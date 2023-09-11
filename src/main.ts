@@ -18,6 +18,14 @@ import { EventStakeNewProvider, ParseEventStakeNewProvider } from "./EventStakeN
 import { EventProviderUnstakeCommit, ParseEventProviderUnstakeCommit } from "./EventProviderUnstakeCommit"
 import { EventFreezeProvider, ParseEventFreezeProvider } from "./EventFreezeProvider"
 import { EventUnfreezeProvider, ParseEventUnfreezeProvider } from "./EventUnfreezeProvider"
+import { EventBuySubscription, ParseEventBuySubscription } from "./EventBuySubscription"
+import { EventAddProjectToSubscription, ParseEventAddProjectToSubscription } from "./EventAddProjectToSubscription"
+import { EventDelKeyFromProject, ParseEventDelKeyFromProject } from "./EventDelKeyFromProject"
+import { EventDelProjectToSubscription, ParseEventDelProjectToSubscription } from "./EventDelProjectToSubscription"
+import { EventAddKeyToProject, ParseEventAddKeyToProject } from "./EventAddKeyToProject"
+import { EventConflictVoteGotCommit, ParseEventConflictVoteGotCommit } from "./EventConflictVoteGotCommit"
+import { EventResponseConflictDetection, ParseEventResponseConflictDetection } from "./EventResponseConflictDetection"
+import { EventConflictDetectionReceived, ParseEventConflictDetectionReceived } from "./EventConflictDetectionReceived"
 
 const rpc = "https://public-rpc-testnet2.lavanet.xyz/"
 const lava_testnet2_start_height = 340778;
@@ -38,6 +46,14 @@ type LavaBlock = {
     providerUnstakeCommitEvts: EventProviderUnstakeCommit[]
     freezeProviderEvts: EventFreezeProvider[]
     unfreezeProviderEvts: EventUnfreezeProvider[]
+    buySubscriptionEvts: EventBuySubscription[]
+    addProjectToSubscriptionEvts: EventAddProjectToSubscription[]
+    delKeyFromProjectEvts: EventDelKeyFromProject[]
+    delProjectToSubscriptionEvts: EventDelProjectToSubscription[]
+    addKeyToProjectEvts: EventAddKeyToProject[]
+    conflictVoteGotCommitEvts: EventConflictVoteGotCommit[]
+    responseConflictDetectionEvts: EventResponseConflictDetection[]
+    conflictDetectionReceivedEvts: EventConflictDetectionReceived[]
 }
 
 const GetOneBlock = async (height: number, client: StargateClient): Promise<LavaBlock> => {
@@ -49,6 +65,14 @@ const GetOneBlock = async (height: number, client: StargateClient): Promise<Lava
         providerUnstakeCommitEvts: [],
         freezeProviderEvts: [],
         unfreezeProviderEvts: [],
+        buySubscriptionEvts: [],
+        addProjectToSubscriptionEvts: [],
+        delKeyFromProjectEvts: [],
+        delProjectToSubscriptionEvts: [],
+        addKeyToProjectEvts: [],
+        conflictVoteGotCommitEvts: [],
+        responseConflictDetectionEvts: [],
+        conflictDetectionReceivedEvts: [],
     }
 
     const txs = await client.searchTx('tx.height=' + height);
@@ -58,6 +82,8 @@ const GetOneBlock = async (height: number, client: StargateClient): Promise<Lava
         }
         tx.events.forEach((evt) => {
             switch (evt.type) {
+                //
+                // Providers
                 case 'lava_relay_payment':
                     lavaBlock.relayPaymentEvts.push(ParseEventRelayPayment(evt));
                     break;
@@ -77,6 +103,41 @@ const GetOneBlock = async (height: number, client: StargateClient): Promise<Lava
                     lavaBlock.unfreezeProviderEvts.push(ParseEventUnfreezeProvider(evt))
                     break
 
+                //
+                // Subscription
+                case 'lava_buy_subscription_event':
+                    lavaBlock.buySubscriptionEvts.push(ParseEventBuySubscription(evt));
+                    break
+                case 'lava_add_project_to_subscription_event':
+                    lavaBlock.addProjectToSubscriptionEvts.push(ParseEventAddProjectToSubscription(evt));
+                    break
+                case 'lava_del_project_to_subscription_event':
+                    lavaBlock.delKeyFromProjectEvts.push(ParseEventDelKeyFromProject(evt));
+                    break
+                case 'lava_del_key_from_project_event':
+                    lavaBlock.delProjectToSubscriptionEvts.push(ParseEventDelProjectToSubscription(evt));
+                    break
+                case 'lava_add_key_to_project_event':
+                    lavaBlock.addKeyToProjectEvts.push(ParseEventAddKeyToProject(evt));
+                    break
+
+                //
+                // Conflict
+                case 'lava_conflict_vote_got_commit':
+                    lavaBlock.conflictVoteGotCommitEvts.push(ParseEventConflictVoteGotCommit(evt));
+                    break
+                case 'lava_response_conflict_detection':
+                    lavaBlock.responseConflictDetectionEvts.push(ParseEventResponseConflictDetection(evt));
+                    break
+                case 'lava_conflict_detection_received':
+                    lavaBlock.conflictDetectionReceivedEvts.push(ParseEventConflictDetectionReceived(evt));
+                    break
+
+                case 'submit_proposal':
+                case 'proposal_deposit':
+                case 'proposal_vote':
+                    break;
+
                 case 'coin_received':
                 case 'coinbase':
                 case 'coin_spent':
@@ -90,23 +151,6 @@ const GetOneBlock = async (height: number, client: StargateClient): Promise<Lava
                 case 'redelegate':
                 case 'create_validator':
                 case 'edit_validator':
-                    break;
-
-                case 'submit_proposal':
-                case 'proposal_deposit':
-                case 'proposal_vote':
-                    break;
-
-                case 'lava_buy_subscription_event':
-                case 'lava_add_project_to_subscription_event':
-                case 'lava_del_project_to_subscription_event':
-                case 'lava_del_key_from_project_event':
-                case 'lava_add_key_to_project_event':
-                    break
-
-                case 'lava_conflict_vote_got_commit':
-                case 'lava_response_conflict_detection':
-                case 'lava_conflict_detection_received':
                     break;
 
                 default:
@@ -390,7 +434,7 @@ const main = async (): Promise<void> => {
         //
         // Start filling up
         const batchSize = 250
-        const concurrentSize = 10
+        const concurrentSize = 1
         const blockList = []
         for (let i = start_height; i <= latestHeight; i++) {
             blockList.push(i)

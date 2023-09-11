@@ -390,7 +390,7 @@ const main = async (): Promise<void> => {
         //
         // Start filling up
         const batchSize = 250
-        const concurrentSize = 25
+        const concurrentSize = 10
         const blockList = []
         for (let i = start_height; i <= latestHeight; i++) {
             blockList.push(i)

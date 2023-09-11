@@ -1,0 +1,29 @@
+{
+  "name": "jsinfo",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "generate": "drizzle-kit generate:sqlite"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@tsconfig/node-lts": "^18.12.4",
+    "@types/better-sqlite3": "^7.6.4",
+    "@types/node": "^20.5.3",
+    "drizzle-kit": "^0.19.13",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.1.6"
+  },
+  "dependencies": {
+    "@cosmjs/stargate": "^0.31.1",
+    "@lavanet/lavajs": "^0.22.4",
+    "@prisma/client": "^5.2.0",
+    "@supercharge/promise-pool": "^3.0.0",
+    "better-sqlite3": "^8.6.0",
+    "drizzle-orm": "^0.28.6"
+  }
+}

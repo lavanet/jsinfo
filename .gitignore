@@ -41,3 +41,6 @@ next-env.d.ts
 # sqlite db
 dev.db
 dev.db-journal
+
+# static block cache files
+/static

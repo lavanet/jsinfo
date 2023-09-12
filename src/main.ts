@@ -2,7 +2,7 @@
 //
 //
 
-import { StargateClient } from "@cosmjs/stargate"
+import { StargateClient, IndexedTx } from "@cosmjs/stargate"
 import { drizzle, BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import { eq, desc } from "drizzle-orm";
@@ -10,7 +10,7 @@ import { Provider, Event, RelayPayment, InsertRelayPayment, blocks, providers, I
 import Database from 'better-sqlite3';
 import * as lavajs from '@lavanet/lavajs';
 import { PromisePool } from '@supercharge/promise-pool'
-
+import { writeFileSync, readFileSync } from 'fs';
 
 import { EventRelayPayment, ParseEventRelayPayment } from "./EventRelayPayment"
 import { EventStakeUpdateProvider, ParseEventStakeUpdateProvider } from "./EventStakeUpdateProvider"
@@ -75,7 +75,17 @@ const GetOneBlock = async (height: number, client: StargateClient): Promise<Lava
         conflictDetectionReceivedEvts: [],
     }
 
-    const txs = await client.searchTx('tx.height=' + height);
+    const staticPath = `./static/${height.toString()}.json`
+    let txs: IndexedTx[] = []
+    try {
+        txs = JSON.parse(readFileSync(staticPath, 'utf-8')) as IndexedTx[]
+    }
+    catch {
+        txs = await client.searchTx('tx.height=' + height);
+        writeFileSync(staticPath, JSON.stringify(txs, null, 0), 'utf-8')
+    }
+    
+
     txs.forEach((tx) => {
         if (tx.code != 0) {
             return;

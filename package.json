@@ -24,6 +24,7 @@
     "@prisma/client": "^5.2.0",
     "@supercharge/promise-pool": "^3.0.0",
     "better-sqlite3": "^8.6.0",
-    "drizzle-orm": "^0.28.6"
+    "drizzle-orm": "^0.28.6",
+    "fastify": "^4.23.2"
   }
 }

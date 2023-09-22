@@ -2,30 +2,31 @@
 //
 //
 
-import { StargateClient, IndexedTx } from "@cosmjs/stargate"
+import { StargateClient, IndexedTx, Block } from "@cosmjs/stargate"
 import { drizzle, BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import { eq, desc } from "drizzle-orm";
-import { Provider, Event, RelayPayment, InsertRelayPayment, blocks, providers, InsertEvent, events, relayPayments, Spec, specs, InsertProviderStake, providerStakes } from './schema';
+import * as schema from './schema';
 import Database from 'better-sqlite3';
 import * as lavajs from '@lavanet/lavajs';
 import { PromisePool } from '@supercharge/promise-pool'
 import { writeFileSync, readFileSync } from 'fs';
 
-import { EventRelayPayment, ParseEventRelayPayment } from "./EventRelayPayment"
-import { EventStakeUpdateProvider, ParseEventStakeUpdateProvider } from "./EventStakeUpdateProvider"
-import { EventStakeNewProvider, ParseEventStakeNewProvider } from "./EventStakeNewProvider"
-import { EventProviderUnstakeCommit, ParseEventProviderUnstakeCommit } from "./EventProviderUnstakeCommit"
-import { EventFreezeProvider, ParseEventFreezeProvider } from "./EventFreezeProvider"
-import { EventUnfreezeProvider, ParseEventUnfreezeProvider } from "./EventUnfreezeProvider"
-import { EventBuySubscription, ParseEventBuySubscription } from "./EventBuySubscription"
-import { EventAddProjectToSubscription, ParseEventAddProjectToSubscription } from "./EventAddProjectToSubscription"
-import { EventDelKeyFromProject, ParseEventDelKeyFromProject } from "./EventDelKeyFromProject"
-import { EventDelProjectToSubscription, ParseEventDelProjectToSubscription } from "./EventDelProjectToSubscription"
-import { EventAddKeyToProject, ParseEventAddKeyToProject } from "./EventAddKeyToProject"
-import { EventConflictVoteGotCommit, ParseEventConflictVoteGotCommit } from "./EventConflictVoteGotCommit"
-import { EventResponseConflictDetection, ParseEventResponseConflictDetection } from "./EventResponseConflictDetection"
-import { EventConflictDetectionReceived, ParseEventConflictDetectionReceived } from "./EventConflictDetectionReceived"
+import { EventRelayPayment, ParseEventRelayPayment } from "./events/EventRelayPayment"
+import { EventStakeUpdateProvider, ParseEventStakeUpdateProvider } from "./events/EventStakeUpdateProvider"
+import { EventStakeNewProvider, ParseEventStakeNewProvider } from "./events/EventStakeNewProvider"
+import { EventProviderUnstakeCommit, ParseEventProviderUnstakeCommit } from "./events/EventProviderUnstakeCommit"
+import { EventFreezeProvider, ParseEventFreezeProvider } from "./events/EventFreezeProvider"
+import { EventUnfreezeProvider, ParseEventUnfreezeProvider } from "./events/EventUnfreezeProvider"
+import { EventBuySubscription, ParseEventBuySubscription } from "./events/EventBuySubscription"
+import { EventAddProjectToSubscription, ParseEventAddProjectToSubscription } from "./events/EventAddProjectToSubscription"
+import { EventDelKeyFromProject, ParseEventDelKeyFromProject } from "./events/EventDelKeyFromProject"
+import { EventDelProjectToSubscription, ParseEventDelProjectToSubscription } from "./events/EventDelProjectToSubscription"
+import { EventAddKeyToProject, ParseEventAddKeyToProject } from "./events/EventAddKeyToProject"
+import { EventConflictVoteGotCommit, ParseEventConflictVoteGotCommit } from "./events/EventConflictVoteGotCommit"
+import { EventResponseConflictDetection, ParseEventResponseConflictDetection } from "./events/EventResponseConflictDetection"
+import { EventConflictDetectionReceived, ParseEventConflictDetectionReceived } from "./events/EventConflictDetectionReceived"
+import { queryserver } from "./query";
 
 const rpc = "https://public-rpc-testnet2.lavanet.xyz/"
 const lava_testnet2_start_height = 340778;
@@ -40,6 +41,7 @@ enum EventType {
 
 type LavaBlock = {
     height: number
+    datetime: number,
     relayPaymentEvts: EventRelayPayment[]
     stakeNewProviderEvts: EventStakeNewProvider[]
     stakeUpdateProviderEvts: EventStakeUpdateProvider[]
@@ -57,8 +59,35 @@ type LavaBlock = {
 }
 
 const GetOneBlock = async (height: number, client: StargateClient): Promise<LavaBlock> => {
+    //
+    // Get block (mostly for date)
+    const pathBlocks = `./static/${height.toString()}.json`
+    let block: Block;
+    try {
+        block = JSON.parse(readFileSync(pathBlocks, 'utf-8')) as Block
+    }
+    catch {
+        block = await client.getBlock(height)
+        writeFileSync(pathBlocks, JSON.stringify(block, null, 0), 'utf-8')
+    }
+
+    //
+    // Get Txs for block
+    const pathTxs = `./static/${height.toString()}_txs.json`
+    let txs: IndexedTx[] = []
+    try {
+        txs = JSON.parse(readFileSync(pathTxs, 'utf-8')) as IndexedTx[]
+    }
+    catch {
+        txs = await client.searchTx('tx.height=' + height);
+        writeFileSync(pathTxs, JSON.stringify(txs, null, 0), 'utf-8')
+    }
+
+    //
+    // Block object to return
     const lavaBlock: LavaBlock = {
         height: height,
+        datetime: Math.trunc(Date.parse(block.header.time) / 1000),
         relayPaymentEvts: [],
         stakeNewProviderEvts: [],
         stakeUpdateProviderEvts: [],
@@ -75,18 +104,11 @@ const GetOneBlock = async (height: number, client: StargateClient): Promise<Lava
         conflictDetectionReceivedEvts: [],
     }
 
-    const staticPath = `./static/${height.toString()}.json`
-    let txs: IndexedTx[] = []
-    try {
-        txs = JSON.parse(readFileSync(staticPath, 'utf-8')) as IndexedTx[]
-    }
-    catch {
-        txs = await client.searchTx('tx.height=' + height);
-        writeFileSync(staticPath, JSON.stringify(txs, null, 0), 'utf-8')
-    }
-    
-
+    //
+    // Loop over txs in block
     txs.forEach((tx) => {
+        //
+        // Pass on failed txs
         if (tx.code != 0) {
             return;
         }
@@ -122,10 +144,10 @@ const GetOneBlock = async (height: number, client: StargateClient): Promise<Lava
                     lavaBlock.addProjectToSubscriptionEvts.push(ParseEventAddProjectToSubscription(evt));
                     break
                 case 'lava_del_project_to_subscription_event':
-                    lavaBlock.delKeyFromProjectEvts.push(ParseEventDelKeyFromProject(evt));
+                    lavaBlock.delProjectToSubscriptionEvts.push(ParseEventDelProjectToSubscription(evt));
                     break
                 case 'lava_del_key_from_project_event':
-                    lavaBlock.delProjectToSubscriptionEvts.push(ParseEventDelProjectToSubscription(evt));
+                    lavaBlock.delKeyFromProjectEvts.push(ParseEventDelKeyFromProject(evt));
                     break
                 case 'lava_add_key_to_project_event':
                     lavaBlock.addKeyToProjectEvts.push(ParseEventAddKeyToProject(evt));
@@ -173,7 +195,12 @@ const GetOneBlock = async (height: number, client: StargateClient): Promise<Lava
     return lavaBlock;
 }
 
-function getOrSetProvider(dbProviders: Map<string, Provider>, static_dbProviders: Map<string, Provider> | null, address: string, moniker: string): Provider {
+function getOrSetProvider(
+    dbProviders: Map<string, schema.Provider>,
+    static_dbProviders: Map<string, schema.Provider> | null,
+    address: string,
+    moniker: string
+): schema.Provider {
     if (static_dbProviders != null) {
         let staticProvider = static_dbProviders.get(address);
         if (staticProvider != undefined) {
@@ -189,12 +216,16 @@ function getOrSetProvider(dbProviders: Map<string, Provider>, static_dbProviders
     provider = {
         address: address,
         moniker: moniker,
-    } as Provider
+    } as schema.Provider
     dbProviders.set(address, provider)
     return provider
 }
 
-function getOrSetSpec(dbSpecs: Map<string, Spec>, static_dbSpecs: Map<string, Spec> | null, specS: string): Spec {
+function getOrSetSpec(
+    dbSpecs: Map<string, schema.Spec>,
+    static_dbSpecs: Map<string, schema.Spec> | null,
+    specS: string
+): schema.Spec {
     if (static_dbSpecs != null) {
         let staticSpec = static_dbSpecs.get(specS);
         if (staticSpec != undefined) {
@@ -209,12 +240,56 @@ function getOrSetSpec(dbSpecs: Map<string, Spec>, static_dbSpecs: Map<string, Sp
 
     spec = {
         id: specS
-    } as Spec
+    } as schema.Spec
     dbSpecs.set(specS, spec)
     return spec
 }
 
-async function getLatestProviders(dbProviders: Map<string, Provider>, dbSpecs: Map<string, Spec>) {
+function getOrSetConsumer(
+    dbConsumers: Map<string, schema.Consumer>,
+    address: string
+): schema.Consumer {
+    let dbConsumer = dbConsumers.get(address);
+    if (dbConsumer != undefined) {
+        return dbConsumer
+    }
+
+    dbConsumer = {
+        address: address
+    } as schema.Consumer
+    dbConsumers.set(address, dbConsumer)
+    return dbConsumer
+}
+
+function getOrSetPlan(
+    dbPlans: Map<string, schema.Plan>,
+    static_dbPlans: Map<string, schema.Plan> | null,
+    planId: string
+): schema.Plan {
+    if (static_dbPlans != null) {
+        let staticPlan = static_dbPlans.get(planId);
+        if (staticPlan != undefined) {
+            return staticPlan
+        }
+    }
+
+    let dbPlan = dbPlans.get(planId);
+    if (dbPlan != undefined) {
+        return dbPlan
+    }
+
+    dbPlan = {
+        id: planId
+    } as schema.Plan
+    dbPlans.set(planId, dbPlan)
+    return dbPlan
+}
+
+
+async function getLatestProvidersAndSpecs(
+    dbProviders: Map<string, schema.Provider>,
+    dbSpecs: Map<string, schema.Spec>
+) {
     const client = await lavajs.lavanet.ClientFactory.createRPCQueryClient({ rpcEndpoint: rpc })
     const lavaClient = client.lavanet.lava;
 
@@ -229,26 +304,51 @@ async function getLatestProviders(dbProviders: Map<string, Provider>, dbSpecs: M
     }))
 }
 
+async function getLatestPlans(dbPlans: Map<string, schema.Plan>) {
+    const client = await lavajs.lavanet.ClientFactory.createRPCQueryClient({ rpcEndpoint: rpc })
+    const lavaClient = client.lavanet.lava;
+
+    let plans = await lavaClient.plans.list()
+    plans.plansInfo.forEach((plan) => {
+        dbPlans.set(plan.index, {
+            desc: plan.description,
+            id: plan.index,
+            price: parseInt(plan.price.amount),
+        } as schema.Plan)
+    })
+}
+
+
 async function InsertBlock(
     block: LavaBlock,
     db: BetterSQLite3Database,
-    static_dbProviders: Map<string, Provider>,
-    static_dbSpecs: Map<string, Spec>
+    static_dbProviders: Map<string, schema.Provider>,
+    static_dbSpecs: Map<string, schema.Spec>,
+    static_dbPlans: Map<string, schema.Plan>
 ) {
     //
     // Is in DB already?
-    const dbBlock = await db.select().from(blocks).where(eq(blocks.height, block.height));
+    const dbBlock = await db.select().from(schema.blocks).where(eq(schema.blocks.height, block.height));
     if (dbBlock.length != 0) {
         return
     }
 
     //
+    // Init
+    let dbProviders: Map<string, schema.Provider> = new Map()
+    let dbSpecs: Map<string, schema.Spec> = new Map()
+    let dbConsumers: Map<string, schema.Consumer> = new Map()
+    let dbPlans: Map<string, schema.Plan> = new Map()
+    //
+    let dbEvents: schema.InsertEvent[] = []
+    let dbProviderStakes: schema.InsertProviderStake[] = []
+    let dbPayments: schema.InsertRelayPayment[] = []
+    let dbConflictResponses: schema.InsertConflictResponse[] = []
+    let dbSubscriptionBuys: schema.InsertSubscriptionBuy[] = []
+    let dbConflictVote: schema.InsertConflictVote[] = []
+
+    //
     // Stake related
-    let dbProviders: Map<string, Provider> = new Map()
-    let dbSpecs: Map<string, Spec> = new Map()
-    let dbEvents: InsertEvent[] = []
-    let dbPayments: InsertRelayPayment[] = []
-    let dbProviderStakes: InsertProviderStake[] = []
     block.stakeNewProviderEvts.forEach((evt) => {
         getOrSetProvider(dbProviders, static_dbProviders, evt.provider, evt.moniker)
         getOrSetSpec(dbSpecs, static_dbSpecs, evt.spec)
@@ -258,12 +358,12 @@ async function InsertBlock(
             blockId: block?.height,
             provider: evt.provider,
             specId: evt.spec
-        } as InsertProviderStake)
+        } as schema.InsertProviderStake)
         dbEvents.push({
             blockId: block?.height,
             eventType: EventType.StakeNewProvider,
             provider: evt.provider,
-        } as InsertEvent)
+        } as schema.InsertEvent)
     })
     block.stakeUpdateProviderEvts.forEach((evt) => {
         getOrSetProvider(dbProviders, static_dbProviders, evt.provider, evt.moniker)
@@ -273,7 +373,7 @@ async function InsertBlock(
             blockId: block?.height,
             eventType: EventType.StakeUpdateProvider,
             provider: evt.provider
-        } as InsertEvent)
+        } as schema.InsertEvent)
     })
     block.providerUnstakeCommitEvts.forEach((evt) => {
         getOrSetProvider(dbProviders, static_dbProviders, evt.address, evt.moniker)
@@ -283,7 +383,7 @@ async function InsertBlock(
             blockId: block?.height,
             eventType: EventType.ProviderUnstakeCommit,
             provider: evt.address
-        } as InsertEvent)
+        } as schema.InsertEvent)
     })
 
     //
@@ -298,7 +398,7 @@ async function InsertBlock(
             blockId: block?.height,
             eventType: EventType.FreezeProvider,
             provider: evt.providerAddress
-        } as InsertEvent)
+        } as schema.InsertEvent)
     })
     block.unfreezeProviderEvts.forEach((evt) => {
         getOrSetProvider(dbProviders, static_dbProviders, evt.providerAddress, '')
@@ -310,7 +410,7 @@ async function InsertBlock(
             blockId: block?.height,
             eventType: EventType.UnfreezeProvider,
             provider: evt.providerAddress
-        } as InsertEvent)
+        } as schema.InsertEvent)
     })
 
     //
@@ -318,6 +418,7 @@ async function InsertBlock(
     block.relayPaymentEvts.forEach((evt) => {
         getOrSetProvider(dbProviders, static_dbProviders, evt.provider, '')
         getOrSetSpec(dbSpecs, static_dbSpecs, evt.chainID)
+        getOrSetConsumer(dbConsumers, evt.client)
 
         dbPayments.push({
             blockId: block?.height,
@@ -330,7 +431,52 @@ async function InsertBlock(
             qosLatency: evt.QoSLatency,
             qosSync: evt.QoSLatency,
             relays: evt.relayNumber,
-        } as InsertRelayPayment)
+            consumer: evt.client
+        } as schema.InsertRelayPayment)
+    })
+
+    //
+    // Plans / Subscriptions related
+    block.buySubscriptionEvts.forEach((evt) => {
+        getOrSetConsumer(dbConsumers, evt.consumer)
+        getOrSetPlan(dbPlans, static_dbPlans, evt.plan)
+
+        dbSubscriptionBuys.push({
+            blockId: block?.height,
+            consumer: evt.consumer,
+            duration: evt.duration,
+            plan: evt.plan,
+        } as schema.InsertSubscriptionBuy)
+    })
+
+    //
+    // Conflict related
+    block.responseConflictDetectionEvts.forEach((evt) => {
+        getOrSetSpec(dbSpecs, static_dbSpecs, evt.chainID)
+        getOrSetConsumer(dbConsumers, evt.client)
+
+        dbConflictResponses.push({
+            blockId: block?.height,
+            consumer: evt.client,
+
+            apiInterface: evt.apiInterface,
+            apiURL: evt.apiURL,
+            connectionType: evt.connectionType,
+            requestBlock: evt.requestBlock,
+            requestData: evt.requestData,
+            specId: evt.chainID,
+            voteDeadline: evt.voteDeadline,
+            voteId: evt.voteID,
+        } as schema.InsertConflictResponse)
+    })
+    block.conflictVoteGotCommitEvts.forEach((evt) => {
+        getOrSetProvider(dbProviders, static_dbProviders, evt.provider, '')
+
+        dbConflictVote.push({
+            blockId: block?.height,
+            provider: evt.provider,
+            voteId: evt.voteID,
+        } as schema.ConflictVote)
     })
 
     //
@@ -342,71 +488,82 @@ async function InsertBlock(
         if (block == null) {
             return
         }
-        await tx.insert(blocks).values({ height: block.height })
+        await tx.insert(schema.blocks).values({ height: block.height })
 
         //
         // Insert all specs
         const arrSpecs = Array.from(dbSpecs.values())
         if (arrSpecs.length > 0) {
-            await tx.insert(specs)
+            await tx.insert(schema.specs)
                 .values(arrSpecs)
                 .onConflictDoNothing();
         }
 
         //
-        // Find our create all providers
+        // Find / create all providers
         const arrProviders = Array.from(dbProviders.values())
         if (arrProviders.length > 0) {
-            await tx.insert(providers)
+            await tx.insert(schema.providers)
                 .values(arrProviders)
                 .onConflictDoNothing();
         }
 
         //
-        // Create all events
+        // Find / create all plans
+        const arrPlans = Array.from(dbPlans.values())
+        if (arrPlans.length > 0) {
+            await tx.insert(schema.plans)
+                .values(arrPlans)
+                .onConflictDoNothing();
+        }
+
+        //
+        // Find / create all consumers
+        const arrConsumers = Array.from(dbConsumers.values())
+        if (arrConsumers.length > 0) {
+            await tx.insert(schema.consumers)
+                .values(arrConsumers)
+                .onConflictDoNothing();
+        }
+
+        //
+        // Create
         if (dbEvents.length > 0) {
-            await tx.insert(events).values(dbEvents)
+            await tx.insert(schema.events).values(dbEvents)
         }
-
-        //
-        // Create all relay payments
         if (dbPayments.length > 0) {
-            await tx.insert(relayPayments).values(dbPayments)
+            await tx.insert(schema.relayPayments).values(dbPayments)
         }
-
-        //
-        // Create all provider stakes
         if (dbProviderStakes.length > 0) {
-            await tx.insert(providerStakes).values(dbProviderStakes)
+            await tx.insert(schema.providerStakes).values(dbProviderStakes)
+        }
+        if (dbConflictResponses.length > 0) {
+            await tx.insert(schema.conflictResponses).values(dbConflictResponses)
+        }
+        if (dbSubscriptionBuys.length > 0) {
+            await tx.insert(schema.subscriptionBuys).values(dbSubscriptionBuys)
+        }
+        if (dbConflictVote.length > 0) {
+            await tx.insert(schema.conflictVotes).values(dbConflictVote)
         }
     })
 }
 
-const main = async (): Promise<void> => {
-    //
-    // Client
-    const client = await StargateClient.connect(rpc)
-    const chainId = await client.getChainId();
-    const height = await client.getHeight();
-    console.log('chain', chainId, 'current height', height);
 
-    //
-    // DB
-    const sqlite = new Database('dev.db');
-    const db: BetterSQLite3Database = drizzle(sqlite);
-    await migrate(db, { migrationsFolder: "drizzle" });
-
-    //
-    // Insert providers & specs from latst block
-    let static_dbProviders: Map<string, Provider> = new Map()
-    let static_dbSpecs: Map<string, Spec> = new Map()
-    await getLatestProviders(static_dbProviders, static_dbSpecs);
+async function latestBlockMeta(
+    db: BetterSQLite3Database,
+    static_dbProviders: Map<string, schema.Provider>,
+    static_dbSpecs: Map<string, schema.Spec>,
+    static_dbPlans: Map<string, schema.Plan>
+) {
+    await getLatestProvidersAndSpecs(static_dbProviders, static_dbSpecs)
+    await getLatestPlans(static_dbPlans)
     await db.transaction(async (tx) => {
         //
         // Insert all specs
         const arrSpecs = Array.from(static_dbSpecs.values())
         if (arrSpecs.length > 0) {
-            await tx.insert(specs)
+            await tx.insert(schema.specs)
                 .values(arrSpecs)
                 .onConflictDoNothing();
         }
@@ -415,11 +572,42 @@ const main = async (): Promise<void> => {
         // Find our create all providers
         const arrProviders = Array.from(static_dbProviders.values())
         if (arrProviders.length > 0) {
-            await tx.insert(providers)
+            await tx.insert(schema.providers)
                 .values(arrProviders)
                 .onConflictDoNothing();
         }
+
+        //
+        // Find our create all plans
+        const arrPlans = Array.from(static_dbPlans.values())
+        if (arrPlans.length > 0) {
+            await tx.insert(schema.plans)
+                .values(arrPlans)
+                .onConflictDoNothing();
+        }
     })
+}
+
+const indexer = async (): Promise<void> => {
+    //
+    // Client
+    const client = await StargateClient.connect(rpc)
+    const chainId = await client.getChainId()
+    const height = await client.getHeight()
+    console.log('chain', chainId, 'current height', height)
+
+    //
+    // DB
+    const sqlite = new Database('dev.db')
+    const db: BetterSQLite3Database = drizzle(sqlite)
+    await migrate(db, { migrationsFolder: "drizzle" })
+
+    //
+    // Insert providers, specs & plans from latest block 
+    let static_dbProviders: Map<string, schema.Provider> = new Map()
+    let static_dbSpecs: Map<string, schema.Spec> = new Map()
+    let static_dbPlans: Map<string, schema.Plan> = new Map()
+    await latestBlockMeta(db, static_dbProviders, static_dbSpecs, static_dbPlans) // TODO: do this every new block?
 
     //
     // Loop forever, filling up blocks
@@ -432,7 +620,7 @@ const main = async (): Promise<void> => {
         //
         // Find latest block on DB
         let start_height = lava_testnet2_start_height
-        const latestDbBlock = await db.select().from(blocks).orderBy(desc(blocks.height)).limit(1)
+        const latestDbBlock = await db.select().from(schema.blocks).orderBy(desc(schema.blocks.height)).limit(1)
         if (latestDbBlock.length != 0) {
             const tHeight = latestDbBlock[0].height
             if (tHeight != null) {
@@ -460,21 +648,40 @@ const main = async (): Promise<void> => {
                     let block: null | LavaBlock = null;
                     block = await GetOneBlock(height, client)
                     if (block != null) {
-                        await InsertBlock(block, db, static_dbProviders, static_dbSpecs)
+                        await InsertBlock(block, db, static_dbProviders, static_dbSpecs, static_dbPlans)
                     }
                 })
 
             let timeTaken = performance.now() - start;
             console.log(errors, blockList.length / batchSize, 'time', timeTaken)
             //
-            // Add errors back to queue
+            // Add errors to start of queue
             errors.forEach((err) => {
-                blockList.push(err.item)
+                blockList.unshift(err.item)
             })
         }
         setTimeout(fillUp, pollEvery)
     }
     fillUp()
+}
+
+const main = async (): Promise<void> => {
+    if (process.argv.length != 3) {
+        console.log('bad arguments')
+        return
+    }
+    switch (process.argv[2]) {
+        case 'indexer':
+            indexer()
+            break
+        case 'queryserver':
+            queryserver()
+            break
+        default:
+            console.log('(2) bad arguments')
+            return
+    }
+    return
 }
 
 main()

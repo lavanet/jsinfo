@@ -2,5 +2,6 @@
 
 ```
 npm run generate
-npx ts-node src/main.ts
+bunx ts-node src/main.ts indexer
+bunx ts-node src/main.ts queryserver
 ```

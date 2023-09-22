@@ -1,8 +1,16 @@
 
 import Fastify, { FastifyInstance, RouteShorthandOptions } from 'fastify'
-import { Server, IncomingMessage, ServerResponse } from 'http'
+import { drizzle, BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
+import Database from 'better-sqlite3';
+import { eq, desc } from "drizzle-orm";
+import * as schema from './schema';
 
-const server: FastifyInstance = Fastify({})
+const sqlite = new Database('dev.db')
+const db: BetterSQLite3Database = drizzle(sqlite)
+
+const server: FastifyInstance = Fastify({
+    logger: true,
+})
 
 const opts: RouteShorthandOptions = {
     schema: {
@@ -20,7 +28,14 @@ const opts: RouteShorthandOptions = {
 }
 
 server.get('/ping', opts, async (request, reply) => {
-    return { pong: 'it worked!' }
+    const latestDbBlocks = await db.select().from(schema.blocks).orderBy(desc(schema.blocks.height)).limit(1)
+    let latestDbBlock: any
+    if (latestDbBlocks.length != 0) {
+        latestDbBlock = latestDbBlocks[0]
+    }
+
+    console.log(request.query)
+    return { pong: latestDbBlock.height }
 })
 
 export const queryserver = async (): Promise<void> => {

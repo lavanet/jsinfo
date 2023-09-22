@@ -2,7 +2,7 @@
 import Fastify, { FastifyInstance, RouteShorthandOptions } from 'fastify'
 import { drizzle, BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import Database from 'better-sqlite3';
-import { eq, desc } from "drizzle-orm";
+import { sql, desc } from "drizzle-orm";
 import * as schema from './schema';
 
 const sqlite = new Database('dev.db')
@@ -18,24 +18,40 @@ const opts: RouteShorthandOptions = {
             200: {
                 type: 'object',
                 properties: {
-                    pong: {
-                        type: 'string'
+                    height: {
+                        type: 'number'
+                    },
+                    cuSum: {
+                        type: 'number'
+                    },
+                    relaySum: {
+                        type: 'number'
                     }
+                    
                 }
             }
         }
     }
 }
 
-server.get('/ping', opts, async (request, reply) => {
+server.get('/latest', opts, async (request, reply) => {
     const latestDbBlocks = await db.select().from(schema.blocks).orderBy(desc(schema.blocks.height)).limit(1)
-    let latestDbBlock: any
+    let latestHeight = 0
     if (latestDbBlocks.length != 0) {
-        latestDbBlock = latestDbBlocks[0]
+        latestHeight = latestDbBlocks[0].height == null ? 0: latestDbBlocks[0].height 
     }
 
-    console.log(request.query)
-    return { pong: latestDbBlock.height }
+    let cuSum = 0
+    let relaySum = 0
+    let res = await db.select({
+         cuSum: sql<number>`sum(${schema.relayPayments.cu})`,
+         relaySum: sql<number>`sum(${schema.relayPayments.relays})`
+        }).from(schema.relayPayments)
+    if (res.length != 0) {
+        cuSum = res[0].cuSum
+        relaySum = res[0].relaySum
+    }
+    return { height: latestHeight, cuSum: cuSum, relaySum: relaySum }
 })
 
 export const queryserver = async (): Promise<void> => {

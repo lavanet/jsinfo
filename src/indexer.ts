@@ -1,4 +1,4 @@
-import { StargateClient} from "@cosmjs/stargate"
+import { StargateClient } from "@cosmjs/stargate"
 import { drizzle, BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import { eq, desc } from "drizzle-orm";
@@ -12,6 +12,20 @@ import { UpdateLatestBlockMeta, GetOrSetConsumer, GetOrSetPlan, GetOrSetProvider
 const rpc = "https://public-rpc-testnet2.lavanet.xyz/"
 const lava_testnet2_start_height = 340778;
 
+
+async function isBlockInDb(
+    db: BetterSQLite3Database,
+    height: number,
+): Promise<boolean> {
+    //
+    // Is in DB already?
+    const dbBlock = await db.select().from(schema.blocks).where(eq(schema.blocks.height, height));
+    if (dbBlock.length != 0) {
+        return true
+    }
+    return false
+}
+
 async function InsertBlock(
     block: LavaBlock,
     db: BetterSQLite3Database,
@@ -19,13 +33,6 @@ async function InsertBlock(
     static_dbSpecs: Map<string, schema.Spec>,
     static_dbPlans: Map<string, schema.Plan>
 ) {
-    //
-    // Is in DB already?
-    const dbBlock = await db.select().from(schema.blocks).where(eq(schema.blocks.height, block.height));
-    if (dbBlock.length != 0) {
-        return
-    }
-
     //
     // Init
     let dbProviders: Map<string, schema.Provider> = new Map()
@@ -269,7 +276,7 @@ const indexer = async (): Promise<void> => {
         static_dbProviders,
         static_dbSpecs,
         static_dbPlans
-        ) // TODO: add this every block (when not catching up)
+    ) // TODO: add this every block (when not catching up)
 
     //
     // Loop forever, filling up blocks
@@ -307,10 +314,16 @@ const indexer = async (): Promise<void> => {
                 .withConcurrency(concurrentSize)
                 .for(tmpList)
                 .process(async (height) => {
+                    if (await isBlockInDb(db, height)) {
+                        return
+                    }
+
                     let block: null | LavaBlock = null;
                     block = await GetOneLavaBlock(height, client)
                     if (block != null) {
                         await InsertBlock(block, db, static_dbProviders, static_dbSpecs, static_dbPlans)
+                    } else {
+                        console.log('failed getting block', height)
                     }
                 })
 

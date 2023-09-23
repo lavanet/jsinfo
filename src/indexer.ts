@@ -288,7 +288,7 @@ const doBatch = async (
             })
 
         let timeTaken = performance.now() - start;
-        console.log(errors, blockList.length / batchSize, 'time', timeTaken)
+        console.log('errors', errors, 'batches remaining', blockList.length / batchSize, 'time', timeTaken)
         //
         // Add errors to start of queue
         errors.forEach((err) => {
@@ -345,7 +345,6 @@ const indexer = async (): Promise<void> => {
         // Found diff, start
         if (latestHeight > dbHeight) {
             console.log('db height', dbHeight, 'blockchain height', latestHeight)
-
             //
             // We'll get the latest meta from RPC
             // if we're not catching up on more than 1 block
@@ -358,7 +357,6 @@ const indexer = async (): Promise<void> => {
                     static_dbPlans
                 )
             }
-
             await doBatch(db, client, dbHeight, latestHeight)
         }
         setTimeout(fillUp, pollEvery)

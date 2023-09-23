@@ -11,7 +11,9 @@ import { UpdateLatestBlockMeta, GetOrSetConsumer, GetOrSetPlan, GetOrSetProvider
 
 const rpc = "https://public-rpc-testnet2.lavanet.xyz/"
 const lava_testnet2_start_height = 340778;
-
+let static_dbProviders: Map<string, schema.Provider> = new Map()
+let static_dbSpecs: Map<string, schema.Spec> = new Map()
+let static_dbPlans: Map<string, schema.Plan> = new Map()
 
 async function isBlockInDb(
     db: BetterSQLite3Database,
@@ -250,6 +252,51 @@ async function InsertBlock(
     })
 }
 
+const doBatch = async (
+    db: BetterSQLite3Database,
+    client: StargateClient,
+    dbHeight: number,
+    latestHeight: number,
+) => {
+    //
+    // Start filling up
+    const batchSize = 250
+    const concurrentSize = 1
+    const blockList = []
+    for (let i = dbHeight; i <= latestHeight; i++) {
+        blockList.push(i)
+    }
+    while (blockList.length > 0) {
+        let start = performance.now();
+
+        const tmpList = blockList.splice(0, batchSize);
+        const { results, errors } = await PromisePool
+            .withConcurrency(concurrentSize)
+            .for(tmpList)
+            .process(async (height) => {
+                if (await isBlockInDb(db, height)) {
+                    return
+                }
+
+                let block: null | LavaBlock = null;
+                block = await GetOneLavaBlock(height, client)
+                if (block != null) {
+                    await InsertBlock(block, db, static_dbProviders, static_dbSpecs, static_dbPlans)
+                } else {
+                    console.log('failed getting block', height)
+                }
+            })
+
+        let timeTaken = performance.now() - start;
+        console.log(errors, blockList.length / batchSize, 'time', timeTaken)
+        //
+        // Add errors to start of queue
+        errors.forEach((err) => {
+            blockList.unshift(err.item)
+        })
+    }
+}
+
 const indexer = async (): Promise<void> => {
     //
     // Client
@@ -267,16 +314,13 @@ const indexer = async (): Promise<void> => {
 
     //
     // Insert providers, specs & plans from latest block 
-    let static_dbProviders: Map<string, schema.Provider> = new Map()
-    let static_dbSpecs: Map<string, schema.Spec> = new Map()
-    let static_dbPlans: Map<string, schema.Plan> = new Map()
     await UpdateLatestBlockMeta(
         db,
         lavajsClient,
         static_dbProviders,
         static_dbSpecs,
         static_dbPlans
-    ) // TODO: add this every block (when not catching up)
+    )
 
     //
     // Loop forever, filling up blocks
@@ -288,52 +332,34 @@ const indexer = async (): Promise<void> => {
 
         //
         // Find latest block on DB
-        let start_height = lava_testnet2_start_height
+        let dbHeight = lava_testnet2_start_height
         const latestDbBlock = await db.select().from(schema.blocks).orderBy(desc(schema.blocks.height)).limit(1)
         if (latestDbBlock.length != 0) {
             const tHeight = latestDbBlock[0].height
             if (tHeight != null) {
-                start_height = tHeight
+                dbHeight = tHeight
             }
         }
-        console.log('db height', start_height, 'blockchain height', latestHeight)
 
         //
-        // Start filling up
-        const batchSize = 250
-        const concurrentSize = 1
-        const blockList = []
-        for (let i = start_height; i <= latestHeight; i++) {
-            blockList.push(i)
-        }
-        while (blockList.length > 0) {
-            let start = performance.now();
+        // Found diff, start
+        if (latestHeight > dbHeight) {
+            console.log('db height', dbHeight, 'blockchain height', latestHeight)
 
-            const tmpList = blockList.splice(0, batchSize);
-            const { results, errors } = await PromisePool
-                .withConcurrency(concurrentSize)
-                .for(tmpList)
-                .process(async (height) => {
-                    if (await isBlockInDb(db, height)) {
-                        return
-                    }
-
-                    let block: null | LavaBlock = null;
-                    block = await GetOneLavaBlock(height, client)
-                    if (block != null) {
-                        await InsertBlock(block, db, static_dbProviders, static_dbSpecs, static_dbPlans)
-                    } else {
-                        console.log('failed getting block', height)
-                    }
-                })
-
-            let timeTaken = performance.now() - start;
-            console.log(errors, blockList.length / batchSize, 'time', timeTaken)
             //
-            // Add errors to start of queue
-            errors.forEach((err) => {
-                blockList.unshift(err.item)
-            })
+            // We'll get the latest meta from RPC
+            // if we're not catching up on more than 1 block
+            if (latestHeight - dbHeight == 1) {
+                await UpdateLatestBlockMeta(
+                    db,
+                    lavajsClient,
+                    static_dbProviders,
+                    static_dbSpecs,
+                    static_dbPlans
+                )
+            }
+
+            await doBatch(db, client, dbHeight, latestHeight)
         }
         setTimeout(fillUp, pollEvery)
     }

@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, real } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, real, primaryKey } from 'drizzle-orm/sqlite-core';
 
 export const blocks = sqliteTable('blocks', {
   height: integer('height').unique(),
@@ -34,14 +34,23 @@ export const specs = sqliteTable('specs', {
 export type Spec = typeof specs.$inferSelect
 export type InsertSpec = typeof specs.$inferInsert
 
+export enum LavaProviderStakeStatus {
+  Active = 1,
+  Inactive,
+}
+
 export const providerStakes = sqliteTable('provider_stakes', {
-  id: integer('id').primaryKey(),
   stake: integer('stake'),
   appliedHeight: integer('applied_height'),
+  status: integer('status'),
   
   provider: text('provider').references(() => providers.address),
   specId: text('spec_id').references(() => specs.id),
   blockId: integer('block_id').references(() => blocks.height),
+}, (table) => {
+  return {
+    pk: primaryKey(table.provider, table.specId),
+  };
 });
 export type ProviderStake = typeof providerStakes.$inferSelect
 export type InsertProviderStake = typeof providerStakes.$inferInsert
@@ -51,9 +60,15 @@ export const relayPayments = sqliteTable('relay_payments', {
   relays: integer('relays'),
   cu: integer('cu'),
   pay: integer('pay'),
+  
   qosSync: real('qos_sync'),  
   qosAvailability: real('qos_availability'),  
   qosLatency: real('qos_latency'),  
+  
+  qosSyncExc: real('qos_sync_exc'),  
+  qosAvailabilityExc: real('qos_availability_exc'),
+  qosLatencyExc: real('qos_latency_exc'),
+
   provider: text('provider').references(() => providers.address),
   specId: text('spec_id').references(() => specs.id),
   blockId: integer('block_id').references(() => blocks.height),

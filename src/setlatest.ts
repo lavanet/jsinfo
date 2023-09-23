@@ -1,5 +1,6 @@
 import * as lavajs from '@lavanet/lavajs';
 import { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
+import { eq } from "drizzle-orm";
 import * as schema from './schema';
 
 export type LavaClient = Awaited<ReturnType<typeof lavajs.lavanet.ClientFactory.createRPCQueryClient>>
@@ -94,13 +95,16 @@ export function GetOrSetPlan(
     return dbPlan
 }
 
-async function getLatestProvidersAndSpecs(
+async function getLatestProvidersAndSpecsAndStakes(
     client: LavaClient,
+    height: number,
     dbProviders: Map<string, schema.Provider>,
     dbSpecs: Map<string, schema.Spec>,
+    dbStakes: Map<string, schema.ProviderStake[]>,
 ) {
     const lavaClient = client.lavanet.lava;
 
+    dbStakes.clear()
     let specs = await lavaClient.spec.showAllChains()
     await Promise.all(specs.chainInfoList.map(async (spec) => {
         GetOrSetSpec(dbSpecs, null, spec.chainID)
@@ -108,6 +112,21 @@ async function getLatestProvidersAndSpecs(
         let providers = await lavaClient.pairing.providers({ chainID: spec.chainID, showFrozen: true })
         providers.stakeEntry.forEach((providerStake) => {
             GetOrSetProvider(dbProviders, null, providerStake.address, providerStake.moniker)
+
+            // init if needed
+            if (dbStakes.get(providerStake.address) == undefined) {
+                dbStakes.set(providerStake.address, [])
+            }
+            let stakeArr: schema.ProviderStake[] = dbStakes.get(providerStake.address)!
+            stakeArr.push({
+                provider: providerStake.address,
+                blockId: height,
+                specId: providerStake.chain,
+                stake: parseInt(providerStake.stake.amount),
+                appliedHeight: providerStake.stakeAppliedBlock.toNumber(),
+                status: schema.LavaProviderStakeStatus.Active,
+            } as schema.ProviderStake)
+
         })
     }))
 }
@@ -128,12 +147,15 @@ async function getLatestPlans(client: LavaClient, dbPlans: Map<string, schema.Pl
 export async function UpdateLatestBlockMeta(
     db: BetterSQLite3Database,
     client: LavaClient,
+    height: number,
     static_dbProviders: Map<string, schema.Provider>,
     static_dbSpecs: Map<string, schema.Spec>,
-    static_dbPlans: Map<string, schema.Plan>
+    static_dbPlans: Map<string, schema.Plan>,
+    static_dbStakes: Map<string, schema.ProviderStake[]>
 ) {
-    await getLatestProvidersAndSpecs(client, static_dbProviders, static_dbSpecs)
+    await getLatestProvidersAndSpecsAndStakes(client, height, static_dbProviders, static_dbSpecs, static_dbStakes)
     await getLatestPlans(client, static_dbPlans)
+
     await db.transaction(async (tx) => {
         //
         // Insert all specs
@@ -161,5 +183,31 @@ export async function UpdateLatestBlockMeta(
                 .values(arrPlans)
                 .onConflictDoNothing();
         }
+
+        //
+        // All stakes
+        await Promise.all(Array.from(static_dbStakes.values()).map(async (stakes) => {
+            if (stakes.length == 0) {
+                return
+            }
+            // Update / Insert
+            await tx.insert(schema.providerStakes)
+                .values(stakes)
+                .onConflictDoNothing();
+
+            // Deactivate non existing
+            const provider = stakes[0].provider
+            let currentStakes = await db.select().from(schema.providerStakes).where(eq(schema.providerStakes, provider))
+            const oldStakes: schema.ProviderStake[] = []
+            currentStakes.forEach((stake) => {
+                if (!stakes.some(e => e.specId == stake.specId)) {
+                    stake.status = schema.LavaProviderStakeStatus.Inactive
+                    oldStakes.push(stake)
+                }
+            })
+            await tx.insert(schema.providerStakes)
+                .values(oldStakes)
+                .onConflictDoNothing() // TODO fix this
+        }))
     })
 }

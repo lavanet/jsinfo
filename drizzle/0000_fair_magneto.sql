@@ -49,11 +49,13 @@ CREATE TABLE `plans` (
 );
 --> statement-breakpoint
 CREATE TABLE `provider_stakes` (
-	`id` integer PRIMARY KEY NOT NULL,
+	`stake` integer,
 	`applied_height` integer,
+	`status` integer,
 	`provider` text,
 	`spec_id` text,
 	`block_id` integer,
+	PRIMARY KEY(`provider`, `spec_id`),
 	FOREIGN KEY (`provider`) REFERENCES `providers`(`address`) ON UPDATE no action ON DELETE no action,
 	FOREIGN KEY (`spec_id`) REFERENCES `specs`(`id`) ON UPDATE no action ON DELETE no action,
 	FOREIGN KEY (`block_id`) REFERENCES `blocks`(`height`) ON UPDATE no action ON DELETE no action
@@ -72,6 +74,9 @@ CREATE TABLE `relay_payments` (
 	`qos_sync` real,
 	`qos_availability` real,
 	`qos_latency` real,
+	`qos_sync_exc` real,
+	`qos_availability_exc` real,
+	`qos_latency_exc` real,
 	`provider` text,
 	`spec_id` text,
 	`block_id` integer,

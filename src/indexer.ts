@@ -14,6 +14,7 @@ const lava_testnet2_start_height = 340778;
 let static_dbProviders: Map<string, schema.Provider> = new Map()
 let static_dbSpecs: Map<string, schema.Spec> = new Map()
 let static_dbPlans: Map<string, schema.Plan> = new Map()
+let static_dbStakes: Map<string, schema.ProviderStake[]> = new Map()
 
 async function isBlockInDb(
     db: BetterSQLite3Database,
@@ -31,9 +32,6 @@ async function isBlockInDb(
 async function InsertBlock(
     block: LavaBlock,
     db: BetterSQLite3Database,
-    static_dbProviders: Map<string, schema.Provider>,
-    static_dbSpecs: Map<string, schema.Spec>,
-    static_dbPlans: Map<string, schema.Plan>
 ) {
     //
     // Init
@@ -43,7 +41,6 @@ async function InsertBlock(
     let dbPlans: Map<string, schema.Plan> = new Map()
     //
     let dbEvents: schema.InsertEvent[] = []
-    let dbProviderStakes: schema.InsertProviderStake[] = []
     let dbPayments: schema.InsertRelayPayment[] = []
     let dbConflictResponses: schema.InsertConflictResponse[] = []
     let dbSubscriptionBuys: schema.InsertSubscriptionBuy[] = []
@@ -55,13 +52,6 @@ async function InsertBlock(
         GetOrSetProvider(dbProviders, static_dbProviders, evt.provider, evt.moniker)
         GetOrSetSpec(dbSpecs, static_dbSpecs, evt.spec)
 
-        dbProviderStakes.push({
-            appliedHeight: evt.stakeAppliedBlock,
-            stake: evt.stake,
-            blockId: block?.height,
-            provider: evt.provider,
-            specId: evt.spec
-        } as schema.InsertProviderStake)
         dbEvents.push({
             blockId: block?.height,
             eventType: schema.LavaProviderEventType.StakeNewProvider,
@@ -130,9 +120,15 @@ async function InsertBlock(
             //
             cu: evt.CU,
             pay: evt.BasePay,
+            //
             qosAvailability: evt.QoSAvailability,
             qosLatency: evt.QoSLatency,
             qosSync: evt.QoSLatency,
+            //
+            qosAvailabilityExc: evt.ExcellenceQoSAvailability,
+            qosLatencyExc: evt.ExcellenceQoSLatency,
+            qosSyncExc: evt.ExcellenceQoSLatency,
+            //
             relays: evt.relayNumber,
             consumer: evt.client
         } as schema.InsertRelayPayment)
@@ -185,15 +181,9 @@ async function InsertBlock(
     //
     // We use a transaction to revert insert on any errors
     await db.transaction(async (tx) => {
+        // insert block
+        await tx.insert(schema.blocks).values({ height: block.height, datetime: new Date(block.datetime) })
 
-        //
-        // First insert block
-        if (block == null) {
-            return
-        }
-        await tx.insert(schema.blocks).values({ height: block.height })
-
-        //
         // Insert all specs
         const arrSpecs = Array.from(dbSpecs.values())
         if (arrSpecs.length > 0) {
@@ -201,8 +191,6 @@ async function InsertBlock(
                 .values(arrSpecs)
                 .onConflictDoNothing();
         }
-
-        //
         // Find / create all providers
         const arrProviders = Array.from(dbProviders.values())
         if (arrProviders.length > 0) {
@@ -210,8 +198,6 @@ async function InsertBlock(
                 .values(arrProviders)
                 .onConflictDoNothing();
         }
-
-        //
         // Find / create all plans
         const arrPlans = Array.from(dbPlans.values())
         if (arrPlans.length > 0) {
@@ -219,8 +205,6 @@ async function InsertBlock(
                 .values(arrPlans)
                 .onConflictDoNothing();
         }
-
-        //
         // Find / create all consumers
         const arrConsumers = Array.from(dbConsumers.values())
         if (arrConsumers.length > 0) {
@@ -228,17 +212,12 @@ async function InsertBlock(
                 .values(arrConsumers)
                 .onConflictDoNothing();
         }
-
-        //
         // Create
         if (dbEvents.length > 0) {
             await tx.insert(schema.events).values(dbEvents)
         }
         if (dbPayments.length > 0) {
             await tx.insert(schema.relayPayments).values(dbPayments)
-        }
-        if (dbProviderStakes.length > 0) {
-            await tx.insert(schema.providerStakes).values(dbProviderStakes)
         }
         if (dbConflictResponses.length > 0) {
             await tx.insert(schema.conflictResponses).values(dbConflictResponses)
@@ -281,7 +260,7 @@ const doBatch = async (
                 let block: null | LavaBlock = null;
                 block = await GetOneLavaBlock(height, client)
                 if (block != null) {
-                    await InsertBlock(block, db, static_dbProviders, static_dbSpecs, static_dbPlans)
+                    await InsertBlock(block, db)
                 } else {
                     console.log('failed getting block', height)
                 }
@@ -317,9 +296,11 @@ const indexer = async (): Promise<void> => {
     await UpdateLatestBlockMeta(
         db,
         lavajsClient,
+        height,
         static_dbProviders,
         static_dbSpecs,
-        static_dbPlans
+        static_dbPlans,
+        static_dbStakes
     )
 
     //
@@ -345,19 +326,22 @@ const indexer = async (): Promise<void> => {
         // Found diff, start
         if (latestHeight > dbHeight) {
             console.log('db height', dbHeight, 'blockchain height', latestHeight)
+            await doBatch(db, client, dbHeight, latestHeight)
+
             //
-            // We'll get the latest meta from RPC
-            // if we're not catching up on more than 1 block
+            // Get the latest meta from RPC if not catching up
+            // catching up = more than 1 block being indexed
             if (latestHeight - dbHeight == 1) {
                 await UpdateLatestBlockMeta(
                     db,
                     lavajsClient,
+                    height,
                     static_dbProviders,
                     static_dbSpecs,
-                    static_dbPlans
+                    static_dbPlans,
+                    static_dbStakes
                 )
             }
-            await doBatch(db, client, dbHeight, latestHeight)
         }
         setTimeout(fillUp, pollEvery)
     }

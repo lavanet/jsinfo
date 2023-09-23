@@ -1,7 +1,7 @@
 {
   "version": "5",
   "dialect": "sqlite",
-  "id": "bef6e556-d45a-43b8-ab6c-82e453b56c0c",
+  "id": "d5c51607-0bfd-4c1f-ab51-f60e4ddb5d5b",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "blocks": {
@@ -354,15 +354,22 @@
     "provider_stakes": {
       "name": "provider_stakes",
       "columns": {
-        "id": {
-          "name": "id",
+        "stake": {
+          "name": "stake",
           "type": "integer",
-          "primaryKey": true,
-          "notNull": true,
+          "primaryKey": false,
+          "notNull": false,
           "autoincrement": false
         },
         "applied_height": {
           "name": "applied_height",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
           "type": "integer",
           "primaryKey": false,
           "notNull": false,
@@ -432,7 +439,14 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {},
+      "compositePrimaryKeys": {
+        "provider_stakes_provider_spec_id_pk": {
+          "columns": [
+            "provider",
+            "spec_id"
+          ]
+        }
+      },
       "uniqueConstraints": {}
     },
     "providers": {
@@ -513,6 +527,27 @@
         },
         "qos_latency": {
           "name": "qos_latency",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "qos_sync_exc": {
+          "name": "qos_sync_exc",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "qos_availability_exc": {
+          "name": "qos_availability_exc",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "qos_latency_exc": {
+          "name": "qos_latency_exc",
           "type": "real",
           "primaryKey": false,
           "notNull": false,

@@ -204,7 +204,6 @@ server.get('/consumer/:addr', consumerOpts, async (request, reply) => {
     //
     const res3 = await db.select().from(schema.conflictResponses).where(eq(schema.conflictResponses.consumer, addr))
     const res4 = await db.select().from(schema.subscriptionBuys).where(eq(schema.subscriptionBuys.consumer, addr))
-    //subscription_buys
     return {
         addr: addr,
         cuSum: cuSum,

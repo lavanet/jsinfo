@@ -124,7 +124,6 @@ async function getLatestProvidersAndSpecsAndStakes(
                 specId: providerStake.chain,
                 stake: parseInt(providerStake.stake.amount),
                 appliedHeight: providerStake.stakeAppliedBlock.toNumber(),
-                status: schema.LavaProviderStakeStatus.Active,
             } as schema.ProviderStake)
 
         })
@@ -185,29 +184,17 @@ export async function UpdateLatestBlockMeta(
         }
 
         //
-        // All stakes
+        // clear all stakes
+        await db.delete(schema.providerStakes)
+        // Insert all stakes
         await Promise.all(Array.from(static_dbStakes.values()).map(async (stakes) => {
             if (stakes.length == 0) {
                 return
             }
-            // Update / Insert
+            // Insert
             await tx.insert(schema.providerStakes)
                 .values(stakes)
                 .onConflictDoNothing();
-
-            // Deactivate non existing
-            const provider = stakes[0].provider
-            let currentStakes = await db.select().from(schema.providerStakes).where(eq(schema.providerStakes, provider))
-            const oldStakes: schema.ProviderStake[] = []
-            currentStakes.forEach((stake) => {
-                if (!stakes.some(e => e.specId == stake.specId)) {
-                    stake.status = schema.LavaProviderStakeStatus.Inactive
-                    oldStakes.push(stake)
-                }
-            })
-            await tx.insert(schema.providerStakes)
-                .values(oldStakes)
-                .onConflictDoNothing() // TODO fix this
         }))
     })
 }

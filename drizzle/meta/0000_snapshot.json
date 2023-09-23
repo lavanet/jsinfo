@@ -1,7 +1,7 @@
 {
   "version": "5",
   "dialect": "sqlite",
-  "id": "d5c51607-0bfd-4c1f-ab51-f60e4ddb5d5b",
+  "id": "79ee3cb1-8ee0-4239-8e6d-5d84c6e5600f",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "blocks": {
@@ -363,13 +363,6 @@
         },
         "applied_height": {
           "name": "applied_height",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "status": {
-          "name": "status",
           "type": "integer",
           "primaryKey": false,
           "notNull": false,

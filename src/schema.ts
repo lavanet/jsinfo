@@ -34,15 +34,9 @@ export const specs = sqliteTable('specs', {
 export type Spec = typeof specs.$inferSelect
 export type InsertSpec = typeof specs.$inferInsert
 
-export enum LavaProviderStakeStatus {
-  Active = 1,
-  Inactive,
-}
-
 export const providerStakes = sqliteTable('provider_stakes', {
   stake: integer('stake'),
   appliedHeight: integer('applied_height'),
-  status: integer('status'),
   
   provider: text('provider').references(() => providers.address),
   specId: text('spec_id').references(() => specs.id),
@@ -60,7 +54,7 @@ export const relayPayments = sqliteTable('relay_payments', {
   relays: integer('relays'),
   cu: integer('cu'),
   pay: integer('pay'),
-  
+
   qosSync: real('qos_sync'),  
   qosAvailability: real('qos_availability'),  
   qosLatency: real('qos_latency'),  

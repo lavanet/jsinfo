@@ -51,7 +51,6 @@ CREATE TABLE `plans` (
 CREATE TABLE `provider_stakes` (
 	`stake` integer,
 	`applied_height` integer,
-	`status` integer,
 	`provider` text,
 	`spec_id` text,
 	`block_id` integer,

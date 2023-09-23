@@ -21,6 +21,9 @@ const latestOpts: RouteShorthandOptions = {
                     height: {
                         type: 'number'
                     },
+                    datetime: {
+                        type: 'number'
+                    },
                     cuSum: {
                         type: 'number'
                     },
@@ -37,8 +40,10 @@ server.get('/latest', latestOpts, async (request, reply) => {
     //
     const latestDbBlocks = await db.select().from(schema.blocks).orderBy(desc(schema.blocks.height)).limit(1)
     let latestHeight = 0
+    let latestDatetime = 0
     if (latestDbBlocks.length != 0) {
         latestHeight = latestDbBlocks[0].height == null ? 0 : latestDbBlocks[0].height
+        latestDatetime = latestDbBlocks[0].datetime == null ? 0 : latestDbBlocks[0].datetime.getTime()
     }
 
     //
@@ -55,7 +60,12 @@ server.get('/latest', latestOpts, async (request, reply) => {
 
     //
     //await db.select().from(schema.providerStakes).orderBy(desc(schema.providerStakes.id))
-    return { height: latestHeight, cuSum: cuSum, relaySum: relaySum }
+    return {
+        height: latestHeight,
+        datetime: latestDatetime,
+        cuSum: cuSum,
+        relaySum: relaySum 
+    }
 })
 
 const providerOpts: RouteShorthandOptions = {

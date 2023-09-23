@@ -62,6 +62,14 @@ export const relayPayments = sqliteTable('relay_payments', {
 export type RelayPayment = typeof relayPayments.$inferSelect
 export type InsertRelayPayment = typeof relayPayments.$inferInsert
 
+export enum LavaProviderEventType {
+  StakeNewProvider = 1,
+  StakeUpdateProvider,
+  ProviderUnstakeCommit,
+  FreezeProvider,
+  UnfreezeProvider,
+}
+
 export const events = sqliteTable('events', {
   id: integer('id').primaryKey(),
   eventType: integer('event_type'),

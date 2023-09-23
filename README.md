@@ -2,6 +2,6 @@
 
 ```
 npm run generate
-bunx ts-node src/main.ts indexer
-bunx ts-node src/main.ts queryserver
+bunx ts-node src/indexer.ts
+bunx ts-node src/query.ts 
 ```

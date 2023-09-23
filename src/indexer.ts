@@ -26,8 +26,8 @@ import { EventAddKeyToProject, ParseEventAddKeyToProject } from "./events/EventA
 import { EventConflictVoteGotCommit, ParseEventConflictVoteGotCommit } from "./events/EventConflictVoteGotCommit"
 import { EventResponseConflictDetection, ParseEventResponseConflictDetection } from "./events/EventResponseConflictDetection"
 import { EventConflictDetectionReceived, ParseEventConflictDetectionReceived } from "./events/EventConflictDetectionReceived"
-import { queryserver } from "./query";
 
+export type LavaClient = Awaited<ReturnType<typeof lavajs.lavanet.ClientFactory.createRPCQueryClient>>
 const rpc = "https://public-rpc-testnet2.lavanet.xyz/"
 const lava_testnet2_start_height = 340778;
 
@@ -287,10 +287,10 @@ function getOrSetPlan(
 
 
 async function getLatestProvidersAndSpecs(
+    client: LavaClient,
     dbProviders: Map<string, schema.Provider>,
-    dbSpecs: Map<string, schema.Spec>
+    dbSpecs: Map<string, schema.Spec>,
 ) {
-    const client = await lavajs.lavanet.ClientFactory.createRPCQueryClient({ rpcEndpoint: rpc })
     const lavaClient = client.lavanet.lava;
 
     let specs = await lavaClient.spec.showAllChains()
@@ -304,8 +304,7 @@ async function getLatestProvidersAndSpecs(
     }))
 }
 
-async function getLatestPlans(dbPlans: Map<string, schema.Plan>) {
-    const client = await lavajs.lavanet.ClientFactory.createRPCQueryClient({ rpcEndpoint: rpc })
+async function getLatestPlans(client: LavaClient, dbPlans: Map<string, schema.Plan>) {
     const lavaClient = client.lavanet.lava;
 
     let plans = await lavaClient.plans.list()
@@ -355,6 +354,7 @@ async function InsertBlock(
 
         dbProviderStakes.push({
             appliedHeight: evt.stakeAppliedBlock,
+            stake: evt.stake,
             blockId: block?.height,
             provider: evt.provider,
             specId: evt.spec
@@ -552,12 +552,13 @@ async function InsertBlock(
 
 async function latestBlockMeta(
     db: BetterSQLite3Database,
+    client: LavaClient,
     static_dbProviders: Map<string, schema.Provider>,
     static_dbSpecs: Map<string, schema.Spec>,
     static_dbPlans: Map<string, schema.Plan>
 ) {
-    await getLatestProvidersAndSpecs(static_dbProviders, static_dbSpecs)
-    await getLatestPlans(static_dbPlans)
+    await getLatestProvidersAndSpecs(client, static_dbProviders, static_dbSpecs)
+    await getLatestPlans(client, static_dbPlans)
     await db.transaction(async (tx) => {
         //
         // Insert all specs
@@ -594,6 +595,7 @@ const indexer = async (): Promise<void> => {
     const client = await StargateClient.connect(rpc)
     const chainId = await client.getChainId()
     const height = await client.getHeight()
+    const lavajsClient = await lavajs.lavanet.ClientFactory.createRPCQueryClient({ rpcEndpoint: rpc })
     console.log('chain', chainId, 'current height', height)
 
     //
@@ -607,7 +609,7 @@ const indexer = async (): Promise<void> => {
     let static_dbProviders: Map<string, schema.Provider> = new Map()
     let static_dbSpecs: Map<string, schema.Spec> = new Map()
     let static_dbPlans: Map<string, schema.Plan> = new Map()
-    await latestBlockMeta(db, static_dbProviders, static_dbSpecs, static_dbPlans) // TODO: do this every new block?
+    await latestBlockMeta(db, lavajsClient, static_dbProviders, static_dbSpecs, static_dbPlans) // TODO: do this every new block?
 
     //
     // Loop forever, filling up blocks
@@ -665,23 +667,4 @@ const indexer = async (): Promise<void> => {
     fillUp()
 }
 
-const main = async (): Promise<void> => {
-    if (process.argv.length != 3) {
-        console.log('bad arguments')
-        return
-    }
-    switch (process.argv[2]) {
-        case 'indexer':
-            indexer()
-            break
-        case 'queryserver':
-            queryserver()
-            break
-        default:
-            console.log('(2) bad arguments')
-            return
-    }
-    return
-}
-
-main()
+indexer()

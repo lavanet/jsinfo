@@ -36,7 +36,9 @@ export type InsertSpec = typeof specs.$inferInsert
 
 export const providerStakes = sqliteTable('provider_stakes', {
   id: integer('id').primaryKey(),
+  stake: integer('stake'),
   appliedHeight: integer('applied_height'),
+  
   provider: text('provider').references(() => providers.address),
   specId: text('spec_id').references(() => specs.id),
   blockId: integer('block_id').references(() => blocks.height),

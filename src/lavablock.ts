@@ -64,7 +64,7 @@ export const GetOneLavaBlock = async (height: number, client: StargateClient): P
     // Block object to return
     const lavaBlock: LavaBlock = {
         height: height,
-        datetime: Math.trunc(Date.parse(block.header.time) / 1000),
+        datetime: Date.parse(block.header.time),
         relayPaymentEvts: [],
         stakeNewProviderEvts: [],
         stakeUpdateProviderEvts: [],

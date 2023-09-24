@@ -1,6 +1,6 @@
 
 import Fastify, { FastifyInstance, RouteShorthandOptions } from 'fastify'
-import { sql, desc, eq } from "drizzle-orm";
+import { sql, desc, eq, gt } from "drizzle-orm";
 import * as schema from './schema';
 import { GetDb } from './utils';
 
@@ -79,15 +79,16 @@ server.get('/latest', latestOpts, async (request, reply) => {
     //
     // Get graph with 1 day resolution
     let res3 = await db.select({
-        date: schema.blocks.datetime,
-        chainId: sql`${schema.relayPayments.specId}`,
+        date: sql<Date>`DATE(${schema.blocks.datetime})`,
+        chainId: schema.relayPayments.specId,
         cuSum: sql<number>`sum(${schema.relayPayments.cu})`,
         relaySum: sql<number>`sum(${schema.relayPayments.relays})`,
         rewardSum: sql<number>`sum(${schema.relayPayments.pay})`
     }).from(schema.relayPayments).
         leftJoin(schema.blocks, eq(schema.relayPayments.blockId, schema.blocks.height)).
-        groupBy(sql`${schema.relayPayments.specId}`).
-        groupBy(sql<Date>`DATE(${schema.blocks.datetime})`)
+        groupBy(sql`${schema.relayPayments.specId}`, sql<Date>`DATE(${schema.blocks.datetime})`).
+        where(gt(sql<Date>`DATE(${schema.blocks.datetime})`, sql<Date>`now() - interval '30 day'`))
+
     console.log(res3)
 
     return {

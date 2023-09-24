@@ -1,8 +1,8 @@
 {
   "version": "5",
   "dialect": "pg",
-  "id": "61a1ae2a-ba29-436f-add4-652c2e6c3cf6",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "98855576-c9fb-416a-bfb8-38fbecf48307",
+  "prevId": "61a1ae2a-ba29-436f-add4-652c2e6c3cf6",
   "tables": {
     "blocks": {
       "name": "blocks",
@@ -338,7 +338,7 @@
       "columns": {
         "stake": {
           "name": "stake",
-          "type": "integer",
+          "type": "bigint",
           "primaryKey": false,
           "notNull": false
         },
@@ -462,19 +462,19 @@
         },
         "relays": {
           "name": "relays",
-          "type": "integer",
+          "type": "bigint",
           "primaryKey": false,
           "notNull": false
         },
         "cu": {
           "name": "cu",
-          "type": "integer",
+          "type": "bigint",
           "primaryKey": false,
           "notNull": false
         },
         "pay": {
           "name": "pay",
-          "type": "integer",
+          "type": "bigint",
           "primaryKey": false,
           "notNull": false
         },

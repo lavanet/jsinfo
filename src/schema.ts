@@ -1,41 +1,41 @@
-import { sqliteTable, text, integer, real, primaryKey } from 'drizzle-orm/sqlite-core';
+import { pgTable, text, integer, serial, bigint, real, primaryKey, timestamp } from 'drizzle-orm/pg-core';
 
-export const blocks = sqliteTable('blocks', {
+export const blocks = pgTable('blocks', {
   height: integer('height').unique(),
-  datetime: integer('datetime', { mode: 'timestamp' }),
+  datetime: timestamp('datetime', { mode: "date" }),
 });
 export type Block = typeof blocks.$inferSelect
 export type InsertBlock = typeof blocks.$inferInsert
 
-export const consumers = sqliteTable('consumers', {
+export const consumers = pgTable('consumers', {
   address: text('address').unique(),
 });
 export type Consumer = typeof consumers.$inferSelect
 export type InsertConsumer = typeof consumers.$inferInsert
 
-export const plans = sqliteTable('plans', {
+export const plans = pgTable('plans', {
   id: text('id').unique(),
   desc: text('desc'),
-  price: integer('pay'),
+  price: bigint('pay', { mode: 'number' }),
 });
 export type Plan = typeof plans.$inferSelect
 export type InsertPlan = typeof plans.$inferInsert
 
-export const providers = sqliteTable('providers', {
+export const providers = pgTable('providers', {
   address: text('address').unique(),
   moniker: text('moniker'),
 });
 export type Provider = typeof providers.$inferSelect
 export type InsertProvider = typeof providers.$inferInsert
 
-export const specs = sqliteTable('specs', {
+export const specs = pgTable('specs', {
   id: text('id').unique(),
 });
 export type Spec = typeof specs.$inferSelect
 export type InsertSpec = typeof specs.$inferInsert
 
-export const providerStakes = sqliteTable('provider_stakes', {
-  stake: integer('stake'),
+export const providerStakes = pgTable('provider_stakes', {
+  stake: bigint('stake', { mode: 'number' }),
   appliedHeight: integer('applied_height'),
   
   provider: text('provider').references(() => providers.address),
@@ -49,11 +49,11 @@ export const providerStakes = sqliteTable('provider_stakes', {
 export type ProviderStake = typeof providerStakes.$inferSelect
 export type InsertProviderStake = typeof providerStakes.$inferInsert
 
-export const relayPayments = sqliteTable('relay_payments', {
-  id: integer('id').primaryKey(),
-  relays: integer('relays'),
-  cu: integer('cu'),
-  pay: integer('pay'),
+export const relayPayments = pgTable('relay_payments', {
+  id: serial('id').primaryKey(),
+  relays: bigint('relays', { mode: 'number' }),
+  cu: bigint('cu', { mode: 'number' }),
+  pay: bigint('pay', { mode: 'number' }),
 
   qosSync: real('qos_sync'),  
   qosAvailability: real('qos_availability'),  
@@ -79,8 +79,8 @@ export enum LavaProviderEventType {
   UnfreezeProvider,
 }
 
-export const events = sqliteTable('events', {
-  id: integer('id').primaryKey(),
+export const events = pgTable('events', {
+  id: serial('id').primaryKey(),
   eventType: integer('event_type'),
   
   provider: text('provider').references(() => providers.address),
@@ -89,8 +89,8 @@ export const events = sqliteTable('events', {
 export type Event = typeof events.$inferSelect
 export type InsertEvent = typeof events.$inferInsert
 
-export const conflictResponses = sqliteTable('conflict_responses', {
-  id: integer('id').primaryKey(),
+export const conflictResponses = pgTable('conflict_responses', {
+  id: serial('id').primaryKey(),
 
   blockId: integer('block_id').references(() => blocks.height),
   consumer: text('consumer').references(() => consumers.address),
@@ -107,8 +107,8 @@ export const conflictResponses = sqliteTable('conflict_responses', {
 export type ConflictResponse = typeof conflictResponses.$inferSelect
 export type InsertConflictResponse = typeof conflictResponses.$inferInsert
 
-export const conflictVotes = sqliteTable('conflict_votes', {
-  id: integer('id').primaryKey(),
+export const conflictVotes = pgTable('conflict_votes', {
+  id: serial('id').primaryKey(),
   voteId: text('vote_id'),
   
   blockId: integer('block_id').references(() => blocks.height),
@@ -118,7 +118,7 @@ export const conflictVotes = sqliteTable('conflict_votes', {
 export type ConflictVote = typeof conflictVotes.$inferSelect
 export type InsertConflictVote = typeof conflictVotes.$inferInsert
 
-export const subscriptionBuys = sqliteTable('subscription_buys', {
+export const subscriptionBuys = pgTable('subscription_buys', {
   blockId: integer('block_id').references(() => blocks.height),
   consumer: text('consumer').references(() => consumers.address),
   duration: integer('number'),

@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "generate": "drizzle-kit generate:sqlite"
+    "generate": "drizzle-kit generate:pg"
   },
   "keywords": [],
   "author": "",
@@ -25,6 +25,7 @@
     "@supercharge/promise-pool": "^3.0.0",
     "better-sqlite3": "^8.6.0",
     "drizzle-orm": "^0.28.6",
-    "fastify": "^4.23.2"
+    "fastify": "^4.23.2",
+    "postgres": "^3.3.5"
   }
 }

@@ -1,12 +1,10 @@
 
 import Fastify, { FastifyInstance, RouteShorthandOptions } from 'fastify'
-import { drizzle, BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
-import Database from 'better-sqlite3';
 import { sql, desc, eq } from "drizzle-orm";
 import * as schema from './schema';
+import { GetDb } from './utils';
 
-const sqlite = new Database('dev.db')
-const db: BetterSQLite3Database = drizzle(sqlite)
+const db = GetDb()
 
 const server: FastifyInstance = Fastify({
     logger: true,
@@ -29,6 +27,12 @@ const latestOpts: RouteShorthandOptions = {
                     },
                     relaySum: {
                         type: 'number'
+                    },
+                    rewardSum: {
+                        type: 'number'
+                    },
+                    stakeSum: {
+                        type: 'number'
                     }
                 }
             }
@@ -47,24 +51,52 @@ server.get('/latest', latestOpts, async (request, reply) => {
     }
 
     //
+    // Get total payments and more
     let cuSum = 0
     let relaySum = 0
+    let rewardSum = 0
     let res = await db.select({
         cuSum: sql<number>`sum(${schema.relayPayments.cu})`,
-        relaySum: sql<number>`sum(${schema.relayPayments.relays})`
+        relaySum: sql<number>`sum(${schema.relayPayments.relays})`,
+        rewardSum: sql<number>`sum(${schema.relayPayments.pay})`
     }).from(schema.relayPayments)
     if (res.length != 0) {
         cuSum = res[0].cuSum
         relaySum = res[0].relaySum
+        rewardSum = relaySum = res[0].rewardSum
     }
 
     //
-    //await db.select().from(schema.providerStakes).orderBy(desc(schema.providerStakes.id))
+    // Get total provider stake
+    let stakeSum = 0
+    let res2 = await db.select({
+        stakeSum: sql<number>`sum(${schema.providerStakes.stake})`,
+    }).from(schema.providerStakes)
+    if (res2.length != 0) {
+        stakeSum = res2[0].stakeSum
+    }
+
+    //
+    // Get graph with 1 day resolution
+    let res3 = await db.select({
+        date: schema.blocks.datetime,
+        chainId: sql`${schema.relayPayments.specId}`,
+        cuSum: sql<number>`sum(${schema.relayPayments.cu})`,
+        relaySum: sql<number>`sum(${schema.relayPayments.relays})`,
+        rewardSum: sql<number>`sum(${schema.relayPayments.pay})`
+    }).from(schema.relayPayments).
+        leftJoin(schema.blocks, eq(schema.relayPayments.blockId, schema.blocks.height)).
+        groupBy(sql`${schema.relayPayments.specId}`).
+        groupBy(sql<Date>`DATE(${schema.blocks.datetime})`)
+    console.log(res3)
+
     return {
         height: latestHeight,
         datetime: latestDatetime,
         cuSum: cuSum,
-        relaySum: relaySum 
+        relaySum: relaySum,
+        rewardSum: rewardSum,
+        stakeSum: stakeSum,
     }
 })
 

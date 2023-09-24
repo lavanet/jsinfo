@@ -1,6 +1,5 @@
 import * as lavajs from '@lavanet/lavajs';
-import { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
-import { eq } from "drizzle-orm";
+import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from './schema';
 
 export type LavaClient = Awaited<ReturnType<typeof lavajs.lavanet.ClientFactory.createRPCQueryClient>>
@@ -144,7 +143,7 @@ async function getLatestPlans(client: LavaClient, dbPlans: Map<string, schema.Pl
 }
 
 export async function UpdateLatestBlockMeta(
-    db: BetterSQLite3Database,
+    db: PostgresJsDatabase,
     client: LavaClient,
     height: number,
     withStakes: boolean,
@@ -185,6 +184,7 @@ export async function UpdateLatestBlockMeta(
         }
 
         if (withStakes) {
+            console.log('withStakes', withStakes)
             //
             // clear all stakes
             await db.delete(schema.providerStakes)

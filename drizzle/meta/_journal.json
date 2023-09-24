@@ -1,12 +1,19 @@
 {
   "version": "5",
-  "dialect": "sqlite",
+  "dialect": "pg",
   "entries": [
     {
       "idx": 0,
       "version": "5",
-      "when": 1695498151106,
-      "tag": "0000_soft_shatterstar",
+      "when": 1695585579859,
+      "tag": "0000_flat_smasher",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1695585731516,
+      "tag": "0001_same_magik",
       "breakpoints": true
     }
   ]

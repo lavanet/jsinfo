@@ -1,23 +1,22 @@
 import { StargateClient } from "@cosmjs/stargate"
-import { drizzle, BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
-import { migrate } from "drizzle-orm/better-sqlite3/migrator";
+import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { eq, desc } from "drizzle-orm";
-import Database from 'better-sqlite3';
 import * as lavajs from '@lavanet/lavajs';
 import * as schema from './schema';
 import { PromisePool } from '@supercharge/promise-pool'
 import { LavaBlock, GetOneLavaBlock } from './lavablock'
 import { UpdateLatestBlockMeta, GetOrSetConsumer, GetOrSetPlan, GetOrSetProvider, GetOrSetSpec } from './setlatest'
+import { MigrateDb, GetDb } from "./utils";
 
 const rpc = "https://public-rpc-testnet2.lavanet.xyz/"
-const lava_testnet2_start_height = 340778;
+const lava_testnet2_start_height = 340779; // 340778 has a weird date (9 months ago)
 let static_dbProviders: Map<string, schema.Provider> = new Map()
 let static_dbSpecs: Map<string, schema.Spec> = new Map()
 let static_dbPlans: Map<string, schema.Plan> = new Map()
 let static_dbStakes: Map<string, schema.ProviderStake[]> = new Map()
 
 async function isBlockInDb(
-    db: BetterSQLite3Database,
+    db: PostgresJsDatabase,
     height: number,
 ): Promise<boolean> {
     //
@@ -31,7 +30,7 @@ async function isBlockInDb(
 
 async function InsertBlock(
     block: LavaBlock,
-    db: BetterSQLite3Database,
+    db: PostgresJsDatabase,
 ) {
     //
     // Init
@@ -232,7 +231,7 @@ async function InsertBlock(
 }
 
 const doBatch = async (
-    db: BetterSQLite3Database,
+    db: PostgresJsDatabase,
     client: StargateClient,
     dbHeight: number,
     latestHeight: number,
@@ -240,7 +239,7 @@ const doBatch = async (
     //
     // Start filling up
     const batchSize = 250
-    const concurrentSize = 2
+    const concurrentSize = 8
     const blockList = []
     for (let i = dbHeight; i <= latestHeight; i++) {
         blockList.push(i)
@@ -292,9 +291,8 @@ const indexer = async (): Promise<void> => {
 
     //
     // DB
-    const sqlite = new Database('dev.db')
-    const db: BetterSQLite3Database = drizzle(sqlite)
-    await migrate(db, { migrationsFolder: "drizzle" })
+    await MigrateDb()
+    const db = GetDb()
 
     //
     // Insert providers, specs & plans from latest block 

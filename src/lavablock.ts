@@ -160,6 +160,7 @@ export const GetOneLavaBlock = async (height: number, client: StargateClient): P
                 case 'redelegate':
                 case 'create_validator':
                 case 'edit_validator':
+                case 'unbond':
                     break;
 
                 default:

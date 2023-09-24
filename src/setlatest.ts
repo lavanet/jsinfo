@@ -147,6 +147,7 @@ export async function UpdateLatestBlockMeta(
     db: BetterSQLite3Database,
     client: LavaClient,
     height: number,
+    withStakes: boolean,
     static_dbProviders: Map<string, schema.Provider>,
     static_dbSpecs: Map<string, schema.Spec>,
     static_dbPlans: Map<string, schema.Plan>,
@@ -183,18 +184,20 @@ export async function UpdateLatestBlockMeta(
                 .onConflictDoNothing();
         }
 
-        //
-        // clear all stakes
-        await db.delete(schema.providerStakes)
-        // Insert all stakes
-        await Promise.all(Array.from(static_dbStakes.values()).map(async (stakes) => {
-            if (stakes.length == 0) {
-                return
-            }
-            // Insert
-            await tx.insert(schema.providerStakes)
-                .values(stakes)
-                .onConflictDoNothing();
-        }))
+        if (withStakes) {
+            //
+            // clear all stakes
+            await db.delete(schema.providerStakes)
+            // Insert all stakes
+            await Promise.all(Array.from(static_dbStakes.values()).map(async (stakes) => {
+                if (stakes.length == 0) {
+                    return
+                }
+                // Insert
+                await tx.insert(schema.providerStakes)
+                    .values(stakes)
+                    .onConflictDoNothing();
+            }))
+        }
     })
 }

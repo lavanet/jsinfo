@@ -240,7 +240,7 @@ const doBatch = async (
     //
     // Start filling up
     const batchSize = 250
-    const concurrentSize = 1
+    const concurrentSize = 2
     const blockList = []
     for (let i = dbHeight; i <= latestHeight; i++) {
         blockList.push(i)
@@ -267,7 +267,12 @@ const doBatch = async (
             })
 
         let timeTaken = performance.now() - start;
-        console.log('errors', errors, 'batches remaining', blockList.length / batchSize, 'time', timeTaken)
+        console.log(
+            'errors', errors,
+            'batches remaining:', blockList.length / batchSize,
+            'time', timeTaken / 1000,
+            'est remaining:', Math.trunc((timeTaken / 1000) * blockList.length / batchSize), 's'
+        )
         //
         // Add errors to start of queue
         errors.forEach((err) => {
@@ -297,6 +302,7 @@ const indexer = async (): Promise<void> => {
         db,
         lavajsClient,
         height,
+        false,
         static_dbProviders,
         static_dbSpecs,
         static_dbPlans,
@@ -336,6 +342,7 @@ const indexer = async (): Promise<void> => {
                     db,
                     lavajsClient,
                     height,
+                    true,
                     static_dbProviders,
                     static_dbSpecs,
                     static_dbPlans,

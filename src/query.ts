@@ -37,6 +37,9 @@ const latestOpts: RouteShorthandOptions = {
                     stakeSum: {
                         type: 'number'
                     },
+                    topProviders: {
+                        type: 'array',
+                    },
                     data: {
                         type: 'array'
                     }
@@ -83,6 +86,15 @@ server.get('/latest', latestOpts, async (request, reply) => {
     }
 
     //
+    // Get "top" providers
+    let res4 = await db.select({
+        address: schema.relayPayments.provider,
+        rewardSum: sql<number>`sum(${schema.relayPayments.pay})`,
+    }).from(schema.relayPayments).
+        groupBy(schema.relayPayments.provider).
+        orderBy(desc(sql<number>`sum(${schema.relayPayments.pay})`))
+    
+    //
     // Get graph with 1 day resolution
     let res3 = await db.select({
         date: sql<Date>`DATE(${schema.blocks.datetime})`,
@@ -93,7 +105,8 @@ server.get('/latest', latestOpts, async (request, reply) => {
     }).from(schema.relayPayments).
         leftJoin(schema.blocks, eq(schema.relayPayments.blockId, schema.blocks.height)).
         groupBy(sql`${schema.relayPayments.specId}`, sql<Date>`DATE(${schema.blocks.datetime})`).
-        where(gt(sql<Date>`DATE(${schema.blocks.datetime})`, sql<Date>`now() - interval '30 day'`))
+        where(gt(sql<Date>`DATE(${schema.blocks.datetime})`, sql<Date>`now() - interval '30 day'`)).
+        orderBy(sql<Date>`DATE(${schema.blocks.datetime})`)
     return {
         height: latestHeight,
         datetime: latestDatetime,
@@ -101,6 +114,7 @@ server.get('/latest', latestOpts, async (request, reply) => {
         relaySum: relaySum,
         rewardSum: rewardSum,
         stakeSum: stakeSum,
+        topProviders: res4,
         data: res3,
     }
 })
@@ -154,7 +168,7 @@ server.get('/provider/:addr', providerOpts, async (request, reply) => {
     }
 
     //
-    const res = await db.select().from(schema.providers).where(eq(schema.providers.address, addr))
+    const res = await db.select().from(schema.providers).where(eq(schema.providers.address, addr)).limit(1)
     if (res.length != 1) {
         return {} // TODO: errors
     }
@@ -175,10 +189,11 @@ server.get('/provider/:addr', providerOpts, async (request, reply) => {
         relaySum = res2[0].relaySum
         rewardSum = res2[0].rewardSum
     }
-    const res6 = await db.select().from(schema.relayPayments).where(eq(schema.relayPayments.provider, addr))
-
+    const res6 = await db.select().from(schema.relayPayments).where(eq(schema.relayPayments.provider, addr)).
+        orderBy(schema.relayPayments.id).offset(0).limit(10)
     //
-    const res3 = await db.select().from(schema.events).where(eq(schema.events.provider, addr))
+    const res3 = await db.select().from(schema.events).where(eq(schema.events.provider, addr)).
+        orderBy(schema.events.id).offset(0).limit(10)
 
     //
     // Get chains

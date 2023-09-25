@@ -1,4 +1,4 @@
-import { pgTable, text, integer, serial, bigint, real, primaryKey, timestamp } from 'drizzle-orm/pg-core';
+import { pgTable, index, text, integer, serial, bigint, real, primaryKey, timestamp } from 'drizzle-orm/pg-core';
 
 export const blocks = pgTable('blocks', {
   height: integer('height').unique(),
@@ -37,7 +37,7 @@ export type InsertSpec = typeof specs.$inferInsert
 export const providerStakes = pgTable('provider_stakes', {
   stake: bigint('stake', { mode: 'number' }),
   appliedHeight: integer('applied_height'),
-  
+
   provider: text('provider').references(() => providers.address),
   specId: text('spec_id').references(() => specs.id),
   blockId: integer('block_id').references(() => blocks.height),
@@ -55,11 +55,11 @@ export const relayPayments = pgTable('relay_payments', {
   cu: bigint('cu', { mode: 'number' }),
   pay: bigint('pay', { mode: 'number' }),
 
-  qosSync: real('qos_sync'),  
-  qosAvailability: real('qos_availability'),  
-  qosLatency: real('qos_latency'),  
-  
-  qosSyncExc: real('qos_sync_exc'),  
+  qosSync: real('qos_sync'),
+  qosAvailability: real('qos_availability'),
+  qosLatency: real('qos_latency'),
+
+  qosSyncExc: real('qos_sync_exc'),
   qosAvailabilityExc: real('qos_availability_exc'),
   qosLatencyExc: real('qos_latency_exc'),
 
@@ -67,7 +67,12 @@ export const relayPayments = pgTable('relay_payments', {
   specId: text('spec_id').references(() => specs.id),
   blockId: integer('block_id').references(() => blocks.height),
   consumer: text('consumer').references(() => consumers.address),
+}, (table) => {
+  return {
+    nameIdx: index("name_idx").on(table.specId),
+  };
 });
+
 export type RelayPayment = typeof relayPayments.$inferSelect
 export type InsertRelayPayment = typeof relayPayments.$inferInsert
 
@@ -82,7 +87,7 @@ export enum LavaProviderEventType {
 export const events = pgTable('events', {
   id: serial('id').primaryKey(),
   eventType: integer('event_type'),
-  
+
   provider: text('provider').references(() => providers.address),
   blockId: integer('block_id').references(() => blocks.height),
 });
@@ -95,7 +100,7 @@ export const conflictResponses = pgTable('conflict_responses', {
   blockId: integer('block_id').references(() => blocks.height),
   consumer: text('consumer').references(() => consumers.address),
   specId: text('spec_id').references(() => specs.id),
-  
+
   voteId: text('vote_id'),
   requestBlock: integer('request_block'),
   voteDeadline: integer('vote_deadline'),
@@ -110,10 +115,10 @@ export type InsertConflictResponse = typeof conflictResponses.$inferInsert
 export const conflictVotes = pgTable('conflict_votes', {
   id: serial('id').primaryKey(),
   voteId: text('vote_id'),
-  
+
   blockId: integer('block_id').references(() => blocks.height),
   provider: text('provider').references(() => providers.address),
-  
+
 });
 export type ConflictVote = typeof conflictVotes.$inferSelect
 export type InsertConflictVote = typeof conflictVotes.$inferInsert

@@ -5,6 +5,8 @@
 sudo -u postgres dropdb jsinfo
 sudo -u postgres createdb jsinfo
 npm run generate
+
+sudo -u jsinfo psql
 ```
 
 ### Run

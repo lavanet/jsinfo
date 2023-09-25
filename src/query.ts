@@ -1,3 +1,6 @@
+// TODOs:
+// 1. Errors
+// 2. Pagination
 
 import Fastify, { FastifyInstance, RouteShorthandOptions } from 'fastify'
 import { sql, desc, eq, gt } from "drizzle-orm";
@@ -33,6 +36,9 @@ const latestOpts: RouteShorthandOptions = {
                     },
                     stakeSum: {
                         type: 'number'
+                    },
+                    data: {
+                        type: 'array'
                     }
                 }
             }
@@ -63,7 +69,7 @@ server.get('/latest', latestOpts, async (request, reply) => {
     if (res.length != 0) {
         cuSum = res[0].cuSum
         relaySum = res[0].relaySum
-        rewardSum = relaySum = res[0].rewardSum
+        rewardSum = res[0].rewardSum
     }
 
     //
@@ -88,9 +94,6 @@ server.get('/latest', latestOpts, async (request, reply) => {
         leftJoin(schema.blocks, eq(schema.relayPayments.blockId, schema.blocks.height)).
         groupBy(sql`${schema.relayPayments.specId}`, sql<Date>`DATE(${schema.blocks.datetime})`).
         where(gt(sql<Date>`DATE(${schema.blocks.datetime})`, sql<Date>`now() - interval '30 day'`))
-
-    console.log(res3)
-
     return {
         height: latestHeight,
         datetime: latestDatetime,
@@ -98,6 +101,7 @@ server.get('/latest', latestOpts, async (request, reply) => {
         relaySum: relaySum,
         rewardSum: rewardSum,
         stakeSum: stakeSum,
+        data: res3,
     }
 })
 
@@ -124,7 +128,16 @@ const providerOpts: RouteShorthandOptions = {
                     },
                     events: {
                         type: 'array',
-                    }
+                    },
+                    stakes: {
+                        type: 'array',
+                    },
+                    payments: {
+                        type: 'array',
+                    },
+                    data: {
+                        type: 'array',
+                    },
                 }
             }
         }
@@ -148,22 +161,39 @@ server.get('/provider/:addr', providerOpts, async (request, reply) => {
     const provider = res[0]
 
     //
+    // Sums
     let cuSum = 0
     let relaySum = 0
     let rewardSum = 0
     const res2 = await db.select({
         cuSum: sql<number>`sum(${schema.relayPayments.cu})`,
         relaySum: sql<number>`sum(${schema.relayPayments.relays})`,
-        rewardSum: sql<number>`sum(${schema.relayPayments.pay})`
+        rewardSum: sql<number>`sum(${schema.relayPayments.pay})`,
     }).from(schema.relayPayments).where(eq(schema.relayPayments.provider, addr))
     if (res2.length == 1) {
         cuSum = res2[0].cuSum
         relaySum = res2[0].relaySum
         rewardSum = res2[0].rewardSum
     }
+    const res6 = await db.select().from(schema.relayPayments).where(eq(schema.relayPayments.provider, addr))
 
     //
     const res3 = await db.select().from(schema.events).where(eq(schema.events.provider, addr))
+
+    //
+    // Get chains
+    let res4 = await db.select({
+        chainId: schema.relayPayments.specId,
+        cuSum: sql<number>`sum(${schema.relayPayments.cu})`,
+        relaySum: sql<number>`sum(${schema.relayPayments.relays})`,
+        rewardSum: sql<number>`sum(${schema.relayPayments.pay})`
+    }).from(schema.relayPayments).
+        groupBy(sql`${schema.relayPayments.specId}`)
+
+    //
+    // Get stakes
+    let res5 = await db.select().from(schema.providerStakes).where(eq(schema.providerStakes.provider, addr))
+
     return {
         addr: provider.address,
         moniker: provider.moniker,
@@ -171,6 +201,9 @@ server.get('/provider/:addr', providerOpts, async (request, reply) => {
         relaySum: relaySum,
         rewardSum: rewardSum,
         events: res3,
+        stakes: res5,
+        payments: res6,
+        data: res4,
     }
 })
 

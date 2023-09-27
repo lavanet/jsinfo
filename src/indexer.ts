@@ -310,10 +310,19 @@ const indexer = async (): Promise<void> => {
     //
     // Loop forever, filling up blocks
     const pollEvery = 1000 // ms
+    const loopFill = () => (setTimeout(fillUp, pollEvery))
     const fillUp = async () => {
         //
         // Blockchain latest
-        const latestHeight = await client.getHeight();
+        let latestHeight = 0
+        try {
+            latestHeight = await client.getHeight();
+        } catch (e) {
+            console.log('client.getHeight', e)
+            loopFill()
+            return
+        }
+
 
         //
         // Find latest block on DB
@@ -336,19 +345,23 @@ const indexer = async (): Promise<void> => {
             // Get the latest meta from RPC if not catching up
             // catching up = more than 1 block being indexed
             if (latestHeight - dbHeight == 1) {
-                await UpdateLatestBlockMeta(
-                    db,
-                    lavajsClient,
-                    height,
-                    true,
-                    static_dbProviders,
-                    static_dbSpecs,
-                    static_dbPlans,
-                    static_dbStakes
-                )
+                try {
+                    await UpdateLatestBlockMeta(
+                        db,
+                        lavajsClient,
+                        height,
+                        true,
+                        static_dbProviders,
+                        static_dbSpecs,
+                        static_dbPlans,
+                        static_dbStakes
+                    )
+                } catch (e) {
+                    console.log('UpdateLatestBlockMeta', e)
+                }
             }
         }
-        setTimeout(fillUp, pollEvery)
+        loopFill()
     }
     fillUp()
 }

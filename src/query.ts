@@ -3,7 +3,7 @@
 // 2. Pagination
 
 import Fastify, { FastifyInstance, RouteShorthandOptions } from 'fastify'
-import { sql, desc, eq, gt } from "drizzle-orm";
+import { sql, desc, eq, gt, inArray } from "drizzle-orm";
 import * as schema from './schema';
 import { GetDb } from './utils';
 
@@ -93,7 +93,59 @@ server.get('/latest', latestOpts, async (request, reply) => {
     }).from(schema.relayPayments).
         groupBy(schema.relayPayments.provider).
         orderBy(desc(sql<number>`sum(${schema.relayPayments.pay})`))
-    
+    let providersAddrs: string[] = []
+    res4.map((provider) => {
+        providersAddrs.push(provider.address!)
+    })
+    //
+    // provider details
+    let res44 = await db.select().from(schema.providers).where(inArray(schema.providers.address, providersAddrs))
+    let res444 = await db.select({
+        provider: schema.providerStakes.provider,
+        nStakes: sql<number>`count(${schema.providerStakes.specId})`,
+    }).from(schema.providerStakes).groupBy(schema.providerStakes.provider)
+    type ProviderDetails = {
+        addr: string,
+        moniker: string,
+        rewardSum: number,
+        nStakes: number,
+    };
+    let providersDetails: ProviderDetails[] = []
+    res4.forEach((provider) => {
+        let moniker = ''
+        let nStakes = 0
+        let tmp1 = res44.find((el) => el.address == provider.address)
+        if (tmp1) {
+            moniker = tmp1.moniker!
+        }
+        let tmp2 = res444.find((el) => el.provider == provider.address)
+        if (tmp2) {
+            nStakes = tmp2.nStakes
+        }
+        providersDetails.push({
+            addr: provider.address!,
+            moniker: moniker,
+            rewardSum: provider.rewardSum,
+            nStakes: nStakes,
+        })
+    })
+
+    //
+    // Get top chains
+    let res8 = await db.select({
+        chainId: schema.relayPayments.specId,
+        relaySum: sql<number>`sum(${schema.relayPayments.relays})`,
+    }).from(schema.relayPayments).
+        leftJoin(schema.blocks, eq(schema.relayPayments.blockId, schema.blocks.height)).
+        groupBy(sql`${schema.relayPayments.specId}`).
+        where(gt(sql<Date>`DATE(${schema.blocks.datetime})`, sql<Date>`now() - interval '30 day'`)).
+        orderBy(desc(sql<number>`sum(${schema.relayPayments.relays})`)).limit(8)
+    let getChains: string[] = []
+    res8.map((chain) => {
+        getChains.push(chain.chainId!)
+    })
+    console.log(getChains)
+
     //
     // Get graph with 1 day resolution
     let res3 = await db.select({
@@ -106,6 +158,7 @@ server.get('/latest', latestOpts, async (request, reply) => {
         leftJoin(schema.blocks, eq(schema.relayPayments.blockId, schema.blocks.height)).
         groupBy(sql`${schema.relayPayments.specId}`, sql<Date>`DATE(${schema.blocks.datetime})`).
         where(gt(sql<Date>`DATE(${schema.blocks.datetime})`, sql<Date>`now() - interval '30 day'`)).
+        where(inArray(schema.relayPayments.specId, getChains)).
         orderBy(sql<Date>`DATE(${schema.blocks.datetime})`)
     return {
         height: latestHeight,
@@ -114,7 +167,7 @@ server.get('/latest', latestOpts, async (request, reply) => {
         relaySum: relaySum,
         rewardSum: rewardSum,
         stakeSum: stakeSum,
-        topProviders: res4,
+        topProviders: providersDetails,
         data: res3,
     }
 })
@@ -207,7 +260,8 @@ server.get('/provider/:addr', providerOpts, async (request, reply) => {
 
     //
     // Get stakes
-    let res5 = await db.select().from(schema.providerStakes).where(eq(schema.providerStakes.provider, addr))
+    let res5 = await db.select().from(schema.providerStakes).
+        where(eq(schema.providerStakes.provider, addr)).orderBy(desc(schema.providerStakes.stake))
 
     return {
         addr: provider.address,
@@ -262,7 +316,7 @@ server.get('/consumer/:addr', consumerOpts, async (request, reply) => {
     }
 
     //
-    const res = await db.select().from(schema.consumers).where(eq(schema.consumers.address, addr))
+    const res = await db.select().from(schema.consumers).where(eq(schema.consumers.address, addr)).limit(1)
     if (res.length != 1) {
         return {} // TODO: errors
     }
@@ -272,6 +326,7 @@ server.get('/consumer/:addr', consumerOpts, async (request, reply) => {
     let relaySum = 0
     let rewardSum = 0
     const res2 = await db.select({
+
         cuSum: sql<number>`sum(${schema.relayPayments.cu})`,
         relaySum: sql<number>`sum(${schema.relayPayments.relays})`,
         rewardSum: sql<number>`sum(${schema.relayPayments.pay})`
@@ -283,8 +338,10 @@ server.get('/consumer/:addr', consumerOpts, async (request, reply) => {
     }
 
     //
-    const res3 = await db.select().from(schema.conflictResponses).where(eq(schema.conflictResponses.consumer, addr))
-    const res4 = await db.select().from(schema.subscriptionBuys).where(eq(schema.subscriptionBuys.consumer, addr))
+    const res3 = await db.select().from(schema.conflictResponses).where(eq(schema.conflictResponses.consumer, addr)).
+        orderBy(desc(schema.conflictResponses.id)).offset(0).limit(10)
+    const res4 = await db.select().from(schema.subscriptionBuys).where(eq(schema.subscriptionBuys.consumer, addr)).
+        orderBy(desc(schema.subscriptionBuys.blockId)).offset(0).limit(10)
     return {
         addr: addr,
         cuSum: cuSum,

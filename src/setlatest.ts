@@ -122,7 +122,7 @@ async function getLatestProvidersAndSpecsAndStakes(
                 blockId: height,
                 specId: providerStake.chain,
                 stake: parseInt(providerStake.stake.amount),
-                appliedHeight: providerStake.stakeAppliedBlock.toNumber(),
+                appliedHeight: providerStake.stakeAppliedBlock.toSigned().toInt(),
             } as schema.ProviderStake)
 
         })

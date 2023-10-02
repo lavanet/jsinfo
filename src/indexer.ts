@@ -274,6 +274,7 @@ const doBatch = async (
         )
         //
         // Add errors to start of queue
+        // TODO: delay the execution of this to the next iteration
         errors.forEach((err) => {
             blockList.unshift(err.item)
         })
@@ -309,7 +310,7 @@ const indexer = async (): Promise<void> => {
 
     //
     // Loop forever, filling up blocks
-    const pollEvery = 1000 // ms
+    const pollEvery = 3000 // ms
     const loopFill = () => (setTimeout(fillUp, pollEvery))
     const fillUp = async () => {
         //

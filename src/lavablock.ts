@@ -40,11 +40,19 @@ export const GetOneLavaBlock = async (height: number, client: StargateClient): P
     // Get block (mostly for date)
     const pathBlocks = `./static/${height.toString()}.json`
     let block: Block;
+    let excp = false
     try {
+        excp = false
         block = JSON.parse(readFileSync(pathBlocks, 'utf-8')) as Block
     }
     catch {
+        excp = true
+    }
+    if (excp || block!.header == undefined) {
         block = await client.getBlock(height)
+        if (block!.header == undefined) {
+            throw('block!.header == undefined')
+        }
         writeFileSync(pathBlocks, JSON.stringify(block, null, 0), 'utf-8')
     }
 
@@ -53,10 +61,17 @@ export const GetOneLavaBlock = async (height: number, client: StargateClient): P
     const pathTxs = `./static/${height.toString()}_txs.json`
     let txs: IndexedTx[] = []
     try {
+        excp = false
         txs = JSON.parse(readFileSync(pathTxs, 'utf-8')) as IndexedTx[]
     }
     catch {
-        txs = await client.searchTx('tx.height=' + height);
+        excp = true
+    }
+    if (excp) {
+        txs = await client.searchTx('tx.height=' + height)
+        if (txs.length == 0 && block!.txs.length != 0) {
+            throw('txs.length == 0 && block!.txs.length != 0')
+        }
         writeFileSync(pathTxs, JSON.stringify(txs, null, 0), 'utf-8')
     }
 
@@ -64,7 +79,7 @@ export const GetOneLavaBlock = async (height: number, client: StargateClient): P
     // Block object to return
     const lavaBlock: LavaBlock = {
         height: height,
-        datetime: Date.parse(block.header.time),
+        datetime: Date.parse(block!.header.time),
         relayPaymentEvts: [],
         stakeNewProviderEvts: [],
         stakeUpdateProviderEvts: [],
@@ -141,11 +156,13 @@ export const GetOneLavaBlock = async (height: number, client: StargateClient): P
                 case 'lava_conflict_detection_received':
                     lavaBlock.conflictDetectionReceivedEvts.push(ParseEventConflictDetectionReceived(evt));
                     break
+                case 'lava_conflict_vote_got_reveal':
+                    break
 
                 case 'submit_proposal':
                 case 'proposal_deposit':
                 case 'proposal_vote':
-                    break;
+                    break
 
                 case 'coin_received':
                 case 'coinbase':
@@ -161,7 +178,7 @@ export const GetOneLavaBlock = async (height: number, client: StargateClient): P
                 case 'create_validator':
                 case 'edit_validator':
                 case 'unbond':
-                    break;
+                    break
 
                 default:
                     console.log('uknown event', height, evt.type)

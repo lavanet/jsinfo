@@ -1,4 +1,4 @@
-import { StargateClient } from "@cosmjs/stargate"
+import { StargateClient, Block } from "@cosmjs/stargate"
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { eq, desc } from "drizzle-orm";
 import * as lavajs from '@lavanet/lavajs';
@@ -8,7 +8,7 @@ import { LavaBlock, GetOneLavaBlock } from './lavablock'
 import { UpdateLatestBlockMeta, GetOrSetConsumer, GetOrSetPlan, GetOrSetProvider, GetOrSetSpec } from './setlatest'
 import { MigrateDb, GetDb } from "./utils";
 
-const rpc = "https://public-rpc-testnet2.lavanet.xyz/"
+const rpc = "https://public-rpc.lavanet.xyz/"
 const lava_testnet2_start_height = 340779; // 340778 has a weird date (9 months ago)
 let static_dbProviders: Map<string, schema.Provider> = new Map()
 let static_dbSpecs: Map<string, schema.Spec> = new Map()
@@ -239,7 +239,7 @@ const doBatch = async (
     //
     // Start filling up
     const batchSize = 250
-    const concurrentSize = 8
+    const concurrentSize = 2
     const blockList = []
     for (let i = dbHeight; i <= latestHeight; i++) {
         blockList.push(i)

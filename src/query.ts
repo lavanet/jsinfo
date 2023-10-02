@@ -243,10 +243,10 @@ server.get('/provider/:addr', providerOpts, async (request, reply) => {
         rewardSum = res2[0].rewardSum
     }
     const res6 = await db.select().from(schema.relayPayments).where(eq(schema.relayPayments.provider, addr)).
-        orderBy(schema.relayPayments.id).offset(0).limit(10)
+        orderBy(desc(schema.relayPayments.id)).offset(0).limit(10)
     //
     const res3 = await db.select().from(schema.events).where(eq(schema.events.provider, addr)).
-        orderBy(schema.events.id).offset(0).limit(10)
+        orderBy(desc(schema.events.id)).offset(0).limit(10)
 
     //
     // Get chains

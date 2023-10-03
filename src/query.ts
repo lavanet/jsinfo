@@ -68,10 +68,10 @@ server.get('/latest', latestOpts, async (request, reply) => {
     let relaySum = 0
     let rewardSum = 0
     let res = await db.select({
-        cuSum: sql<number>`sum(${schema.relayPayments.cu})`,
-        relaySum: sql<number>`sum(${schema.relayPayments.relays})`,
-        rewardSum: sql<number>`sum(${schema.relayPayments.pay})`
-    }).from(schema.relayPayments)
+        cuSum: sql<number>`sum(${schema.relayPaymentsAggView.cuSum})`,
+        relaySum: sql<number>`sum(${schema.relayPaymentsAggView.relaySum})`,
+        rewardSum: sql<number>`sum(${schema.relayPaymentsAggView.rewardSum})`
+    }).from(schema.relayPaymentsAggView)
     if (res.length != 0) {
         cuSum = res[0].cuSum
         relaySum = res[0].relaySum
@@ -91,11 +91,11 @@ server.get('/latest', latestOpts, async (request, reply) => {
     //
     // Get "top" providers
     let res4 = await db.select({
-        address: schema.relayPayments.provider,
-        rewardSum: sql<number>`sum(${schema.relayPayments.pay})`,
-    }).from(schema.relayPayments).
-        groupBy(schema.relayPayments.provider).
-        orderBy(desc(sql<number>`sum(${schema.relayPayments.pay})`))
+        address: schema.relayPaymentsAggView.provider,
+        rewardSum: sql<number>`sum(${schema.relayPaymentsAggView.rewardSum})`,
+    }).from(schema.relayPaymentsAggView).
+        groupBy(schema.relayPaymentsAggView.provider).
+        orderBy(desc(sql<number>`sum(${schema.relayPaymentsAggView.rewardSum})`))
     let providersAddrs: string[] = []
     res4.map((provider) => {
         providersAddrs.push(provider.address!)
@@ -136,13 +136,12 @@ server.get('/latest', latestOpts, async (request, reply) => {
     //
     // Get top chains
     let res8 = await db.select({
-        chainId: schema.relayPayments.specId,
-        relaySum: sql<number>`sum(${schema.relayPayments.relays})`,
-    }).from(schema.relayPayments).
-        leftJoin(schema.blocks, eq(schema.relayPayments.blockId, schema.blocks.height)).
-        groupBy(sql`${schema.relayPayments.specId}`).
-        where(gt(sql<Date>`DATE(${schema.blocks.datetime})`, sql<Date>`now() - interval '30 day'`)).
-        orderBy(desc(sql<number>`sum(${schema.relayPayments.relays})`))
+        chainId: schema.relayPaymentsAggView.chainId,
+        relaySum: sql<number>`sum(${schema.relayPaymentsAggView.relaySum})`,
+    }).from(schema.relayPaymentsAggView).
+        groupBy(sql`${schema.relayPaymentsAggView.chainId}`).
+        where(gt(sql<Date>`DATE(${schema.relayPaymentsAggView.date})`, sql<Date>`now() - interval '30 day'`)).
+        orderBy(desc(sql<number>`sum(${schema.relayPaymentsAggView.relaySum})`))
     let getChains: string[] = []
     res8.map((chain) => {
         if (getChains.length < 8) {
@@ -153,17 +152,16 @@ server.get('/latest', latestOpts, async (request, reply) => {
     //
     // Get graph with 1 day resolution
     let res3 = await db.select({
-        date: sql<Date>`DATE(${schema.blocks.datetime})`,
-        chainId: schema.relayPayments.specId,
-        cuSum: sql<number>`sum(${schema.relayPayments.cu})`,
-        relaySum: sql<number>`sum(${schema.relayPayments.relays})`,
-        rewardSum: sql<number>`sum(${schema.relayPayments.pay})`
-    }).from(schema.relayPayments).
-        leftJoin(schema.blocks, eq(schema.relayPayments.blockId, schema.blocks.height)).
-        groupBy(sql`${schema.relayPayments.specId}`, sql<Date>`DATE(${schema.blocks.datetime})`).
-        where(gt(sql<Date>`DATE(${schema.blocks.datetime})`, sql<Date>`now() - interval '30 day'`)).
-        where(inArray(schema.relayPayments.specId, getChains)).
-        orderBy(sql<Date>`DATE(${schema.blocks.datetime})`)
+        date: schema.relayPaymentsAggView.date,
+        chainId: schema.relayPaymentsAggView.chainId,
+        cuSum: sql<number>`sum(${schema.relayPaymentsAggView.cuSum})`,
+        relaySum: sql<number>`sum(${schema.relayPaymentsAggView.relaySum})`,
+        rewardSum: sql<number>`sum(${schema.relayPaymentsAggView.relaySum})`
+    }).from(schema.relayPaymentsAggView).
+        groupBy(sql`${schema.relayPaymentsAggView.chainId}`, schema.relayPaymentsAggView.date).
+        where(gt(schema.relayPaymentsAggView.date, sql<Date>`now() - interval '30 day'`)).
+        where(inArray(schema.relayPaymentsAggView.chainId, getChains)).
+        orderBy(schema.relayPaymentsAggView.date)
     return {
         height: latestHeight,
         datetime: latestDatetime,
@@ -238,10 +236,12 @@ server.get('/provider/:addr', providerOpts, async (request, reply) => {
     let relaySum = 0
     let rewardSum = 0
     const res2 = await db.select({
-        cuSum: sql<number>`sum(${schema.relayPayments.cu})`,
-        relaySum: sql<number>`sum(${schema.relayPayments.relays})`,
-        rewardSum: sql<number>`sum(${schema.relayPayments.pay})`,
-    }).from(schema.relayPayments).where(eq(schema.relayPayments.provider, addr))
+        cuSum: sql<number>`sum(${schema.relayPaymentsAggView.cuSum})`,
+        relaySum: sql<number>`sum(${schema.relayPaymentsAggView.relaySum})`,
+        rewardSum: sql<number>`sum(${schema.relayPaymentsAggView.rewardSum})`,
+    }).from(schema.relayPaymentsAggView).
+        where(eq(schema.relayPaymentsAggView.provider, addr)).
+        groupBy(schema.relayPaymentsAggView.provider)
     if (res2.length == 1) {
         cuSum = res2[0].cuSum
         relaySum = res2[0].relaySum
@@ -254,14 +254,15 @@ server.get('/provider/:addr', providerOpts, async (request, reply) => {
         orderBy(desc(schema.events.id)).offset(0).limit(10)
 
     //
-    // Get chains
+    // Get data
     let res4 = await db.select({
-        chainId: schema.relayPayments.specId,
-        cuSum: sql<number>`sum(${schema.relayPayments.cu})`,
-        relaySum: sql<number>`sum(${schema.relayPayments.relays})`,
-        rewardSum: sql<number>`sum(${schema.relayPayments.pay})`
-    }).from(schema.relayPayments).
-        groupBy(sql`${schema.relayPayments.specId}`)
+        chainId: schema.relayPaymentsAggView.chainId,
+        cuSum: sql<number>`sum(${schema.relayPaymentsAggView.cuSum})`,
+        relaySum: sql<number>`sum(${schema.relayPaymentsAggView.relaySum})`,
+        rewardSum: sql<number>`sum(${schema.relayPaymentsAggView.rewardSum})`
+    }).from(schema.relayPaymentsAggView).
+        groupBy(sql`${schema.relayPaymentsAggView.chainId}`).
+        where(eq(schema.relayPaymentsAggView.provider, addr))
 
     //
     // Get stakes
@@ -280,6 +281,29 @@ server.get('/provider/:addr', providerOpts, async (request, reply) => {
         data: res4,
     }
 })
+
+const providersOpts: RouteShorthandOptions = {
+    schema: {
+        response: {
+            200: {
+                type: 'object',
+                properties: {
+                    providers: {
+                        type: 'array',
+                    },
+                }
+            }
+        }
+    }
+}
+
+server.get('/providers', providersOpts, async (request, reply) => {
+    const res = await db.select().from(schema.providers)
+    return {
+        providers: res,
+    }
+})
+
 
 const consumerOpts: RouteShorthandOptions = {
     schema: {
@@ -424,10 +448,10 @@ server.get('/spec/:specId', SpecOpts, async (request, reply) => {
     let relaySum = 0
     let rewardSum = 0
     const res2 = await db.select({
-        cuSum: sql<number>`sum(${schema.relayPayments.cu})`,
-        relaySum: sql<number>`sum(${schema.relayPayments.relays})`,
-        rewardSum: sql<number>`sum(${schema.relayPayments.pay})`
-    }).from(schema.relayPayments).where(eq(schema.relayPayments.specId, upSpecId))
+        cuSum: sql<number>`sum(${schema.relayPaymentsAggView.cuSum})`,
+        relaySum: sql<number>`sum(${schema.relayPaymentsAggView.relaySum})`,
+        rewardSum: sql<number>`sum(${schema.relayPaymentsAggView.relaySum})`
+    }).from(schema.relayPaymentsAggView).where(eq(schema.relayPaymentsAggView.chainId, upSpecId))
     if (res2.length == 1) {
         cuSum = res2[0].cuSum
         relaySum = res2[0].relaySum
@@ -442,16 +466,15 @@ server.get('/spec/:specId', SpecOpts, async (request, reply) => {
     //
     // Get graph with 1 day resolution
     let res3 = await db.select({
-        date: sql<Date>`DATE(${schema.blocks.datetime})`,
-        cuSum: sql<number>`sum(${schema.relayPayments.cu})`,
-        relaySum: sql<number>`sum(${schema.relayPayments.relays})`,
-        rewardSum: sql<number>`sum(${schema.relayPayments.pay})`
-    }).from(schema.relayPayments).
-        leftJoin(schema.blocks, eq(schema.relayPayments.blockId, schema.blocks.height)).
-        groupBy(sql<Date>`DATE(${schema.blocks.datetime})`).
-        where(gt(sql<Date>`DATE(${schema.blocks.datetime})`, sql<Date>`now() - interval '30 day'`)).
-        where(eq(schema.relayPayments.specId, upSpecId)).
-        orderBy(sql<Date>`DATE(${schema.blocks.datetime})`)
+        date: schema.relayPaymentsAggView.date,
+        cuSum: sql<number>`sum(${schema.relayPaymentsAggView.cuSum})`,
+        relaySum: sql<number>`sum(${schema.relayPaymentsAggView.relaySum})`,
+        rewardSum: sql<number>`sum(${schema.relayPaymentsAggView.rewardSum})`
+    }).from(schema.relayPaymentsAggView).
+        groupBy(schema.relayPaymentsAggView.date).
+        where(gt(schema.relayPaymentsAggView.date, sql<Date>`now() - interval '30 day'`)).
+        where(eq(schema.relayPaymentsAggView.chainId, upSpecId)).
+        orderBy(schema.relayPaymentsAggView.date)
 
     return {
         specId: res[0].id,

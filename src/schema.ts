@@ -1,4 +1,5 @@
-import { pgTable, index, text, integer, serial, bigint, real, primaryKey, timestamp } from 'drizzle-orm/pg-core';
+import { pgTable, index, text, integer, serial, bigint, real, primaryKey, timestamp, pgMaterializedView } from 'drizzle-orm/pg-core';
+import { sql, desc, eq, gt, and, inArray } from "drizzle-orm";
 
 export const blocks = pgTable('blocks', {
   height: integer('height').unique(),
@@ -72,9 +73,16 @@ export const relayPayments = pgTable('relay_payments', {
     nameIdx: index("name_idx").on(table.specId),
   };
 });
-
 export type RelayPayment = typeof relayPayments.$inferSelect
 export type InsertRelayPayment = typeof relayPayments.$inferInsert
+export const relayPaymentsAggView = pgMaterializedView('relay_payments_agg_view', {
+    provider: text('provider'),
+    date: timestamp('date', { mode: "date" }),
+    chainId: text('spec_id'),
+    cuSum: bigint('cusum', { mode: 'number' }),
+    relaySum: bigint('relaysum', { mode: 'number' }),
+    rewardSum: bigint('rewardsum', { mode: 'number' }),
+  }).existing()
 
 export enum LavaProviderEventType {
   StakeNewProvider = 1,

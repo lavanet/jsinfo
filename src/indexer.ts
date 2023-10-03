@@ -360,6 +360,7 @@ const indexer = async (): Promise<void> => {
                 } catch (e) {
                     console.log('UpdateLatestBlockMeta', e)
                 }
+                await db.refreshMaterializedView(schema.relayPaymentsAggView).concurrently()
             }
         }
         loopFill()

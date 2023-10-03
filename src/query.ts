@@ -3,7 +3,7 @@
 // 2. Pagination
 
 import Fastify, { FastifyInstance, RouteShorthandOptions } from 'fastify'
-import { sql, desc, eq, gt, inArray } from "drizzle-orm";
+import { sql, desc, eq, gt, and, inArray } from "drizzle-orm";
 import * as schema from './schema';
 import { GetDb } from './utils';
 
@@ -304,6 +304,9 @@ const consumerOpts: RouteShorthandOptions = {
                     },
                     subsBuy: {
                         type: 'array'
+                    },
+                    data: {
+                        type: 'array'
                     }
                 }
             }
@@ -342,6 +345,22 @@ server.get('/consumer/:addr', consumerOpts, async (request, reply) => {
     }
 
     //
+    // Get graph with 1 day resolution
+    let res5 = await db.select({
+        date: sql<Date>`DATE(${schema.blocks.datetime})`,
+        cuSum: sql<number>`sum(${schema.relayPayments.cu})`,
+        relaySum: sql<number>`sum(${schema.relayPayments.relays})`,
+        rewardSum: sql<number>`sum(${schema.relayPayments.pay})`
+    }).from(schema.relayPayments).
+        leftJoin(schema.blocks, eq(schema.relayPayments.blockId, schema.blocks.height)).
+        groupBy(sql<Date>`DATE(${schema.blocks.datetime})`).
+        where(and(
+            gt(sql<Date>`DATE(${schema.blocks.datetime})`, sql<Date>`now() - interval '30 day'`),
+            eq(schema.relayPayments.consumer, addr)
+        )).
+        orderBy(sql<Date>`DATE(${schema.blocks.datetime})`)
+
+    //
     const res3 = await db.select().from(schema.conflictResponses).where(eq(schema.conflictResponses.consumer, addr)).
         orderBy(desc(schema.conflictResponses.id)).offset(0).limit(10)
     const res4 = await db.select().from(schema.subscriptionBuys).where(eq(schema.subscriptionBuys.consumer, addr)).
@@ -353,6 +372,7 @@ server.get('/consumer/:addr', consumerOpts, async (request, reply) => {
         rewardSum: rewardSum,
         conflicts: res3,
         subsBuy: res4,
+        data: res5,
     }
 })
 

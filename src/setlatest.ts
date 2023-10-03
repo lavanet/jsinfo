@@ -1,6 +1,7 @@
 import * as lavajs from '@lavanet/lavajs';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from './schema';
+import { ne } from "drizzle-orm";
 
 export type LavaClient = Awaited<ReturnType<typeof lavajs.lavanet.ClientFactory.createRPCQueryClient>>
 
@@ -185,19 +186,27 @@ export async function UpdateLatestBlockMeta(
 
         if (withStakes) {
             console.log('withStakes', withStakes)
-            //
-            // clear all stakes
-            await db.delete(schema.providerStakes)
             // Insert all stakes
             await Promise.all(Array.from(static_dbStakes.values()).map(async (stakes) => {
-                if (stakes.length == 0) {
-                    return
-                }
-                // Insert
-                await tx.insert(schema.providerStakes)
-                    .values(stakes)
-                    .onConflictDoNothing();
+                return stakes.map(async (stake) => {
+                    // Insert
+                    return await tx.insert(schema.providerStakes)
+                        .values(stake)
+                        .onConflictDoUpdate(
+                            {
+                                target: [schema.providerStakes.provider, schema.providerStakes.specId],
+                                set: {
+                                    stake: stake.stake,
+                                    appliedHeight: stake.appliedHeight,
+                                    blockId: height,
+                                },
+                            }
+                        );
+                })
             }))
+            // 
+            // Remove old stakes
+            await tx.delete(schema.providerStakes).where(ne(schema.providerStakes.blockId, height))
         }
     })
 }

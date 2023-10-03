@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "generate": "drizzle-kit generate:pg"
+    "generate": "drizzle-kit generate:pg",
+    "build": "tsc --build"
   },
   "keywords": [],
   "author": "",

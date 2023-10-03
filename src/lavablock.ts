@@ -126,6 +126,8 @@ export const GetOneLavaBlock = async (height: number, client: StargateClient): P
                 case 'lava_unfreeze_provider':
                     lavaBlock.unfreezeProviderEvts.push(ParseEventUnfreezeProvider(evt))
                     break
+                case 'lava_provider_reported':
+                    break
 
                 //
                 // Subscription

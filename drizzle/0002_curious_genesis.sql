@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS "name_idx" ON "relay_payments" ("spec_id");

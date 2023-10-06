@@ -88,7 +88,7 @@ export const ParseEventRelayPayment = (evt: Event): EventRelayPayment => {
     }
     switch (key) {
       case 'relayNumber':
-        evtEvent[key] = parseFloat(attr.value);
+        evtEvent[key] = parseInt(attr.value);
         break;
       case 'uniqueIdentifier':
         evtEvent[key] = parseInt(attr.value);

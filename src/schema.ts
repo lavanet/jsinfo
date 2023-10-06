@@ -81,12 +81,12 @@ export const relayPaymentsAggView = pgMaterializedView('relay_payments_agg_view'
     cuSum: bigint('cusum', { mode: 'number' }),
     relaySum: bigint('relaysum', { mode: 'number' }),
     rewardSum: bigint('rewardsum', { mode: 'number' }),
-    qosSyncAvg: bigint('qosSyncAvg', { mode: 'number' }),
-    qosAvailabilityAvg: bigint('qosAvailabilityAvg', { mode: 'number' }),
-    qosLatencyAvg: bigint('qosLatencyAvg', { mode: 'number' }),
-    qosSyncExcAvg: bigint('qosSyncExcAvg', { mode: 'number' }),
-    qosAvailabilityExcAvg: bigint('qosAvailabilityExcAvg', { mode: 'number' }),
-    qosLatencyExcAv: bigint('qosLatencyExcAv', { mode: 'number' }),
+    qosSyncAvg: bigint('qossyncavg', { mode: 'number' }),
+    qosAvailabilityAvg: bigint('qosavailabilityavg', { mode: 'number' }),
+    qosLatencyAvg: bigint('qoslatencyavg', { mode: 'number' }),
+    qosSyncExcAvg: bigint('qossyncexcavg', { mode: 'number' }),
+    qosAvailabilityExcAvg: bigint('qosavailabilityexcavg', { mode: 'number' }),
+    qosLatencyExcAv: bigint('qoslatencyexcavg', { mode: 'number' }),
   }).existing()
 
 export enum LavaProviderEventType {

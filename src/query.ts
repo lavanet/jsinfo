@@ -156,12 +156,19 @@ server.get('/latest', latestOpts, async (request, reply) => {
         chainId: schema.relayPaymentsAggView.chainId,
         cuSum: sql<number>`sum(${schema.relayPaymentsAggView.cuSum})`,
         relaySum: sql<number>`sum(${schema.relayPaymentsAggView.relaySum})`,
-        rewardSum: sql<number>`sum(${schema.relayPaymentsAggView.relaySum})`
+        rewardSum: sql<number>`sum(${schema.relayPaymentsAggView.rewardSum})`,
+        qosSyncAvg: sql<number>`sum(${schema.relayPaymentsAggView.qosSyncAvg}*${schema.relayPaymentsAggView.relaySum})/sum(${schema.relayPaymentsAggView.relaySum})`,
+        qosAvailabilityAvg: sql<number>`sum(${schema.relayPaymentsAggView.qosAvailabilityAvg}*${schema.relayPaymentsAggView.relaySum})/sum(${schema.relayPaymentsAggView.relaySum})`,
+        qosLatencyAvg: sql<number>`sum(${schema.relayPaymentsAggView.qosLatencyAvg}*${schema.relayPaymentsAggView.relaySum})/sum(${schema.relayPaymentsAggView.relaySum})`,
+        qosSyncExcAvg: sql<number>`sum(${schema.relayPaymentsAggView.qosSyncExcAvg}*${schema.relayPaymentsAggView.relaySum})/sum(${schema.relayPaymentsAggView.relaySum})`,
+        qosAvailabilityExcAvg: sql<number>`sum(${schema.relayPaymentsAggView.qosAvailabilityAvg}*${schema.relayPaymentsAggView.relaySum})/sum(${schema.relayPaymentsAggView.relaySum})`,
+        qosLatencyExcAv: sql<number>`sum(${schema.relayPaymentsAggView.qosLatencyExcAv}*${schema.relayPaymentsAggView.relaySum})/sum(${schema.relayPaymentsAggView.relaySum})`,
     }).from(schema.relayPaymentsAggView).
         groupBy(sql`${schema.relayPaymentsAggView.chainId}`, schema.relayPaymentsAggView.date).
         where(gt(schema.relayPaymentsAggView.date, sql<Date>`now() - interval '30 day'`)).
         where(inArray(schema.relayPaymentsAggView.chainId, getChains)).
         orderBy(schema.relayPaymentsAggView.date)
+
     return {
         height: latestHeight,
         datetime: latestDatetime,
@@ -271,7 +278,7 @@ server.get('/provider/:addr', providerOpts, async (request, reply) => {
     // Get stakes
     let res5 = await db.select().from(schema.providerStakes).
         where(eq(schema.providerStakes.provider, addr)).orderBy(desc(schema.providerStakes.stake))
-    
+
     //
     // Get reports
     let res7 = await db.select().from(schema.providerReported).

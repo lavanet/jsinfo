@@ -9,7 +9,7 @@ import { UpdateLatestBlockMeta, GetOrSetConsumer, GetOrSetPlan, GetOrSetProvider
 import { MigrateDb, GetDb } from "./utils";
 
 const rpc = "https://public-rpc.lavanet.xyz/"
-const lava_testnet2_start_height = 340779; // 340778 has a weird date (9 months ago)
+const lava_testnet2_start_height = 470000; //340779; // 340778 has a weird date (9 months ago)
 let static_dbProviders: Map<string, schema.Provider> = new Map()
 let static_dbSpecs: Map<string, schema.Spec> = new Map()
 let static_dbPlans: Map<string, schema.Plan> = new Map()
@@ -44,6 +44,7 @@ async function InsertBlock(
     let dbConflictResponses: schema.InsertConflictResponse[] = []
     let dbSubscriptionBuys: schema.InsertSubscriptionBuy[] = []
     let dbConflictVote: schema.InsertConflictVote[] = []
+    let dbProviderReports: schema.InsertProviderReported[] = []
 
     //
     // Stake related
@@ -104,6 +105,22 @@ async function InsertBlock(
             provider: evt.providerAddress
         } as schema.InsertEvent)
     })
+    block.providerReportedEvts.forEach((evt) => {
+        GetOrSetProvider(dbProviders, static_dbProviders, evt.provider, '')
+        dbProviderReports.push({
+            blockId: block?.height,
+            cu: evt.cu,
+            datetime: new Date(evt.timestamp),
+            disconnections: evt.disconnections,
+            epoch: evt.epoch,
+            errors: evt.errors,
+            project: evt.project,
+            provider: evt.provider,
+            totalComplaintEpoch: evt.total_complaint_this_epoch,
+        } as schema.InsertProviderReported)
+    })
+
+
 
     //
     // Payment related
@@ -226,6 +243,9 @@ async function InsertBlock(
         }
         if (dbConflictVote.length > 0) {
             await tx.insert(schema.conflictVotes).values(dbConflictVote)
+        }
+        if (dbProviderReports.length > 0) {
+            await tx.insert(schema.providerReported).values(dbProviderReports)
         }
     })
 }

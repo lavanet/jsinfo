@@ -1,5 +1,4 @@
 import { pgTable, index, text, integer, serial, bigint, real, primaryKey, timestamp, pgMaterializedView } from 'drizzle-orm/pg-core';
-import { sql, desc, eq, gt, and, inArray } from "drizzle-orm";
 
 export const blocks = pgTable('blocks', {
   height: integer('height').unique(),
@@ -82,6 +81,12 @@ export const relayPaymentsAggView = pgMaterializedView('relay_payments_agg_view'
     cuSum: bigint('cusum', { mode: 'number' }),
     relaySum: bigint('relaysum', { mode: 'number' }),
     rewardSum: bigint('rewardsum', { mode: 'number' }),
+    qosSyncAvg: bigint('qosSyncAvg', { mode: 'number' }),
+    qosAvailabilityAvg: bigint('qosAvailabilityAvg', { mode: 'number' }),
+    qosLatencyAvg: bigint('qosLatencyAvg', { mode: 'number' }),
+    qosSyncExcAvg: bigint('qosSyncExcAvg', { mode: 'number' }),
+    qosAvailabilityExcAvg: bigint('qosAvailabilityExcAvg', { mode: 'number' }),
+    qosLatencyExcAv: bigint('qosLatencyExcAv', { mode: 'number' }),
   }).existing()
 
 export enum LavaProviderEventType {
@@ -139,3 +144,18 @@ export const subscriptionBuys = pgTable('subscription_buys', {
 });
 export type SubscriptionBuy = typeof subscriptionBuys.$inferSelect
 export type InsertSubscriptionBuy = typeof subscriptionBuys.$inferInsert
+
+export const providerReported = pgTable('provider_reported', {
+  provider: text('provider').references(() => providers.address),
+  blockId: integer('block_id').references(() => blocks.height),
+  
+  cu: bigint('cu', { mode: 'number' }),
+  disconnections: integer('disconnections'),
+  epoch: integer('epoch'),
+  errors: integer('errors'),
+  project: text('project'),
+  datetime: timestamp('datetime', { mode: "date" }),
+  totalComplaintEpoch: integer('total_complaint_this_epoch'),
+});
+export type ProviderReported = typeof providerReported.$inferSelect
+export type InsertProviderReported = typeof providerReported.$inferInsert

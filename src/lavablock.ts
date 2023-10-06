@@ -16,6 +16,8 @@ import { EventConflictVoteGotCommit, ParseEventConflictVoteGotCommit } from "./e
 import { EventResponseConflictDetection, ParseEventResponseConflictDetection } from "./events/EventResponseConflictDetection"
 import { EventConflictDetectionReceived, ParseEventConflictDetectionReceived } from "./events/EventConflictDetectionReceived"
 
+import { EventProviderReported, ParseEventProviderReported } from "./events/EventProviderReported"
+
 export type LavaBlock = {
     height: number
     datetime: number,
@@ -33,6 +35,7 @@ export type LavaBlock = {
     conflictVoteGotCommitEvts: EventConflictVoteGotCommit[]
     responseConflictDetectionEvts: EventResponseConflictDetection[]
     conflictDetectionReceivedEvts: EventConflictDetectionReceived[]
+    providerReportedEvts: EventProviderReported[]
 }
 
 export const GetOneLavaBlock = async (height: number, client: StargateClient): Promise<LavaBlock> => {
@@ -94,6 +97,7 @@ export const GetOneLavaBlock = async (height: number, client: StargateClient): P
         conflictVoteGotCommitEvts: [],
         responseConflictDetectionEvts: [],
         conflictDetectionReceivedEvts: [],
+        providerReportedEvts: [],
     }
 
     //
@@ -127,6 +131,7 @@ export const GetOneLavaBlock = async (height: number, client: StargateClient): P
                     lavaBlock.unfreezeProviderEvts.push(ParseEventUnfreezeProvider(evt))
                     break
                 case 'lava_provider_reported':
+                    lavaBlock.providerReportedEvts.push(ParseEventProviderReported(evt))
                     break
 
                 //

@@ -205,6 +205,9 @@ const providerOpts: RouteShorthandOptions = {
                     payments: {
                         type: 'array',
                     },
+                    reports: {
+                        type: 'array',
+                    },
                     data: {
                         type: 'array',
                     },
@@ -268,6 +271,11 @@ server.get('/provider/:addr', providerOpts, async (request, reply) => {
     // Get stakes
     let res5 = await db.select().from(schema.providerStakes).
         where(eq(schema.providerStakes.provider, addr)).orderBy(desc(schema.providerStakes.stake))
+    
+    //
+    // Get reports
+    let res7 = await db.select().from(schema.providerReported).
+        where(eq(schema.providerReported.provider, addr)).orderBy(desc(schema.providerReported.blockId))
 
     return {
         addr: provider.address,
@@ -278,6 +286,7 @@ server.get('/provider/:addr', providerOpts, async (request, reply) => {
         events: res3,
         stakes: res5,
         payments: res6,
+        reports: res7,
         data: res4,
     }
 })

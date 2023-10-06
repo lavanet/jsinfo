@@ -43,6 +43,9 @@ const latestOpts: RouteShorthandOptions = {
                     allSpecs: {
                         type: 'array',
                     },
+                    qosData: {
+                        type: 'array'
+                    },
                     data: {
                         type: 'array'
                     }
@@ -157,6 +160,20 @@ server.get('/latest', latestOpts, async (request, reply) => {
         cuSum: sql<number>`sum(${schema.relayPaymentsAggView.cuSum})`,
         relaySum: sql<number>`sum(${schema.relayPaymentsAggView.relaySum})`,
         rewardSum: sql<number>`sum(${schema.relayPaymentsAggView.rewardSum})`,
+    }).from(schema.relayPaymentsAggView).
+        where(
+            and(
+                gt(schema.relayPaymentsAggView.date, sql<Date>`now() - interval '30 day'`),
+                inArray(schema.relayPaymentsAggView.chainId, getChains)
+            )
+        ).
+        groupBy(sql`${schema.relayPaymentsAggView.chainId}`, schema.relayPaymentsAggView.date).
+        orderBy(schema.relayPaymentsAggView.date)
+
+    //
+    // QoS graph
+    let res6 = await db.select({
+        date: schema.relayPaymentsAggView.date,
         qosSyncAvg: sql<number>`sum(${schema.relayPaymentsAggView.qosSyncAvg}*${schema.relayPaymentsAggView.relaySum})/sum(${schema.relayPaymentsAggView.relaySum})`,
         qosAvailabilityAvg: sql<number>`sum(${schema.relayPaymentsAggView.qosAvailabilityAvg}*${schema.relayPaymentsAggView.relaySum})/sum(${schema.relayPaymentsAggView.relaySum})`,
         qosLatencyAvg: sql<number>`sum(${schema.relayPaymentsAggView.qosLatencyAvg}*${schema.relayPaymentsAggView.relaySum})/sum(${schema.relayPaymentsAggView.relaySum})`,
@@ -164,9 +181,8 @@ server.get('/latest', latestOpts, async (request, reply) => {
         qosAvailabilityExcAvg: sql<number>`sum(${schema.relayPaymentsAggView.qosAvailabilityAvg}*${schema.relayPaymentsAggView.relaySum})/sum(${schema.relayPaymentsAggView.relaySum})`,
         qosLatencyExcAv: sql<number>`sum(${schema.relayPaymentsAggView.qosLatencyExcAv}*${schema.relayPaymentsAggView.relaySum})/sum(${schema.relayPaymentsAggView.relaySum})`,
     }).from(schema.relayPaymentsAggView).
-        groupBy(sql`${schema.relayPaymentsAggView.chainId}`, schema.relayPaymentsAggView.date).
         where(gt(schema.relayPaymentsAggView.date, sql<Date>`now() - interval '30 day'`)).
-        where(inArray(schema.relayPaymentsAggView.chainId, getChains)).
+        groupBy(schema.relayPaymentsAggView.date).
         orderBy(schema.relayPaymentsAggView.date)
 
     return {
@@ -178,6 +194,7 @@ server.get('/latest', latestOpts, async (request, reply) => {
         stakeSum: stakeSum,
         topProviders: providersDetails,
         allSpecs: res8,
+        qosData: res6,
         data: res3,
     }
 })
@@ -488,8 +505,12 @@ server.get('/spec/:specId', SpecOpts, async (request, reply) => {
         rewardSum: sql<number>`sum(${schema.relayPaymentsAggView.rewardSum})`
     }).from(schema.relayPaymentsAggView).
         groupBy(schema.relayPaymentsAggView.date).
-        where(gt(schema.relayPaymentsAggView.date, sql<Date>`now() - interval '30 day'`)).
-        where(eq(schema.relayPaymentsAggView.chainId, upSpecId)).
+        where(
+            and(
+                gt(schema.relayPaymentsAggView.date, sql<Date>`now() - interval '30 day'`),
+                eq(schema.relayPaymentsAggView.chainId, upSpecId)
+            )
+        ).
         orderBy(schema.relayPaymentsAggView.date)
 
     return {

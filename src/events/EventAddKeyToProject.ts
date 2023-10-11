@@ -1,4 +1,8 @@
 import { Event } from "@cosmjs/stargate"
+import { LavaBlock } from "../lavablock";
+import * as schema from '../schema';
+import { GetOrSetConsumer, GetOrSetTx } from "../setlatest";
+
 /*
 353983  {
   type: 'lava_add_key_to_project_event',
@@ -17,20 +21,22 @@ import { Event } from "@cosmjs/stargate"
 }
 */
 
-export type EventAddKeyToProject = {
-    project: string
-    key: string
-    keytype: number
-    block: number
-};
-
-export const ParseEventAddKeyToProject = (evt: Event): EventAddKeyToProject => {
-    const evtEvent: EventAddKeyToProject = {
-        project: '',
-        key: '',
-        keytype: 0,
-        block: 0,
-    }
+export const ParseEventAddKeyToProject = (
+    evt: Event,
+    height: number,
+    txHash: string,
+    lavaBlock: LavaBlock,
+    static_dbProviders: Map<string, schema.Provider>,
+    static_dbSpecs: Map<string, schema.Spec>,
+    static_dbPlans: Map<string, schema.Plan>,
+    static_dbStakes: Map<string, schema.ProviderStake[]>,
+) => {
+    const evtEvent: schema.InsertEvent = {
+        tx: txHash,
+        blockId: height,  
+        eventType: schema.LavaProviderEventType.AddKeyToProject,
+        provider: null,
+    }   
     evt.attributes.forEach((attr) => {
         let key: string = attr.key;
         if (attr.key.lastIndexOf('.') != -1) {
@@ -38,18 +44,22 @@ export const ParseEventAddKeyToProject = (evt: Event): EventAddKeyToProject => {
         }
         switch (key) {
             case 'project':
-                evtEvent[key] = attr.value;
+                evtEvent.t1 = attr.value;
+                evtEvent.consumer = attr.value.split('-')[0];
                 break
             case 'key':
-                evtEvent[key] = attr.value;
+                evtEvent.t2 = attr.value;
                 break
             case 'keytype':
-                evtEvent[key] = parseInt(attr.value);
+                evtEvent.i1 = parseInt(attr.value);
                 break
             case 'block':
-                evtEvent[key] = parseInt(attr.value);
+                evtEvent.blockId = parseInt(attr.value);
                 break
         }
     })
-    return evtEvent;
+
+    GetOrSetTx(lavaBlock.dbTxs, txHash, height)
+    GetOrSetConsumer(lavaBlock.dbConsumers, evtEvent.consumer!)
+    lavaBlock.dbEvents.push(evtEvent)
 }

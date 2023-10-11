@@ -1,4 +1,8 @@
 import { Event } from "@cosmjs/stargate"
+import { LavaBlock } from "../lavablock";
+import * as schema from '../schema';
+import { GetOrSetProvider, GetOrSetTx } from "../setlatest";
+
 /*
 //block 360494
 lava_unfreeze_provider {
@@ -12,16 +16,24 @@ lava_unfreeze_provider {
   ]
 }
 */
-export type EventUnfreezeProvider = {
-    providerAddress: string
-    chainIDs: string[]
-};
 
-export const ParseEventUnfreezeProvider = (evt: Event): EventUnfreezeProvider => {
-    const evtEvent: EventUnfreezeProvider = {
-        providerAddress: '',
-        chainIDs: [],
+export const ParseEventUnfreezeProvider = (
+    evt: Event,
+    height: number,
+    txHash: string,
+    lavaBlock: LavaBlock,
+    static_dbProviders: Map<string, schema.Provider>,
+    static_dbSpecs: Map<string, schema.Spec>,
+    static_dbPlans: Map<string, schema.Plan>,
+    static_dbStakes: Map<string, schema.ProviderStake[]>,
+) => {
+    const evtEvent: schema.InsertEvent = {
+        tx: txHash,
+        blockId: height,  
+        eventType: schema.LavaProviderEventType.UnfreezeProvider,
+        consumer: null,
     }
+
     evt.attributes.forEach((attr) => {
         let key: string = attr.key;
         if (attr.key.lastIndexOf('.') != -1) {
@@ -29,12 +41,15 @@ export const ParseEventUnfreezeProvider = (evt: Event): EventUnfreezeProvider =>
         }
         switch (key) {
             case 'providerAddress':
-                evtEvent[key] = attr.value;
+                evtEvent.provider = attr.value;
                 break
             case 'chainIDs':
-                evtEvent[key] = attr.value.split(',');
+                evtEvent.t1 = attr.value;
                 break
          }
     })
-    return evtEvent;
+
+    GetOrSetTx(lavaBlock.dbTxs, txHash, height)
+    GetOrSetProvider(lavaBlock.dbProviders, static_dbProviders, evtEvent.provider!, '')
+    lavaBlock.dbEvents.push(evtEvent)
 }

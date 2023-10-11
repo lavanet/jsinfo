@@ -7,6 +7,13 @@ export const blocks = pgTable('blocks', {
 export type Block = typeof blocks.$inferSelect
 export type InsertBlock = typeof blocks.$inferInsert
 
+export const txs = pgTable('txs', {
+  hash: text('tx_hash').unique(),
+  blockId: integer('block_id').references(() => blocks.height),
+});
+export type Tx = typeof txs.$inferSelect
+export type InsertTx = typeof txs.$inferInsert
+
 export const consumers = pgTable('consumers', {
   address: text('address').unique(),
 });
@@ -67,6 +74,7 @@ export const relayPayments = pgTable('relay_payments', {
   specId: text('spec_id').references(() => specs.id),
   blockId: integer('block_id').references(() => blocks.height),
   consumer: text('consumer').references(() => consumers.address),
+  tx: text('tx').references(() => txs.hash),
 }, (table) => {
   return {
     nameIdx: index("name_idx").on(table.specId),
@@ -75,19 +83,19 @@ export const relayPayments = pgTable('relay_payments', {
 export type RelayPayment = typeof relayPayments.$inferSelect
 export type InsertRelayPayment = typeof relayPayments.$inferInsert
 export const relayPaymentsAggView = pgMaterializedView('relay_payments_agg_view', {
-    provider: text('provider'),
-    date: timestamp('date', { mode: "date" }),
-    chainId: text('spec_id'),
-    cuSum: bigint('cusum', { mode: 'number' }),
-    relaySum: bigint('relaysum', { mode: 'number' }),
-    rewardSum: bigint('rewardsum', { mode: 'number' }),
-    qosSyncAvg: bigint('qossyncavg', { mode: 'number' }),
-    qosAvailabilityAvg: bigint('qosavailabilityavg', { mode: 'number' }),
-    qosLatencyAvg: bigint('qoslatencyavg', { mode: 'number' }),
-    qosSyncExcAvg: bigint('qossyncexcavg', { mode: 'number' }),
-    qosAvailabilityExcAvg: bigint('qosavailabilityexcavg', { mode: 'number' }),
-    qosLatencyExcAv: bigint('qoslatencyexcavg', { mode: 'number' }),
-  }).existing()
+  provider: text('provider'),
+  date: timestamp('date', { mode: "date" }),
+  chainId: text('spec_id'),
+  cuSum: bigint('cusum', { mode: 'number' }),
+  relaySum: bigint('relaysum', { mode: 'number' }),
+  rewardSum: bigint('rewardsum', { mode: 'number' }),
+  qosSyncAvg: bigint('qossyncavg', { mode: 'number' }),
+  qosAvailabilityAvg: bigint('qosavailabilityavg', { mode: 'number' }),
+  qosLatencyAvg: bigint('qoslatencyavg', { mode: 'number' }),
+  qosSyncExcAvg: bigint('qossyncexcavg', { mode: 'number' }),
+  qosAvailabilityExcAvg: bigint('qosavailabilityexcavg', { mode: 'number' }),
+  qosLatencyExcAv: bigint('qoslatencyexcavg', { mode: 'number' }),
+}).existing()
 
 export enum LavaProviderEventType {
   StakeNewProvider = 1,
@@ -95,14 +103,34 @@ export enum LavaProviderEventType {
   ProviderUnstakeCommit,
   FreezeProvider,
   UnfreezeProvider,
+  AddKeyToProject,
+  AddProjectToSubscription,
+  ConflictDetectionReceived,
+  DelKeyFromProject,
+  DelProjectToSubscription,
 }
 
 export const events = pgTable('events', {
   id: serial('id').primaryKey(),
   eventType: integer('event_type'),
 
+  t1: text('t1'),
+  t2: text('t2'),
+  t3: text('t3'),
+  b1: bigint('b1', { mode: 'number' }),
+  b2: bigint('b2', { mode: 'number' }),
+  b3: bigint('b3', { mode: 'number' }),
+  i1: integer('i1'),
+  i2: integer('i2'),
+  i3: integer('i3'),
+  r1: real('r1'),
+  r2: real('r2'),
+  r3: real('r3'),
+
   provider: text('provider').references(() => providers.address),
+  consumer: text('consumer').references(() => consumers.address),
   blockId: integer('block_id').references(() => blocks.height),
+  tx: text('tx').references(() => txs.hash),
 });
 export type Event = typeof events.$inferSelect
 export type InsertEvent = typeof events.$inferInsert
@@ -113,6 +141,7 @@ export const conflictResponses = pgTable('conflict_responses', {
   blockId: integer('block_id').references(() => blocks.height),
   consumer: text('consumer').references(() => consumers.address),
   specId: text('spec_id').references(() => specs.id),
+  tx: text('tx').references(() => txs.hash),
 
   voteId: text('vote_id'),
   requestBlock: integer('request_block'),
@@ -131,7 +160,7 @@ export const conflictVotes = pgTable('conflict_votes', {
 
   blockId: integer('block_id').references(() => blocks.height),
   provider: text('provider').references(() => providers.address),
-
+  tx: text('tx').references(() => txs.hash),
 });
 export type ConflictVote = typeof conflictVotes.$inferSelect
 export type InsertConflictVote = typeof conflictVotes.$inferInsert
@@ -141,6 +170,7 @@ export const subscriptionBuys = pgTable('subscription_buys', {
   consumer: text('consumer').references(() => consumers.address),
   duration: integer('number'),
   plan: text('plan').references(() => plans.id),
+  tx: text('tx').references(() => txs.hash),
 });
 export type SubscriptionBuy = typeof subscriptionBuys.$inferSelect
 export type InsertSubscriptionBuy = typeof subscriptionBuys.$inferInsert
@@ -148,7 +178,7 @@ export type InsertSubscriptionBuy = typeof subscriptionBuys.$inferInsert
 export const providerReported = pgTable('provider_reported', {
   provider: text('provider').references(() => providers.address),
   blockId: integer('block_id').references(() => blocks.height),
-  
+
   cu: bigint('cu', { mode: 'number' }),
   disconnections: integer('disconnections'),
   epoch: integer('epoch'),
@@ -156,6 +186,7 @@ export const providerReported = pgTable('provider_reported', {
   project: text('project'),
   datetime: timestamp('datetime', { mode: "date" }),
   totalComplaintEpoch: integer('total_complaint_this_epoch'),
+  tx: text('tx').references(() => txs.hash),
 });
 export type ProviderReported = typeof providerReported.$inferSelect
 export type InsertProviderReported = typeof providerReported.$inferInsert

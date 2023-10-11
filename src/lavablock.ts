@@ -1,44 +1,49 @@
 import { StargateClient, IndexedTx, Block } from "@cosmjs/stargate"
 import { writeFileSync, readFileSync } from 'fs';
 
-import { EventRelayPayment, ParseEventRelayPayment } from "./events/EventRelayPayment"
-import { EventStakeUpdateProvider, ParseEventStakeUpdateProvider } from "./events/EventStakeUpdateProvider"
-import { EventStakeNewProvider, ParseEventStakeNewProvider } from "./events/EventStakeNewProvider"
-import { EventProviderUnstakeCommit, ParseEventProviderUnstakeCommit } from "./events/EventProviderUnstakeCommit"
-import { EventFreezeProvider, ParseEventFreezeProvider } from "./events/EventFreezeProvider"
-import { EventUnfreezeProvider, ParseEventUnfreezeProvider } from "./events/EventUnfreezeProvider"
-import { EventBuySubscription, ParseEventBuySubscription } from "./events/EventBuySubscription"
-import { EventAddProjectToSubscription, ParseEventAddProjectToSubscription } from "./events/EventAddProjectToSubscription"
-import { EventDelKeyFromProject, ParseEventDelKeyFromProject } from "./events/EventDelKeyFromProject"
-import { EventDelProjectToSubscription, ParseEventDelProjectToSubscription } from "./events/EventDelProjectToSubscription"
-import { EventAddKeyToProject, ParseEventAddKeyToProject } from "./events/EventAddKeyToProject"
-import { EventConflictVoteGotCommit, ParseEventConflictVoteGotCommit } from "./events/EventConflictVoteGotCommit"
-import { EventResponseConflictDetection, ParseEventResponseConflictDetection } from "./events/EventResponseConflictDetection"
-import { EventConflictDetectionReceived, ParseEventConflictDetectionReceived } from "./events/EventConflictDetectionReceived"
+import { ParseEventRelayPayment } from "./events/EventRelayPayment"
+import { ParseEventStakeUpdateProvider } from "./events/EventStakeUpdateProvider"
+import { ParseEventStakeNewProvider } from "./events/EventStakeNewProvider"
+import { ParseEventProviderUnstakeCommit } from "./events/EventProviderUnstakeCommit"
+import { ParseEventFreezeProvider } from "./events/EventFreezeProvider"
+import { ParseEventUnfreezeProvider } from "./events/EventUnfreezeProvider"
+import { ParseEventBuySubscription } from "./events/EventBuySubscription"
+import { ParseEventAddProjectToSubscription } from "./events/EventAddProjectToSubscription"
+import { ParseEventDelKeyFromProject } from "./events/EventDelKeyFromProject"
+import { ParseEventDelProjectToSubscription } from "./events/EventDelProjectToSubscription"
+import { ParseEventAddKeyToProject } from "./events/EventAddKeyToProject"
+import { ParseEventConflictVoteGotCommit } from "./events/EventConflictVoteGotCommit"
+import { ParseEventResponseConflictDetection } from "./events/EventResponseConflictDetection"
+import { ParseEventConflictDetectionReceived } from "./events/EventConflictDetectionReceived"
+import { ParseEventProviderReported } from "./events/EventProviderReported"
 
-import { EventProviderReported, ParseEventProviderReported } from "./events/EventProviderReported"
+import * as schema from './schema';
 
 export type LavaBlock = {
     height: number
     datetime: number,
-    relayPaymentEvts: EventRelayPayment[]
-    stakeNewProviderEvts: EventStakeNewProvider[]
-    stakeUpdateProviderEvts: EventStakeUpdateProvider[]
-    providerUnstakeCommitEvts: EventProviderUnstakeCommit[]
-    freezeProviderEvts: EventFreezeProvider[]
-    unfreezeProviderEvts: EventUnfreezeProvider[]
-    buySubscriptionEvts: EventBuySubscription[]
-    addProjectToSubscriptionEvts: EventAddProjectToSubscription[]
-    delKeyFromProjectEvts: EventDelKeyFromProject[]
-    delProjectToSubscriptionEvts: EventDelProjectToSubscription[]
-    addKeyToProjectEvts: EventAddKeyToProject[]
-    conflictVoteGotCommitEvts: EventConflictVoteGotCommit[]
-    responseConflictDetectionEvts: EventResponseConflictDetection[]
-    conflictDetectionReceivedEvts: EventConflictDetectionReceived[]
-    providerReportedEvts: EventProviderReported[]
+
+    dbProviders: Map<string, schema.Provider>
+    dbSpecs: Map<string, schema.Spec>
+    dbConsumers: Map<string, schema.Consumer>
+    dbPlans: Map<string, schema.Plan>
+    dbTxs: Map<string, schema.Tx>
+    dbEvents: schema.InsertEvent[]
+    dbPayments: schema.InsertRelayPayment[]
+    dbConflictResponses: schema.InsertConflictResponse[]
+    dbSubscriptionBuys: schema.InsertSubscriptionBuy[]
+    dbConflictVote: schema.InsertConflictVote[]
+    dbProviderReports: schema.InsertProviderReported[]
 }
 
-export const GetOneLavaBlock = async (height: number, client: StargateClient): Promise<LavaBlock> => {
+export const GetOneLavaBlock = async (
+    height: number,
+    client: StargateClient,
+    static_dbProviders: Map<string, schema.Provider>,
+    static_dbSpecs: Map<string, schema.Spec>,
+    static_dbPlans: Map<string, schema.Plan>,
+    static_dbStakes: Map<string, schema.ProviderStake[]>,
+): Promise<LavaBlock> => {
     //
     // Get block (mostly for date)
     const pathBlocks = `./static/${height.toString()}.json`
@@ -54,7 +59,7 @@ export const GetOneLavaBlock = async (height: number, client: StargateClient): P
     if (excp || block!.header == undefined) {
         block = await client.getBlock(height)
         if (block!.header == undefined) {
-            throw('block!.header == undefined')
+            throw ('block!.header == undefined')
         }
         writeFileSync(pathBlocks, JSON.stringify(block, null, 0), 'utf-8')
     }
@@ -73,7 +78,7 @@ export const GetOneLavaBlock = async (height: number, client: StargateClient): P
     if (excp) {
         txs = await client.searchTx('tx.height=' + height)
         if (txs.length == 0 && block!.txs.length != 0) {
-            throw('txs.length == 0 && block!.txs.length != 0')
+            throw ('txs.length == 0 && block!.txs.length != 0')
         }
         writeFileSync(pathTxs, JSON.stringify(txs, null, 0), 'utf-8')
     }
@@ -83,21 +88,18 @@ export const GetOneLavaBlock = async (height: number, client: StargateClient): P
     const lavaBlock: LavaBlock = {
         height: height,
         datetime: Date.parse(block!.header.time),
-        relayPaymentEvts: [],
-        stakeNewProviderEvts: [],
-        stakeUpdateProviderEvts: [],
-        providerUnstakeCommitEvts: [],
-        freezeProviderEvts: [],
-        unfreezeProviderEvts: [],
-        buySubscriptionEvts: [],
-        addProjectToSubscriptionEvts: [],
-        delKeyFromProjectEvts: [],
-        delProjectToSubscriptionEvts: [],
-        addKeyToProjectEvts: [],
-        conflictVoteGotCommitEvts: [],
-        responseConflictDetectionEvts: [],
-        conflictDetectionReceivedEvts: [],
-        providerReportedEvts: [],
+
+        dbProviders: new Map(),
+        dbSpecs: new Map(),
+        dbConsumers: new Map(),
+        dbPlans: new Map(),
+        dbTxs: new Map(),
+        dbEvents: [],
+        dbPayments: [],
+        dbConflictResponses: [],
+        dbSubscriptionBuys: [],
+        dbConflictVote: [],
+        dbProviderReports: [],
     }
 
     //
@@ -108,62 +110,64 @@ export const GetOneLavaBlock = async (height: number, client: StargateClient): P
         if (tx.code != 0) {
             return;
         }
+
         tx.events.forEach((evt) => {
             switch (evt.type) {
                 //
                 // Providers
                 case 'lava_relay_payment':
-                    lavaBlock.relayPaymentEvts.push(ParseEventRelayPayment(evt));
+                    ParseEventRelayPayment(evt, height, tx.hash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
                     break;
                 case 'lava_stake_new_provider':
-                    lavaBlock.stakeNewProviderEvts.push(ParseEventStakeNewProvider(evt))
+                    ParseEventStakeNewProvider(evt, height, tx.hash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
                     break
                 case 'lava_stake_update_provider':
-                    lavaBlock.stakeUpdateProviderEvts.push(ParseEventStakeUpdateProvider(evt))
+                    ParseEventStakeUpdateProvider(evt, height, tx.hash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
                     break
                 case 'lava_provider_unstake_commit':
-                    lavaBlock.providerUnstakeCommitEvts.push(ParseEventProviderUnstakeCommit(evt))
+                    ParseEventProviderUnstakeCommit(evt, height, tx.hash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
                     break
                 case 'lava_freeze_provider':
-                    lavaBlock.freezeProviderEvts.push(ParseEventFreezeProvider(evt))
+                    ParseEventFreezeProvider(evt, height, tx.hash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
                     break
                 case 'lava_unfreeze_provider':
-                    lavaBlock.unfreezeProviderEvts.push(ParseEventUnfreezeProvider(evt))
+                    ParseEventUnfreezeProvider(evt, height, tx.hash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
                     break
                 case 'lava_provider_reported':
-                    lavaBlock.providerReportedEvts.push(ParseEventProviderReported(evt))
+                    ParseEventProviderReported(evt, height, tx.hash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
                     break
 
                 //
                 // Subscription
                 case 'lava_buy_subscription_event':
-                    lavaBlock.buySubscriptionEvts.push(ParseEventBuySubscription(evt));
+                    ParseEventBuySubscription(evt, height, tx.hash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
                     break
                 case 'lava_add_project_to_subscription_event':
-                    lavaBlock.addProjectToSubscriptionEvts.push(ParseEventAddProjectToSubscription(evt));
+                    ParseEventAddProjectToSubscription(evt, height, tx.hash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
                     break
                 case 'lava_del_project_to_subscription_event':
-                    lavaBlock.delProjectToSubscriptionEvts.push(ParseEventDelProjectToSubscription(evt));
+                    ParseEventDelProjectToSubscription(evt, height, tx.hash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
                     break
                 case 'lava_del_key_from_project_event':
-                    lavaBlock.delKeyFromProjectEvts.push(ParseEventDelKeyFromProject(evt));
+                    ParseEventDelKeyFromProject(evt, height, tx.hash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
                     break
                 case 'lava_add_key_to_project_event':
-                    lavaBlock.addKeyToProjectEvts.push(ParseEventAddKeyToProject(evt));
+                    ParseEventAddKeyToProject(evt, height, tx.hash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
                     break
 
                 //
                 // Conflict
                 case 'lava_conflict_vote_got_commit':
-                    lavaBlock.conflictVoteGotCommitEvts.push(ParseEventConflictVoteGotCommit(evt));
+                    ParseEventConflictVoteGotCommit(evt, height, tx.hash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
                     break
                 case 'lava_response_conflict_detection':
-                    lavaBlock.responseConflictDetectionEvts.push(ParseEventResponseConflictDetection(evt));
+                    ParseEventResponseConflictDetection(evt, height, tx.hash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
                     break
                 case 'lava_conflict_detection_received':
-                    lavaBlock.conflictDetectionReceivedEvts.push(ParseEventConflictDetectionReceived(evt));
+                    ParseEventConflictDetectionReceived(evt, height, tx.hash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
                     break
                 case 'lava_conflict_vote_got_reveal':
+                    console.log(height, evt)
                     break
 
                 case 'submit_proposal':

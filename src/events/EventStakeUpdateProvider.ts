@@ -1,4 +1,8 @@
 import { Event } from "@cosmjs/stargate"
+import { LavaBlock } from "../lavablock";
+import * as schema from '../schema';
+import { GetOrSetProvider, GetOrSetTx } from "../setlatest";
+
 /*
 //block 340898
 lava_stake_update_provider {
@@ -15,22 +19,24 @@ lava_stake_update_provider {
   ]
 }
 */
-export type EventStakeUpdateProvider = {
-    stakeAppliedBlock: number
-    stake: number
-    moniker: string
-    spec: string
-    provider: string
-};
 
-export const ParseEventStakeUpdateProvider = (evt: Event): EventStakeUpdateProvider => {
-    const evtEvent: EventStakeUpdateProvider = {
-        stakeAppliedBlock: 0,
-        stake: 0,
-        moniker: '',
-        spec: '',
-        provider: '',
+export const ParseEventStakeUpdateProvider = (
+    evt: Event,
+    height: number,
+    txHash: string,
+    lavaBlock: LavaBlock,
+    static_dbProviders: Map<string, schema.Provider>,
+    static_dbSpecs: Map<string, schema.Spec>,
+    static_dbPlans: Map<string, schema.Plan>,
+    static_dbStakes: Map<string, schema.ProviderStake[]>,
+) => {
+    const evtEvent: schema.InsertEvent = {
+        tx: txHash,
+        blockId: height,
+        eventType: schema.LavaProviderEventType.StakeUpdateProvider,
+        consumer: null,
     }
+
     evt.attributes.forEach((attr) => {
         let key: string = attr.key;
         if (attr.key.lastIndexOf('.') != -1) {
@@ -38,21 +44,24 @@ export const ParseEventStakeUpdateProvider = (evt: Event): EventStakeUpdateProvi
         }
         switch (key) {
             case 'stakeAppliedBlock':
-                evtEvent[key] = parseInt(attr.value);
+                evtEvent.i1 = parseInt(attr.value);
                 break
             case 'stake':
-                evtEvent[key] = parseInt(attr.value);
+                evtEvent.b1 = parseInt(attr.value);
                 break
             case 'moniker':
-                evtEvent[key] = attr.value;
+                evtEvent.t1 = attr.value;
                 break
             case 'spec':
-                evtEvent[key] = attr.value;
+                evtEvent.t2 = attr.value;
                 break
             case 'provider':
-                evtEvent[key] = attr.value;
+                evtEvent.provider = attr.value;
                 break
-         }
+        }
     })
-    return evtEvent;
+
+    GetOrSetTx(lavaBlock.dbTxs, txHash, height)
+    GetOrSetProvider(lavaBlock.dbProviders, static_dbProviders, evtEvent.provider!, '')
+    lavaBlock.dbEvents.push(evtEvent)
 }

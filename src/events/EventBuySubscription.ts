@@ -1,4 +1,8 @@
 import { Event } from "@cosmjs/stargate"
+import { LavaBlock } from "../lavablock";
+import * as schema from '../schema';
+import { GetOrSetConsumer, GetOrSetTx } from "../setlatest";
+
 /*
 360227  {
   type: 'lava_buy_subscription_event',
@@ -12,17 +16,20 @@ import { Event } from "@cosmjs/stargate"
   ]
 }
 */
-export type EventBuySubscription = {
-    consumer: string
-    duration: number
-    plan: string
-};
 
-export const ParseEventBuySubscription = (evt: Event): EventBuySubscription => {
-    const evtEvent: EventBuySubscription = {
-        consumer: '',
-        duration: 0,
-        plan: '',
+export const ParseEventBuySubscription = (
+    evt: Event,
+    height: number,
+    txHash: string,
+    lavaBlock: LavaBlock,
+    static_dbProviders: Map<string, schema.Provider>,
+    static_dbSpecs: Map<string, schema.Spec>,
+    static_dbPlans: Map<string, schema.Plan>,
+    static_dbStakes: Map<string, schema.ProviderStake[]>,
+) => {
+    const evtEvent: schema.InsertSubscriptionBuy = {
+        blockId: height,
+        tx: txHash,
     }
     evt.attributes.forEach((attr) => {
         let key: string = attr.key;
@@ -31,15 +38,18 @@ export const ParseEventBuySubscription = (evt: Event): EventBuySubscription => {
         }
         switch (key) {
             case 'consumer':
-                evtEvent[key] = attr.value;
+                evtEvent.consumer = attr.value;
                 break
             case 'duration':
-                evtEvent[key] = parseInt(attr.value);
+                evtEvent.duration = parseInt(attr.value);
                 break
             case 'plan':
-                evtEvent[key] = attr.value;
+                evtEvent.plan = attr.value;
                 break
          }
     })
-    return evtEvent;
+
+    GetOrSetTx(lavaBlock.dbTxs, txHash, height)
+    GetOrSetConsumer(lavaBlock.dbConsumers, evtEvent.consumer!)
+    lavaBlock.dbSubscriptionBuys.push(evtEvent)
 }

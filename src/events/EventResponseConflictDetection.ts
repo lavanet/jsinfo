@@ -1,4 +1,8 @@
 import { Event } from "@cosmjs/stargate"
+import { LavaBlock } from "../lavablock";
+import * as schema from '../schema';
+import { GetOrSetConsumer, GetOrSetTx, GetOrSetSpec } from "../setlatest";
+
 /*
 340836 {
   type: 'lava_response_conflict_detection',
@@ -30,71 +34,65 @@ import { Event } from "@cosmjs/stargate"
 }
 */
 
-export type EventResponseConflictDetection = {
-  requestBlock: number
-  voteDeadline: number
-  apiInterface: string
-  metadata: string
-  client: string
-  voteID: string
-  chainID: string
-  apiURL: string
-  connectionType: string
-  requestData: string
-  voters: string[]
-};
-
-export const ParseEventResponseConflictDetection = (evt: Event): EventResponseConflictDetection => {
-  const evtEvent: EventResponseConflictDetection = {
-    requestBlock: 0,
-    voteDeadline: 0,
-    apiInterface: '',
-    metadata: '',
-    client: '',
-    voteID: '',
-    chainID: '',
-    apiURL: '',
-    connectionType: '',
-    requestData: '',
-    voters: [],
+export const ParseEventResponseConflictDetection = (
+  evt: Event,
+  height: number,
+  txHash: string,
+  lavaBlock: LavaBlock,
+  static_dbProviders: Map<string, schema.Provider>,
+  static_dbSpecs: Map<string, schema.Spec>,
+  static_dbPlans: Map<string, schema.Plan>,
+  static_dbStakes: Map<string, schema.ProviderStake[]>,
+) => {
+  const evtEvent: schema.InsertConflictResponse = {
+    tx: txHash,
+    blockId: height,
   }
+
   evt.attributes.forEach((attr) => {
     let key: string = attr.key;
     if (attr.key.lastIndexOf('.') != -1) {
       key = attr.key.substring(0, attr.key.lastIndexOf('.'));
     }
     switch (key) {
+      /*
+        case 'metadata':
+        break
+
+        case 'voters':
+        attr.value.split(',');
+        break
+      */
       case 'requestBlock':
-        evtEvent[key] = parseInt(attr.value);
+        evtEvent.requestBlock = parseInt(attr.value);
         break
       case 'voteDeadline':
-        evtEvent[key] = parseInt(attr.value);
+        evtEvent.voteDeadline = parseInt(attr.value);
         break
       case 'apiInterface':
-        evtEvent[key] = attr.value;
-        break
-      case 'metadata':
-        evtEvent[key] = attr.value;
+        evtEvent.apiInterface = attr.value;
         break
       case 'client':
-        evtEvent[key] = attr.value;
+        evtEvent.consumer = attr.value;
         break
       case 'voteID':
-        evtEvent[key] = attr.value;
+        evtEvent.voteId = attr.value;
         break
       case 'chainID':
-        evtEvent[key] = attr.value;
+        evtEvent.specId = attr.value;
         break
       case 'apiURL':
-        evtEvent[key] = attr.value;
+        evtEvent.apiURL = attr.value;
         break
       case 'connectionType':
-        evtEvent[key] = attr.value;
+        evtEvent.connectionType = attr.value;
         break
-      case 'voters':
-        evtEvent[key] = attr.value.split(',');
-        break
+
     }
   })
-  return evtEvent;
+
+  GetOrSetTx(lavaBlock.dbTxs, txHash, height)
+  GetOrSetSpec(lavaBlock.dbSpecs, static_dbSpecs, evtEvent.specId!)
+  GetOrSetConsumer(lavaBlock.dbConsumers, evtEvent.consumer!)
+  lavaBlock.dbPayments.push(evtEvent)
 }

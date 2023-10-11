@@ -33,219 +33,65 @@ async function InsertBlock(
     db: PostgresJsDatabase,
 ) {
     //
-    // Init
-    let dbProviders: Map<string, schema.Provider> = new Map()
-    let dbSpecs: Map<string, schema.Spec> = new Map()
-    let dbConsumers: Map<string, schema.Consumer> = new Map()
-    let dbPlans: Map<string, schema.Plan> = new Map()
-    //
-    let dbEvents: schema.InsertEvent[] = []
-    let dbPayments: schema.InsertRelayPayment[] = []
-    let dbConflictResponses: schema.InsertConflictResponse[] = []
-    let dbSubscriptionBuys: schema.InsertSubscriptionBuy[] = []
-    let dbConflictVote: schema.InsertConflictVote[] = []
-    let dbProviderReports: schema.InsertProviderReported[] = []
-
-    //
-    // Stake related
-    block.stakeNewProviderEvts.forEach((evt) => {
-        GetOrSetProvider(dbProviders, static_dbProviders, evt.provider, evt.moniker)
-        GetOrSetSpec(dbSpecs, static_dbSpecs, evt.spec)
-
-        dbEvents.push({
-            blockId: block?.height,
-            eventType: schema.LavaProviderEventType.StakeNewProvider,
-            provider: evt.provider,
-        } as schema.InsertEvent)
-    })
-    block.stakeUpdateProviderEvts.forEach((evt) => {
-        GetOrSetProvider(dbProviders, static_dbProviders, evt.provider, evt.moniker)
-        GetOrSetSpec(dbSpecs, static_dbSpecs, evt.spec)
-
-        dbEvents.push({
-            blockId: block?.height,
-            eventType: schema.LavaProviderEventType.StakeUpdateProvider,
-            provider: evt.provider
-        } as schema.InsertEvent)
-    })
-    block.providerUnstakeCommitEvts.forEach((evt) => {
-        GetOrSetProvider(dbProviders, static_dbProviders, evt.address, evt.moniker)
-        GetOrSetSpec(dbSpecs, static_dbSpecs, evt.chainID)
-
-        dbEvents.push({
-            blockId: block?.height,
-            eventType: schema.LavaProviderEventType.ProviderUnstakeCommit,
-            provider: evt.address
-        } as schema.InsertEvent)
-    })
-
-    //
-    // Freeze related
-    block.freezeProviderEvts.forEach((evt) => {
-        GetOrSetProvider(dbProviders, static_dbProviders, evt.providerAddress, '')
-        evt.chainIDs.forEach((specId) => {
-            GetOrSetSpec(dbSpecs, static_dbSpecs, specId)
-        })
-
-        dbEvents.push({
-            blockId: block?.height,
-            eventType: schema.LavaProviderEventType.FreezeProvider,
-            provider: evt.providerAddress
-        } as schema.InsertEvent)
-    })
-    block.unfreezeProviderEvts.forEach((evt) => {
-        GetOrSetProvider(dbProviders, static_dbProviders, evt.providerAddress, '')
-        evt.chainIDs.forEach((specId) => {
-            GetOrSetSpec(dbSpecs, static_dbSpecs, specId)
-        })
-
-        dbEvents.push({
-            blockId: block?.height,
-            eventType: schema.LavaProviderEventType.UnfreezeProvider,
-            provider: evt.providerAddress
-        } as schema.InsertEvent)
-    })
-    block.providerReportedEvts.forEach((evt) => {
-        GetOrSetProvider(dbProviders, static_dbProviders, evt.provider, '')
-        dbProviderReports.push({
-            blockId: block?.height,
-            cu: evt.cu,
-            datetime: new Date(evt.timestamp),
-            disconnections: evt.disconnections,
-            epoch: evt.epoch,
-            errors: evt.errors,
-            project: evt.project,
-            provider: evt.provider,
-            totalComplaintEpoch: evt.total_complaint_this_epoch,
-        } as schema.InsertProviderReported)
-    })
-
-
-
-    //
-    // Payment related
-    block.relayPaymentEvts.forEach((evt) => {
-        GetOrSetProvider(dbProviders, static_dbProviders, evt.provider, '')
-        GetOrSetSpec(dbSpecs, static_dbSpecs, evt.chainID)
-        GetOrSetConsumer(dbConsumers, evt.client)
-
-        dbPayments.push({
-            blockId: block?.height,
-            specId: evt.chainID,
-            provider: evt.provider,
-            //
-            cu: evt.CU,
-            pay: evt.BasePay,
-            //
-            qosAvailability: evt.QoSAvailability,
-            qosLatency: evt.QoSLatency,
-            qosSync: evt.QoSSync,
-            //
-            qosAvailabilityExc: evt.ExcellenceQoSAvailability,
-            qosLatencyExc: evt.ExcellenceQoSLatency,
-            qosSyncExc: evt.ExcellenceQoSSync,
-            //
-            relays: evt.relayNumber,
-            consumer: evt.client
-        } as schema.InsertRelayPayment)
-    })
-
-    //
-    // Plans / Subscriptions related
-    block.buySubscriptionEvts.forEach((evt) => {
-        GetOrSetConsumer(dbConsumers, evt.consumer)
-        GetOrSetPlan(dbPlans, static_dbPlans, evt.plan)
-
-        dbSubscriptionBuys.push({
-            blockId: block?.height,
-            consumer: evt.consumer,
-            duration: evt.duration,
-            plan: evt.plan,
-        } as schema.InsertSubscriptionBuy)
-    })
-
-    //
-    // Conflict related
-    block.responseConflictDetectionEvts.forEach((evt) => {
-        GetOrSetSpec(dbSpecs, static_dbSpecs, evt.chainID)
-        GetOrSetConsumer(dbConsumers, evt.client)
-
-        dbConflictResponses.push({
-            blockId: block?.height,
-            consumer: evt.client,
-
-            apiInterface: evt.apiInterface,
-            apiURL: evt.apiURL,
-            connectionType: evt.connectionType,
-            requestBlock: evt.requestBlock,
-            requestData: evt.requestData,
-            specId: evt.chainID,
-            voteDeadline: evt.voteDeadline,
-            voteId: evt.voteID,
-        } as schema.InsertConflictResponse)
-    })
-    block.conflictVoteGotCommitEvts.forEach((evt) => {
-        GetOrSetProvider(dbProviders, static_dbProviders, evt.provider, '')
-
-        dbConflictVote.push({
-            blockId: block?.height,
-            provider: evt.provider,
-            voteId: evt.voteID,
-        } as schema.ConflictVote)
-    })
-
-    //
     // We use a transaction to revert insert on any errors
     await db.transaction(async (tx) => {
         // insert block
         await tx.insert(schema.blocks).values({ height: block.height, datetime: new Date(block.datetime) })
 
         // Insert all specs
-        const arrSpecs = Array.from(dbSpecs.values())
+        const arrSpecs = Array.from(block.dbSpecs.values())
         if (arrSpecs.length > 0) {
             await tx.insert(schema.specs)
                 .values(arrSpecs)
                 .onConflictDoNothing();
         }
+        
+        // Insert all Txs
+        const arrTxs = Array.from(block.dbTxs.values())
+        if (arrTxs.length > 0) {
+            await tx.insert(schema.txs)
+                .values(arrTxs)
+                .onConflictDoNothing();
+        }
         // Find / create all providers
-        const arrProviders = Array.from(dbProviders.values())
+        const arrProviders = Array.from(block.dbProviders.values())
         if (arrProviders.length > 0) {
             await tx.insert(schema.providers)
                 .values(arrProviders)
                 .onConflictDoNothing();
         }
         // Find / create all plans
-        const arrPlans = Array.from(dbPlans.values())
+        const arrPlans = Array.from(block.dbPlans.values())
         if (arrPlans.length > 0) {
             await tx.insert(schema.plans)
                 .values(arrPlans)
                 .onConflictDoNothing();
         }
         // Find / create all consumers
-        const arrConsumers = Array.from(dbConsumers.values())
+        const arrConsumers = Array.from(block.dbConsumers.values())
         if (arrConsumers.length > 0) {
             await tx.insert(schema.consumers)
                 .values(arrConsumers)
                 .onConflictDoNothing();
         }
         // Create
-        if (dbEvents.length > 0) {
-            await tx.insert(schema.events).values(dbEvents)
+        if (block.dbEvents.length > 0) {
+            await tx.insert(schema.events).values(block.dbEvents)
         }
-        if (dbPayments.length > 0) {
-            await tx.insert(schema.relayPayments).values(dbPayments)
+        if (block.dbPayments.length > 0) {
+            await tx.insert(schema.relayPayments).values(block.dbPayments)
         }
-        if (dbConflictResponses.length > 0) {
-            await tx.insert(schema.conflictResponses).values(dbConflictResponses)
+        if (block.dbConflictResponses.length > 0) {
+            await tx.insert(schema.conflictResponses).values(block.dbConflictResponses)
         }
-        if (dbSubscriptionBuys.length > 0) {
-            await tx.insert(schema.subscriptionBuys).values(dbSubscriptionBuys)
+        if (block.dbSubscriptionBuys.length > 0) {
+            await tx.insert(schema.subscriptionBuys).values(block.dbSubscriptionBuys)
         }
-        if (dbConflictVote.length > 0) {
-            await tx.insert(schema.conflictVotes).values(dbConflictVote)
+        if (block.dbConflictVote.length > 0) {
+            await tx.insert(schema.conflictVotes).values(block.dbConflictVote)
         }
-        if (dbProviderReports.length > 0) {
-            await tx.insert(schema.providerReported).values(dbProviderReports)
+        if (block.dbProviderReports.length > 0) {
+            await tx.insert(schema.providerReported).values(block.dbProviderReports)
         }
     })
 }
@@ -277,7 +123,7 @@ const doBatch = async (
                 }
 
                 let block: null | LavaBlock = null;
-                block = await GetOneLavaBlock(height, client)
+                block = await GetOneLavaBlock(height, client, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
                 if (block != null) {
                     await InsertBlock(block, db)
                 } else {

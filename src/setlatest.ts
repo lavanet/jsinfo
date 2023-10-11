@@ -55,6 +55,24 @@ export function GetOrSetSpec(
     return spec
 }
 
+export function GetOrSetTx(
+    dbTxs: Map<string, schema.Tx>,
+    txHash: string,
+    height: number,
+): schema.Tx {
+    let dbTx = dbTxs.get(txHash);
+    if (dbTx != undefined) {
+        return dbTx
+    }
+
+    dbTx = {
+        hash: txHash,
+        blockId: height,
+    } as schema.Tx
+    dbTxs.set(txHash, dbTx)
+    return dbTx
+}
+
 export function GetOrSetConsumer(
     dbConsumers: Map<string, schema.Consumer>,
     address: string

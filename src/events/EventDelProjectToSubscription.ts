@@ -1,4 +1,8 @@
 import { Event } from "@cosmjs/stargate"
+import { LavaBlock } from "../lavablock";
+import * as schema from '../schema';
+import { GetOrSetConsumer, GetOrSetTx } from "../setlatest";
+
 /*
 371879  {
   type: 'lava_del_project_to_subscription_event',
@@ -12,16 +16,23 @@ import { Event } from "@cosmjs/stargate"
 }
 */
 
-export type EventDelProjectToSubscription = {
-    subscription: string
-    projectName: string
-};
+export const ParseEventDelProjectToSubscription = (
+    evt: Event,
+    height: number,
+    txHash: string,
+    lavaBlock: LavaBlock,
+    static_dbProviders: Map<string, schema.Provider>,
+    static_dbSpecs: Map<string, schema.Spec>,
+    static_dbPlans: Map<string, schema.Plan>,
+    static_dbStakes: Map<string, schema.ProviderStake[]>,
+) => {
+    const evtEvent: schema.InsertEvent = {
+        tx: txHash,
+        blockId: height,
+        eventType: schema.LavaProviderEventType.DelProjectToSubscription,
+        provider: null,
+    }   
 
-export const ParseEventDelProjectToSubscription = (evt: Event): EventDelProjectToSubscription => {
-    const evtEvent: EventDelProjectToSubscription = {
-        subscription: '',
-        projectName: '',
-    }
     evt.attributes.forEach((attr) => {
         let key: string = attr.key;
         if (attr.key.lastIndexOf('.') != -1) {
@@ -29,12 +40,15 @@ export const ParseEventDelProjectToSubscription = (evt: Event): EventDelProjectT
         }
         switch (key) {
             case 'subscription':
-                evtEvent[key] = attr.value;
+                evtEvent.consumer = attr.value;
                 break
             case 'projectName':
-                evtEvent[key] = attr.value;
+                evtEvent.t1 = attr.value;
                 break
          }
     })
-    return evtEvent;
-}
+
+    GetOrSetTx(lavaBlock.dbTxs, txHash, height)
+    GetOrSetConsumer(lavaBlock.dbConsumers, evtEvent.consumer!)
+    lavaBlock.dbEvents.push(evtEvent)
+ }

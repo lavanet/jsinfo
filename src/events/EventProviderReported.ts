@@ -1,4 +1,7 @@
 import { Event } from "@cosmjs/stargate"
+import { LavaBlock } from "../lavablock";
+import * as schema from '../schema';
+import { GetOrSetProvider, GetOrSetTx } from "../setlatest";
 
 /*
 //block 472892
@@ -23,27 +26,19 @@ import { Event } from "@cosmjs/stargate"
 }
 */
 
-export type EventProviderReported = {
-  cu: number
-  disconnections: number
-  epoch: number
-  errors: number
-  project: string
-  provider: string
-  timestamp: number
-  total_complaint_this_epoch: number
-};
-
-export const ParseEventProviderReported = (evt: Event): EventProviderReported => {
-  const evtEvent: EventProviderReported = {
-    cu: 0,
-    disconnections: 0,
-    epoch: 0,
-    errors: 0,
-    project: '',
-    provider: '',
-    timestamp: 0,
-    total_complaint_this_epoch: 0,
+export const ParseEventProviderReported = (
+  evt: Event,
+  height: number,
+  txHash: string,
+  lavaBlock: LavaBlock,
+  static_dbProviders: Map<string, schema.Provider>,
+  static_dbSpecs: Map<string, schema.Spec>,
+  static_dbPlans: Map<string, schema.Plan>,
+  static_dbStakes: Map<string, schema.ProviderStake[]>,
+) => {
+  const evtEvent: schema.InsertProviderReported = {
+    blockId: height,
+    tx: txHash,
   }
   evt.attributes.forEach((attr) => {
     let key: string = attr.key;
@@ -52,30 +47,33 @@ export const ParseEventProviderReported = (evt: Event): EventProviderReported =>
     }
     switch (key) {
       case 'cu':
-        evtEvent[key] = parseInt(attr.value);
+        evtEvent.cu = parseInt(attr.value);
         break;
       case 'disconnections':
-        evtEvent[key] = parseInt(attr.value);
+        evtEvent.disconnections = parseInt(attr.value);
         break;
       case 'epoch':
-        evtEvent[key] = parseInt(attr.value);
+        evtEvent.epoch = parseInt(attr.value);
         break;
       case 'errors':
-        evtEvent[key] = parseInt(attr.value);
+        evtEvent.errors = parseInt(attr.value);
         break;
       case 'project':
-        evtEvent[key] = attr.value;
+        evtEvent.project = attr.value;
         break;
       case 'provider':
-        evtEvent[key] = attr.value;
+        evtEvent.provider = attr.value;
         break;
       case 'timestamp':
-        evtEvent[key] = Date.parse(attr.value);
+        evtEvent.datetime = new Date(Date.parse(attr.value));
         break;
       case 'total_complaint_this_epoch':
-        evtEvent[key] = parseInt(attr.value);
+        evtEvent.totalComplaintEpoch = parseInt(attr.value);
         break;
     }
   })
-  return evtEvent;
+
+  GetOrSetTx(lavaBlock.dbTxs, txHash, height)
+  GetOrSetProvider(lavaBlock.dbProviders, static_dbProviders, evtEvent.provider!, '')
+  lavaBlock.dbProviderReports.push(evtEvent)
 }

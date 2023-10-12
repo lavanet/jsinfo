@@ -1,7 +1,7 @@
 import { Event } from "@cosmjs/stargate"
 import { LavaBlock } from "../lavablock";
 import * as schema from '../schema';
-import { GetOrSetConsumer, GetOrSetTx } from "../setlatest";
+import { GetOrSetConsumer, SetTx } from "../setlatest";
 
 /*
 351669  {
@@ -24,7 +24,7 @@ import { GetOrSetConsumer, GetOrSetTx } from "../setlatest";
 export const ParseEventDelKeyFromProject = (
     evt: Event,
     height: number,
-    txHash: string,
+    txHash: string | null,
     lavaBlock: LavaBlock,
     static_dbProviders: Map<string, schema.Provider>,
     static_dbSpecs: Map<string, schema.Spec>,
@@ -41,7 +41,7 @@ export const ParseEventDelKeyFromProject = (
     evt.attributes.forEach((attr) => {
         let key: string = attr.key;
         if (attr.key.lastIndexOf('.') != -1) {
-            key = attr.key.substring(0, attr.key.lastIndexOf('.'));
+            key = attr.key.substring(0, attr.key.lastIndexOf('.'))
         }
         switch (key) {
             case 'project':
@@ -51,15 +51,15 @@ export const ParseEventDelKeyFromProject = (
                 evtEvent.t2 = attr.value;
                 break
             case 'keytype':
-                evtEvent.i1 = parseInt(attr.value);
+                evtEvent.i1 = parseInt(attr.value)
                 break
             case 'block':
-                evtEvent.i2 = parseInt(attr.value);
+                evtEvent.i2 = parseInt(attr.value)
                 break
         }
     })
 
-    GetOrSetTx(lavaBlock.dbTxs, txHash, height)
+    SetTx(lavaBlock.dbTxs, txHash, height)
     GetOrSetConsumer(lavaBlock.dbConsumers, evtEvent.consumer!)
     lavaBlock.dbEvents.push(evtEvent)
 }

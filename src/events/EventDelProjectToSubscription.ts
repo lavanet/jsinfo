@@ -1,7 +1,7 @@
 import { Event } from "@cosmjs/stargate"
 import { LavaBlock } from "../lavablock";
 import * as schema from '../schema';
-import { GetOrSetConsumer, GetOrSetTx } from "../setlatest";
+import { GetOrSetConsumer, SetTx } from "../setlatest";
 
 /*
 371879  {
@@ -19,7 +19,7 @@ import { GetOrSetConsumer, GetOrSetTx } from "../setlatest";
 export const ParseEventDelProjectToSubscription = (
     evt: Event,
     height: number,
-    txHash: string,
+    txHash: string | null,
     lavaBlock: LavaBlock,
     static_dbProviders: Map<string, schema.Provider>,
     static_dbSpecs: Map<string, schema.Spec>,
@@ -36,7 +36,7 @@ export const ParseEventDelProjectToSubscription = (
     evt.attributes.forEach((attr) => {
         let key: string = attr.key;
         if (attr.key.lastIndexOf('.') != -1) {
-            key = attr.key.substring(0, attr.key.lastIndexOf('.'));
+            key = attr.key.substring(0, attr.key.lastIndexOf('.'))
         }
         switch (key) {
             case 'subscription':
@@ -48,7 +48,7 @@ export const ParseEventDelProjectToSubscription = (
          }
     })
 
-    GetOrSetTx(lavaBlock.dbTxs, txHash, height)
+    SetTx(lavaBlock.dbTxs, txHash, height)
     GetOrSetConsumer(lavaBlock.dbConsumers, evtEvent.consumer!)
     lavaBlock.dbEvents.push(evtEvent)
  }

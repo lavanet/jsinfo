@@ -108,6 +108,11 @@ export enum LavaProviderEventType {
   ConflictDetectionReceived,
   DelKeyFromProject,
   DelProjectToSubscription,
+  ProviderJailed,
+  VoteGotReveal,
+  VoteRevealStarted,
+  DetectionVoteResolved,
+  DetectionVoteUnresolved,
 }
 
 export const events = pgTable('events', {

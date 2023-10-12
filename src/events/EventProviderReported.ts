@@ -1,7 +1,7 @@
 import { Event } from "@cosmjs/stargate"
 import { LavaBlock } from "../lavablock";
 import * as schema from '../schema';
-import { GetOrSetProvider, GetOrSetTx } from "../setlatest";
+import { GetOrSetProvider, SetTx } from "../setlatest";
 
 /*
 //block 472892
@@ -29,7 +29,7 @@ import { GetOrSetProvider, GetOrSetTx } from "../setlatest";
 export const ParseEventProviderReported = (
   evt: Event,
   height: number,
-  txHash: string,
+  txHash: string | null,
   lavaBlock: LavaBlock,
   static_dbProviders: Map<string, schema.Provider>,
   static_dbSpecs: Map<string, schema.Spec>,
@@ -43,37 +43,37 @@ export const ParseEventProviderReported = (
   evt.attributes.forEach((attr) => {
     let key: string = attr.key;
     if (attr.key.lastIndexOf('.') != -1) {
-      key = attr.key.substring(0, attr.key.lastIndexOf('.'));
+      key = attr.key.substring(0, attr.key.lastIndexOf('.'))
     }
     switch (key) {
       case 'cu':
-        evtEvent.cu = parseInt(attr.value);
-        break;
+        evtEvent.cu = parseInt(attr.value)
+        break
       case 'disconnections':
-        evtEvent.disconnections = parseInt(attr.value);
-        break;
+        evtEvent.disconnections = parseInt(attr.value)
+        break
       case 'epoch':
-        evtEvent.epoch = parseInt(attr.value);
-        break;
+        evtEvent.epoch = parseInt(attr.value)
+        break
       case 'errors':
-        evtEvent.errors = parseInt(attr.value);
-        break;
+        evtEvent.errors = parseInt(attr.value)
+        break
       case 'project':
         evtEvent.project = attr.value;
-        break;
+        break
       case 'provider':
         evtEvent.provider = attr.value;
-        break;
+        break
       case 'timestamp':
         evtEvent.datetime = new Date(Date.parse(attr.value));
-        break;
+        break
       case 'total_complaint_this_epoch':
-        evtEvent.totalComplaintEpoch = parseInt(attr.value);
-        break;
+        evtEvent.totalComplaintEpoch = parseInt(attr.value)
+        break
     }
   })
 
-  GetOrSetTx(lavaBlock.dbTxs, txHash, height)
+  SetTx(lavaBlock.dbTxs, txHash, height)
   GetOrSetProvider(lavaBlock.dbProviders, static_dbProviders, evtEvent.provider!, '')
   lavaBlock.dbProviderReports.push(evtEvent)
 }

@@ -1,35 +1,49 @@
 import { Event } from "@cosmjs/stargate"
 import { LavaBlock } from "../lavablock";
 import * as schema from '../schema';
-import { GetOrSetConsumer, GetOrSetProvider, GetOrSetSpec, GetOrSetTx } from "../setlatest";
+import { GetOrSetConsumer, GetOrSetProvider, GetOrSetSpec, SetTx } from "../setlatest";
 
 /*
-//block 355712
-{
+462631 {
   type: 'lava_relay_payment',
   attributes: [
-    { key: 'relayNumber.6', value: '703' },
-    { key: 'uniqueIdentifier.6', value: '3383608703295002626' },
-    { key: 'ExcellenceQoSAvailability.6', value: '0.999731740000000000'},
-    { key: 'clientFee.6', value: '0' },
-    { key: 'provider.6', value: 'lava@1uhwudw7vzqtnffu2hf5yhv4n8trj79ezl66z99'},
-    { key: 'chainID.6', value: 'CELO' },
-    { key: 'QoSSync.6', value: '0.998575498575498575' },
-    { key: 'ExcellenceQoSLatency.6', value: '0.038088570000000000' },
-    { key: 'reliabilityPay.6', value: 'false' },
-    { key: 'QoSScore.6', value: '0.999524940546085479' },
-    { key: 'CU.6', value: '25530' },
-    { key: 'ExcellenceQoSSync.6', value: '0.000127620000000000' },
-    { key: 'client.6', value: 'lava@1qu0jm3ev9hl3l285wn8ppw8n7jtn9d2a2d5uch' },
-    { key: 'badge.6', value: '[]' },
-    { key: 'Mint.6', value: '76590000ulava' },
-    { key: 'BasePay.6', value: '76590000ulava' },
-    { key: 'totalCUInEpoch.6', value: '240150' },
-    { key: 'QoSLatency.6', value: '1.000000000000000000' },
-    { key: 'QoSAvailability.6', value: '1.000000000000000000' },
-    { key: 'projectID.6', value: 'lava@1qu0jm3ev9hl3l285wn8ppw8n7jtn9d2a2d5uch-admin'},
-    { key: 'descriptionString.6', value: '6272409706814775257' },
-    { key: 'QoSReport.6', value: 'Latency: 1.000000000000000000, Availability: 1.000000000000000000, Sync: 0.998575498575498575'}
+    { key: 'Mint.1', value: '150000ulava' },
+    { key: 'ExcellenceQoSLatency.1', value: '0.039115400000000000' },
+    { key: 'descriptionString.1', value: '7229806934220869017' },
+    { key: 'QoSSync.1', value: '0.000000000000000000' },
+    { key: 'totalCUInEpoch.1', value: '50' },
+    {
+      key: 'ExcellenceQoSAvailability.1',
+      value: '0.993230920000000000'
+    },
+    {
+      key: 'projectID.1',
+      value: 'lava@1qu0jm3ev9hl3l285wn8ppw8n7jtn9d2a2d5uch-admin'
+    },
+    { key: 'ExcellenceQoSSync.1', value: '0.000020120000000000' },
+    { key: 'reliabilityPay.1', value: 'false' },
+    { key: 'BasePay.1', value: '150000ulava' },
+    { key: 'QoSScore.1', value: '0.000000000000000000' },
+    {
+      key: 'QoSReport.1',
+      value: 'Latency: 1.000000000000000000, Availability: 1.000000000000000000, Sync: 0.000000000000000000'
+    },
+    { key: 'uniqueIdentifier.1', value: '5007474103256658834' },
+    { key: 'chainID.1', value: 'LAV1' },
+    { key: 'CU.1', value: '50' },
+    { key: 'relayNumber.1', value: '5' },
+    { key: 'clientFee.1', value: '0' },
+    { key: 'badge.1', value: '[]' },
+    {
+      key: 'provider.1',
+      value: 'lava@1dn5duttgdwu5l7nmhn7jnmpkk348k6t2r58mnp'
+    },
+    { key: 'QoSAvailability.1', value: '1.000000000000000000' },
+    {
+      key: 'client.1',
+      value: 'lava@1qu0jm3ev9hl3l285wn8ppw8n7jtn9d2a2d5uch'
+    },
+    { key: 'QoSLatency.1', value: '1.000000000000000000' }
   ]
 }
 */
@@ -37,7 +51,7 @@ import { GetOrSetConsumer, GetOrSetProvider, GetOrSetSpec, GetOrSetTx } from "..
 export const ParseEventRelayPayment = (
   evt: Event,
   height: number,
-  txHash: string,
+  txHash: string | null,
   lavaBlock: LavaBlock,
   static_dbProviders: Map<string, schema.Provider>,
   static_dbSpecs: Map<string, schema.Spec>,
@@ -89,7 +103,7 @@ export const ParseEventRelayPayment = (
       */
 
       case 'relayNumber':
-        evtEvent.relays = parseInt(attr.value);
+        evtEvent.relays = parseInt(attr.value)
         break
       case 'ExcellenceQoSAvailability':
         evtEvent.qosAvailabilityExc = parseFloat(attr.value);
@@ -116,18 +130,18 @@ export const ParseEventRelayPayment = (
         evtEvent.specId = attr.value;
         break
       case 'CU':
-        evtEvent.cu = parseInt(attr.value);
+        evtEvent.cu = parseInt(attr.value)
         break
       case 'client':
         evtEvent.consumer = attr.value;
         break
       case 'BasePay':
-        evtEvent.pay = parseInt(attr.value);
+        evtEvent.pay = parseInt(attr.value)
         break
     }
   })
 
-  GetOrSetTx(lavaBlock.dbTxs, txHash, height)
+  SetTx(lavaBlock.dbTxs, txHash, height)
   GetOrSetProvider(lavaBlock.dbProviders, static_dbProviders, evtEvent.provider!, '')
   GetOrSetSpec(lavaBlock.dbSpecs, static_dbSpecs, evtEvent.specId!)
   GetOrSetConsumer(lavaBlock.dbConsumers, evtEvent.consumer!)

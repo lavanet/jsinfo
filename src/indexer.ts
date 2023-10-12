@@ -1,15 +1,16 @@
-import { StargateClient, Block } from "@cosmjs/stargate"
+import { StargateClient } from "@cosmjs/stargate"
+import { Tendermint37Client } from "@cosmjs/tendermint-rpc";
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { eq, desc } from "drizzle-orm";
 import * as lavajs from '@lavanet/lavajs';
 import * as schema from './schema';
 import { PromisePool } from '@supercharge/promise-pool'
 import { LavaBlock, GetOneLavaBlock } from './lavablock'
-import { UpdateLatestBlockMeta, GetOrSetConsumer, GetOrSetPlan, GetOrSetProvider, GetOrSetSpec } from './setlatest'
+import { UpdateLatestBlockMeta } from './setlatest'
 import { MigrateDb, GetDb } from "./utils";
 
 const rpc = "https://public-rpc.lavanet.xyz/"
-const lava_testnet2_start_height = 340779; // 340778 has a weird date (9 months ago)
+const lava_testnet2_start_height = 485000// 340779; // 340778 has a weird date (9 months ago)
 let static_dbProviders: Map<string, schema.Provider> = new Map()
 let static_dbSpecs: Map<string, schema.Spec> = new Map()
 let static_dbPlans: Map<string, schema.Plan> = new Map()
@@ -99,13 +100,14 @@ async function InsertBlock(
 const doBatch = async (
     db: PostgresJsDatabase,
     client: StargateClient,
+    clientTm: Tendermint37Client,
     dbHeight: number,
     latestHeight: number,
 ) => {
     //
     // Start filling up
     const batchSize = 250
-    const concurrentSize = 2
+    const concurrentSize = 4
     const blockList = []
     for (let i = dbHeight; i <= latestHeight; i++) {
         blockList.push(i)
@@ -123,7 +125,7 @@ const doBatch = async (
                 }
 
                 let block: null | LavaBlock = null;
-                block = await GetOneLavaBlock(height, client, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
+                block = await GetOneLavaBlock(height, client, clientTm, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
                 if (block != null) {
                     await InsertBlock(block, db)
                 } else {
@@ -151,6 +153,7 @@ const indexer = async (): Promise<void> => {
     //
     // Client
     const client = await StargateClient.connect(rpc)
+    const clientTm = await Tendermint37Client.connect(rpc)
     const chainId = await client.getChainId()
     const height = await client.getHeight()
     const lavajsClient = await lavajs.lavanet.ClientFactory.createRPCQueryClient({ rpcEndpoint: rpc })
@@ -206,7 +209,7 @@ const indexer = async (): Promise<void> => {
         // Found diff, start
         if (latestHeight > dbHeight) {
             console.log('db height', dbHeight, 'blockchain height', latestHeight)
-            await doBatch(db, client, dbHeight, latestHeight)
+            await doBatch(db, client, clientTm, dbHeight, latestHeight)
 
             //
             // Get the latest meta from RPC if not catching up

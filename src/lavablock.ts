@@ -1,6 +1,6 @@
-import { StargateClient, IndexedTx, Block } from "@cosmjs/stargate"
+import { StargateClient, IndexedTx, Block, Event } from "@cosmjs/stargate"
+import { Tendermint37Client } from "@cosmjs/tendermint-rpc";
 import { writeFileSync, readFileSync } from 'fs';
-
 import { ParseEventRelayPayment } from "./events/EventRelayPayment"
 import { ParseEventStakeUpdateProvider } from "./events/EventStakeUpdateProvider"
 import { ParseEventStakeNewProvider } from "./events/EventStakeNewProvider"
@@ -16,8 +16,13 @@ import { ParseEventConflictVoteGotCommit } from "./events/EventConflictVoteGotCo
 import { ParseEventResponseConflictDetection } from "./events/EventResponseConflictDetection"
 import { ParseEventConflictDetectionReceived } from "./events/EventConflictDetectionReceived"
 import { ParseEventProviderReported } from "./events/EventProviderReported"
-
+import { ParseEventProviderJailed } from "./events/EventProviderJailed";
+import { ParseEventConflictVoteGotReveal } from "./events/EventConflictVoteGotReveal";
+import { ParseEventConflictVoteRevealStarted } from "./events/EventConflictVoteRevealStarted";
+import { ParseEventConflictDetectionVoteResolved } from "./events/EventConflictDetectionVoteResolved";
+import { ParseEventConflictDetectionVoteUnresolved } from "./events/EventConflictDetectionVoteUnresolved";
 import * as schema from './schema';
+
 
 export type LavaBlock = {
     height: number
@@ -36,16 +41,12 @@ export type LavaBlock = {
     dbProviderReports: schema.InsertProviderReported[]
 }
 
-export const GetOneLavaBlock = async (
+//
+// Get block (mostly for date)
+const getRpcBlock = async (
     height: number,
     client: StargateClient,
-    static_dbProviders: Map<string, schema.Provider>,
-    static_dbSpecs: Map<string, schema.Spec>,
-    static_dbPlans: Map<string, schema.Plan>,
-    static_dbStakes: Map<string, schema.ProviderStake[]>,
-): Promise<LavaBlock> => {
-    //
-    // Get block (mostly for date)
+): Promise<Block> => {
     const pathBlocks = `./static/${height.toString()}.json`
     let block: Block;
     let excp = false
@@ -64,10 +65,19 @@ export const GetOneLavaBlock = async (
         writeFileSync(pathBlocks, JSON.stringify(block, null, 0), 'utf-8')
     }
 
+    return block!
+}
+
+const getRpcTxs = async (
+    height: number,
+    client: StargateClient,
+    block: Block,
+): Promise<IndexedTx[]> => {
     //
     // Get Txs for block
     const pathTxs = `./static/${height.toString()}_txs.json`
     let txs: IndexedTx[] = []
+    let excp = false
     try {
         excp = false
         txs = JSON.parse(readFileSync(pathTxs, 'utf-8')) as IndexedTx[]
@@ -82,6 +92,181 @@ export const GetOneLavaBlock = async (
         }
         writeFileSync(pathTxs, JSON.stringify(txs, null, 0), 'utf-8')
     }
+
+    return txs
+}
+
+const getRpcBlockResultEvents = async (
+    height: number,
+    client: Tendermint37Client
+): Promise<Event[]> => {
+    //
+    // Get Begin/End block events
+    const pathTxs = `./static/${height.toString()}_block_evts.json`
+    let evts: Event[] = []
+    let excp = false
+    try {
+        excp = false
+        evts = JSON.parse(readFileSync(pathTxs, 'utf-8')) as Event[]
+    }
+    catch {
+        excp = true
+    }
+    if (excp) {
+        const res = await client.blockResults(height)
+        evts.push(...res.beginBlockEvents)
+        evts.push(...res.endBlockEvents)
+        if (res.height != height) {
+            throw ('res.height != height')
+        }
+        writeFileSync(pathTxs, JSON.stringify(evts, null, 0), 'utf-8')
+    }
+
+    return evts
+}
+
+const processOneEvent = (
+    evt: Event,
+    lavaBlock: LavaBlock,
+    height: number,
+    txHash: string | null,
+    static_dbProviders: Map<string, schema.Provider>,
+    static_dbSpecs: Map<string, schema.Spec>,
+    static_dbPlans: Map<string, schema.Plan>,
+    static_dbStakes: Map<string, schema.ProviderStake[]>,
+) => {
+    switch (evt.type) {
+        //
+        // Providers
+        case 'lava_relay_payment':
+            ParseEventRelayPayment(evt, height, txHash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
+            break
+        case 'lava_stake_new_provider':
+            ParseEventStakeNewProvider(evt, height, txHash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
+            break
+        case 'lava_stake_update_provider':
+            ParseEventStakeUpdateProvider(evt, height, txHash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
+            break
+        case 'lava_provider_unstake_commit':
+            ParseEventProviderUnstakeCommit(evt, height, txHash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
+            break
+        case 'lava_freeze_provider':
+            ParseEventFreezeProvider(evt, height, txHash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
+            break
+        case 'lava_unfreeze_provider':
+            ParseEventUnfreezeProvider(evt, height, txHash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
+            break
+        case 'lava_provider_reported':
+            ParseEventProviderReported(evt, height, txHash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
+            break
+        case 'lava_provider_jailed':
+            ParseEventProviderJailed(evt, height, txHash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
+            break
+
+        //
+        // Subscription
+        case 'lava_buy_subscription_event':
+            ParseEventBuySubscription(evt, height, txHash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
+            break
+        case 'lava_add_project_to_subscription_event':
+            ParseEventAddProjectToSubscription(evt, height, txHash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
+            break
+        case 'lava_del_project_to_subscription_event':
+            ParseEventDelProjectToSubscription(evt, height, txHash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
+            break
+        case 'lava_del_key_from_project_event':
+            ParseEventDelKeyFromProject(evt, height, txHash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
+            break
+        case 'lava_add_key_to_project_event':
+            ParseEventAddKeyToProject(evt, height, txHash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
+            break
+
+        //
+        // Conflict
+        case 'lava_conflict_vote_got_commit':
+            // sealed vote by provider
+            ParseEventConflictVoteGotCommit(evt, height, txHash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
+            break
+        case 'lava_response_conflict_detection':
+            // consumer sent 2 conflicting proofs, start conflict resolution
+            ParseEventResponseConflictDetection(evt, height, txHash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
+            break
+        case 'lava_conflict_detection_received':
+            // redundant
+            ParseEventConflictDetectionReceived(evt, height, txHash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
+            break
+        case 'lava_conflict_vote_got_reveal':
+            ParseEventConflictVoteGotReveal(evt, height, txHash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
+            break
+        case 'lava_conflict_vote_reveal_started':
+            ParseEventConflictVoteRevealStarted(evt, height, txHash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
+            break
+        case 'lava_conflict_detection_vote_resolved':
+            ParseEventConflictDetectionVoteResolved(evt, height, txHash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
+            break
+        case 'lava_conflict_detection_vote_unresolved':
+            ParseEventConflictDetectionVoteUnresolved(evt, height, txHash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
+            break
+
+        case 'lava_fixated_params_clean':
+        case 'lava_new_epoch':
+        case 'lava_earliest_epoch':
+            break
+        case 'lava_param_change':
+        case 'lava_spec_refresh':
+        case 'lava_spec_modify':
+        case 'lava_spec_add':
+            break
+
+        case 'submit_proposal':
+        case 'proposal_deposit':
+        case 'proposal_vote':
+            break
+
+        case 'coin_received':
+        case 'coinbase':
+        case 'coin_spent':
+        case 'coin_received':
+        case 'transfer':
+        case 'message':
+        case 'tx':
+        case 'withdraw_rewards':
+        case 'withdraw_commission':
+        case 'delegate':
+        case 'redelegate':
+        case 'create_validator':
+        case 'edit_validator':
+        case 'unbond':
+        case 'liveness':
+        case 'mint':
+        case 'burn':
+        case 'slash':
+        case 'commission':
+        case 'rewards':
+        case 'complete_redelegation':
+        case 'active_proposal':
+            break
+
+        default:
+            console.log('uknown event', height, evt.type)
+            break
+    }
+}
+
+export const GetOneLavaBlock = async (
+    height: number,
+    client: StargateClient,
+    clientTm: Tendermint37Client,
+    static_dbProviders: Map<string, schema.Provider>,
+    static_dbSpecs: Map<string, schema.Spec>,
+    static_dbPlans: Map<string, schema.Plan>,
+    static_dbStakes: Map<string, schema.ProviderStake[]>,
+): Promise<LavaBlock> => {
+
+
+    const block = await getRpcBlock(height, client)
+    const txs = await getRpcTxs(height, client, block)
+    const evts = await getRpcBlockResultEvents(height, clientTm)
 
     //
     // Block object to return
@@ -111,92 +296,27 @@ export const GetOneLavaBlock = async (
             return;
         }
 
-        tx.events.forEach((evt) => {
-            switch (evt.type) {
-                //
-                // Providers
-                case 'lava_relay_payment':
-                    ParseEventRelayPayment(evt, height, tx.hash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
-                    break;
-                case 'lava_stake_new_provider':
-                    ParseEventStakeNewProvider(evt, height, tx.hash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
-                    break
-                case 'lava_stake_update_provider':
-                    ParseEventStakeUpdateProvider(evt, height, tx.hash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
-                    break
-                case 'lava_provider_unstake_commit':
-                    ParseEventProviderUnstakeCommit(evt, height, tx.hash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
-                    break
-                case 'lava_freeze_provider':
-                    ParseEventFreezeProvider(evt, height, tx.hash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
-                    break
-                case 'lava_unfreeze_provider':
-                    ParseEventUnfreezeProvider(evt, height, tx.hash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
-                    break
-                case 'lava_provider_reported':
-                    ParseEventProviderReported(evt, height, tx.hash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
-                    break
-
-                //
-                // Subscription
-                case 'lava_buy_subscription_event':
-                    ParseEventBuySubscription(evt, height, tx.hash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
-                    break
-                case 'lava_add_project_to_subscription_event':
-                    ParseEventAddProjectToSubscription(evt, height, tx.hash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
-                    break
-                case 'lava_del_project_to_subscription_event':
-                    ParseEventDelProjectToSubscription(evt, height, tx.hash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
-                    break
-                case 'lava_del_key_from_project_event':
-                    ParseEventDelKeyFromProject(evt, height, tx.hash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
-                    break
-                case 'lava_add_key_to_project_event':
-                    ParseEventAddKeyToProject(evt, height, tx.hash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
-                    break
-
-                //
-                // Conflict
-                case 'lava_conflict_vote_got_commit':
-                    ParseEventConflictVoteGotCommit(evt, height, tx.hash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
-                    break
-                case 'lava_response_conflict_detection':
-                    ParseEventResponseConflictDetection(evt, height, tx.hash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
-                    break
-                case 'lava_conflict_detection_received':
-                    ParseEventConflictDetectionReceived(evt, height, tx.hash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
-                    break
-                case 'lava_conflict_vote_got_reveal':
-                    console.log(height, evt)
-                    break
-
-                case 'submit_proposal':
-                case 'proposal_deposit':
-                case 'proposal_vote':
-                    break
-
-                case 'coin_received':
-                case 'coinbase':
-                case 'coin_spent':
-                case 'coin_received':
-                case 'transfer':
-                case 'message':
-                case 'tx':
-                case 'withdraw_rewards':
-                case 'withdraw_commission':
-                case 'delegate':
-                case 'redelegate':
-                case 'create_validator':
-                case 'edit_validator':
-                case 'unbond':
-                    break
-
-                default:
-                    console.log('uknown event', height, evt.type)
-                    break
-            }
-        })
+        tx.events.forEach((evt) => processOneEvent(
+            evt,
+            lavaBlock,
+            height,
+            tx.hash,
+            static_dbProviders,
+            static_dbSpecs,
+            static_dbPlans,
+            static_dbStakes
+        ))
     });
+    evts.forEach((evt) => processOneEvent(
+        evt,
+        lavaBlock,
+        height,
+        null,
+        static_dbProviders,
+        static_dbSpecs,
+        static_dbPlans,
+        static_dbStakes
+    ))
 
     return lavaBlock;
 }

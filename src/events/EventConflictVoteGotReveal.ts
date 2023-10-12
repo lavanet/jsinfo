@@ -1,21 +1,25 @@
 import { Event } from "@cosmjs/stargate"
 import { LavaBlock } from "../lavablock";
 import * as schema from '../schema';
-import { GetOrSetConsumer, SetTx } from "../setlatest";
+import { GetOrSetProvider, SetTx } from "../setlatest";
 
 /*
-461834 {
-  type: 'lava_conflict_detection_received',
+458352 {
+  type: 'lava_conflict_vote_got_reveal',
   attributes: [
-    {
-      key: 'client',
-      value: 'lava@1qu0jm3ev9hl3l285wn8ppw8n7jtn9d2a2d5uch'
-    }
+      {
+      key: 'voteID',
+      value: 'lava@1mh9d3vdthekxvc0aflnvzhurv2585aakzs9e3alava@1zghevuyek94dth77a2cjzc0s09puc8tz04hneflava@1zvfemd9cagdw4aey6jl07nes6zvx43u6vfzf7y458250'
+      },
+      {
+      key: 'provider',
+      value: 'lava@1vfpuqq06426z3x4qsn38w6hdqrywqxlc6wmnxp'
+      }
   ]
 }
 */
 
-export const ParseEventConflictDetectionReceived = (
+export const ParseEventConflictVoteGotReveal = (
   evt: Event,
   height: number,
   txHash: string | null,
@@ -28,7 +32,8 @@ export const ParseEventConflictDetectionReceived = (
   const evtEvent: schema.InsertEvent = {
     tx: txHash,
     blockId: height,
-    eventType: schema.LavaProviderEventType.ConflictDetectionReceived,
+    eventType: schema.LavaProviderEventType.VoteGotReveal,
+    consumer: null,
     provider: null,
   }
 
@@ -38,13 +43,16 @@ export const ParseEventConflictDetectionReceived = (
       key = attr.key.substring(0, attr.key.lastIndexOf('.'))
     }
     switch (key) {
-      case 'client':
-        evtEvent.consumer = attr.value;
+      case 'voteID':
+        evtEvent.t1 = attr.value;
+        break
+      case 'provider':
+        evtEvent.provider = attr.value;
         break
     }
   })
 
   SetTx(lavaBlock.dbTxs, txHash, height)
-  GetOrSetConsumer(lavaBlock.dbConsumers, evtEvent.consumer!)
+  GetOrSetProvider(lavaBlock.dbProviders, static_dbProviders, evtEvent.provider!, '')
   lavaBlock.dbEvents.push(evtEvent)
 }

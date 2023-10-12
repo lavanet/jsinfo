@@ -4,22 +4,21 @@ import * as schema from '../schema';
 import { GetOrSetProvider, SetTx } from "../setlatest";
 
 /*
-461844 {
-  type: 'lava_conflict_vote_got_commit',
+485100 {
+  type: 'lava_provider_jailed',
   attributes: [
-    {
-      key: 'provider',
-      value: 'lava@1l57uxerrqsclr2y6srzv8e3y5tcrlyjpvaldpp'
-    },
-    {
-      key: 'voteID',
-      value: 'lava@1qu0jm3ev9hl3l285wn8ppw8n7jtn9d2a2d5uchlava@1f8kg6htavv67x4e54j6zvlg6pwzcsg52k3wu80lava@1j6xsjzvccykc08sz2xe4l2j4a3er64qf8dc9jw461820'
-    }
+      { key: 'chain_id', value: 'COS3' },
+      { key: 'complaint_cu', value: '921' },
+      {
+      key: 'provider_address',
+      value: 'lava@12u7dam8tyedr82ntwe6zz5e34n6vhr3kjlanaf'
+      },
+      { key: 'serviced_cu', value: '70' }
   ]
 }
 */
 
-export const ParseEventConflictVoteGotCommit = (
+export const ParseEventProviderJailed = (
   evt: Event,
   height: number,
   txHash: string | null,
@@ -29,26 +28,35 @@ export const ParseEventConflictVoteGotCommit = (
   static_dbPlans: Map<string, schema.Plan>,
   static_dbStakes: Map<string, schema.ProviderStake[]>,
 ) => {
-  const evtEvent: schema.InsertConflictVote = {
-    blockId: height,
+  const evtEvent: schema.InsertEvent = {
     tx: txHash,
+    blockId: height,
+    eventType: schema.LavaProviderEventType.ProviderJailed,
+    consumer: null,
   }
+
   evt.attributes.forEach((attr) => {
     let key: string = attr.key;
     if (attr.key.lastIndexOf('.') != -1) {
       key = attr.key.substring(0, attr.key.lastIndexOf('.'))
     }
     switch (key) {
-      case 'voteID':
-        evtEvent.voteId = attr.value;
+      case 'chain_id':
+        evtEvent.t1 = attr.value;
         break
-      case 'provider':
+      case 'complaint_cu':
+        evtEvent.b1 = parseInt(attr.value)
+        break
+      case 'provider_address':
         evtEvent.provider = attr.value;
+        break
+      case 'serviced_cu':
+        evtEvent.b2 = parseInt(attr.value)
         break
     }
   })
 
   SetTx(lavaBlock.dbTxs, txHash, height)
   GetOrSetProvider(lavaBlock.dbProviders, static_dbProviders, evtEvent.provider!, '')
-  lavaBlock.dbConflictVote.push(evtEvent)
+  lavaBlock.dbEvents.push(evtEvent)
 }

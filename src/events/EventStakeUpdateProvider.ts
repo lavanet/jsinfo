@@ -1,7 +1,7 @@
 import { Event } from "@cosmjs/stargate"
 import { LavaBlock } from "../lavablock";
 import * as schema from '../schema';
-import { GetOrSetProvider, GetOrSetTx } from "../setlatest";
+import { GetOrSetProvider, SetTx } from "../setlatest";
 
 /*
 //block 340898
@@ -23,7 +23,7 @@ lava_stake_update_provider {
 export const ParseEventStakeUpdateProvider = (
     evt: Event,
     height: number,
-    txHash: string,
+    txHash: string | null,
     lavaBlock: LavaBlock,
     static_dbProviders: Map<string, schema.Provider>,
     static_dbSpecs: Map<string, schema.Spec>,
@@ -40,14 +40,14 @@ export const ParseEventStakeUpdateProvider = (
     evt.attributes.forEach((attr) => {
         let key: string = attr.key;
         if (attr.key.lastIndexOf('.') != -1) {
-            key = attr.key.substring(0, attr.key.lastIndexOf('.'));
+            key = attr.key.substring(0, attr.key.lastIndexOf('.'))
         }
         switch (key) {
             case 'stakeAppliedBlock':
-                evtEvent.i1 = parseInt(attr.value);
+                evtEvent.i1 = parseInt(attr.value)
                 break
             case 'stake':
-                evtEvent.b1 = parseInt(attr.value);
+                evtEvent.b1 = parseInt(attr.value)
                 break
             case 'moniker':
                 evtEvent.t1 = attr.value;
@@ -61,7 +61,7 @@ export const ParseEventStakeUpdateProvider = (
         }
     })
 
-    GetOrSetTx(lavaBlock.dbTxs, txHash, height)
+    SetTx(lavaBlock.dbTxs, txHash, height)
     GetOrSetProvider(lavaBlock.dbProviders, static_dbProviders, evtEvent.provider!, '')
     lavaBlock.dbEvents.push(evtEvent)
 }

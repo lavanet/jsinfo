@@ -1,18 +1,20 @@
 import { Event } from "@cosmjs/stargate"
 import { LavaBlock } from "../lavablock";
 import * as schema from '../schema';
-import { GetOrSetProvider, GetOrSetTx } from "../setlatest";
+import { GetOrSetProvider, SetTx } from "../setlatest";
 
 /*
-//block 360494
-lava_unfreeze_provider {
+459042 {
   type: 'lava_unfreeze_provider',
   attributes: [
     {
       key: 'providerAddress',
-      value: 'lava@1q7jyftyahuf66jefc36254rldk6je9xkf5t79z'
+      value: 'lava@13mmqeu332calsmzwzcvhjedx4mdmywurydmrd4'
     },
-    { key: 'chainIDs', value: 'FTM250' }
+    {
+      key: 'chainIDs',
+      value: 'EVMOS,EVMOST,CANTO,JUN1,AXELAR,AXELART'
+    }
   ]
 }
 */
@@ -20,7 +22,7 @@ lava_unfreeze_provider {
 export const ParseEventUnfreezeProvider = (
     evt: Event,
     height: number,
-    txHash: string,
+    txHash: string | null,
     lavaBlock: LavaBlock,
     static_dbProviders: Map<string, schema.Provider>,
     static_dbSpecs: Map<string, schema.Spec>,
@@ -37,7 +39,7 @@ export const ParseEventUnfreezeProvider = (
     evt.attributes.forEach((attr) => {
         let key: string = attr.key;
         if (attr.key.lastIndexOf('.') != -1) {
-            key = attr.key.substring(0, attr.key.lastIndexOf('.'));
+            key = attr.key.substring(0, attr.key.lastIndexOf('.'))
         }
         switch (key) {
             case 'providerAddress':
@@ -49,7 +51,7 @@ export const ParseEventUnfreezeProvider = (
          }
     })
 
-    GetOrSetTx(lavaBlock.dbTxs, txHash, height)
+    SetTx(lavaBlock.dbTxs, txHash, height)
     GetOrSetProvider(lavaBlock.dbProviders, static_dbProviders, evtEvent.provider!, '')
     lavaBlock.dbEvents.push(evtEvent)
 }

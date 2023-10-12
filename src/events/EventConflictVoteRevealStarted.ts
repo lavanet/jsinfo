@@ -1,21 +1,22 @@
 import { Event } from "@cosmjs/stargate"
 import { LavaBlock } from "../lavablock";
 import * as schema from '../schema';
-import { GetOrSetConsumer, SetTx } from "../setlatest";
+import { SetTx } from "../setlatest";
 
 /*
-461834 {
-  type: 'lava_conflict_detection_received',
+486510 {
+  type: 'lava_conflict_vote_reveal_started',
   attributes: [
-    {
-      key: 'client',
-      value: 'lava@1qu0jm3ev9hl3l285wn8ppw8n7jtn9d2a2d5uch'
-    }
+      { key: 'voteDeadline', value: '486570' },
+      {
+      key: 'voteID',
+      value: 'lava@1mh9d3vdthekxvc0aflnvzhurv2585aakzs9e3alava@1f8kg6htavv67x4e54j6zvlg6pwzcsg52k3wu80lava@1q7jyftyahuf66jefc36254rldk6je9xkf5t79z486390'
+      }
   ]
 }
 */
 
-export const ParseEventConflictDetectionReceived = (
+export const ParseEventConflictVoteRevealStarted = (
   evt: Event,
   height: number,
   txHash: string | null,
@@ -28,7 +29,8 @@ export const ParseEventConflictDetectionReceived = (
   const evtEvent: schema.InsertEvent = {
     tx: txHash,
     blockId: height,
-    eventType: schema.LavaProviderEventType.ConflictDetectionReceived,
+    eventType: schema.LavaProviderEventType.VoteRevealStarted,
+    consumer: null,
     provider: null,
   }
 
@@ -38,13 +40,15 @@ export const ParseEventConflictDetectionReceived = (
       key = attr.key.substring(0, attr.key.lastIndexOf('.'))
     }
     switch (key) {
-      case 'client':
-        evtEvent.consumer = attr.value;
+      case 'voteDeadline':
+        evtEvent.i1 = parseInt(attr.value)
+        break
+      case 'voteID':
+        evtEvent.t1 = attr.value;
         break
     }
   })
 
   SetTx(lavaBlock.dbTxs, txHash, height)
-  GetOrSetConsumer(lavaBlock.dbConsumers, evtEvent.consumer!)
   lavaBlock.dbEvents.push(evtEvent)
 }

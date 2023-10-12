@@ -1,7 +1,7 @@
 import { Event } from "@cosmjs/stargate"
 import { LavaBlock } from "../lavablock";
 import * as schema from '../schema';
-import { GetOrSetConsumer, GetOrSetTx, GetOrSetSpec } from "../setlatest";
+import { GetOrSetConsumer, SetTx, GetOrSetSpec } from "../setlatest";
 
 /*
 340836 {
@@ -37,7 +37,7 @@ import { GetOrSetConsumer, GetOrSetTx, GetOrSetSpec } from "../setlatest";
 export const ParseEventResponseConflictDetection = (
   evt: Event,
   height: number,
-  txHash: string,
+  txHash: string | null,
   lavaBlock: LavaBlock,
   static_dbProviders: Map<string, schema.Provider>,
   static_dbSpecs: Map<string, schema.Spec>,
@@ -52,7 +52,7 @@ export const ParseEventResponseConflictDetection = (
   evt.attributes.forEach((attr) => {
     let key: string = attr.key;
     if (attr.key.lastIndexOf('.') != -1) {
-      key = attr.key.substring(0, attr.key.lastIndexOf('.'));
+      key = attr.key.substring(0, attr.key.lastIndexOf('.'))
     }
     switch (key) {
       /*
@@ -64,10 +64,10 @@ export const ParseEventResponseConflictDetection = (
         break
       */
       case 'requestBlock':
-        evtEvent.requestBlock = parseInt(attr.value);
+        evtEvent.requestBlock = parseInt(attr.value)
         break
       case 'voteDeadline':
-        evtEvent.voteDeadline = parseInt(attr.value);
+        evtEvent.voteDeadline = parseInt(attr.value)
         break
       case 'apiInterface':
         evtEvent.apiInterface = attr.value;
@@ -91,7 +91,7 @@ export const ParseEventResponseConflictDetection = (
     }
   })
 
-  GetOrSetTx(lavaBlock.dbTxs, txHash, height)
+  SetTx(lavaBlock.dbTxs, txHash, height)
   GetOrSetSpec(lavaBlock.dbSpecs, static_dbSpecs, evtEvent.specId!)
   GetOrSetConsumer(lavaBlock.dbConsumers, evtEvent.consumer!)
   lavaBlock.dbPayments.push(evtEvent)

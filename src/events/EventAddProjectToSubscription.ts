@@ -1,17 +1,17 @@
 import { Event } from "@cosmjs/stargate"
 import { LavaBlock } from "../lavablock";
 import * as schema from '../schema';
-import { GetOrSetConsumer, GetOrSetTx } from "../setlatest";
+import { GetOrSetConsumer, SetTx } from "../setlatest";
 
 /*
-341737  {
+461785 {
   type: 'lava_add_project_to_subscription_event',
   attributes: [
     {
       key: 'subscription',
       value: 'lava@1qu0jm3ev9hl3l285wn8ppw8n7jtn9d2a2d5uch'
     },
-    { key: 'projectName', value: 'f195d68175eb091ec1f71d00f8952b85' }
+    { key: 'projectName', value: '10e1d3dec0ab282312ea912f327596a1' }
   ]
 }
 */
@@ -19,7 +19,7 @@ import { GetOrSetConsumer, GetOrSetTx } from "../setlatest";
 export const ParseEventAddProjectToSubscription = (
     evt: Event,
     height: number,
-    txHash: string,
+    txHash: string | null,
     lavaBlock: LavaBlock,
     static_dbProviders: Map<string, schema.Provider>,
     static_dbSpecs: Map<string, schema.Spec>,
@@ -36,7 +36,7 @@ export const ParseEventAddProjectToSubscription = (
     evt.attributes.forEach((attr) => {
         let key: string = attr.key;
         if (attr.key.lastIndexOf('.') != -1) {
-            key = attr.key.substring(0, attr.key.lastIndexOf('.'));
+            key = attr.key.substring(0, attr.key.lastIndexOf('.'))
         }
         switch (key) {
             case 'subscription':
@@ -48,7 +48,7 @@ export const ParseEventAddProjectToSubscription = (
          }
     })
 
-    GetOrSetTx(lavaBlock.dbTxs, txHash, height)
+    SetTx(lavaBlock.dbTxs, txHash, height)
     GetOrSetConsumer(lavaBlock.dbConsumers, evtEvent.consumer!)
     lavaBlock.dbEvents.push(evtEvent)
 }

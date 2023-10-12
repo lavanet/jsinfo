@@ -10,7 +10,7 @@ import { UpdateLatestBlockMeta } from './setlatest'
 import { MigrateDb, GetDb } from "./utils";
 
 const rpc = "https://public-rpc.lavanet.xyz/"
-const lava_testnet2_start_height = 485000// 340779; // 340778 has a weird date (9 months ago)
+const lava_testnet2_start_height = 340779; // 340778 has a weird date (9 months ago)
 let static_dbProviders: Map<string, schema.Provider> = new Map()
 let static_dbSpecs: Map<string, schema.Spec> = new Map()
 let static_dbPlans: Map<string, schema.Plan> = new Map()

@@ -4,8 +4,6 @@ services:
     build: .
     env_file:
       - .env
-    environment:
-      POSTGRESQL_URL: ${POSTGRESQL_URL}
     entrypoint: bun indexer.js
 
   query:
@@ -17,8 +15,4 @@ services:
       - "3000"
     env_file:
       - .env
-    environment:
-      - POSTGRESQL_URL=${POSTGRESQL_URL}
-      - QUERY_PORT=${QUERY_PORT}
-      - QUERY_HOST=${QUERY_HOST}
     entrypoint: bun query.js

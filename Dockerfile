@@ -23,6 +23,5 @@ COPY --from=install --chown=bun:bun /temp/dev/node_modules node_modules
 COPY --from=prerelease --chown=bun:bun /usr/src/app/drizzle drizzle
 COPY --from=prerelease --chown=bun:bun /usr/src/app/dist .
 
-# run the app
+# switch to user
 USER bun
-ENTRYPOINT ["bun", "query.js"]

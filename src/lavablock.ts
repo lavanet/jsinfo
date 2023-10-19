@@ -24,6 +24,8 @@ import { ParseEventConflictDetectionVoteUnresolved } from "./events/EventConflic
 import * as schema from './schema';
 
 const is_save_cache = parseInt(process.env['SAVE_CACHE']!)
+const is_read_cache = parseInt(process.env['READ_CACHE']!)
+const cache_path = process.env['CACHE_PATH']!
 
 export type LavaBlock = {
     height: number
@@ -48,15 +50,18 @@ const getRpcBlock = async (
     height: number,
     client: StargateClient,
 ): Promise<Block> => {
-    const pathBlocks = `./static/${height.toString()}.json`
+    const pathBlocks = `${cache_path}${height.toString()}.json`
     let block: Block;
-    let excp = false
-    try {
-        excp = false
-        block = JSON.parse(readFileSync(pathBlocks, 'utf-8')) as Block
-    }
-    catch {
-        excp = true
+    let excp = true
+
+    if (is_read_cache) {
+        try {
+            excp = false
+            block = JSON.parse(readFileSync(pathBlocks, 'utf-8')) as Block
+        }
+        catch {
+            excp = true
+        }
     }
     if (excp || block!.header == undefined) {
         block = await client.getBlock(height)
@@ -78,15 +83,18 @@ const getRpcTxs = async (
 ): Promise<IndexedTx[]> => {
     //
     // Get Txs for block
-    const pathTxs = `./static/${height.toString()}_txs.json`
+    const pathTxs = `${cache_path}${height.toString()}_txs.json`
     let txs: IndexedTx[] = []
-    let excp = false
-    try {
-        excp = false
-        txs = JSON.parse(readFileSync(pathTxs, 'utf-8')) as IndexedTx[]
-    }
-    catch {
-        excp = true
+    let excp = true
+
+    if (is_read_cache) {
+        try {
+            excp = false
+            txs = JSON.parse(readFileSync(pathTxs, 'utf-8')) as IndexedTx[]
+        }
+        catch {
+            excp = true
+        }
     }
     if (excp) {
         txs = await client.searchTx('tx.height=' + height)
@@ -107,15 +115,18 @@ const getRpcBlockResultEvents = async (
 ): Promise<Event[]> => {
     //
     // Get Begin/End block events
-    const pathTxs = `./static/${height.toString()}_block_evts.json`
+    const pathTxs = `${cache_path}${height.toString()}_block_evts.json`
     let evts: Event[] = []
-    let excp = false
-    try {
-        excp = false
-        evts = JSON.parse(readFileSync(pathTxs, 'utf-8')) as Event[]
-    }
-    catch {
-        excp = true
+    let excp = true
+
+    if (is_read_cache) {
+        try {
+            excp = false
+            evts = JSON.parse(readFileSync(pathTxs, 'utf-8')) as Event[]
+        }
+        catch {
+            excp = true
+        }
     }
     if (excp) {
         const res = await client.blockResults(height)
@@ -213,6 +224,9 @@ const processOneEvent = (
             break
         case 'lava_conflict_detection_vote_unresolved':
             ParseEventConflictDetectionVoteUnresolved(evt, height, txHash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
+            break
+        case 'lava_provider_latest_block_report':
+            // TODO
             break
 
         case 'lava_fixated_params_clean':

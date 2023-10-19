@@ -10,6 +10,9 @@ import { UpdateLatestBlockMeta } from './setlatest'
 import { MigrateDb, GetDb } from "./utils";
 
 const rpc = process.env['LAVA_RPC'] as string
+const n_workers = parseInt(process.env['N_WORKERS']!)
+const batch_size = parseInt(process.env['BATCH_SIZE']!)
+const poll_ms = parseInt(process.env['POLL_MS']!)
 const lava_testnet2_start_height = parseInt(process.env['START_BLOCK']!) // 340778 has a weird date (9 months ago)
 let static_dbProviders: Map<string, schema.Provider> = new Map()
 let static_dbSpecs: Map<string, schema.Spec> = new Map()
@@ -106,18 +109,17 @@ const doBatch = async (
 ) => {
     //
     // Start filling up
-    const batchSize = 250
-    const concurrentSize = 4
     const blockList = []
-    for (let i = dbHeight; i <= latestHeight; i++) {
+    for (let i = dbHeight + 1; i <= latestHeight; i++) {
         blockList.push(i)
     }
+    const org_len = blockList.length
     while (blockList.length > 0) {
         let start = performance.now();
 
-        const tmpList = blockList.splice(0, batchSize);
+        const tmpList = blockList.splice(0, batch_size);
         const { results, errors } = await PromisePool
-            .withConcurrency(concurrentSize)
+            .withConcurrency(n_workers)
             .for(tmpList)
             .process(async (height) => {
                 if (await isBlockInDb(db, height)) {
@@ -135,10 +137,11 @@ const doBatch = async (
 
         let timeTaken = performance.now() - start;
         console.log(
+            'work', org_len,
             'errors', errors,
-            'batches remaining:', blockList.length / batchSize,
+            'batches remaining:', blockList.length / batch_size,
             'time', timeTaken / 1000,
-            'est remaining:', Math.trunc((timeTaken / 1000) * blockList.length / batchSize), 's'
+            'est remaining:', Math.trunc((timeTaken / 1000) * blockList.length / batch_size), 's'
         )
         //
         // Add errors to start of queue
@@ -180,8 +183,7 @@ const indexer = async (): Promise<void> => {
 
     //
     // Loop forever, filling up blocks
-    const pollEvery = 3000 // ms
-    const loopFill = () => (setTimeout(fillUp, pollEvery))
+    const loopFill = () => (setTimeout(fillUp, poll_ms))
     const fillUp = async () => {
         //
         // Blockchain latest

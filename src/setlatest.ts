@@ -207,7 +207,6 @@ export async function UpdateLatestBlockMeta(
         }
 
         if (withStakes) {
-            console.log('withStakes', withStakes)
             // Insert all stakes
             await Promise.all(Array.from(static_dbStakes.values()).map(async (stakes) => {
                 return stakes.map(async (stake) => {

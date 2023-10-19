@@ -3,7 +3,7 @@
 ### Generate migrations
 If you make changes to the schema, make migrations:
 ```bash
-npm run generate
+bun run generate
 ```
 
 ### Create db
@@ -27,4 +27,10 @@ pg_restore -d postgres://addr:port/postgres db.dump
 ``` bash
 bunx ts-node src/indexer.ts
 bunx ts-node src/query.ts 
+```
+
+### Docker
+```bash
+docker compose up -d
+docker compose logs -f
 ```

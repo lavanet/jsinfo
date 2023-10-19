@@ -9,8 +9,8 @@ import { LavaBlock, GetOneLavaBlock } from './lavablock'
 import { UpdateLatestBlockMeta } from './setlatest'
 import { MigrateDb, GetDb } from "./utils";
 
-const rpc = "https://public-rpc.lavanet.xyz/"
-const lava_testnet2_start_height = 340779; // 340778 has a weird date (9 months ago)
+const rpc = process.env['LAVA_RPC'] as string
+const lava_testnet2_start_height = parseInt(process.env['START_BLOCK']!) // 340778 has a weird date (9 months ago)
 let static_dbProviders: Map<string, schema.Provider> = new Map()
 let static_dbSpecs: Map<string, schema.Spec> = new Map()
 let static_dbPlans: Map<string, schema.Plan> = new Map()
@@ -150,6 +150,7 @@ const doBatch = async (
 }
 
 const indexer = async (): Promise<void> => {
+    console.log(`starting indexer, rpc: ${rpc}, start height: ${lava_testnet2_start_height}`)
     //
     // Client
     const client = await StargateClient.connect(rpc)

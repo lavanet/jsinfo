@@ -23,6 +23,7 @@ import { ParseEventConflictDetectionVoteResolved } from "./events/EventConflictD
 import { ParseEventConflictDetectionVoteUnresolved } from "./events/EventConflictDetectionVoteUnresolved";
 import * as schema from './schema';
 
+const is_save_cache = parseInt(process.env['SAVE_CACHE']!)
 
 export type LavaBlock = {
     height: number
@@ -62,7 +63,9 @@ const getRpcBlock = async (
         if (block!.header == undefined) {
             throw ('block!.header == undefined')
         }
-        writeFileSync(pathBlocks, JSON.stringify(block, null, 0), 'utf-8')
+        if (is_save_cache) {
+            writeFileSync(pathBlocks, JSON.stringify(block, null, 0), 'utf-8')
+        }
     }
 
     return block!
@@ -90,7 +93,9 @@ const getRpcTxs = async (
         if (txs.length == 0 && block!.txs.length != 0) {
             throw ('txs.length == 0 && block!.txs.length != 0')
         }
-        writeFileSync(pathTxs, JSON.stringify(txs, null, 0), 'utf-8')
+        if (is_save_cache) {
+            writeFileSync(pathTxs, JSON.stringify(txs, null, 0), 'utf-8')
+        }
     }
 
     return txs
@@ -119,7 +124,9 @@ const getRpcBlockResultEvents = async (
         if (res.height != height) {
             throw ('res.height != height')
         }
-        writeFileSync(pathTxs, JSON.stringify(evts, null, 0), 'utf-8')
+        if (is_save_cache) {
+            writeFileSync(pathTxs, JSON.stringify(evts, null, 0), 'utf-8')
+        }
     }
 
     return evts

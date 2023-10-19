@@ -13,7 +13,6 @@
   "license": "ISC",
   "devDependencies": {
     "@tsconfig/node-lts": "^18.12.4",
-    "@types/better-sqlite3": "^7.6.4",
     "@types/node": "^20.6.3",
     "drizzle-kit": "^0.19.13",
     "ts-node": "^10.9.1",
@@ -22,11 +21,9 @@
   "dependencies": {
     "@cosmjs/stargate": "^0.31.1",
     "@lavanet/lavajs": "^0.22.4",
-    "@prisma/client": "^5.2.0",
     "@supercharge/promise-pool": "^3.0.0",
-    "better-sqlite3": "^8.6.0",
     "drizzle-orm": "^0.28.6",
     "fastify": "^4.23.2",
-    "postgres": "^3.3.5"
+    "postgres": "3.3.5"
   }
 }

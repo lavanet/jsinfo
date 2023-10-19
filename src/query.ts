@@ -9,6 +9,19 @@ import { GetDb } from './utils';
 
 const db = GetDb()
 
+async function getLatestBlock() {
+    //
+    const latestDbBlocks = await db.select().from(schema.blocks).orderBy(desc(schema.blocks.height)).limit(1)
+    let latestHeight = 0
+    let latestDatetime = 0
+    if (latestDbBlocks.length != 0) {
+        latestHeight = latestDbBlocks[0].height == null ? 0 : latestDbBlocks[0].height
+        latestDatetime = latestDbBlocks[0].datetime == null ? 0 : latestDbBlocks[0].datetime.getTime()
+    }
+
+    return {latestHeight, latestDatetime}
+}
+
 const server: FastifyInstance = Fastify({
     logger: true,
 })
@@ -57,13 +70,7 @@ const latestOpts: RouteShorthandOptions = {
 
 server.get('/latest', latestOpts, async (request, reply) => {
     //
-    const latestDbBlocks = await db.select().from(schema.blocks).orderBy(desc(schema.blocks.height)).limit(1)
-    let latestHeight = 0
-    let latestDatetime = 0
-    if (latestDbBlocks.length != 0) {
-        latestHeight = latestDbBlocks[0].height == null ? 0 : latestDbBlocks[0].height
-        latestDatetime = latestDbBlocks[0].datetime == null ? 0 : latestDbBlocks[0].datetime.getTime()
-    }
+    const { latestHeight, latestDatetime } = await getLatestBlock()
 
     //
     // Get total payments and more
@@ -524,12 +531,21 @@ server.get('/spec/:specId', SpecOpts, async (request, reply) => {
 })
 
 export const queryserver = async (): Promise<void> => {
+    const port = parseInt(process.env['QUERY_PORT']!)
+    const host = process.env['QUERY_HOST']!
+
     try {
-        await server.listen({ port: 3000 })
+        try {
+            const { latestHeight, latestDatetime } = await getLatestBlock()
+            server.log.info(`block ${latestHeight} block time ${latestDatetime}`)
+        } catch (err) {
+            server.log.error('failed to connect get block from db')
+            server.log.error(err)
+            process.exit(1)
+        }
 
-        const address = server.server.address()
-        const port = typeof address === 'string' ? address : address?.port
-
+        server.log.info('listening on', port, host)
+        await server.listen({ port: port, host: host })
     } catch (err) {
         server.log.error(err)
         process.exit(1)

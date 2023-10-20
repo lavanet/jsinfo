@@ -21,6 +21,9 @@ sudo -u jsinfo pg_dump -Fc > db.dump
 
 # Recover
 pg_restore -d postgres://addr:port/postgres db.dump
+
+# Dump for GCP import
+sudo -u jsinfo pg_dump --format=p --no-owner --no-acl jsinfo > dump.sql
 ```
 
 ### Run

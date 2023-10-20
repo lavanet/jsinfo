@@ -25,8 +25,8 @@ jobs:
       - name: 'Authenticate to Google Cloud'
         uses: 'google-github-actions/auth@v1'
         with:
-          workload_identity_provider: '${{secrets.staging_workload_identity_provider}}'
-          service_account: '${{secrets.staging_service_account}}'
+          workload_identity_provider: '${{secrets.testnet_workload_identity_provider}}'
+          service_account: '${{secrets.testnet_service_account}}'
 
       - name: 'Set up GCP CLI'
         uses: 'google-github-actions/setup-gcloud@v1'
@@ -38,7 +38,7 @@ jobs:
 
       - name: 'GCP set project'
         env:
-          PROJECT_SECRET: ${{secrets.staging_project}}
+          PROJECT_SECRET: ${{secrets.testnet_project}}
         run: |
           gcloud config set project "$PROJECT_SECRET"
 
@@ -64,7 +64,7 @@ jobs:
 
       - name: Build, tag, and push docker image to GCP
         env:
-          REGISTRY: ${{ secrets.staging_registry }}
+          REGISTRY: ${{ secrets.testnet_registry }}
           IMAGE_TAG: ${{ github.sha }}
           NOW: ${{ env.NOW }}
         run: |

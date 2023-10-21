@@ -122,17 +122,26 @@ const doBatch = async (
             .withConcurrency(n_workers)
             .for(tmpList)
             .process(async (height) => {
+                console.log(">>> DBG", "process", height, "start")
+
+
                 if (await isBlockInDb(db, height)) {
                     return
                 }
 
+                console.log(">>> DBG", "process", height, "111")
+
                 let block: null | LavaBlock = null;
                 block = await GetOneLavaBlock(height, client, clientTm, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
+                console.log(">>> DBG", "process", height, "222")
                 if (block != null) {
+                    console.log(">>> DBG", "process", height, "333")
                     await InsertBlock(block, db)
+                    console.log(">>> DBG", "process", height, "444")
                 } else {
                     console.log('failed getting block', height)
                 }
+                console.log(">>> DBG", "process", height, "555")
             })
 
         let timeTaken = performance.now() - start;
@@ -185,6 +194,7 @@ const indexer = async (): Promise<void> => {
     // Loop forever, filling up blocks
     const loopFill = () => (setTimeout(fillUp, poll_ms))
     const fillUp = async () => {
+        console.log(">>> DBG", "fillUp")
         //
         // Blockchain latest
         let latestHeight = 0
@@ -199,26 +209,37 @@ const indexer = async (): Promise<void> => {
 
         //
         // Find latest block on DB
+        console.log(">>> DBG", "Find latest 1")
         let dbHeight = lava_testnet2_start_height
-        const latestDbBlock = await db.select().from(schema.blocks).orderBy(desc(schema.blocks.height)).limit(1)
+        let latestDbBlock
+        try {
+            latestDbBlock = await db.select().from(schema.blocks).orderBy(desc(schema.blocks.height)).limit(1)
+        } catch (e) {
+            console.log('failed getting latestDbBlock', e)
+            loopFill()
+            return
+        }
         if (latestDbBlock.length != 0) {
             const tHeight = latestDbBlock[0].height
             if (tHeight != null) {
                 dbHeight = tHeight
             }
         }
+        console.log(">>> DBG", "Find latest 2")
 
         //
         // Found diff, start
         if (latestHeight > dbHeight) {
             console.log('db height', dbHeight, 'blockchain height', latestHeight)
             await doBatch(db, client, clientTm, dbHeight, latestHeight)
+            console.log(">>> DBG", "doBatch done")
 
             //
             // Get the latest meta from RPC if not catching up
             // catching up = more than 1 block being indexed
             if (latestHeight - dbHeight == 1) {
                 try {
+                    console.log(">>> DBG", "UpdateLatestBlockMeta")
                     await UpdateLatestBlockMeta(
                         db,
                         lavajsClient,
@@ -229,10 +250,17 @@ const indexer = async (): Promise<void> => {
                         static_dbPlans,
                         static_dbStakes
                     )
+                    console.log(">>> DBG", "UpdateLatestBlockMeta done")
                 } catch (e) {
                     console.log('UpdateLatestBlockMeta', e)
                 }
-                await db.refreshMaterializedView(schema.relayPaymentsAggView).concurrently()
+                console.log(">>> DBG", "refreshMaterializedView")
+                try {
+                    await db.refreshMaterializedView(schema.relayPaymentsAggView).concurrently()
+                } catch (e) {
+                    console.log("db.refreshMaterializedView failed", e)
+                }
+                console.log(">>> DBG", "refreshMaterializedView done")
             }
         }
         loopFill()

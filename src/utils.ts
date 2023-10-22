@@ -10,7 +10,10 @@ export const MigrateDb = async () => {
 }
 
 export const GetDb = () => {
-    const queryClient = postgres(postgre_url);
+    const queryClient = postgres(postgre_url, {
+        idle_timeout: 20,
+        max_lifetime: 60 * 30,
+    });
     const db: PostgresJsDatabase = drizzle(queryClient);
     return db
 }

@@ -41,19 +41,23 @@ async function InsertBlock(
     // We use a transaction to revert insert on any errors
     await db.transaction(async (tx) => {
         // insert block
+        console.log(">>> DBG", "InsertBlock", block.height, "666")
         await tx.insert(schema.blocks).values({ height: block.height, datetime: new Date(block.datetime) })
 
         // Insert all specs
         const arrSpecs = Array.from(block.dbSpecs.values())
         if (arrSpecs.length > 0) {
+            console.log(">>> DBG", "InsertBlock", block.height, "777", arrSpecs.length)
             await tx.insert(schema.specs)
                 .values(arrSpecs)
                 .onConflictDoNothing();
+                // TODO: update here
         }
         
         // Insert all Txs
         const arrTxs = Array.from(block.dbTxs.values())
         if (arrTxs.length > 0) {
+            console.log(">>> DBG", "InsertBlock", block.height, "888", arrTxs.length)
             await tx.insert(schema.txs)
                 .values(arrTxs)
                 .onConflictDoNothing();
@@ -61,6 +65,7 @@ async function InsertBlock(
         // Find / create all providers
         const arrProviders = Array.from(block.dbProviders.values())
         if (arrProviders.length > 0) {
+            console.log(">>> DBG", "InsertBlock", block.height, "999", arrProviders.length)
             await tx.insert(schema.providers)
                 .values(arrProviders)
                 .onConflictDoNothing();
@@ -68,6 +73,7 @@ async function InsertBlock(
         // Find / create all plans
         const arrPlans = Array.from(block.dbPlans.values())
         if (arrPlans.length > 0) {
+            console.log(">>> DBG", "InsertBlock", block.height, "aaa", arrPlans.length)
             await tx.insert(schema.plans)
                 .values(arrPlans)
                 .onConflictDoNothing();
@@ -75,30 +81,38 @@ async function InsertBlock(
         // Find / create all consumers
         const arrConsumers = Array.from(block.dbConsumers.values())
         if (arrConsumers.length > 0) {
+            console.log(">>> DBG", "InsertBlock", block.height, "bbb", arrConsumers.length)
             await tx.insert(schema.consumers)
                 .values(arrConsumers)
                 .onConflictDoNothing();
         }
         // Create
         if (block.dbEvents.length > 0) {
+            console.log(">>> DBG", "InsertBlock", block.height, "ccc", block.dbEvents.length)
             await tx.insert(schema.events).values(block.dbEvents)
         }
         if (block.dbPayments.length > 0) {
+            console.log(">>> DBG", "InsertBlock", block.height, "ddd", block.dbPayments.length)
             await tx.insert(schema.relayPayments).values(block.dbPayments)
         }
         if (block.dbConflictResponses.length > 0) {
+            console.log(">>> DBG", "InsertBlock", block.height, "eee", block.dbConflictResponses.length)
             await tx.insert(schema.conflictResponses).values(block.dbConflictResponses)
         }
         if (block.dbSubscriptionBuys.length > 0) {
+            console.log(">>> DBG", "InsertBlock", block.height, "fff", block.dbSubscriptionBuys.length)
             await tx.insert(schema.subscriptionBuys).values(block.dbSubscriptionBuys)
         }
         if (block.dbConflictVote.length > 0) {
+            console.log(">>> DBG", "InsertBlock", block.height, "@@@", block.dbConflictVote.length)
             await tx.insert(schema.conflictVotes).values(block.dbConflictVote)
         }
         if (block.dbProviderReports.length > 0) {
+            console.log(">>> DBG", "InsertBlock", block.height, "###", block.dbProviderReports.length)
             await tx.insert(schema.providerReported).values(block.dbProviderReports)
         }
     })
+    console.log(">>> DBG", "InsertBlock", block.height, "$$$")
 }
 
 const doBatch = async (

@@ -94,5 +94,5 @@ export const ParseEventResponseConflictDetection = (
   SetTx(lavaBlock.dbTxs, txHash, height)
   GetOrSetSpec(lavaBlock.dbSpecs, static_dbSpecs, evtEvent.specId!)
   GetOrSetConsumer(lavaBlock.dbConsumers, evtEvent.consumer!)
-  lavaBlock.dbPayments.push(evtEvent)
+  lavaBlock.dbConflictResponses.push(evtEvent)
 }

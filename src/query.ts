@@ -11,8 +11,8 @@ let db = GetDb()
 
 async function checkDb() {
     try {
-        await db.select().from(schema.blocks).limit(1)    
-    } catch(e) {
+        await db.select().from(schema.blocks).limit(1)
+    } catch (e) {
         console.log('checkDb exception, resetting connection', e)
         db = GetDb()
     }
@@ -54,7 +54,7 @@ const latestOpts: RouteShorthandOptions = {
 
 server.get('/latest', latestOpts, async (request, reply) => {
     await checkDb()
-    
+
     const { latestHeight, latestDatetime } = await getLatestBlock()
     return {
         height: latestHeight,
@@ -612,7 +612,9 @@ server.get('/spec/:specId', SpecOpts, async (request, reply) => {
     //
     // Get stakes
     let res5 = await db.select().from(schema.providerStakes).
-        where(eq(schema.providerStakes.specId, upSpecId)).orderBy(desc(schema.providerStakes.stake))
+        leftJoin(schema.providers, eq(schema.providerStakes.provider, schema.providers.address)).
+        where(eq(schema.providerStakes.specId, upSpecId)).
+        orderBy(desc(schema.providerStakes.stake))
 
     //
     // Get graph with 1 day resolution
@@ -660,6 +662,60 @@ server.get('/spec/:specId', SpecOpts, async (request, reply) => {
         qosData: res6,
         stakes: res5,
         data: res3,
+    }
+})
+
+const eventsOpts: RouteShorthandOptions = {
+    schema: {
+        response: {
+            200: {
+                type: 'object',
+                properties: {
+                    height: {
+                        type: 'number'
+                    },
+                    datetime: {
+                        type: 'number'
+                    },
+                    events: {
+                        type: 'array'
+                    },
+                    payments: {
+                        type: 'array',
+                    },
+                    reports: {
+                        type: 'array',
+                    },
+                }
+            }
+        }
+    }
+}
+
+server.get('/events', eventsOpts, async (request, reply) => {
+    await checkDb()
+    const { latestHeight, latestDatetime } = await getLatestBlock()
+
+    //
+    const res3 = await db.select().from(schema.events).
+        leftJoin(schema.blocks, eq(schema.events.blockId, schema.blocks.height)).
+        leftJoin(schema.providers, eq(schema.events.provider, schema.providers.address)).
+        orderBy(desc(schema.events.id)).offset(0).limit(250)
+    const res6 = await db.select().from(schema.relayPayments).
+        leftJoin(schema.blocks, eq(schema.relayPayments.blockId, schema.blocks.height)).
+        leftJoin(schema.providers, eq(schema.relayPayments.provider, schema.providers.address)).
+        orderBy(desc(schema.relayPayments.id)).offset(0).limit(250)
+    let res7 = await db.select().from(schema.providerReported).
+        leftJoin(schema.blocks, eq(schema.providerReported.blockId, schema.blocks.height)).
+        leftJoin(schema.providers, eq(schema.providerReported.provider, schema.providers.address)).
+        orderBy(desc(schema.providerReported.blockId)).limit(250)
+    // TODO: return & display dbConflictResponses
+    return {
+        height: latestHeight,
+        datetime: latestDatetime,
+        events: res3,
+        payments: res6,
+        reports: res7,
     }
 })
 

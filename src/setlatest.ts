@@ -2,6 +2,7 @@ import * as lavajs from '@lavanet/lavajs';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from './schema';
 import { ne } from "drizzle-orm";
+import { boolean } from 'drizzle-orm/mysql-core';
 
 export type LavaClient = Awaited<ReturnType<typeof lavajs.lavanet.ClientFactory.createRPCQueryClient>>
 
@@ -125,8 +126,16 @@ async function getLatestProvidersAndSpecsAndStakes(
     dbStakes: Map<string, schema.ProviderStake[]>,
 ) {
     const lavaClient = client.lavanet.lava;
-
     dbStakes.clear()
+
+    // unstaking map
+    const unstakingProviders: Map<string, boolean> = new Map()
+    let unstaking = await lavaClient.epochstorage.stakeStorage({
+        index: 'Unstake'
+    })
+    unstaking.stakeStorage.stakeEntries.forEach((stake) => {
+        unstakingProviders.set(stake.address + '_' + stake.chain, true)
+    })
     let specs = await lavaClient.spec.showAllChains()
     await Promise.all(specs.chainInfoList.map(async (spec) => {
         GetOrSetSpec(dbSpecs, null, spec.chainID)
@@ -139,7 +148,8 @@ async function getLatestProvidersAndSpecsAndStakes(
             if (dbStakes.get(providerStake.address) == undefined) {
                 dbStakes.set(providerStake.address, [])
             }
-            // TODO add addons & extensions
+
+            // addons
             let addons = ''
             let extensions = ''
             providerStake.endpoints.forEach((endPoint) => {
@@ -147,10 +157,15 @@ async function getLatestProvidersAndSpecsAndStakes(
                 extensions += endPoint.extensions.join(',')
             })
             let stakeArr: schema.ProviderStake[] = dbStakes.get(providerStake.address)!
+            
+            // status
             const appliedHeight = providerStake.stakeAppliedBlock.toSigned().toInt()
             let status = schema.LavaProviderStakeStatus.Active
             if (appliedHeight == -1) {
                 status = schema.LavaProviderStakeStatus.Frozen
+            }
+            if (unstakingProviders.get(providerStake.address + '_' + providerStake.chain) === true) {
+                status = schema.LavaProviderStakeStatus.Unstaking
             }
             stakeArr.push({
                 provider: providerStake.address,
@@ -163,8 +178,6 @@ async function getLatestProvidersAndSpecsAndStakes(
 
                 stake: parseInt(providerStake.stake.amount),
                 appliedHeight: appliedHeight,
-                //
-                // TODO add geolocation!
             } as schema.ProviderStake)
 
         })
@@ -242,6 +255,7 @@ export async function UpdateLatestBlockMeta(
                                     geolocation: stake.geolocation,
                                     addons: stake.addons,
                                     extensions: stake.extensions,
+                                    status: stake.status,
                                 },
                             }
                         );

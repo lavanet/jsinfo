@@ -45,4 +45,4 @@ dev.db-journal
 # static block cache files
 /static
 *.dump
-*.sql
+dump.sql

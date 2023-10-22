@@ -258,6 +258,7 @@ const processOneEvent = (
         case 'create_validator':
         case 'edit_validator':
         case 'unbond':
+        case 'complete_unbonding':
         case 'liveness':
         case 'mint':
         case 'burn':

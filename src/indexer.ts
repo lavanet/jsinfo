@@ -18,6 +18,7 @@ let static_dbProviders: Map<string, schema.Provider> = new Map()
 let static_dbSpecs: Map<string, schema.Spec> = new Map()
 let static_dbPlans: Map<string, schema.Plan> = new Map()
 let static_dbStakes: Map<string, schema.ProviderStake[]> = new Map()
+const globakWorkList = []
 
 async function isBlockInDb(
     db: PostgresJsDatabase,
@@ -109,7 +110,9 @@ const doBatch = async (
 ) => {
     //
     // Start filling up
-    const blockList = []
+    console.log('globakWorkList', globakWorkList.length, globakWorkList)
+    const blockList = [...globakWorkList]
+    globakWorkList.length = 0
     for (let i = dbHeight + 1; i <= latestHeight; i++) {
         blockList.push(i)
     }
@@ -153,10 +156,10 @@ const doBatch = async (
             'est remaining:', Math.trunc((timeTaken / 1000) * blockList.length / batch_size), 's'
         )
         //
-        // Add errors to start of queue
-        // TODO: delay the execution of this to the next iteration
+        // Add errors to global work list
+        // to be tried again on the next iteration
         errors.forEach((err) => {
-            blockList.unshift(err.item)
+            globakWorkList.push(err.item)
         })
     }
 }

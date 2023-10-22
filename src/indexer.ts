@@ -18,7 +18,7 @@ let static_dbProviders: Map<string, schema.Provider> = new Map()
 let static_dbSpecs: Map<string, schema.Spec> = new Map()
 let static_dbPlans: Map<string, schema.Plan> = new Map()
 let static_dbStakes: Map<string, schema.ProviderStake[]> = new Map()
-const globakWorkList = []
+const globakWorkList: number[] = []
 
 async function isBlockInDb(
     db: PostgresJsDatabase,

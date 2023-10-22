@@ -33,6 +33,14 @@ async function isBlockInDb(
     return false
 }
 
+async function doInChunks(sz: number, arr: any, cb: (arr: any) => Promise<any>) {
+    while (arr.length != 0) {
+        const tmpArr = arr.splice(0, sz)
+        await cb(tmpArr)
+    }
+    return
+}
+
 async function InsertBlock(
     block: LavaBlock,
     db: PostgresJsDatabase,
@@ -41,78 +49,74 @@ async function InsertBlock(
     // We use a transaction to revert insert on any errors
     await db.transaction(async (tx) => {
         // insert block
-        console.log(">>> DBG", "InsertBlock", block.height, "666")
         await tx.insert(schema.blocks).values({ height: block.height, datetime: new Date(block.datetime) })
 
         // Insert all specs
         const arrSpecs = Array.from(block.dbSpecs.values())
-        if (arrSpecs.length > 0) {
-            console.log(">>> DBG", "InsertBlock", block.height, "777", arrSpecs.length)
+        await doInChunks(100, arrSpecs, async (arr: any) => {
             await tx.insert(schema.specs)
-                .values(arrSpecs)
+                .values(arr)
                 .onConflictDoNothing();
-                // TODO: update here
-        }
-        
+            // TODO: update here
+        })
+
         // Insert all Txs
         const arrTxs = Array.from(block.dbTxs.values())
-        if (arrTxs.length > 0) {
-            console.log(">>> DBG", "InsertBlock", block.height, "888", arrTxs.length)
+        await doInChunks(100, arrTxs, async (arr: any) => {
             await tx.insert(schema.txs)
-                .values(arrTxs)
+                .values(arr)
                 .onConflictDoNothing();
-        }
+        })
+
         // Find / create all providers
         const arrProviders = Array.from(block.dbProviders.values())
-        if (arrProviders.length > 0) {
-            console.log(">>> DBG", "InsertBlock", block.height, "999", arrProviders.length)
+        await doInChunks(100, arrProviders, async (arr: any) => {
             await tx.insert(schema.providers)
-                .values(arrProviders)
+                .values(arr)
                 .onConflictDoNothing();
-        }
+        })
+
         // Find / create all plans
         const arrPlans = Array.from(block.dbPlans.values())
-        if (arrPlans.length > 0) {
-            console.log(">>> DBG", "InsertBlock", block.height, "aaa", arrPlans.length)
+        await doInChunks(100, arrPlans, async (arr: any) => {
             await tx.insert(schema.plans)
-                .values(arrPlans)
+                .values(arr)
                 .onConflictDoNothing();
-        }
+        })
+
         // Find / create all consumers
         const arrConsumers = Array.from(block.dbConsumers.values())
-        if (arrConsumers.length > 0) {
-            console.log(">>> DBG", "InsertBlock", block.height, "bbb", arrConsumers.length)
+        await doInChunks(100, arrConsumers, async (arr: any) => {
             await tx.insert(schema.consumers)
-                .values(arrConsumers)
+                .values(arr)
                 .onConflictDoNothing();
-        }
+        })
+
         // Create
-        if (block.dbEvents.length > 0) {
-            console.log(">>> DBG", "InsertBlock", block.height, "ccc", block.dbEvents.length)
-            await tx.insert(schema.events).values(block.dbEvents)
-        }
-        if (block.dbPayments.length > 0) {
-            console.log(">>> DBG", "InsertBlock", block.height, "ddd", block.dbPayments.length)
-            await tx.insert(schema.relayPayments).values(block.dbPayments)
-        }
-        if (block.dbConflictResponses.length > 0) {
-            console.log(">>> DBG", "InsertBlock", block.height, "eee", block.dbConflictResponses.length)
-            await tx.insert(schema.conflictResponses).values(block.dbConflictResponses)
-        }
-        if (block.dbSubscriptionBuys.length > 0) {
-            console.log(">>> DBG", "InsertBlock", block.height, "fff", block.dbSubscriptionBuys.length)
-            await tx.insert(schema.subscriptionBuys).values(block.dbSubscriptionBuys)
-        }
-        if (block.dbConflictVote.length > 0) {
-            console.log(">>> DBG", "InsertBlock", block.height, "@@@", block.dbConflictVote.length)
-            await tx.insert(schema.conflictVotes).values(block.dbConflictVote)
-        }
-        if (block.dbProviderReports.length > 0) {
-            console.log(">>> DBG", "InsertBlock", block.height, "###", block.dbProviderReports.length)
-            await tx.insert(schema.providerReported).values(block.dbProviderReports)
-        }
+        await doInChunks(100, block.dbEvents, async (arr: any) => {
+            await tx.insert(schema.events).values(arr)
+        })
+
+        await doInChunks(100, block.dbPayments, async (arr: any) => {
+            await tx.insert(schema.relayPayments).values(arr)
+        })
+
+        await doInChunks(100, block.dbConflictResponses, async (arr: any) => {
+            await tx.insert(schema.conflictResponses).values(arr)
+        })
+
+        await doInChunks(100, block.dbSubscriptionBuys, async (arr: any) => {
+            await tx.insert(schema.subscriptionBuys).values(arr)
+        })
+
+        await doInChunks(100, block.dbConflictVote, async (arr: any) => {
+            await tx.insert(schema.conflictVotes).values(arr)
+        })
+
+        await doInChunks(100, block.dbProviderReports, async (arr: any) => {
+            await tx.insert(schema.providerReported).values(arr)
+        })
     })
-    console.log(">>> DBG", "InsertBlock", block.height, "$$$")
 }
 
 const doBatch = async (
@@ -139,26 +143,17 @@ const doBatch = async (
             .withConcurrency(n_workers)
             .for(tmpList)
             .process(async (height) => {
-                console.log(">>> DBG", "process", height, "start")
-
-
                 if (await isBlockInDb(db, height)) {
                     return
                 }
 
-                console.log(">>> DBG", "process", height, "111")
-
                 let block: null | LavaBlock = null;
                 block = await GetOneLavaBlock(height, client, clientTm, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
-                console.log(">>> DBG", "process", height, "222")
                 if (block != null) {
-                    console.log(">>> DBG", "process", height, "333")
                     await InsertBlock(block, db)
-                    console.log(">>> DBG", "process", height, "444")
                 } else {
                     console.log('failed getting block', height)
                 }
-                console.log(">>> DBG", "process", height, "555")
             })
 
         let timeTaken = performance.now() - start;
@@ -192,7 +187,7 @@ const indexer = async (): Promise<void> => {
     //
     // DB
     await MigrateDb()
-    const db = GetDb()
+    let db = GetDb()
 
     //
     // Insert providers, specs & plans from latest block 
@@ -211,7 +206,6 @@ const indexer = async (): Promise<void> => {
     // Loop forever, filling up blocks
     const loopFill = () => (setTimeout(fillUp, poll_ms))
     const fillUp = async () => {
-        console.log(">>> DBG", "fillUp")
         //
         // Blockchain latest
         let latestHeight = 0
@@ -226,13 +220,14 @@ const indexer = async (): Promise<void> => {
 
         //
         // Find latest block on DB
-        console.log(">>> DBG", "Find latest 1")
         let dbHeight = lava_testnet2_start_height
         let latestDbBlock
         try {
             latestDbBlock = await db.select().from(schema.blocks).orderBy(desc(schema.blocks.height)).limit(1)
         } catch (e) {
             console.log('failed getting latestDbBlock', e)
+            console.log('restarting db connection')
+            db = GetDb()
             loopFill()
             return
         }
@@ -242,7 +237,6 @@ const indexer = async (): Promise<void> => {
                 dbHeight = tHeight
             }
         }
-        console.log(">>> DBG", "Find latest 2")
 
         //
         // Found diff, start

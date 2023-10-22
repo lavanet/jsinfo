@@ -41,9 +41,18 @@ export const specs = pgTable('specs', {
 export type Spec = typeof specs.$inferSelect
 export type InsertSpec = typeof specs.$inferInsert
 
+export enum LavaProviderStakeStatus {
+  Active = 1,
+  Frozen,
+  Unstaking,
+}
 export const providerStakes = pgTable('provider_stakes', {
   stake: bigint('stake', { mode: 'number' }),
   appliedHeight: integer('applied_height'),
+  geolocation: integer('geolocation'),
+  addons: text('addons'),
+  extensions: text('extensions'),
+  status: integer('status'), // LavaProviderStakeStatus
 
   provider: text('provider').references(() => providers.address),
   specId: text('spec_id').references(() => specs.id),

@@ -43,6 +43,20 @@
       "when": 1697055796456,
       "tag": "0005_sloppy_freak",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1698002555497,
+      "tag": "0006_round_paper_doll",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "5",
+      "when": 1698003040338,
+      "tag": "0007_simple_vertigo",
+      "breakpoints": true
     }
   ]
 }

@@ -7,7 +7,16 @@ import { sql, desc, eq, gt, and, inArray } from "drizzle-orm";
 import * as schema from './schema';
 import { GetDb } from './utils';
 
-const db = GetDb()
+let db = GetDb()
+
+async function checkDb() {
+    try {
+        await db.select().from(schema.blocks).limit(1)    
+    } catch(e) {
+        console.log('checkDb exception, resetting connection', e)
+        db = GetDb()
+    }
+}
 
 async function getLatestBlock() {
     //
@@ -44,6 +53,8 @@ const latestOpts: RouteShorthandOptions = {
 }
 
 server.get('/latest', latestOpts, async (request, reply) => {
+    await checkDb()
+    
     const { latestHeight, latestDatetime } = await getLatestBlock()
     return {
         height: latestHeight,
@@ -95,6 +106,8 @@ const indexOpts: RouteShorthandOptions = {
 }
 
 server.get('/index', indexOpts, async (request, reply) => {
+    await checkDb()
+
     //
     const { latestHeight, latestDatetime } = await getLatestBlock()
 
@@ -287,6 +300,8 @@ const providerOpts: RouteShorthandOptions = {
 }
 
 server.get('/provider/:addr', providerOpts, async (request, reply) => {
+    await checkDb()
+
     const { addr } = request.params as { addr: string }
     if (addr.length != 44) {
         return {} // TODO: errors
@@ -419,6 +434,8 @@ const providersOpts: RouteShorthandOptions = {
 }
 
 server.get('/providers', providersOpts, async (request, reply) => {
+    await checkDb()
+
     const res = await db.select().from(schema.providers)
     return {
         providers: res,
@@ -459,6 +476,8 @@ const consumerOpts: RouteShorthandOptions = {
 }
 
 server.get('/consumer/:addr', consumerOpts, async (request, reply) => {
+    await checkDb()
+
     const { addr } = request.params as { addr: string }
     if (addr.length != 44) {
         return {} // TODO: errors
@@ -560,6 +579,8 @@ const SpecOpts: RouteShorthandOptions = {
 }
 
 server.get('/spec/:specId', SpecOpts, async (request, reply) => {
+    await checkDb()
+
     const { specId } = request.params as { specId: string }
     if (specId.length <= 0) {
         return {} // TODO: errors

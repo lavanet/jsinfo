@@ -139,13 +139,32 @@ async function getLatestProvidersAndSpecsAndStakes(
             if (dbStakes.get(providerStake.address) == undefined) {
                 dbStakes.set(providerStake.address, [])
             }
+            // TODO add addons & extensions
+            let addons = ''
+            let extensions = ''
+            providerStake.endpoints.forEach((endPoint) => {
+                addons += endPoint.addons.join(',')
+                extensions += endPoint.extensions.join(',')
+            })
             let stakeArr: schema.ProviderStake[] = dbStakes.get(providerStake.address)!
+            const appliedHeight = providerStake.stakeAppliedBlock.toSigned().toInt()
+            let status = schema.LavaProviderStakeStatus.Active
+            if (appliedHeight == -1) {
+                status = schema.LavaProviderStakeStatus.Frozen
+            }
             stakeArr.push({
                 provider: providerStake.address,
                 blockId: height,
                 specId: providerStake.chain,
+                geolocation: providerStake.geolocation.toNumber(),
+                addons: addons,
+                extensions: extensions,
+                status: status,
+
                 stake: parseInt(providerStake.stake.amount),
-                appliedHeight: providerStake.stakeAppliedBlock.toSigned().toInt(),
+                appliedHeight: appliedHeight,
+                //
+                // TODO add geolocation!
             } as schema.ProviderStake)
 
         })
@@ -220,6 +239,9 @@ export async function UpdateLatestBlockMeta(
                                     stake: stake.stake,
                                     appliedHeight: stake.appliedHeight,
                                     blockId: height,
+                                    geolocation: stake.geolocation,
+                                    addons: stake.addons,
+                                    extensions: stake.extensions,
                                 },
                             }
                         );

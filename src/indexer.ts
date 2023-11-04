@@ -7,7 +7,7 @@ import * as schema from './schema';
 import { PromisePool } from '@supercharge/promise-pool'
 import { LavaBlock, GetOneLavaBlock } from './lavablock'
 import { UpdateLatestBlockMeta } from './setlatest'
-import { MigrateDb, GetDb } from "./utils";
+import { MigrateDb, GetDb, DoInChunks } from "./utils";
 
 const rpc = process.env['LAVA_RPC'] as string
 const n_workers = parseInt(process.env['N_WORKERS']!)
@@ -33,14 +33,6 @@ async function isBlockInDb(
     return false
 }
 
-async function doInChunks(sz: number, arr: any, cb: (arr: any) => Promise<any>) {
-    while (arr.length != 0) {
-        const tmpArr = arr.splice(0, sz)
-        await cb(tmpArr)
-    }
-    return
-}
-
 async function InsertBlock(
     block: LavaBlock,
     db: PostgresJsDatabase,
@@ -53,16 +45,15 @@ async function InsertBlock(
 
         // Insert all specs
         const arrSpecs = Array.from(block.dbSpecs.values())
-        await doInChunks(100, arrSpecs, async (arr: any) => {
+        await DoInChunks(100, arrSpecs, async (arr: any) => {
             await tx.insert(schema.specs)
                 .values(arr)
                 .onConflictDoNothing();
-            // TODO: update here
         })
 
         // Insert all Txs
         const arrTxs = Array.from(block.dbTxs.values())
-        await doInChunks(100, arrTxs, async (arr: any) => {
+        await DoInChunks(100, arrTxs, async (arr: any) => {
             await tx.insert(schema.txs)
                 .values(arr)
                 .onConflictDoNothing();
@@ -70,7 +61,7 @@ async function InsertBlock(
 
         // Find / create all providers
         const arrProviders = Array.from(block.dbProviders.values())
-        await doInChunks(100, arrProviders, async (arr: any) => {
+        await DoInChunks(100, arrProviders, async (arr: any) => {
             await tx.insert(schema.providers)
                 .values(arr)
                 .onConflictDoNothing();
@@ -78,7 +69,7 @@ async function InsertBlock(
 
         // Find / create all plans
         const arrPlans = Array.from(block.dbPlans.values())
-        await doInChunks(100, arrPlans, async (arr: any) => {
+        await DoInChunks(100, arrPlans, async (arr: any) => {
             await tx.insert(schema.plans)
                 .values(arr)
                 .onConflictDoNothing();
@@ -86,34 +77,34 @@ async function InsertBlock(
 
         // Find / create all consumers
         const arrConsumers = Array.from(block.dbConsumers.values())
-        await doInChunks(100, arrConsumers, async (arr: any) => {
+        await DoInChunks(100, arrConsumers, async (arr: any) => {
             await tx.insert(schema.consumers)
                 .values(arr)
                 .onConflictDoNothing();
         })
 
         // Create
-        await doInChunks(100, block.dbEvents, async (arr: any) => {
+        await DoInChunks(100, block.dbEvents, async (arr: any) => {
             await tx.insert(schema.events).values(arr)
         })
 
-        await doInChunks(100, block.dbPayments, async (arr: any) => {
+        await DoInChunks(100, block.dbPayments, async (arr: any) => {
             await tx.insert(schema.relayPayments).values(arr)
         })
 
-        await doInChunks(100, block.dbConflictResponses, async (arr: any) => {
+        await DoInChunks(100, block.dbConflictResponses, async (arr: any) => {
             await tx.insert(schema.conflictResponses).values(arr)
         })
 
-        await doInChunks(100, block.dbSubscriptionBuys, async (arr: any) => {
+        await DoInChunks(100, block.dbSubscriptionBuys, async (arr: any) => {
             await tx.insert(schema.subscriptionBuys).values(arr)
         })
 
-        await doInChunks(100, block.dbConflictVote, async (arr: any) => {
+        await DoInChunks(100, block.dbConflictVote, async (arr: any) => {
             await tx.insert(schema.conflictVotes).values(arr)
         })
 
-        await doInChunks(100, block.dbProviderReports, async (arr: any) => {
+        await DoInChunks(100, block.dbProviderReports, async (arr: any) => {
             await tx.insert(schema.providerReported).values(arr)
         })
     })
@@ -243,14 +234,12 @@ const indexer = async (): Promise<void> => {
         if (latestHeight > dbHeight) {
             console.log('db height', dbHeight, 'blockchain height', latestHeight)
             await doBatch(db, client, clientTm, dbHeight, latestHeight)
-            console.log(">>> DBG", "doBatch done")
 
             //
             // Get the latest meta from RPC if not catching up
             // catching up = more than 1 block being indexed
             if (latestHeight - dbHeight == 1) {
                 try {
-                    console.log(">>> DBG", "UpdateLatestBlockMeta")
                     await UpdateLatestBlockMeta(
                         db,
                         lavajsClient,
@@ -261,17 +250,14 @@ const indexer = async (): Promise<void> => {
                         static_dbPlans,
                         static_dbStakes
                     )
-                    console.log(">>> DBG", "UpdateLatestBlockMeta done")
                 } catch (e) {
                     console.log('UpdateLatestBlockMeta', e)
                 }
-                console.log(">>> DBG", "refreshMaterializedView")
                 try {
                     await db.refreshMaterializedView(schema.relayPaymentsAggView).concurrently()
                 } catch (e) {
                     console.log("db.refreshMaterializedView failed", e)
                 }
-                console.log(">>> DBG", "refreshMaterializedView done")
             }
         }
         loopFill()

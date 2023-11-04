@@ -17,3 +17,11 @@ export const GetDb = () => {
     const db: PostgresJsDatabase = drizzle(queryClient);
     return db
 }
+
+export async function DoInChunks(sz: number, arr: any, cb: (arr: any) => Promise<any>) {
+    while (arr.length != 0) {
+        const tmpArr = arr.splice(0, sz)
+        await cb(tmpArr)
+    }
+    return
+}

@@ -46,3 +46,4 @@ dev.db-journal
 /static
 *.dump
 dump.sql
+.vscode/*

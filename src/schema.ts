@@ -45,6 +45,7 @@ export enum LavaProviderStakeStatus {
   Active = 1,
   Frozen,
   Unstaking,
+  Inactive,
 }
 export const providerStakes = pgTable('provider_stakes', {
   stake: bigint('stake', { mode: 'number' }),

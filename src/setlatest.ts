@@ -2,7 +2,8 @@ import * as lavajs from '@lavanet/lavajs';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from './schema';
 import { ne } from "drizzle-orm";
-import { boolean } from 'drizzle-orm/mysql-core';
+import { DoInChunks } from "./utils";
+import { StakeEntry } from '@lavanet/lavajs/dist/codegen/lavanet/lava/epochstorage/stake_entry';
 
 export type LavaClient = Awaited<ReturnType<typeof lavajs.lavanet.ClientFactory.createRPCQueryClient>>
 
@@ -118,6 +119,51 @@ export function GetOrSetPlan(
     return dbPlan
 }
 
+function _doStake(
+    height: number,
+    dbProviders: Map<string, schema.Provider>,
+    dbStakes: Map<string, schema.ProviderStake[]>,
+    providerStake: StakeEntry,
+    isUnstaking: boolean,
+) {
+    GetOrSetProvider(dbProviders, null, providerStake.address, providerStake.moniker)
+
+    // init if needed
+    if (dbStakes.get(providerStake.address) == undefined) {
+        dbStakes.set(providerStake.address, [])
+    }
+
+    // addons
+    let addons = ''
+    let extensions = ''
+    providerStake.endpoints.forEach((endPoint) => {
+        addons += endPoint.addons.join(',')
+        extensions += endPoint.extensions.join(',')
+    })
+    let stakeArr: schema.ProviderStake[] = dbStakes.get(providerStake.address)!
+
+    // status
+    const appliedHeight = providerStake.stakeAppliedBlock.toSigned().toInt()
+    let status = schema.LavaProviderStakeStatus.Active
+    if (isUnstaking) {
+        status = schema.LavaProviderStakeStatus.Unstaking
+    } else if (appliedHeight == -1) {
+        status = schema.LavaProviderStakeStatus.Frozen
+    }
+    stakeArr.push({
+        provider: providerStake.address,
+        blockId: height,
+        specId: providerStake.chain,
+        geolocation: providerStake.geolocation.toNumber(),
+        addons: addons,
+        extensions: extensions,
+        status: status,
+
+        stake: parseInt(providerStake.stake.amount),
+        appliedHeight: appliedHeight,
+    } as schema.ProviderStake)
+}
+
 async function getLatestProvidersAndSpecsAndStakes(
     client: LavaClient,
     height: number,
@@ -128,60 +174,35 @@ async function getLatestProvidersAndSpecsAndStakes(
     const lavaClient = client.lavanet.lava;
     dbStakes.clear()
 
-    // unstaking map
-    const unstakingProviders: Map<string, boolean> = new Map()
-    let unstaking = await lavaClient.epochstorage.stakeStorage({
-        index: 'Unstake'
-    })
-    unstaking.stakeStorage.stakeEntries.forEach((stake) => {
-        unstakingProviders.set(stake.address + '_' + stake.chain, true)
-    })
+    // regular stakes
     let specs = await lavaClient.spec.showAllChains()
     await Promise.all(specs.chainInfoList.map(async (spec) => {
         GetOrSetSpec(dbSpecs, null, spec.chainID)
 
         let providers = await lavaClient.pairing.providers({ chainID: spec.chainID, showFrozen: true })
-        providers.stakeEntry.forEach((providerStake) => {
-            GetOrSetProvider(dbProviders, null, providerStake.address, providerStake.moniker)
-
-            // init if needed
-            if (dbStakes.get(providerStake.address) == undefined) {
-                dbStakes.set(providerStake.address, [])
-            }
-
-            // addons
-            let addons = ''
-            let extensions = ''
-            providerStake.endpoints.forEach((endPoint) => {
-                addons += endPoint.addons.join(',')
-                extensions += endPoint.extensions.join(',')
-            })
-            let stakeArr: schema.ProviderStake[] = dbStakes.get(providerStake.address)!
-            
-            // status
-            const appliedHeight = providerStake.stakeAppliedBlock.toSigned().toInt()
-            let status = schema.LavaProviderStakeStatus.Active
-            if (appliedHeight == -1) {
-                status = schema.LavaProviderStakeStatus.Frozen
-            }
-            if (unstakingProviders.get(providerStake.address + '_' + providerStake.chain) === true) {
-                status = schema.LavaProviderStakeStatus.Unstaking
-            }
-            stakeArr.push({
-                provider: providerStake.address,
-                blockId: height,
-                specId: providerStake.chain,
-                geolocation: providerStake.geolocation.toNumber(),
-                addons: addons,
-                extensions: extensions,
-                status: status,
-
-                stake: parseInt(providerStake.stake.amount),
-                appliedHeight: appliedHeight,
-            } as schema.ProviderStake)
-
+        providers.stakeEntry.forEach((stake) => {
+            _doStake(height, dbProviders, dbStakes, stake, false)
         })
     }))
+
+    // unstaking stakes
+    let unstaking = await lavaClient.epochstorage.stakeStorage({
+        index: 'Unstake'
+    })
+    unstaking.stakeStorage.stakeEntries.forEach((stake) => {
+        //
+        // Only add if no regular stake exists
+        // if regular stake exists
+        //      it means the provider restaked without waiting for unstaking period
+        if (dbStakes.get(stake.address) != undefined) {
+            dbStakes.get(stake.address)!.forEach((dbStake) => {
+                if (dbStake.specId == stake.chain) {
+                    return
+                }
+            })
+        }
+        _doStake(height, dbProviders, dbStakes, stake, true)
+    })
 }
 
 async function getLatestPlans(client: LavaClient, dbPlans: Map<string, schema.Plan>) {
@@ -214,35 +235,50 @@ export async function UpdateLatestBlockMeta(
         //
         // Insert all specs
         const arrSpecs = Array.from(static_dbSpecs.values())
-        if (arrSpecs.length > 0) {
+        await DoInChunks(100, arrSpecs, async (arr: any) => {
             await tx.insert(schema.specs)
-                .values(arrSpecs)
+                .values(arr)
                 .onConflictDoNothing();
-        }
+        })
 
-        //
-        // Find our create all providers
+        // Find / create all providers
         const arrProviders = Array.from(static_dbProviders.values())
-        if (arrProviders.length > 0) {
-            await tx.insert(schema.providers)
-                .values(arrProviders)
-                .onConflictDoNothing();
-        }
+        await DoInChunks(100, arrProviders, async (arr: any) => {
+            return arr.map(async (provider: any) => {
+                return await tx.insert(schema.providers)
+                    .values(provider)
+                    .onConflictDoUpdate(
+                        {
+                            target: [schema.providers.address],
+                            set: {
+                                moniker: provider.moniker
+                            },
+                        }
+                    );
+            })
+        })
 
         //
         // Find our create all plans
         const arrPlans = Array.from(static_dbPlans.values())
         if (arrPlans.length > 0) {
-            await tx.insert(schema.plans)
-                .values(arrPlans)
-                .onConflictDoNothing();
+            await Promise.all(arrPlans.map(async (plan: any) => {
+                return await tx.insert(schema.plans)
+                    .values(arrPlans)
+                    .onConflictDoUpdate({
+                        target: [schema.plans.id],
+                        set: {
+                            desc: plan.desc,
+                            price: plan.price,
+                        }
+                    });
+            }))
         }
 
         if (withStakes) {
             // Insert all stakes
             await Promise.all(Array.from(static_dbStakes.values()).map(async (stakes) => {
                 return stakes.map(async (stake) => {
-                    // Insert
                     return await tx.insert(schema.providerStakes)
                         .values(stake)
                         .onConflictDoUpdate(
@@ -262,8 +298,12 @@ export async function UpdateLatestBlockMeta(
                 })
             }))
             // 
-            // Remove old stakes
-            await tx.delete(schema.providerStakes).where(ne(schema.providerStakes.blockId, height))
+            // Update old stakes
+            await tx.update(schema.providerStakes)
+                .set({
+                    status: schema.LavaProviderStakeStatus.Inactive
+                })
+                .where(ne(schema.providerStakes.blockId, height))
         }
     })
 }

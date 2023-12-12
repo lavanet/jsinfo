@@ -8,10 +8,6 @@ WORKDIR /usr/src/app
 FROM base AS install
 RUN mkdir -p /temp/dev
 COPY package.json /temp/dev/
-
-# Install Node.js
-RUN apt-get update && apt-get install -y nodejs npm
-
 RUN cd /temp/dev && bun install
 
 # copy node_modules from temp directory

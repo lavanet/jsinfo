@@ -157,17 +157,20 @@ server.get('/index', indexOpts, async (request, reply) => {
     let res444 = await db.select({
         provider: schema.providerStakes.provider,
         nStakes: sql<number>`count(${schema.providerStakes.specId})`,
+        totalStake: sql<number>`sum(${schema.providerStakes.stake})`
     }).from(schema.providerStakes).groupBy(schema.providerStakes.provider)
     type ProviderDetails = {
         addr: string,
         moniker: string,
         rewardSum: number,
         nStakes: number,
+        totalStake: number,
     };
     let providersDetails: ProviderDetails[] = []
     res4.forEach((provider) => {
         let moniker = ''
         let nStakes = 0
+        let totalStake = 0;
         let tmp1 = res44.find((el) => el.address == provider.address)
         if (tmp1) {
             moniker = tmp1.moniker!
@@ -175,12 +178,14 @@ server.get('/index', indexOpts, async (request, reply) => {
         let tmp2 = res444.find((el) => el.provider == provider.address)
         if (tmp2) {
             nStakes = tmp2.nStakes
+            totalStake = tmp2.totalStake
         }
         providersDetails.push({
             addr: provider.address!,
             moniker: moniker,
             rewardSum: provider.rewardSum,
             nStakes: nStakes,
+            totalStake: totalStake,
         })
     })
 

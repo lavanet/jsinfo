@@ -10,7 +10,7 @@ RUN mkdir -p /temp/dev
 COPY package.json /temp/dev/
 
 # Install Node.js
-RUN apk add --update nodejs npm
+RUN apt-get update && apt-get install -y nodejs npm
 
 RUN cd /temp/dev && bun install
 

@@ -1,3 +1,5 @@
+// jsinfo/src/query.ts
+
 // TODOs:
 // 1. Errors
 // 2. Pagination

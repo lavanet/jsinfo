@@ -2,6 +2,8 @@
 
 # dependencies
 /node_modules
+/node_modules_bak
+/package-lock.json_bak
 /.pnp
 .pnp.js
 
@@ -47,3 +49,5 @@ dev.db-journal
 *.dump
 dump.sql
 .vscode/*
+
+bun.lockb

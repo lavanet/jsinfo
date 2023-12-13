@@ -736,14 +736,14 @@ export const queryserver = async (): Promise<void> => {
             server.log.info(`block ${latestHeight} block time ${latestDatetime}`)
         } catch (err) {
             server.log.error('failed to connect get block from db')
-            server.log.error(err)
+            server.log.error(String(err))
             process.exit(1)
         }
 
-        server.log.info('listening on', port, host)
+        server.log.info(`listening on ${port} ${host}`)
         await server.listen({ port: port, host: host })
     } catch (err) {
-        server.log.error(err)
+        server.log.error(String(err))
         process.exit(1)
     }
 }

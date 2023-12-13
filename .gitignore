@@ -47,3 +47,6 @@ dev.db-journal
 *.dump
 dump.sql
 .vscode/*
+
+# bun
+bun.lockb

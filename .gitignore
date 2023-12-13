@@ -2,6 +2,8 @@
 
 # dependencies
 /node_modules
+/node_modules_bak
+/package-lock.json_bak
 /.pnp
 .pnp.js
 
@@ -48,5 +50,9 @@ dev.db-journal
 dump.sql
 .vscode/*
 
+<<<<<<< HEAD
 # bun
 bun.lockb
+=======
+bun.lockb
+>>>>>>> DebugBranchWithNode

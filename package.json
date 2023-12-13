@@ -6,13 +6,13 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "generate": "drizzle-kit generate:pg",
+    "migrations:generate": "drizzle-kit generate:pg --schema ./src/schema.ts",
     "build": "tsc --build"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "@tsconfig/node-lts": "^18.12.4",
     "@types/node": "^20.6.3",
     "drizzle-kit": "^0.19.13",
     "ts-node": "^10.9.1",
@@ -22,6 +22,8 @@
     "@cosmjs/stargate": "^0.31.1",
     "@lavanet/lavajs": "^0.22.4",
     "@supercharge/promise-pool": "^3.0.0",
+    "@tsconfig/node-lts": "^18.12.4",
+    "bun-types": "^1.0.17",
     "dotenv": "^16.3.1",
     "drizzle-orm": "^0.28.6",
     "fastify": "^4.23.2",

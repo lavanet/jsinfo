@@ -3,6 +3,7 @@
 // TODOs:
 // 1. Errors
 // 2. Pagination
+require('dotenv').config();
 
 import Fastify, { FastifyInstance, RouteShorthandOptions } from 'fastify'
 import { sql, desc, eq, gt, and, inArray } from "drizzle-orm";

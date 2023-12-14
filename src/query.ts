@@ -753,9 +753,9 @@ try {
     queryserver();
 } catch (error) {
     if (error instanceof Error) {
-        console.error('An error occurred while running the indexer:', error.message);
+        console.error('An error occurred while running the queryserver:', error.message);
         console.error('Stack trace:', error.stack);
     } else {
-        console.error('An unknown error occurred while running the indexer:', error);
+        console.error('An unknown error occurred while running the queryserver:', error);
     }
 }

@@ -3,18 +3,16 @@ services:
     image: jsinfo-indexer
     build: .
     env_file:
-      - dockercompose.env
+      - .env
     entrypoint: bun indexer.js
-    volumes:
-      - /Users/mikecotic/Documents/lava_projects/jsinfo/static/cache:/Users/mikecotic/Documents/lava_projects/jsinfo/static/cache
 
   query:
     image: jsinfo-query
     build: .
     ports:
       - "3000:3000"
+    expose:
+      - "3000"
     env_file:
-      - dockercompose.env
+      - .env
     entrypoint: bun query.js
-    volumes:
-      - /Users/mikecotic/Documents/lava_projects/jsinfo/static/cache:/Users/mikecotic/Documents/lava_projects/jsinfo/static/cache

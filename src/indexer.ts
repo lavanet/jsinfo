@@ -168,7 +168,13 @@ const indexer = async (): Promise<void> => {
     console.log(`starting indexer, rpc: ${rpc}, start height: ${lava_testnet2_start_height}`)
     //
     // Client
-    const client = await StargateClient.connect(rpc)
+    let client: StargateClient;
+    try {
+        client = await StargateClient.connect(rpc);
+    } catch (e) {
+        console.error(`Error connecting to ${rpc}:`, e instanceof Error ? e.message : e);
+        return;
+    }  
     const clientTm = await Tendermint37Client.connect(rpc)
     const chainId = await client.getChainId()
     const height = await client.getHeight()
@@ -265,4 +271,13 @@ const indexer = async (): Promise<void> => {
     fillUp()
 }
 
-indexer()
+try {
+    indexer();
+} catch (error) {
+    if (error instanceof Error) {
+        console.error('An error occurred while running the indexer:', error.message);
+        console.error('Stack trace:', error.stack);
+    } else {
+        console.error('An unknown error occurred while running the indexer:', error);
+    }
+}

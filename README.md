@@ -28,14 +28,18 @@ sudo -u jsinfo pg_dump --format=p --no-owner --no-acl jsinfo > dump.sql
 
 ### Run
 ``` bash
-bunx ts-node src/indexer.ts
-bunx ts-node src/query.ts 
+make indexer
+make query
+# bunx ts-node src/indexer.ts
+# bunx ts-node src/query.ts 
 ```
 
 ### Docker
 ```bash
-docker compose up -d
-docker compose logs -f
+make build_bun_docker
+make run_docker_compose
+# docker compose up -d
+# docker compose logs -f
 ```
 
 ### Todo

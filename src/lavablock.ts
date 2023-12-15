@@ -1,28 +1,27 @@
 import { StargateClient, IndexedTx, Block, Event } from "@cosmjs/stargate"
 import { Tendermint37Client } from "@cosmjs/tendermint-rpc";
 import { writeFileSync, readFileSync } from 'fs';
-import { ParseEventRelayPayment } from "./events/EventRelayPayment"
-import { ParseEventStakeUpdateProvider } from "./events/EventStakeUpdateProvider"
-import { ParseEventStakeNewProvider } from "./events/EventStakeNewProvider"
-import { ParseEventProviderUnstakeCommit } from "./events/EventProviderUnstakeCommit"
-import { ParseEventFreezeProvider } from "./events/EventFreezeProvider"
-import { ParseEventUnfreezeProvider } from "./events/EventUnfreezeProvider"
-import { ParseEventBuySubscription } from "./events/EventBuySubscription"
-import { ParseEventAddProjectToSubscription } from "./events/EventAddProjectToSubscription"
-import { ParseEventDelKeyFromProject } from "./events/EventDelKeyFromProject"
-import { ParseEventDelProjectToSubscription } from "./events/EventDelProjectToSubscription"
-import { ParseEventAddKeyToProject } from "./events/EventAddKeyToProject"
-import { ParseEventConflictVoteGotCommit } from "./events/EventConflictVoteGotCommit"
-import { ParseEventResponseConflictDetection } from "./events/EventResponseConflictDetection"
-import { ParseEventConflictDetectionReceived } from "./events/EventConflictDetectionReceived"
-import { ParseEventProviderReported } from "./events/EventProviderReported"
+import { ParseEventRelayPayment } from "./events/EventRelayPayment";
+import { ParseEventStakeUpdateProvider } from "./events/EventStakeUpdateProvider";
+import { ParseEventStakeNewProvider } from "./events/EventStakeNewProvider";
+import { ParseEventProviderUnstakeCommit } from "./events/EventProviderUnstakeCommit";
+import { ParseEventFreezeProvider } from "./events/EventFreezeProvider";
+import { ParseEventUnfreezeProvider } from "./events/EventUnfreezeProvider";
+import { ParseEventBuySubscription } from "./events/EventBuySubscription";
+import { ParseEventAddProjectToSubscription } from "./events/EventAddProjectToSubscription";
+import { ParseEventDelKeyFromProject } from "./events/EventDelKeyFromProject";
+import { ParseEventDelProjectToSubscription } from "./events/EventDelProjectToSubscription";
+import { ParseEventAddKeyToProject } from "./events/EventAddKeyToProject";
+import { ParseEventConflictVoteGotCommit } from "./events/EventConflictVoteGotCommit";
+import { ParseEventResponseConflictDetection } from "./events/EventResponseConflictDetection";
+import { ParseEventConflictDetectionReceived } from "./events/EventConflictDetectionReceived";
+import { ParseEventProviderReported } from "./events/EventProviderReported";
 import { ParseEventProviderJailed } from "./events/EventProviderJailed";
 import { ParseEventConflictVoteGotReveal } from "./events/EventConflictVoteGotReveal";
 import { ParseEventConflictVoteRevealStarted } from "./events/EventConflictVoteRevealStarted";
 import { ParseEventConflictDetectionVoteResolved } from "./events/EventConflictDetectionVoteResolved";
 import { ParseEventConflictDetectionVoteUnresolved } from "./events/EventConflictDetectionVoteUnresolved";
 import * as schema from './schema';
-
 const is_save_cache = parseInt(process.env['SAVE_CACHE']!)
 const is_read_cache = parseInt(process.env['READ_CACHE']!)
 const cache_path = process.env['CACHE_PATH']!

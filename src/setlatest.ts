@@ -136,7 +136,7 @@ function _doStake(
     // addons
     let addons = ''
     let extensions = ''
-    providerStake.endpoints.forEach((endPoint) => {
+    providerStake.endpoints.forEach((endPoint: { addons: string[]; extensions: string[]; }) => {
         addons += endPoint.addons.join(',')
         extensions += endPoint.extensions.join(',')
     })

@@ -1,10 +1,14 @@
+// jsinfo/src/indexer.ts
+
 import { StargateClient } from "@cosmjs/stargate"
 import { Tendermint37Client } from "@cosmjs/tendermint-rpc";
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { eq, desc } from "drizzle-orm";
 import * as lavajs from '@lavanet/lavajs';
-import * as schema from './schema';
 import { PromisePool } from '@supercharge/promise-pool'
+import retry from 'async-retry';
+import util from 'util';
+import * as schema from "./schema";
 import { LavaBlock, GetOneLavaBlock } from './lavablock'
 import { UpdateLatestBlockMeta } from './setlatest'
 import { MigrateDb, GetDb, DoInChunks } from "./utils";
@@ -164,21 +168,59 @@ const doBatch = async (
     }
 }
 
+interface ConnectionResult {
+    client: StargateClient;
+    clientTm: Tendermint37Client;
+    chainId: string;
+    height: number;
+    lavajsClient: any;
+}
+
+// Define the backoffRetry function
+const backoffRetry = async <T>(title: string, fn: () => Promise<T>): Promise<T> => {
+    return await retry(fn,
+        {
+            retries: 8, // The maximum amount of times to retry the operation
+            factor: 2,  // The exponential factor to use
+            minTimeout: 1000, // The number of milliseconds before starting the first retry
+            maxTimeout: 5000, // The maximum number of milliseconds between two retries
+            randomize: true, // Randomizes the timeouts by multiplying with a factor between 1 to 2
+            onRetry: (error: any, attempt: any) => {
+                let errorMessage = `[Backoff Retry] Function: ${title}\n`;
+                try {
+                    errorMessage += `Attempt number: ${attempt} has failed.\n`;
+                    if (error instanceof Error) {
+                        errorMessage += `An error occurred during the execution of ${title}: ${error.message}\n`;
+                        errorMessage += `Stack trace for the error in ${title}: ${error.stack}\n`;
+                        errorMessage += `Full error object: ${util.inspect(error, { showHidden: true, depth: null })}\n`;
+                    } else {
+                        errorMessage += `An unknown error occurred during the execution of ${title}: ${error}\n`;
+                    }
+                } catch (e) { }
+                console.error(errorMessage);
+            }
+        }
+    );
+};
+
+
+async function connectToRpc(rpc: string): Promise<ConnectionResult> {
+    const client = await StargateClient.connect(rpc);
+    const clientTm = await Tendermint37Client.connect(rpc);
+    const chainId = await client.getChainId();
+    const height = await client.getHeight();
+    const lavajsClient = await lavajs.lavanet.ClientFactory.createRPCQueryClient({ rpcEndpoint: rpc });
+    console.log('chain', chainId, 'current height', height);
+
+    return { client, clientTm, chainId, height, lavajsClient };
+}
+
 const indexer = async (): Promise<void> => {
-    console.log(`starting indexer, rpc: ${rpc}, start height: ${lava_testnet2_start_height}`)
-    //
-    // Client
-    let client: StargateClient;
-    try {
-        client = await StargateClient.connect(rpc);
-    } catch (e) {
-        console.error(`Error connecting to ${rpc}:`, e instanceof Error ? e.message : e);
-        return;
-    }  
-    const clientTm = await Tendermint37Client.connect(rpc)
-    const chainId = await client.getChainId()
-    const height = await client.getHeight()
-    const lavajsClient = await lavajs.lavanet.ClientFactory.createRPCQueryClient({ rpcEndpoint: rpc })
+    console.log(`starting indexer, rpc: ${rpc}, start height: ${lava_testnet2_start_height}`);
+
+    const { client, clientTm, chainId, height, lavajsClient } =
+        await backoffRetry<ConnectionResult>("connectToRpc", () => connectToRpc(rpc));
+
     console.log('chain', chainId, 'current height', height)
 
     //
@@ -201,19 +243,27 @@ const indexer = async (): Promise<void> => {
 
     //
     // Loop forever, filling up blocks
-    const loopFill = () => (setTimeout(fillUp, poll_ms))
+    const loopFill = () => {
+        console.log(`loopFill function called at: ${new Date().toISOString()}`);
+        setTimeout(() => {
+            fillUpBackoffRetry();
+            console.log(`loopFill function finished at: ${new Date().toISOString()}`);
+        }, poll_ms);
+    }
+
     const fillUp = async () => {
         //
         // Blockchain latest
-        let latestHeight = 0
+        let latestHeight = 0;
         try {
-            latestHeight = await client.getHeight();
+            latestHeight = await backoffRetry<number>("getHeight", async () => {
+                return await client.getHeight();
+            });
         } catch (e) {
             console.log('client.getHeight', e)
             loopFill()
             return
         }
-
 
         //
         // Find latest block on DB
@@ -268,11 +318,24 @@ const indexer = async (): Promise<void> => {
         }
         loopFill()
     }
-    fillUp()
+    const fillUpBackoffRetry = async () => {
+        try {
+            await backoffRetry<void>("fillUp", async () => { await fillUp(); });
+        } catch (e) {
+            console.log('fillUpBackoffRetry error', e)
+            loopFill()
+            return
+        }
+    }
+    fillUpBackoffRetry()
+}
+
+const indexerBackoffRetry = async () => {
+    return await backoffRetry<void>("indexer", async () => { await indexer(); });
 }
 
 try {
-    indexer();
+    indexerBackoffRetry();
 } catch (error) {
     if (error instanceof Error) {
         console.error('An error occurred while running the indexer:', error.message);

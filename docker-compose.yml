@@ -1,18 +1,18 @@
 services:
   indexer:
-    image: jsinfo-indexer
-    build: .
+    image: bun-docker
     env_file:
-      - .env
-    entrypoint: bun indexer.js
+      - dockercompose.env
+    entrypoint: bun src/indexer.js
+    volumes:
+      - ../static/cache:/static/cache
 
   query:
-    image: jsinfo-query
-    build: .
+    image: bun-docker
     ports:
       - "3000:3000"
-    expose:
-      - "3000"
     env_file:
-      - .env
-    entrypoint: bun query.js
+      - dockercompose.env
+    entrypoint: bun src/query.js
+    volumes:
+      - ../static/cache:/static/cache

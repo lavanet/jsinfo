@@ -1,12 +1,26 @@
 {
-  "extends": "@tsconfig/node14/tsconfig.json",
-  "compilerOptions": {
+  "extends": "@tsconfig/node16/tsconfig.json",
+  "compilerOptions": {   
+    "lib": ["ESNext"],
+    "module": "esnext",
+    "target": "esnext",
+    "moduleDetection": "force",
+    "allowImportingTsExtensions": false,
+    "noEmit": false,
+    "composite": true,
+    "strict": true,
+    "downlevelIteration": true,
+    "skipLibCheck": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "allowJs": true,
+    "esModuleInterop": true,
+    "noImplicitAny": true,
     "outDir": "dist",
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
-    "esModuleInterop": true,
     "sourceMap": true,
-    "types": ["bun-types"]
+    "types": ["bun-types"],
   },
   "include": [
     "src"

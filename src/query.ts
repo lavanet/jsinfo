@@ -10,6 +10,8 @@ import { sql, desc, eq, gt, and, inArray } from "drizzle-orm";
 import * as schema from './schema';
 import { GetDb } from './utils';
 import RequestCache from './queryCache';
+import { FastifyRequest, FastifyReply } from 'fastify';
+
 const requestCache = new RequestCache();
 let db = GetDb()
 
@@ -56,7 +58,7 @@ const latestOpts: RouteShorthandOptions = {
     }
 }
 
-server.get('/latest', latestOpts, async (request, reply) => {
+server.get('/latest', latestOpts, async (request: FastifyRequest, reply: FastifyReply) => {
     await checkDb()
 
     const { latestHeight, latestDatetime } = await getLatestBlock()
@@ -109,7 +111,7 @@ const indexOpts: RouteShorthandOptions = {
     }
 }
 
-server.get('/index', indexOpts, requestCache.handleRequestWithCache(async (request, reply) => {
+server.get('/index', indexOpts, requestCache.handleRequestWithCache(async (request: FastifyRequest, reply: FastifyReply) => {
     await checkDb()
 
     //
@@ -308,7 +310,7 @@ const providerOpts: RouteShorthandOptions = {
     }
 }
 
-server.get('/provider/:addr', providerOpts, requestCache.handleRequestWithCache(async (request, reply) => {
+server.get('/provider/:addr', providerOpts, requestCache.handleRequestWithCache(async (request: FastifyRequest, reply: FastifyReply) => {
     await checkDb()
 
     const { addr } = request.params as { addr: string }
@@ -442,7 +444,7 @@ const providersOpts: RouteShorthandOptions = {
     }
 }
 
-server.get('/providers', providersOpts, requestCache.handleRequestWithCache(async (request, reply) => {
+server.get('/providers', providersOpts, requestCache.handleRequestWithCache(async (request: FastifyRequest, reply: FastifyReply) => {
     await checkDb()
 
     const res = await db.select().from(schema.providers)
@@ -484,7 +486,7 @@ const consumerOpts: RouteShorthandOptions = {
     }
 }
 
-server.get('/consumer/:addr', consumerOpts, requestCache.handleRequestWithCache(async (request, reply) => {
+server.get('/consumer/:addr', consumerOpts, requestCache.handleRequestWithCache(async (request: FastifyRequest, reply: FastifyReply) => {
     await checkDb()
 
     const { addr } = request.params as { addr: string }
@@ -587,7 +589,7 @@ const SpecOpts: RouteShorthandOptions = {
     }
 }
 
-server.get('/spec/:specId', SpecOpts, requestCache.handleRequestWithCache(async (request, reply) => {
+server.get('/spec/:specId', SpecOpts, requestCache.handleRequestWithCache(async (request: FastifyRequest, reply: FastifyReply) => {
     await checkDb()
 
     const { specId } = request.params as { specId: string }
@@ -701,7 +703,7 @@ const eventsOpts: RouteShorthandOptions = {
     }
 }
 
-server.get('/events', eventsOpts, await requestCache.handleRequestWithCache(async (request, reply) => {
+server.get('/events', eventsOpts, await requestCache.handleRequestWithCache(async (request: FastifyRequest, reply: FastifyReply) => {
 
     const { latestHeight, latestDatetime } = await getLatestBlock()
 

@@ -9,7 +9,8 @@ import Fastify, { FastifyInstance, RouteShorthandOptions } from 'fastify'
 import { sql, desc, eq, gt, and, inArray } from "drizzle-orm";
 import * as schema from './schema';
 import { GetDb } from './utils';
-
+import RequestCache from './queryCache';
+const requestCache = new RequestCache();
 let db = GetDb()
 
 async function checkDb() {
@@ -108,7 +109,7 @@ const indexOpts: RouteShorthandOptions = {
     }
 }
 
-server.get('/index', indexOpts, async (request, reply) => {
+server.get('/index', indexOpts, requestCache.handleRequestWithCache(async (request, reply) => {
     await checkDb()
 
     //
@@ -251,7 +252,7 @@ server.get('/index', indexOpts, async (request, reply) => {
         qosData: res6,
         data: res3,
     }
-})
+}))
 
 const providerOpts: RouteShorthandOptions = {
     schema: {
@@ -307,7 +308,7 @@ const providerOpts: RouteShorthandOptions = {
     }
 }
 
-server.get('/provider/:addr', providerOpts, async (request, reply) => {
+server.get('/provider/:addr', providerOpts, requestCache.handleRequestWithCache(async (request, reply) => {
     await checkDb()
 
     const { addr } = request.params as { addr: string }
@@ -424,7 +425,7 @@ server.get('/provider/:addr', providerOpts, async (request, reply) => {
         qosData: data2,
         data: data1,
     }
-})
+}))
 
 const providersOpts: RouteShorthandOptions = {
     schema: {
@@ -441,14 +442,14 @@ const providersOpts: RouteShorthandOptions = {
     }
 }
 
-server.get('/providers', providersOpts, async (request, reply) => {
+server.get('/providers', providersOpts, requestCache.handleRequestWithCache(async (request, reply) => {
     await checkDb()
 
     const res = await db.select().from(schema.providers)
     return {
         providers: res,
     }
-})
+}))
 
 const consumerOpts: RouteShorthandOptions = {
     schema: {
@@ -483,7 +484,7 @@ const consumerOpts: RouteShorthandOptions = {
     }
 }
 
-server.get('/consumer/:addr', consumerOpts, async (request, reply) => {
+server.get('/consumer/:addr', consumerOpts, requestCache.handleRequestWithCache(async (request, reply) => {
     await checkDb()
 
     const { addr } = request.params as { addr: string }
@@ -545,7 +546,7 @@ server.get('/consumer/:addr', consumerOpts, async (request, reply) => {
         subsBuy: res4,
         data: res5,
     }
-})
+}))
 
 const SpecOpts: RouteShorthandOptions = {
     schema: {
@@ -586,7 +587,7 @@ const SpecOpts: RouteShorthandOptions = {
     }
 }
 
-server.get('/spec/:specId', SpecOpts, async (request, reply) => {
+server.get('/spec/:specId', SpecOpts, requestCache.handleRequestWithCache(async (request, reply) => {
     await checkDb()
 
     const { specId } = request.params as { specId: string }
@@ -671,7 +672,7 @@ server.get('/spec/:specId', SpecOpts, async (request, reply) => {
         stakes: res5,
         data: res3,
     }
-})
+}))
 
 const eventsOpts: RouteShorthandOptions = {
     schema: {
@@ -700,8 +701,8 @@ const eventsOpts: RouteShorthandOptions = {
     }
 }
 
-server.get('/events', eventsOpts, async (request, reply) => {
-    await checkDb()
+server.get('/events', eventsOpts, await requestCache.handleRequestWithCache(async (request, reply) => {
+
     const { latestHeight, latestDatetime } = await getLatestBlock()
 
     //
@@ -725,7 +726,8 @@ server.get('/events', eventsOpts, async (request, reply) => {
         payments: res6,
         reports: res7,
     }
-})
+
+}))
 
 export const queryserver = async (): Promise<void> => {
     const port = parseInt(process.env['QUERY_PORT']!)

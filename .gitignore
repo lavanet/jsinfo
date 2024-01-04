@@ -50,9 +50,7 @@ dev.db-journal
 dump.sql
 .vscode/*
 
-<<<<<<< HEAD
 # bun
 bun.lockb
-=======
-bun.lockb
->>>>>>> DebugBranchWithNode
+
+package-lock.json

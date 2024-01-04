@@ -9,8 +9,8 @@ connect_to_bun_docker:
 run_docker_compose:
 	docker-compose -f docker-compose.yml up
 
-indexer:
+run_indexer:
 	bun run src/indexer.ts
 
-query:
+run_query:
 	bun run src/query.ts

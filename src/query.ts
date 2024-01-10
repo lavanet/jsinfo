@@ -462,6 +462,57 @@ server.get('/providers', providersOpts, requestCache.handleRequestWithCache(asyn
     }
 }))
 
+const specssOpts: RouteShorthandOptions = {
+    schema: {
+        response: {
+            200: {
+                type: 'object',
+                properties: {
+                    specs: {
+                        type: 'array',
+                    },
+                }
+            }
+        }
+    }
+}
+
+server.get('/specs', specssOpts, requestCache.handleRequestWithCache(async (request: FastifyRequest, reply: FastifyReply) => {
+    await checkDb()
+
+    const res = await db.select().from(schema.specs)
+    
+    return {
+        specs: res,
+    }
+}))
+
+const consumersOpts: RouteShorthandOptions = {
+    schema: {
+        response: {
+            200: {
+                type: 'object',
+                properties: {
+                    consumers: {
+                        type: 'array',
+                    },
+                }
+            }
+        }
+    }
+}
+
+server.get('/consumers', consumersOpts, requestCache.handleRequestWithCache(async (request: FastifyRequest, reply: FastifyReply) => {
+    await checkDb()
+
+    const res = await db.select().from(schema.consumers)
+    
+    return {
+        consumers: res,
+    }
+}))
+
+
 const consumerOpts: RouteShorthandOptions = {
     schema: {
         response: {

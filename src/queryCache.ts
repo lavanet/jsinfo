@@ -22,7 +22,7 @@ class RequestCache {
 
         if (!this.cache[key]) {
             console.log(`QueryCache: No cache entry for ${key}. Fetching data...`);
-            await this.tryFetchData(key, request, reply, handler);
+            this.tryFetchData(key, request, reply, handler);
 
         } else if (this.cache[key].isFetching) {
             console.log(`QueryCache: Data for ${key} is currently being fetched...`);
@@ -36,6 +36,10 @@ class RequestCache {
     }
 
     async tryFetchData(key: string, request: FastifyRequest, reply: FastifyReply, handler: (request: FastifyRequest, reply: FastifyReply) => Promise<any>, retryCount: number = 0) {
+        // generates a random number between 25 and 35
+        // blocks are 30 seconds . from gil: if the latest block is 30 seconds old, refresh the cache
+        // adding a 5 second margin to not make all the quries at the same time
+
         if (this.cache[key]) {
             // If the key exists, only update the properties
             this.cache[key].isFetching = true;

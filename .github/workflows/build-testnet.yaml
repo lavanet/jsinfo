@@ -62,13 +62,19 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-buildx-
 
+      - name: TESTNET JsInfo Image Tag
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+          NOW: ${{ env.NOW }}
+        run: echo "${IMAGE_TAG}""-""${NOW}"
+        
       - name: Build, tag, and push docker image to GCP
         env:
           REGISTRY: ${{ secrets.testnet_registry }}
           IMAGE_TAG: ${{ github.sha }}
           NOW: ${{ env.NOW }}
         run: |
-          docker buildx build -t $REGISTRY:$IMAGE_TAG \
+          docker buildx build -t $REGISTRY:$IMAGE_TAG -t $REGISTRY:$IMAGE_TAG-$NOW \
             -t $REGISTRY:$IMAGE_TAG-$NOW \
             --cache-from="type=local,src=/tmp/.buildx-cache" \
             --cache-to="type=local,dest=/tmp/.buildx-cache-new" \

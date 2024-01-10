@@ -11,6 +11,7 @@ import * as schema from './schema';
 import { GetDb } from './utils';
 import RequestCache from './queryCache';
 import { FastifyRequest, FastifyReply } from 'fastify';
+import fastifyCors from '@fastify/cors';
 
 const requestCache = new RequestCache();
 let db = GetDb()
@@ -40,6 +41,11 @@ const server: FastifyInstance = Fastify({
     logger: true,
 })
 
+server.register(fastifyCors, {
+    // put your options here
+    origin: "*"
+  });
+
 const latestOpts: RouteShorthandOptions = {
     schema: {
         response: {
@@ -57,6 +63,9 @@ const latestOpts: RouteShorthandOptions = {
         }
     }
 }
+
+
+
 
 server.get('/latest', latestOpts, async (request: FastifyRequest, reply: FastifyReply) => {
     await checkDb()

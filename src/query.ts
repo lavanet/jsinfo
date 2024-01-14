@@ -12,6 +12,7 @@ import { GetDb } from './utils';
 import RequestCache from './queryCache';
 import { FastifyRequest, FastifyReply } from 'fastify';
 import fastifyCors from '@fastify/cors';
+
 import brotli from 'brotli';
 
 const requestCache = new RequestCache();

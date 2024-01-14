@@ -25,5 +25,8 @@ COPY --from=install --chown=bun:bun /temp/dev/node_modules node_modules
 COPY --from=prerelease --chown=bun:bun /usr/src/app/drizzle drizzle
 COPY --from=prerelease --chown=bun:bun /usr/src/app/dist .
 
+# Add scripts
+COPY scripts/refreshQueryCache.sh scripts/refreshQueryCache.sh
+
 # switch to user
 USER bun

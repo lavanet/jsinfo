@@ -41,10 +41,7 @@ const server: FastifyInstance = Fastify({
     logger: true,
 })
 
-server.register(fastifyCors, {
-    // put your options here
-    origin: "*"
-  });
+server.register(fastifyCors, { origin: "*" });
 
 const latestOpts: RouteShorthandOptions = {
     schema: {
@@ -63,8 +60,6 @@ const latestOpts: RouteShorthandOptions = {
         }
     }
 }
-
-
 
 
 server.get('/latest', latestOpts, async (request: FastifyRequest, reply: FastifyReply) => {
@@ -323,18 +318,16 @@ server.get('/provider/:addr', providerOpts, requestCache.handleRequestWithCache(
     await checkDb()
 
     const { addr } = request.params as { addr: string }
-    if (addr.length != 44) {
-        return {} // TODO: errors
-    }
-    if (!addr.startsWith('lava@')) {
-        return {} // TODO: errors
+    if (addr.length != 44 || !addr.startsWith('lava@')) {
+        return {error: 'bad address'}
     }
 
     //
     const res = await db.select().from(schema.providers).where(eq(schema.providers.address, addr)).limit(1)
     if (res.length != 1) {
-        return {} // TODO: errors
+        return {error: 'address does not exist'}
     }
+
     const provider = res[0]
     const { latestHeight, latestDatetime } = await getLatestBlock()
 
@@ -550,17 +543,14 @@ server.get('/consumer/:addr', consumerOpts, requestCache.handleRequestWithCache(
     await checkDb()
 
     const { addr } = request.params as { addr: string }
-    if (addr.length != 44) {
-        return {} // TODO: errors
-    }
-    if (!addr.startsWith('lava@')) {
-        return {} // TODO: errors
+    if (addr.length != 44 || !addr.startsWith('lava@')) {
+        return {error: 'invalid address'}
     }
 
     //
     const res = await db.select().from(schema.consumers).where(eq(schema.consumers.address, addr)).limit(1)
     if (res.length != 1) {
-        return {} // TODO: errors
+        return {error: 'address does not exist'}
     }
 
     //
@@ -654,14 +644,14 @@ server.get('/spec/:specId', SpecOpts, requestCache.handleRequestWithCache(async 
 
     const { specId } = request.params as { specId: string }
     if (specId.length <= 0) {
-        return {} // TODO: errors
+        return {error: 'invalid specId'}
     }
     const upSpecId = specId.toUpperCase()
 
     //
     const res = await db.select().from(schema.specs).where(eq(schema.specs.id, upSpecId)).limit(1)
     if (res.length != 1) {
-        return {} // TODO: errors
+        return {error: 'specId does not exist'}
     }
     const { latestHeight, latestDatetime } = await getLatestBlock()
 
@@ -780,6 +770,7 @@ server.get('/events', eventsOpts, await requestCache.handleRequestWithCache(asyn
         leftJoin(schema.blocks, eq(schema.providerReported.blockId, schema.blocks.height)).
         leftJoin(schema.providers, eq(schema.providerReported.provider, schema.providers.address)).
         orderBy(desc(schema.providerReported.blockId)).limit(250)
+    
     // TODO: return & display dbConflictResponses
     return {
         height: latestHeight,

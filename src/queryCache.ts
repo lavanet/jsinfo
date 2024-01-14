@@ -100,6 +100,7 @@ class RequestCache {
             console.log(`QueryCache: Data fetched for ${key}`);
         } catch (error) {
             console.log(`QueryCache: Error fetching data for ${key} on attempt ${retryCount + 1}`);
+            console.log(error);
             this.cache.get(key).isFetching = false;
             if (retryCount < 2) { // If it's not the last attempt
                 setTimeout(() => {

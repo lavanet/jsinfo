@@ -12,9 +12,11 @@ import { GetDb } from './utils';
 import RequestCache from './queryCache';
 import { FastifyRequest, FastifyReply } from 'fastify';
 import fastifyCors from '@fastify/cors';
+import brotli from 'brotli';
 
 const requestCache = new RequestCache();
 let db = GetDb()
+
 
 async function checkDb() {
     try {
@@ -42,6 +44,32 @@ const server: FastifyInstance = Fastify({
 })
 
 server.register(fastifyCors, { origin: "*" });
+
+const isOnSendLogsEnabled = true;
+
+server.addHook('onSend', async (request, reply, payload) => {
+    try {
+        if (isOnSendLogsEnabled) console.log('onSendHook: started');
+        if (request.headers['accept-encoding']?.includes('br')) {
+            if (isOnSendLogsEnabled) console.log('onSendHook: Brotli encoding is accepted');
+            const compressedPayload = await brotli.compress(Buffer.from(payload as Buffer));
+            if (isOnSendLogsEnabled) console.log('onSendHook: Compression completed');
+            if (compressedPayload) {
+                if (isOnSendLogsEnabled) console.log('onSendHook: Compression was successful');
+                reply.header('Content-Encoding', 'br');
+                if (isOnSendLogsEnabled) console.log('onSendHook:', compressedPayload);
+                return Buffer.from(compressedPayload, 'utf8');
+            } else {
+                if (isOnSendLogsEnabled) console.log('onSendHook: Compression failed');
+            }
+            if (isOnSendLogsEnabled) console.log('onSendHook: Returning original payload');
+        }
+    } catch (error) {
+        if (isOnSendLogsEnabled) console.log('onSendHook: An error occurred:', error);
+        if (isOnSendLogsEnabled) console.log('onSendHook: Returning original payload');
+    }
+    return payload;
+});
 
 const latestOpts: RouteShorthandOptions = {
     schema: {
@@ -319,13 +347,13 @@ server.get('/provider/:addr', providerOpts, requestCache.handleRequestWithCache(
 
     const { addr } = request.params as { addr: string }
     if (addr.length != 44 || !addr.startsWith('lava@')) {
-        return {error: 'bad address'}
+        return { error: 'bad address' }
     }
 
     //
     const res = await db.select().from(schema.providers).where(eq(schema.providers.address, addr)).limit(1)
     if (res.length != 1) {
-        return {error: 'address does not exist'}
+        return { error: 'address does not exist' }
     }
 
     const provider = res[0]
@@ -474,7 +502,7 @@ server.get('/specs', specssOpts, requestCache.handleRequestWithCache(async (requ
     await checkDb()
 
     const res = await db.select().from(schema.specs)
-    
+
     return {
         specs: res,
     }
@@ -499,7 +527,7 @@ server.get('/consumers', consumersOpts, requestCache.handleRequestWithCache(asyn
     await checkDb()
 
     const res = await db.select().from(schema.consumers)
-    
+
     return {
         consumers: res,
     }
@@ -544,13 +572,13 @@ server.get('/consumer/:addr', consumerOpts, requestCache.handleRequestWithCache(
 
     const { addr } = request.params as { addr: string }
     if (addr.length != 44 || !addr.startsWith('lava@')) {
-        return {error: 'invalid address'}
+        return { error: 'invalid address' }
     }
 
     //
     const res = await db.select().from(schema.consumers).where(eq(schema.consumers.address, addr)).limit(1)
     if (res.length != 1) {
-        return {error: 'address does not exist'}
+        return { error: 'address does not exist' }
     }
 
     //
@@ -644,14 +672,14 @@ server.get('/spec/:specId', SpecOpts, requestCache.handleRequestWithCache(async 
 
     const { specId } = request.params as { specId: string }
     if (specId.length <= 0) {
-        return {error: 'invalid specId'}
+        return { error: 'invalid specId' }
     }
     const upSpecId = specId.toUpperCase()
 
     //
     const res = await db.select().from(schema.specs).where(eq(schema.specs.id, upSpecId)).limit(1)
     if (res.length != 1) {
-        return {error: 'specId does not exist'}
+        return { error: 'specId does not exist' }
     }
     const { latestHeight, latestDatetime } = await getLatestBlock()
 
@@ -770,7 +798,7 @@ server.get('/events', eventsOpts, await requestCache.handleRequestWithCache(asyn
         leftJoin(schema.blocks, eq(schema.providerReported.blockId, schema.blocks.height)).
         leftJoin(schema.providers, eq(schema.providerReported.provider, schema.providers.address)).
         orderBy(desc(schema.providerReported.blockId)).limit(250)
-    
+
     // TODO: return & display dbConflictResponses
     return {
         height: latestHeight,

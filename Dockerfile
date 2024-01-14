@@ -26,6 +26,7 @@ COPY --from=prerelease --chown=bun:bun /usr/src/app/drizzle drizzle
 COPY --from=prerelease --chown=bun:bun /usr/src/app/dist .
 
 # Add scripts
+RUN apk add --update curl jq
 COPY scripts/refreshQueryCache.sh scripts/refreshQueryCache.sh
 
 # switch to user

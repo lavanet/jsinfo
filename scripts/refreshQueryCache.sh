@@ -60,6 +60,10 @@ revalidate_cache() {
     revalidate_cache_for_specs
     revalidate_cache_for_consumers
     revalidate_cache_for_providers
+    echo "revalidate_cache: Browsing to /events"
+    get "/events"
+    echo "revalidate_cache: Browsing to /index"
+    get "/index"
     echo "revalidate_cache: Finished revalidation of cache."
 }
 

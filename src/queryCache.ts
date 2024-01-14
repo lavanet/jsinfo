@@ -73,8 +73,14 @@ class RequestCache {
         }
 
         // refetch data?
-        if (Object.keys(this.cache.get(key).data).length === 0 || Date.now() > this.cache.get(key).expiry) {
+        if (Object.keys(this.cache.get(key).data).length === 0) {
             console.log(`QueryCache: No cache entry for ${key}. Fetching data...`);
+            this.tryFetchData(key, request, reply, handler);
+        }
+
+        // refetch data?
+        if (Date.now() > this.cache.get(key).expiry) {
+            console.log(`QueryCache: Data for ${key} expiered . Fetching data...`);
             this.tryFetchData(key, request, reply, handler);
         }
 

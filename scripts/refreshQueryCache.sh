@@ -13,8 +13,10 @@ get() {
     while [ $i -lt $retries ]; do
         response=$(curl -s "$REST_URL$url")
         if echo "$response" | jq . > /dev/null 2>&1; then
-            echo "$response"
-            return
+            if [ "$response" != "{}" ]; then
+                echo "$response"
+                return
+            fi
         fi
         i=$((i+1))
         sleep 0.5

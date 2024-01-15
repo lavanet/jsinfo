@@ -13,10 +13,6 @@ interface CacheEntry {
     dateOnDisk?: Date;
 }
 
-const queryCacheProcess = process.env.QUERY_CACHE_PROCESS == 'true';
-if (queryCacheProcess) {
-    console.log('QueryCache: Query cache process is in QUERY_CACHE_PROCESS mode');
-}
 class QueryCache {
     private cacheDir: string;
     private memoryCache: Record<string, CacheEntry>;
@@ -101,22 +97,14 @@ class RequestCache {
 
         // refetch data?
         if (Object.keys(this.cache.get(key).data).length === 0) {
-            console.log(`QueryCache: No cache entry for ${key}. queryCacheProcess: ${queryCacheProcess}. Fetching data...`);
-            if (queryCacheProcess) {
-                await this.tryFetchData(key, request, reply, handler);
-            } else {
-                this.tryFetchData(key, request, reply, handler);
-            }
+            console.log(`QueryCache: No cache entry for ${key}. Fetching data...`);
+            await this.tryFetchData(key, request, reply, handler);
         }
 
         // refetch data?
         if (Date.now() > this.cache.get(key).expiry) {
-            console.log(`QueryCache: Data for ${key} expiered . queryCacheProcess: ${queryCacheProcess}. Fetching data...`);
-            if (queryCacheProcess) {
-                await this.tryFetchData(key, request, reply, handler);
-            } else {
-                this.tryFetchData(key, request, reply, handler);
-            }
+            console.log(`QueryCache: Data for ${key} expiered . Fetching data...`);
+            await this.tryFetchData(key, request, reply, handler);
         }
 
         return this.cache.get(key).data;
@@ -127,14 +115,14 @@ class RequestCache {
         this.cache.get(key).isFetching = new Date();
 
         try {
-            console.time(`QueryCache: handler execution time for ${key}. queryCacheProcess: ${queryCacheProcess}.`);
+            console.time(`QueryCache: handler execution time for ${key}.`);
             const data = await handler(request, reply);
-            console.timeEnd(`QueryCache: handler execution time for ${key}. queryCacheProcess: ${queryCacheProcess}.`);
+            console.timeEnd(`QueryCache: handler execution time for ${key}.`);
             this.cache.updateData(key, data);
             this.cache.get(key).isFetching = null;
-            console.log(`QueryCache: Data fetched for ${key}. queryCacheProcess: ${queryCacheProcess}.`);
+            console.log(`QueryCache: Data fetched for ${key}.`);
         } catch (error) {
-            console.log(`QueryCache: Error fetching data for ${key} on attempt ${retryCount + 1}. queryCacheProcess: ${queryCacheProcess}.`);
+            console.log(`QueryCache: Error fetching data for ${key} on attempt ${retryCount + 1}.`);
             console.log(error);
             this.cache.get(key).isFetching = null;
             if (retryCount < 2) { // If it's not the last attempt

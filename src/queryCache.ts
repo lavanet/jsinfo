@@ -7,7 +7,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 interface CacheEntry {
-    isFetching: boolean;
+    isFetching: Date | null;
     data: any;
     expiry: number;
     dateOnDisk?: Date;
@@ -40,7 +40,7 @@ class QueryCache {
         // If the cache entry is not in the in-memory cache, create a new cache entry with empty data
         if (!cacheEntry) {
             this.memoryCache[key] = cacheEntry = {
-                isFetching: false,
+                isFetching: null,
                 data: {},
                 expiry: this.getNewExpiry()
             };
@@ -59,7 +59,7 @@ class QueryCache {
         }
         
         // If the data in the cache entry is empty, try to load it from the disk
-        if (!cacheEntry.isFetching && Object.keys(cacheEntry.data).length === 0) {
+        if (!this.isFetchInProgress(cacheEntry) && Object.keys(cacheEntry.data).length === 0) {
             if (fs.existsSync(cacheFilePath)) {
                 const data: any = JSON.parse(fs.readFileSync(cacheFilePath, 'utf-8'));
                 console.log(`QueryCache: Loaded data for key "${key}" from disk`);
@@ -70,6 +70,12 @@ class QueryCache {
         }
     
         return cacheEntry;
+    }
+
+    isFetchInProgress(cacheEntry: CacheEntry): boolean {
+        // fetches can only be 30 seconds - after that try again
+        const thirtySecondsAgo = new Date(Date.now() - 30 * 1000);
+        return cacheEntry.isFetching != null && cacheEntry.isFetching > thirtySecondsAgo;
     }
 
     updateData(key: string, newData: any): void {
@@ -117,20 +123,20 @@ class RequestCache {
     }
 
     async tryFetchData(key: string, request: FastifyRequest, reply: FastifyReply, handler: (request: FastifyRequest, reply: FastifyReply) => Promise<any>, retryCount: number = 0) {
-        if (this.cache.get(key).isFetching) return;
-        this.cache.get(key).isFetching = true;
+        if (this.cache.isFetchInProgress(this.cache.get(key))) return;
+        this.cache.get(key).isFetching = new Date();
 
         try {
             console.time(`QueryCache: handler execution time for ${key}. queryCacheProcess: ${queryCacheProcess}.`);
             const data = await handler(request, reply);
             console.timeEnd(`QueryCache: handler execution time for ${key}. queryCacheProcess: ${queryCacheProcess}.`);
             this.cache.updateData(key, data);
-            this.cache.get(key).isFetching = false;
+            this.cache.get(key).isFetching = null;
             console.log(`QueryCache: Data fetched for ${key}. queryCacheProcess: ${queryCacheProcess}.`);
         } catch (error) {
             console.log(`QueryCache: Error fetching data for ${key} on attempt ${retryCount + 1}. queryCacheProcess: ${queryCacheProcess}.`);
             console.log(error);
-            this.cache.get(key).isFetching = false;
+            this.cache.get(key).isFetching = null;
             if (retryCount < 2) { // If it's not the last attempt
                 setTimeout(() => {
                     this.tryFetchData(key, request, reply, handler, retryCount + 1);

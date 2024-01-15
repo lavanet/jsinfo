@@ -10,6 +10,7 @@ interface CacheEntry {
     isFetching: boolean;
     data: any;
     expiry: number;
+    dateOnDisk?: Date;
 }
 class QueryCache {
     private cacheDir: string;
@@ -40,13 +41,26 @@ class QueryCache {
             };
         }
     
+        const cacheFilePath = path.join(this.cacheDir, encodeURIComponent(key));
+
+        if (!cacheEntry.isFetching && fs.existsSync(cacheFilePath)) {
+            const stats = fs.statSync(cacheFilePath);
+            if (cacheEntry.dateOnDisk && cacheEntry.dateOnDisk < stats.mtime) {
+                const data = fs.readFileSync(cacheFilePath, 'utf8');
+                cacheEntry.data = JSON.parse(data);
+                cacheEntry.dateOnDisk = stats.mtime;
+            }
+            console.log(`QueryCache: date on disk: ${cacheEntry.dateOnDisk} is newer for: "${key}", file modification date: ${stats.mtime}`);
+        }
+        
         // If the data in the cache entry is empty, try to load it from the disk
         if (!cacheEntry.isFetching && Object.keys(cacheEntry.data).length === 0) {
-            const cacheFilePath = path.join(this.cacheDir, encodeURIComponent(key));
             if (fs.existsSync(cacheFilePath)) {
                 const data: any = JSON.parse(fs.readFileSync(cacheFilePath, 'utf-8'));
                 console.log(`QueryCache: Loaded data for key "${key}" from disk`);
                 cacheEntry.data = data;
+                const stats = fs.statSync(cacheFilePath);
+                cacheEntry.dateOnDisk = stats.mtime;
             }
         }
     
@@ -58,7 +72,9 @@ class QueryCache {
         cacheEntry.data = newData;
         const cacheFilePath = path.join(this.cacheDir, encodeURIComponent(key));
         fs.writeFileSync(cacheFilePath, JSON.stringify(cacheEntry.data));
-        this.get(key).expiry = this.getNewExpiry();
+        const stats = fs.statSync(cacheFilePath);
+        cacheEntry.dateOnDisk = stats.mtime;
+        cacheEntry.expiry = this.getNewExpiry();
     }
 }
 class RequestCache {

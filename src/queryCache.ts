@@ -95,7 +95,7 @@ class RequestCache {
 
         // refetch data?
         if (Object.keys(this.cache.get(key).data).length === 0) {
-            console.log(`QueryCache: No cache entry for ${key}. Fetching data...`);
+            console.log(`QueryCache: No cache entry for ${key}. queryCacheProcess: ${queryCacheProcess}. Fetching data...`);
             if (queryCacheProcess) {
                 await this.tryFetchData(key, request, reply, handler);
             } else {
@@ -105,7 +105,7 @@ class RequestCache {
 
         // refetch data?
         if (Date.now() > this.cache.get(key).expiry) {
-            console.log(`QueryCache: Data for ${key} expiered . Fetching data...`);
+            console.log(`QueryCache: Data for ${key} expiered . queryCacheProcess: ${queryCacheProcess}. Fetching data...`);
             if (queryCacheProcess) {
                 await this.tryFetchData(key, request, reply, handler);
             } else {
@@ -121,14 +121,14 @@ class RequestCache {
         this.cache.get(key).isFetching = true;
 
         try {
-            console.time(`QueryCache: handler execution time for ${key}`);
+            console.time(`QueryCache: handler execution time for ${key}. queryCacheProcess: ${queryCacheProcess}.`);
             const data = await handler(request, reply);
-            console.timeEnd(`QueryCache: handler execution time for ${key}`);
+            console.timeEnd(`QueryCache: handler execution time for ${key}. queryCacheProcess: ${queryCacheProcess}.`);
             this.cache.updateData(key, data);
             this.cache.get(key).isFetching = false;
-            console.log(`QueryCache: Data fetched for ${key}`);
+            console.log(`QueryCache: Data fetched for ${key}. queryCacheProcess: ${queryCacheProcess}.`);
         } catch (error) {
-            console.log(`QueryCache: Error fetching data for ${key} on attempt ${retryCount + 1}`);
+            console.log(`QueryCache: Error fetching data for ${key} on attempt ${retryCount + 1}. queryCacheProcess: ${queryCacheProcess}.`);
             console.log(error);
             this.cache.get(key).isFetching = false;
             if (retryCount < 2) { // If it's not the last attempt

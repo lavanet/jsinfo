@@ -46,7 +46,7 @@ const server: FastifyInstance = Fastify({
 
 server.register(fastifyCors, { origin: "*" });
 
-const isOnSendLogsEnabled = true;
+const isOnSendLogsEnabled = false;
 
 server.addHook('onSend', async (request, reply, payload) => {
     try {

@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# jsinfo/scripts/refreshQueryCache.sh
+# jsinfo/scripts/run.sh
 
 REST_URL="${REST_URL:-http://0.0.0.0:8080}"
 
@@ -12,10 +12,8 @@ get() {
     i=0
     while [ $i -lt $retries ]; do
         response=$(curl -s "$REST_URL$url")
-        echo "$response"
         if echo "$response" | jq . > /dev/null 2>&1; then
             echo "$response"
-            echo "$response" >&2
             return
         fi
         i=$((i+1))
@@ -28,8 +26,7 @@ revalidate_cache_for_specs() {
     response=$(get "/specs")
     specs=$(echo "$response" | jq -r '.specs[] | .id')
     for spec in $specs; do
-        echo "revalidate_cache: calling $REST_URL/spec/$spec"
-        curl -s "$REST_URL/spec/$spec" > /dev/null
+        get "/spec/$spec" > /dev/null
     done
 }
 
@@ -38,8 +35,7 @@ revalidate_cache_for_consumers() {
     response=$(get "/consumers")
     consumers=$(echo "$response" | jq -r '.consumers[] | .address')
     for consumer in $consumers; do
-        echo "revalidate_cache: calling $REST_URL/consumer/$consumer"
-        curl -s "$REST_URL/consumer/$consumer" > /dev/null
+        get "/consumer/$consumer" > /dev/null
     done
 }
 
@@ -49,8 +45,7 @@ revalidate_cache_for_providers() {
     providers=$(echo "$response" | jq -r '.providers[] | .address')
     for provider in $providers; do
         if [ "$provider" != "null" ]; then
-            echo "revalidate_cache: calling $REST_URL/provider/$provider"
-            curl -s "$REST_URL/provider/$provider" > /dev/null
+            get "/provider/$provider" > /dev/null
         fi
     done
 }
@@ -61,9 +56,9 @@ revalidate_cache() {
     revalidate_cache_for_consumers
     revalidate_cache_for_providers
     echo "revalidate_cache: Browsing to /events"
-    get "/events"
+    get "/events" > /dev/null
     echo "revalidate_cache: Browsing to /index"
-    get "/index"
+    get "/index" > /dev/null
     echo "revalidate_cache: Finished revalidation of cache."
 }
 

@@ -306,11 +306,15 @@ const indexer = async (): Promise<void> => {
                         static_dbPlans,
                         static_dbStakes
                     )
+
                 } catch (e) {
                     console.log('UpdateLatestBlockMeta', e)
                 }
                 try {
+                    const start = Date.now();
                     await db.refreshMaterializedView(schema.relayPaymentsAggView).concurrently()
+                    console.log(`db.refreshMaterializedView execution time: ${Date.now() - start} ms`);
+                    
                 } catch (e) {
                     console.log("db.refreshMaterializedView failed", e)
                 }

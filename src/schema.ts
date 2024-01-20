@@ -71,6 +71,7 @@ export const relayPayments = pgTable('relay_payments', {
   relays: bigint('relays', { mode: 'number' }),
   cu: bigint('cu', { mode: 'number' }),
   pay: bigint('pay', { mode: 'number' }),
+  datetime: timestamp('datetime', { mode: "date" }),
 
   qosSync: real('qos_sync'),
   qosAvailability: real('qos_availability'),
@@ -106,6 +107,28 @@ export const relayPaymentsAggView = pgMaterializedView('relay_payments_agg_view'
   qosAvailabilityExcAvg: bigint('qosavailabilityexcavg', { mode: 'number' }),
   qosLatencyExcAv: bigint('qoslatencyexcavg', { mode: 'number' }),
 }).existing()
+
+export const aggHourlyrelayPayments = pgTable('agg_hourly_relay_payments', {
+  provider: text('provider').references(() => providers.address),
+  date: timestamp('date', { mode: "date" }),
+  hour: integer('hour'),
+  specId: text('spec_id').references(() => specs.id),
+  cuSum: bigint('cusum', { mode: 'number' }),
+  relaySum: bigint('relaysum', { mode: 'number' }),
+  rewardSum: bigint('rewardsum', { mode: 'number' }),
+  qosSyncAvg: bigint('qossyncavg', { mode: 'number' }),
+  qosAvailabilityAvg: bigint('qosavailabilityavg', { mode: 'number' }),
+  qosLatencyAvg: bigint('qoslatencyavg', { mode: 'number' }),
+  qosSyncExcAvg: bigint('qossyncexcavg', { mode: 'number' }),
+  qosAvailabilityExcAvg: bigint('qosavailabilityexcavg', { mode: 'number' }),
+  qosLatencyExcAv: bigint('qoslatencyexcavg', { mode: 'number' }),
+}, (table) => {
+  return {
+    aggHourlyIdx: index("aggHourlyIdx").on(table.date, table.hour, table.specId, table.provider),
+  };
+});
+export type AggHorulyRelayPayment = typeof aggHourlyrelayPayments.$inferSelect
+export type InsertAggHourlyRelayPayment = typeof aggHourlyrelayPayments.$inferInsert
 
 export enum LavaProviderEventType {
   StakeNewProvider = 1,

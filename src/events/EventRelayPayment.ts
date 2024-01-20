@@ -61,6 +61,7 @@ export const ParseEventRelayPayment = (
   const evtEvent: schema.InsertRelayPayment = {
     tx: txHash,
     blockId: height,
+    datetime: new Date(lavaBlock.datetime),
   }
   evt.attributes.forEach((attr) => {
     let key: string = attr.key;

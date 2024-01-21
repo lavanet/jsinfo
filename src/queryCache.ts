@@ -26,7 +26,7 @@ class QueryCache {
     }
 
     getNewExpiry(): number {
-        return Date.now() + Math.floor(Math.random() * (25 - 15 + 1) + 15) * 1000;
+        return Date.now() + Math.floor(Math.random() * (11) + 15) * 1000;
     }
 
     get(key: string): CacheEntry {

@@ -19,6 +19,18 @@ const requestCache = new RequestCache();
 let db = GetDb()
 
 
+function formatDates(dataArray) {
+    return dataArray.map(item => {
+        const date = new Date(item.date);
+        const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        const formattedDate = `${monthNames[date.getMonth()]} ${date.getDate()}`;
+        return {
+            ...item,
+            date: formattedDate
+        };
+    });
+}
+
 async function checkDb() {
     try {
         await db.select().from(schema.blocks).limit(1)
@@ -188,6 +200,7 @@ server.get('/index', indexOpts, requestCache.handleRequestWithCache(async (reque
     res4.map((provider) => {
         providersAddrs.push(provider.address!)
     })
+
     //
     // provider details
     let res44 = await db.select().from(schema.providers).where(inArray(schema.providers.address, providersAddrs))
@@ -245,7 +258,7 @@ server.get('/index', indexOpts, requestCache.handleRequestWithCache(async (reque
     //
     // Get graph with 1 day resolution
     let res3 = await db.select({
-        date: sql<string>`to_char(${schema.aggHourlyrelayPayments.datehour}, 'MON dd')`,
+        date: sql<string>`DATE_TRUNC('day', ${schema.aggHourlyrelayPayments.datehour}) as mydate`,
         chainId: schema.aggHourlyrelayPayments.specId,
         cuSum: sql<number>`sum(${schema.aggHourlyrelayPayments.cuSum})`,
         relaySum: sql<number>`sum(${schema.aggHourlyrelayPayments.relaySum})`,
@@ -257,13 +270,13 @@ server.get('/index', indexOpts, requestCache.handleRequestWithCache(async (reque
                 inArray(schema.aggHourlyrelayPayments.specId, getChains)
             )
         ).
-        groupBy(sql`${schema.aggHourlyrelayPayments.specId}`, schema.aggHourlyrelayPayments.datehour).
-        orderBy(schema.aggHourlyrelayPayments.datehour)
+        groupBy(sql`${schema.aggHourlyrelayPayments.specId}`, sql`mydate`).
+        orderBy(sql`mydate`)
 
     //
     // QoS graph
     let res6 = await db.select({
-        date: sql<string>`to_char(${schema.aggHourlyrelayPayments.datehour}, 'MON dd')`,
+        date: sql`DATE_TRUNC('day', ${schema.aggHourlyrelayPayments.datehour}) as mydate`,
         qosSyncAvg: sql<number>`sum(${schema.aggHourlyrelayPayments.qosSyncAvg}*${schema.aggHourlyrelayPayments.relaySum})/sum(${schema.aggHourlyrelayPayments.relaySum})`,
         qosAvailabilityAvg: sql<number>`sum(${schema.aggHourlyrelayPayments.qosAvailabilityAvg}*${schema.aggHourlyrelayPayments.relaySum})/sum(${schema.aggHourlyrelayPayments.relaySum})`,
         qosLatencyAvg: sql<number>`sum(${schema.aggHourlyrelayPayments.qosLatencyAvg}*${schema.aggHourlyrelayPayments.relaySum})/sum(${schema.aggHourlyrelayPayments.relaySum})`,
@@ -272,9 +285,10 @@ server.get('/index', indexOpts, requestCache.handleRequestWithCache(async (reque
         qosLatencyExcAv: sql<number>`sum(${schema.aggHourlyrelayPayments.qosLatencyExcAvg}*${schema.aggHourlyrelayPayments.relaySum})/sum(${schema.aggHourlyrelayPayments.relaySum})`,
     }).from(schema.aggHourlyrelayPayments).
         where(gt(schema.aggHourlyrelayPayments.datehour, sql<Date>`now() - interval '30 day'`)).
-        groupBy(schema.aggHourlyrelayPayments.datehour).
-        orderBy(schema.aggHourlyrelayPayments.datehour)
+        groupBy(sql`mydate`).
+        orderBy(sql`mydate`)
 
+    //
     return {
         height: latestHeight,
         datetime: latestDatetime,
@@ -284,8 +298,8 @@ server.get('/index', indexOpts, requestCache.handleRequestWithCache(async (reque
         stakeSum: stakeSum,
         topProviders: providersDetails,
         allSpecs: res8,
-        qosData: res6,
-        data: res3,
+        qosData: formatDates(res6),
+        data: formatDates(res3),
     }
 }))
 
@@ -406,7 +420,7 @@ server.get('/provider/:addr', providerOpts, requestCache.handleRequestWithCache(
     //
     // Get graph with 1 day resolution
     let data1 = await db.select({
-        date: sql<string>`to_char(${schema.aggHourlyrelayPayments.datehour}, 'MON dd')`,
+        date: sql`DATE_TRUNC('day', ${schema.aggHourlyrelayPayments.datehour}) as mydate`,
         chainId: schema.aggHourlyrelayPayments.specId,
         cuSum: sql<number>`sum(${schema.aggHourlyrelayPayments.cuSum})`,
         relaySum: sql<number>`sum(${schema.aggHourlyrelayPayments.relaySum})`,
@@ -418,13 +432,13 @@ server.get('/provider/:addr', providerOpts, requestCache.handleRequestWithCache(
                 eq(schema.aggHourlyrelayPayments.provider, addr)
             )
         ).
-        groupBy(sql`${schema.aggHourlyrelayPayments.specId}`, schema.aggHourlyrelayPayments.datehour).
-        orderBy(schema.aggHourlyrelayPayments.datehour)
+        groupBy(sql`${schema.aggHourlyrelayPayments.specId}`, sql`mydate`).
+        orderBy(sql`mydate`)
 
     //
     // QoS graph
     let data2 = await db.select({
-        date: sql<string>`to_char(${schema.aggHourlyrelayPayments.datehour}, 'MON dd')`,
+        date: sql`DATE_TRUNC('day', ${schema.aggHourlyrelayPayments.datehour}) as mydate`,
         qosSyncAvg: sql<number>`sum(${schema.aggHourlyrelayPayments.qosSyncAvg}*${schema.aggHourlyrelayPayments.relaySum})/sum(${schema.aggHourlyrelayPayments.relaySum})`,
         qosAvailabilityAvg: sql<number>`sum(${schema.aggHourlyrelayPayments.qosAvailabilityAvg}*${schema.aggHourlyrelayPayments.relaySum})/sum(${schema.aggHourlyrelayPayments.relaySum})`,
         qosLatencyAvg: sql<number>`sum(${schema.aggHourlyrelayPayments.qosLatencyAvg}*${schema.aggHourlyrelayPayments.relaySum})/sum(${schema.aggHourlyrelayPayments.relaySum})`,
@@ -438,9 +452,8 @@ server.get('/provider/:addr', providerOpts, requestCache.handleRequestWithCache(
                 eq(schema.aggHourlyrelayPayments.provider, addr)
             )
         ).
-        groupBy(schema.aggHourlyrelayPayments.datehour).
-        orderBy(schema.aggHourlyrelayPayments.datehour)
-
+        groupBy(sql`mydate`).
+        orderBy(sql`mydate`)
 
     return {
         height: latestHeight,
@@ -455,8 +468,8 @@ server.get('/provider/:addr', providerOpts, requestCache.handleRequestWithCache(
         stakes: res5,
         payments: res6,
         reports: res7,
-        qosData: data2,
-        data: data1,
+        qosData: formatDates(data2),
+        data: formatDates(data1),
     }
 }))
 
@@ -709,24 +722,24 @@ server.get('/spec/:specId', SpecOpts, requestCache.handleRequestWithCache(async 
     //
     // Get graph with 1 day resolution
     let res3 = await db.select({
-        date: sql<string>`to_char(${schema.aggHourlyrelayPayments.datehour}, 'MON dd')`,
+        date: sql`DATE_TRUNC('day', ${schema.aggHourlyrelayPayments.datehour}) as mydate`,
         cuSum: sql<number>`sum(${schema.aggHourlyrelayPayments.cuSum})`,
         relaySum: sql<number>`sum(${schema.aggHourlyrelayPayments.relaySum})`,
         rewardSum: sql<number>`sum(${schema.aggHourlyrelayPayments.rewardSum})`
     }).from(schema.aggHourlyrelayPayments).
-        groupBy(schema.aggHourlyrelayPayments.datehour).
+        groupBy(sql`mydate`).
         where(
             and(
                 gt(schema.aggHourlyrelayPayments.datehour, sql<Date>`now() - interval '30 day'`),
                 eq(schema.aggHourlyrelayPayments.specId, upSpecId)
             )
         ).
-        orderBy(schema.aggHourlyrelayPayments.datehour)
+        orderBy(sql`mydate`)
 
     //
     // QoS graph
     let res6 = await db.select({
-        date: sql<string>`to_char(${schema.aggHourlyrelayPayments.datehour}, 'MON dd')`,
+        date: sql`DATE_TRUNC('day', ${schema.aggHourlyrelayPayments.datehour}) as mydate`,
         qosSyncAvg: sql<number>`sum(${schema.aggHourlyrelayPayments.qosSyncAvg}*${schema.aggHourlyrelayPayments.relaySum})/sum(${schema.aggHourlyrelayPayments.relaySum})`,
         qosAvailabilityAvg: sql<number>`sum(${schema.aggHourlyrelayPayments.qosAvailabilityAvg}*${schema.aggHourlyrelayPayments.relaySum})/sum(${schema.aggHourlyrelayPayments.relaySum})`,
         qosLatencyAvg: sql<number>`sum(${schema.aggHourlyrelayPayments.qosLatencyAvg}*${schema.aggHourlyrelayPayments.relaySum})/sum(${schema.aggHourlyrelayPayments.relaySum})`,
@@ -739,8 +752,8 @@ server.get('/spec/:specId', SpecOpts, requestCache.handleRequestWithCache(async 
                 gt(schema.aggHourlyrelayPayments.datehour, sql<Date>`now() - interval '30 day'`),
                 eq(schema.aggHourlyrelayPayments.specId, upSpecId)
             )
-        ).groupBy(schema.aggHourlyrelayPayments.datehour).
-        orderBy(schema.aggHourlyrelayPayments.datehour)
+        ).groupBy(sql`mydate`).
+        orderBy(sql`mydate`)
 
     return {
         height: latestHeight,
@@ -750,8 +763,8 @@ server.get('/spec/:specId', SpecOpts, requestCache.handleRequestWithCache(async 
         relaySum: relaySum,
         rewardSum: rewardSum,
         qosData: res6,
-        stakes: res5,
-        data: res3,
+        stakes: formatDates(res5),
+        data: formatDates(res3),
     }
 }))
 

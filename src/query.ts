@@ -266,7 +266,7 @@ server.get('/index', indexOpts, requestCache.handleRequestWithCache(async (reque
     }).from(schema.aggHourlyrelayPayments).
         where(
             and(
-                gt(schema.aggHourlyrelayPayments.datehour, sql<Date>`now() - interval '30 day'`),
+                gt(sql<string>`DATE_TRUNC('day', ${schema.aggHourlyrelayPayments.datehour})`, sql<Date>`now() - interval '30 day'`),
                 inArray(schema.aggHourlyrelayPayments.specId, getChains)
             )
         ).
@@ -284,7 +284,7 @@ server.get('/index', indexOpts, requestCache.handleRequestWithCache(async (reque
         qosAvailabilityExcAvg: sql<number>`sum(${schema.aggHourlyrelayPayments.qosAvailabilityAvg}*${schema.aggHourlyrelayPayments.relaySum})/sum(${schema.aggHourlyrelayPayments.relaySum})`,
         qosLatencyExcAv: sql<number>`sum(${schema.aggHourlyrelayPayments.qosLatencyExcAvg}*${schema.aggHourlyrelayPayments.relaySum})/sum(${schema.aggHourlyrelayPayments.relaySum})`,
     }).from(schema.aggHourlyrelayPayments).
-        where(gt(schema.aggHourlyrelayPayments.datehour, sql<Date>`now() - interval '30 day'`)).
+        where(gt(sql<string>`DATE_TRUNC('day', ${schema.aggHourlyrelayPayments.datehour})`, sql<Date>`now() - interval '30 day'`)).
         groupBy(sql`mydate`).
         orderBy(sql`mydate`)
 
@@ -428,7 +428,7 @@ server.get('/provider/:addr', providerOpts, requestCache.handleRequestWithCache(
     }).from(schema.aggHourlyrelayPayments).
         where(
             and(
-                gt(schema.aggHourlyrelayPayments.datehour, sql<Date>`now() - interval '30 day'`),
+                gt(sql<string>`DATE_TRUNC('day', ${schema.aggHourlyrelayPayments.datehour})`, sql<Date>`now() - interval '30 day'`),
                 eq(schema.aggHourlyrelayPayments.provider, addr)
             )
         ).
@@ -448,7 +448,7 @@ server.get('/provider/:addr', providerOpts, requestCache.handleRequestWithCache(
     }).from(schema.aggHourlyrelayPayments).
         where(
             and(
-                gt(schema.aggHourlyrelayPayments.datehour, sql<Date>`now() - interval '30 day'`),
+                gt(sql<string>`DATE_TRUNC('day', ${schema.aggHourlyrelayPayments.datehour})`, sql<Date>`now() - interval '30 day'`),
                 eq(schema.aggHourlyrelayPayments.provider, addr)
             )
         ).
@@ -730,7 +730,7 @@ server.get('/spec/:specId', SpecOpts, requestCache.handleRequestWithCache(async 
         groupBy(sql`mydate`).
         where(
             and(
-                gt(schema.aggHourlyrelayPayments.datehour, sql<Date>`now() - interval '30 day'`),
+                gt(sql<string>`DATE_TRUNC('day', ${schema.aggHourlyrelayPayments.datehour})`, sql<Date>`now() - interval '30 day'`),
                 eq(schema.aggHourlyrelayPayments.specId, upSpecId)
             )
         ).
@@ -749,7 +749,7 @@ server.get('/spec/:specId', SpecOpts, requestCache.handleRequestWithCache(async 
     }).from(schema.aggHourlyrelayPayments).
         where(
             and(
-                gt(schema.aggHourlyrelayPayments.datehour, sql<Date>`now() - interval '30 day'`),
+                gt(sql<string>`DATE_TRUNC('day', ${schema.aggHourlyrelayPayments.datehour})`, sql<Date>`now() - interval '30 day'`),
                 eq(schema.aggHourlyrelayPayments.specId, upSpecId)
             )
         ).groupBy(sql`mydate`).
@@ -762,8 +762,8 @@ server.get('/spec/:specId', SpecOpts, requestCache.handleRequestWithCache(async 
         cuSum: cuSum,
         relaySum: relaySum,
         rewardSum: rewardSum,
-        qosData: res6,
-        stakes: formatDates(res5),
+        qosData: formatDates(res6),
+        stakes: res5,
         data: formatDates(res3),
     }
 }))

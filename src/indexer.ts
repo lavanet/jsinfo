@@ -215,17 +215,16 @@ async function aggGetStartEnd(db: PostgresJsDatabase): Promise<{ startTime: Date
         console.log("No relay payments found");
         return { startTime: null, endTime: null };
     }
-    const endTime = new Date(lastRelayPayment as any);
+    const endTime = lastRelayPayment as Date;
 
     // Last aggregated hour
     const lastAggHour = await db.select({
         datehour: sql`MAX(${schema.aggHourlyrelayPayments.datehour})`,
     }).from(schema.aggHourlyrelayPayments)
         .then(rows => rows[0]?.datehour);
-
     let startTime: Date;
     if (lastAggHour) {
-        startTime = new Date(lastAggHour as any);
+        startTime = new Date(lastAggHour as string);
     } else {
         startTime = new Date("2000-01-01T00:00:00Z"); // Default start time if no data is found
     }
@@ -276,44 +275,49 @@ async function updateAggHourlyPayments(db: PostgresJsDatabase) {
         console.log("updateAggHourlyPayments:", "no agg results found")
         return;
     }
+    console.log("aggResults.length", aggResults.length, aggResults[aggResults.length - 1])
 
     //
     // Update first the latest aggregate hour rows inserting
     // Note: the latest aggregate hour rows are partial (until updated post their hour)
-    const latestHourData = aggResults.filter(r => new Date(r.datehour as any).getTime() === endTime.getTime());
-    console.log("updateAggHourlyPayments:", "latestHourData", latestHourData, "latestHourData.length", latestHourData.length)
-    for (const row of latestHourData) {
-        await db.update(schema.aggHourlyrelayPayments)
-            .set({
-                cuSum: row.cuSum,
-                relaySum: row.relaySum,
-                rewardSum: row.rewardSum,
-                qosSyncAvg: row.qosSyncAvg,
-                qosAvailabilityAvg: row.qosAvailabilityAvg,
-                qosLatencyAvg: row.qosLatencyAvg,
-                qosSyncExcAvg: row.qosSyncExcAvg,
-                qosAvailabilityExcAvg: row.qosAvailabilityExcAvg,
-                qosLatencyExcAvg: row.qosLatencyExcAvg
-            } as any)
-            .where(
-                and(
-                    sql`${schema.aggHourlyrelayPayments.datehour} = ${row.datehour}`,
-                    sql`${schema.aggHourlyrelayPayments.provider} = ${row.provider}`,
-                    sql`${schema.aggHourlyrelayPayments.specId} = ${row.specId}`
+    const latestHourData = aggResults.filter(r =>
+        (new Date(r.datehour as string)).getTime() == startTime.getTime()
+    );
+    const remainingData = aggResults.filter(r =>
+        (new Date(r.datehour as string)).getTime() > startTime.getTime()
+    );
+    await db.transaction(async (tx) => {
+        for (const row of latestHourData) {
+            await tx.update(schema.aggHourlyrelayPayments)
+                .set({
+                    cuSum: row.cuSum,
+                    relaySum: row.relaySum,
+                    rewardSum: row.rewardSum,
+                    qosSyncAvg: row.qosSyncAvg,
+                    qosAvailabilityAvg: row.qosAvailabilityAvg,
+                    qosLatencyAvg: row.qosLatencyAvg,
+                    qosSyncExcAvg: row.qosSyncExcAvg,
+                    qosAvailabilityExcAvg: row.qosAvailabilityExcAvg,
+                    qosLatencyExcAvg: row.qosLatencyExcAvg
+                } as any)
+                .where(
+                    and(
+                        sql`${schema.aggHourlyrelayPayments.datehour} = ${row.datehour}`,
+                        sql`${schema.aggHourlyrelayPayments.provider} = ${row.provider}`,
+                        sql`${schema.aggHourlyrelayPayments.specId} = ${row.specId}`
+                    )
                 )
-            )
-    }
+        }
 
-    //
-    // Insert new rows
-    const remainingData = aggResults.filter(r => new Date(r.datehour as any).getTime() < endTime.getTime());
-    console.log("updateAggHourlyPayments:", "remainingData", remainingData.length)
-    if (remainingData.length === 0) {
-        return;
-    }
-    await DoInChunks(250, remainingData, async (arr: any) => {
-        await db.insert(schema.aggHourlyrelayPayments)
-            .values(arr)
+        //
+        // Insert new rows
+        if (remainingData.length === 0) {
+            return;
+        }
+        await DoInChunks(250, remainingData, async (arr: any) => {
+            await tx.insert(schema.aggHourlyrelayPayments)
+                .values(arr)
+        })
     })
 }
 
@@ -430,14 +434,6 @@ const indexer = async (): Promise<void> => {
                     console.log(`db.updateAggHourlyPayments execution time: ${Date.now() - start} ms`);
                 } catch (e) {
                     console.log("update agg relay payments failed", e)
-                }
-                try {
-                    const start = Date.now();
-                    await db.refreshMaterializedView(schema.relayPaymentsAggView).concurrently()
-                    console.log(`db.refreshMaterializedView execution time: ${Date.now() - start} ms`);
-
-                } catch (e) {
-                    console.log("db.refreshMaterializedView failed", e)
                 }
             }
         }

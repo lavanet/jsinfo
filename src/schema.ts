@@ -89,6 +89,7 @@ export const relayPayments = pgTable('relay_payments', {
 }, (table) => {
   return {
     nameIdx: index("name_idx").on(table.specId),
+    tsIdx: index("ts_idx").on(table.datetime),
   };
 });
 export type RelayPayment = typeof relayPayments.$inferSelect
@@ -110,7 +111,7 @@ export const relayPaymentsAggView = pgMaterializedView('relay_payments_agg_view'
 
 export const aggHourlyrelayPayments = pgTable('agg_hourly_relay_payments', {
   provider: text('provider').references(() => providers.address),
-  datehour: timestamp('datehour', { mode: "date" }),
+  datehour: timestamp('datehour', { mode: "string" }), // Note: do not change this to 'date', it will cause bugs
   specId: text('spec_id').references(() => specs.id),
   cuSum: bigint('cusum', { mode: 'number' }),
   relaySum: bigint('relaysum', { mode: 'number' }),

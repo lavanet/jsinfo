@@ -1,4 +1,4 @@
-import { pgTable, index, text, integer, serial, bigint, real, primaryKey, timestamp, pgMaterializedView } from 'drizzle-orm/pg-core';
+import { pgTable, index, text, integer, serial, bigint, real, uniqueIndex, primaryKey, timestamp, pgMaterializedView, doublePrecision } from 'drizzle-orm/pg-core';
 
 export const blocks = pgTable('blocks', {
   height: integer('height').unique(),
@@ -110,21 +110,20 @@ export const relayPaymentsAggView = pgMaterializedView('relay_payments_agg_view'
 
 export const aggHourlyrelayPayments = pgTable('agg_hourly_relay_payments', {
   provider: text('provider').references(() => providers.address),
-  date: timestamp('date', { mode: "date" }),
-  hour: integer('hour'),
+  datehour: timestamp('datehour', { mode: "date" }),
   specId: text('spec_id').references(() => specs.id),
   cuSum: bigint('cusum', { mode: 'number' }),
   relaySum: bigint('relaysum', { mode: 'number' }),
   rewardSum: bigint('rewardsum', { mode: 'number' }),
-  qosSyncAvg: bigint('qossyncavg', { mode: 'number' }),
-  qosAvailabilityAvg: bigint('qosavailabilityavg', { mode: 'number' }),
-  qosLatencyAvg: bigint('qoslatencyavg', { mode: 'number' }),
-  qosSyncExcAvg: bigint('qossyncexcavg', { mode: 'number' }),
-  qosAvailabilityExcAvg: bigint('qosavailabilityexcavg', { mode: 'number' }),
-  qosLatencyExcAv: bigint('qoslatencyexcavg', { mode: 'number' }),
+  qosSyncAvg: doublePrecision('qossyncavg'),
+  qosAvailabilityAvg: doublePrecision('qosavailabilityavg'),
+  qosLatencyAvg: doublePrecision('qoslatencyavg'),
+  qosSyncExcAvg: doublePrecision('qossyncexcavg'),
+  qosAvailabilityExcAvg: doublePrecision('qosavailabilityexcavg'),
+  qosLatencyExcAvg: doublePrecision('qoslatencyexcavg'),
 }, (table) => {
   return {
-    aggHourlyIdx: index("aggHourlyIdx").on(table.date, table.hour, table.specId, table.provider),
+    aggHourlyIdx: uniqueIndex("aggHourlyIdx").on(table.datehour, table.specId, table.provider),
   };
 });
 export type AggHorulyRelayPayment = typeof aggHourlyrelayPayments.$inferSelect

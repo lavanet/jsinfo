@@ -3,7 +3,7 @@
 import { StargateClient } from "@cosmjs/stargate"
 import { Tendermint37Client } from "@cosmjs/tendermint-rpc";
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { eq, desc } from "drizzle-orm";
+import { sql, eq, desc, and } from "drizzle-orm";
 import * as lavajs from '@lavanet/lavajs';
 import { PromisePool } from '@supercharge/promise-pool'
 import retry from 'async-retry';
@@ -12,6 +12,7 @@ import * as schema from "./schema";
 import { LavaBlock, GetOneLavaBlock } from './lavablock'
 import { UpdateLatestBlockMeta } from './setlatest'
 import { MigrateDb, GetDb, DoInChunks } from "./utils";
+import { log } from "console";
 
 const rpc = process.env['LAVA_RPC'] as string
 const n_workers = parseInt(process.env['N_WORKERS']!)
@@ -203,6 +204,118 @@ const backoffRetry = async <T>(title: string, fn: () => Promise<T>): Promise<T> 
     );
 };
 
+async function aggGetStartEnd(db: PostgresJsDatabase): Promise<{ startTime: Date | null, endTime: Date | null }> {
+    // Last relay payment time
+    const lastRelayPayment = await db.select({
+        datehour: sql`DATE_TRUNC('hour', MAX(${schema.relayPayments.datetime}))`,
+    }).from(schema.relayPayments)
+        .then(rows => rows[0]?.datehour);
+
+    if (!lastRelayPayment) {
+        console.log("No relay payments found");
+        return { startTime: null, endTime: null };
+    }
+    const endTime = new Date(lastRelayPayment as any);
+
+    // Last aggregated hour
+    const lastAggHour = await db.select({
+        datehour: sql`MAX(${schema.aggHourlyrelayPayments.datehour})`,
+    }).from(schema.aggHourlyrelayPayments)
+        .then(rows => rows[0]?.datehour);
+
+    let startTime: Date;
+    if (lastAggHour) {
+        startTime = new Date(lastAggHour as any);
+    } else {
+        startTime = new Date("2000-01-01T00:00:00Z"); // Default start time if no data is found
+    }
+
+    console.log("aggGetStartEnd: startTime", startTime, "endTime", endTime);
+    return { startTime, endTime };
+}
+
+async function updateAggHourlyPayments(db: PostgresJsDatabase) {
+    const { startTime, endTime } = await aggGetStartEnd(db)
+    console.log("updateAggHourlyPayments:", "startTime", startTime, "endTime", endTime)
+    if (startTime === null || endTime === null) {
+        console.log("updateAggHourlyPayments: startTime === null || endTime === null")
+        return
+    }
+    if (startTime > endTime) {
+        console.log("updateAggHourlyPayments: startTime > endTime")
+        return
+    }
+
+    //
+    const aggResults = await db.select({
+        provider: sql`${schema.relayPayments.provider}`,
+        datehour: sql`DATE_TRUNC('hour', ${schema.relayPayments.datetime}) as datehour`,
+        specId: sql`${schema.relayPayments.specId}`,
+        cuSum: sql`SUM(${schema.relayPayments.cu})`,
+        relaySum: sql`SUM(${schema.relayPayments.relays})`,
+        rewardSum: sql`SUM(${schema.relayPayments.pay})`,
+        qosSyncAvg: sql`SUM(${schema.relayPayments.qosSync} * ${schema.relayPayments.relays}) / SUM(${schema.relayPayments.relays})`,
+        qosAvailabilityAvg: sql`SUM(${schema.relayPayments.qosAvailability} * ${schema.relayPayments.relays}) / SUM(${schema.relayPayments.relays})`,
+        qosLatencyAvg: sql`SUM(${schema.relayPayments.qosLatency} * ${schema.relayPayments.relays}) / SUM(${schema.relayPayments.relays})`,
+        qosSyncExcAvg: sql`SUM(${schema.relayPayments.qosSyncExc} * ${schema.relayPayments.relays}) / SUM(${schema.relayPayments.relays})`,
+        qosAvailabilityExcAvg: sql`SUM(${schema.relayPayments.qosAvailabilityExc} * ${schema.relayPayments.relays}) / SUM(${schema.relayPayments.relays})`,
+        qosLatencyExcAvg: sql`SUM(${schema.relayPayments.qosLatencyExc} * ${schema.relayPayments.relays}) / SUM(${schema.relayPayments.relays})`,
+    }).from(schema.relayPayments)
+        .where(
+            sql`${schema.relayPayments.datetime} >= ${startTime}`
+        )
+        .groupBy(
+            sql`datehour`,
+            schema.relayPayments.provider,
+            schema.relayPayments.specId
+        )
+        .orderBy(
+            sql`datehour`,
+        )
+    if (aggResults.length === 0) {
+        console.log("updateAggHourlyPayments:", "no agg results found")
+        return;
+    }
+
+    //
+    // Update first the latest aggregate hour rows inserting
+    // Note: the latest aggregate hour rows are partial (until updated post their hour)
+    const latestHourData = aggResults.filter(r => new Date(r.datehour as any).getTime() === endTime.getTime());
+    console.log("updateAggHourlyPayments:", "latestHourData", latestHourData, "latestHourData.length", latestHourData.length)
+    for (const row of latestHourData) {
+        await db.update(schema.aggHourlyrelayPayments)
+            .set({
+                cuSum: row.cuSum,
+                relaySum: row.relaySum,
+                rewardSum: row.rewardSum,
+                qosSyncAvg: row.qosSyncAvg,
+                qosAvailabilityAvg: row.qosAvailabilityAvg,
+                qosLatencyAvg: row.qosLatencyAvg,
+                qosSyncExcAvg: row.qosSyncExcAvg,
+                qosAvailabilityExcAvg: row.qosAvailabilityExcAvg,
+                qosLatencyExcAvg: row.qosLatencyExcAvg
+            } as any)
+            .where(
+                and(
+                    sql`${schema.aggHourlyrelayPayments.datehour} = ${row.datehour}`,
+                    sql`${schema.aggHourlyrelayPayments.provider} = ${row.provider}`,
+                    sql`${schema.aggHourlyrelayPayments.specId} = ${row.specId}`
+                )
+            )
+    }
+
+    //
+    // Insert new rows
+    const remainingData = aggResults.filter(r => new Date(r.datehour as any).getTime() < endTime.getTime());
+    console.log("updateAggHourlyPayments:", "remainingData", remainingData.length)
+    if (remainingData.length === 0) {
+        return;
+    }
+    await DoInChunks(250, remainingData, async (arr: any) => {
+        await db.insert(schema.aggHourlyrelayPayments)
+            .values(arr)
+    })
+}
 
 async function connectToRpc(rpc: string): Promise<ConnectionResult> {
     const client = await StargateClient.connect(rpc);
@@ -306,15 +419,23 @@ const indexer = async (): Promise<void> => {
                         static_dbPlans,
                         static_dbStakes
                     )
-
                 } catch (e) {
                     console.log('UpdateLatestBlockMeta', e)
+                }
+
+                //
+                try {
+                    const start = Date.now();
+                    await updateAggHourlyPayments(db);
+                    console.log(`db.updateAggHourlyPayments execution time: ${Date.now() - start} ms`);
+                } catch (e) {
+                    console.log("update agg relay payments failed", e)
                 }
                 try {
                     const start = Date.now();
                     await db.refreshMaterializedView(schema.relayPaymentsAggView).concurrently()
                     console.log(`db.refreshMaterializedView execution time: ${Date.now() - start} ms`);
-                    
+
                 } catch (e) {
                     console.log("db.refreshMaterializedView failed", e)
                 }

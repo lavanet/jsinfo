@@ -1,7 +1,7 @@
 {
   "version": "5",
   "dialect": "pg",
-  "id": "9183ed27-2c92-487a-a365-443754554288",
+  "id": "2b22fb6b-139c-4235-8bbd-b51339c65d1a",
   "prevId": "4f269327-ce84-41a3-bf33-e2af864f082c",
   "tables": {
     "agg_hourly_relay_payments": {
@@ -14,15 +14,9 @@
           "primaryKey": false,
           "notNull": false
         },
-        "date": {
-          "name": "date",
+        "datehour": {
+          "name": "datehour",
           "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "hour": {
-          "name": "hour",
-          "type": "integer",
           "primaryKey": false,
           "notNull": false
         },
@@ -52,37 +46,37 @@
         },
         "qossyncavg": {
           "name": "qossyncavg",
-          "type": "bigint",
+          "type": "double precision",
           "primaryKey": false,
           "notNull": false
         },
         "qosavailabilityavg": {
           "name": "qosavailabilityavg",
-          "type": "bigint",
+          "type": "double precision",
           "primaryKey": false,
           "notNull": false
         },
         "qoslatencyavg": {
           "name": "qoslatencyavg",
-          "type": "bigint",
+          "type": "double precision",
           "primaryKey": false,
           "notNull": false
         },
         "qossyncexcavg": {
           "name": "qossyncexcavg",
-          "type": "bigint",
+          "type": "double precision",
           "primaryKey": false,
           "notNull": false
         },
         "qosavailabilityexcavg": {
           "name": "qosavailabilityexcavg",
-          "type": "bigint",
+          "type": "double precision",
           "primaryKey": false,
           "notNull": false
         },
         "qoslatencyexcavg": {
           "name": "qoslatencyexcavg",
-          "type": "bigint",
+          "type": "double precision",
           "primaryKey": false,
           "notNull": false
         }
@@ -91,12 +85,11 @@
         "aggHourlyIdx": {
           "name": "aggHourlyIdx",
           "columns": [
-            "date",
-            "hour",
+            "datehour",
             "spec_id",
             "provider"
           ],
-          "isUnique": false
+          "isUnique": true
         }
       },
       "foreignKeys": {

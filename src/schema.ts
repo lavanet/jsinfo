@@ -94,20 +94,6 @@ export const relayPayments = pgTable('relay_payments', {
 });
 export type RelayPayment = typeof relayPayments.$inferSelect
 export type InsertRelayPayment = typeof relayPayments.$inferInsert
-export const relayPaymentsAggView = pgMaterializedView('relay_payments_agg_view', {
-  provider: text('provider'),
-  date: timestamp('date', { mode: "date" }),
-  chainId: text('spec_id'),
-  cuSum: bigint('cusum', { mode: 'number' }),
-  relaySum: bigint('relaysum', { mode: 'number' }),
-  rewardSum: bigint('rewardsum', { mode: 'number' }),
-  qosSyncAvg: bigint('qossyncavg', { mode: 'number' }),
-  qosAvailabilityAvg: bigint('qosavailabilityavg', { mode: 'number' }),
-  qosLatencyAvg: bigint('qoslatencyavg', { mode: 'number' }),
-  qosSyncExcAvg: bigint('qossyncexcavg', { mode: 'number' }),
-  qosAvailabilityExcAvg: bigint('qosavailabilityexcavg', { mode: 'number' }),
-  qosLatencyExcAv: bigint('qoslatencyexcavg', { mode: 'number' }),
-}).existing()
 
 export const aggHourlyrelayPayments = pgTable('agg_hourly_relay_payments', {
   provider: text('provider').references(() => providers.address),

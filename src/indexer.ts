@@ -275,7 +275,6 @@ async function updateAggHourlyPayments(db: PostgresJsDatabase) {
         console.log("updateAggHourlyPayments:", "no agg results found")
         return;
     }
-    console.log("aggResults.length", aggResults.length, aggResults[aggResults.length - 1])
 
     //
     // Update first the latest aggregate hour rows inserting

@@ -14,7 +14,7 @@ export const GetDb = () => {
         idle_timeout: 20,
         max_lifetime: 60 * 30,
     });
-    const db: PostgresJsDatabase = drizzle(queryClient, { logger: true });
+    const db: PostgresJsDatabase = drizzle(queryClient/*, { logger: true }*/);
     return db
 }
 

@@ -86,24 +86,27 @@ export async function updateAggHourlyPayments(db: PostgresJsDatabase) {
     );
     await db.transaction(async (tx) => {
         for (const row of latestHourData) {
-            await tx.update(schema.aggHourlyrelayPayments)
-                .set({
-                    cuSum: row.cuSum,
-                    relaySum: row.relaySum,
-                    rewardSum: row.rewardSum,
-                    qosSyncAvg: row.qosSyncAvg,
-                    qosAvailabilityAvg: row.qosAvailabilityAvg,
-                    qosLatencyAvg: row.qosLatencyAvg,
-                    qosSyncExcAvg: row.qosSyncExcAvg,
-                    qosAvailabilityExcAvg: row.qosAvailabilityExcAvg,
-                    qosLatencyExcAvg: row.qosLatencyExcAvg
-                } as any)
-                .where(
-                    and(
-                        sql`${schema.aggHourlyrelayPayments.datehour} = ${row.datehour}`,
-                        sql`${schema.aggHourlyrelayPayments.provider} = ${row.provider}`,
-                        sql`${schema.aggHourlyrelayPayments.specId} = ${row.specId}`
-                    )
+            await tx.insert(schema.aggHourlyrelayPayments)
+                .values(row as any)
+                .onConflictDoUpdate(
+                    {
+                        target: [
+                            schema.aggHourlyrelayPayments.datehour,
+                            schema.aggHourlyrelayPayments.provider,
+                            schema.aggHourlyrelayPayments.specId,
+                        ],
+                        set: {
+                            cuSum: row.cuSum,
+                            relaySum: row.relaySum,
+                            rewardSum: row.rewardSum,
+                            qosSyncAvg: row.qosSyncAvg,
+                            qosAvailabilityAvg: row.qosAvailabilityAvg,
+                            qosLatencyAvg: row.qosLatencyAvg,
+                            qosSyncExcAvg: row.qosSyncExcAvg,
+                            qosAvailabilityExcAvg: row.qosAvailabilityExcAvg,
+                            qosLatencyExcAvg: row.qosLatencyExcAvg
+                        } as any
+                    }
                 )
         }
 

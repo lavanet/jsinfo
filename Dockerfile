@@ -29,5 +29,5 @@ COPY --from=prerelease --chown=bun:bun /usr/src/app/dist .
 RUN apk add --update curl jq
 COPY scripts scripts
 
-# switch to user
-USER bun
+# # switch to user
+# USER bun

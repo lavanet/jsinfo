@@ -13,10 +13,6 @@ run_script() {
     while true; do
         echo "QueryPod $(date) :: Starting '$command'..."
         eval "$command" || true
-        status=$?
-        if [ $status -ne 0 ]; then
-            echo "Command failed with exit status $status"
-        fi
         echo "QueryPod $(date) :: '$command' stopped, restarting..."
         sleep 1
     done

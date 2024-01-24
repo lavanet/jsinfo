@@ -882,6 +882,8 @@ export const queryserver = async (): Promise<void> => {
         } catch (err) {
             logger.error('failed to connect get block from db')
             logger.error(String(err))
+            logger.error('Sleeping one second before exit')
+            await new Promise(resolve => setTimeout(resolve, 1000));
             process.exit(1)
         }
 
@@ -889,6 +891,8 @@ export const queryserver = async (): Promise<void> => {
         await server.listen({ port: port, host: host })
     } catch (err) {
         logger.error(String(err))
+        logger.error('Sleeping one second before exit')
+        await new Promise(resolve => setTimeout(resolve, 1000));
         process.exit(1)
     }
 }

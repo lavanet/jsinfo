@@ -5,10 +5,12 @@
 // 2. Pagination
 require('dotenv').config();
 
-import Fastify, { FastifyInstance, RouteShorthandOptions } from 'fastify'
+import Fastify, { FastifyBaseLogger, FastifyInstance, RouteShorthandOptions } from 'fastify'
+import pino from 'pino';
+
 import { sql, desc, eq, gt, and, inArray } from "drizzle-orm";
 import * as schema from './schema';
-import { GetDb } from './utils';
+import { GetDb, logger } from './utils';
 import RequestCache from './queryCache';
 import { FastifyRequest, FastifyReply } from 'fastify';
 import fastifyCors from '@fastify/cors';
@@ -35,7 +37,7 @@ async function checkDb() {
     try {
         await db.select().from(schema.blocks).limit(1)
     } catch (e) {
-        console.log('checkDb exception, resetting connection', e)
+        logger.info('checkDb exception, resetting connection', e)
         db = GetDb()
     }
 }
@@ -52,9 +54,17 @@ async function getLatestBlock() {
     return { latestHeight, latestDatetime }
 }
 
-const server: FastifyInstance = Fastify({
-    logger: true,
-})
+const FastifyLogger: FastifyBaseLogger = pino({
+    level: 'error',
+    transport: {
+        target: 'pino-pretty',
+        options: {
+            colorize: true,
+        }
+    }
+});
+
+const server: FastifyInstance = Fastify({ logger: FastifyLogger });
 
 server.register(fastifyCors, { origin: "*" });
 
@@ -62,27 +72,48 @@ const isOnSendLogsEnabled = false;
 
 server.addHook('onSend', async (request, reply, payload) => {
     try {
-        if (isOnSendLogsEnabled) console.log('onSendHook: started');
+        if (isOnSendLogsEnabled) logger.info('onSendHook: started');
         if (request.headers['accept-encoding']?.includes('br')) {
-            if (isOnSendLogsEnabled) console.log('onSendHook: Brotli encoding is accepted');
+            if (isOnSendLogsEnabled) logger.info('onSendHook: Brotli encoding is accepted');
             const compressedPayload = await brotli.compress(Buffer.from(payload as Buffer));
-            if (isOnSendLogsEnabled) console.log('onSendHook: Compression completed');
+            if (isOnSendLogsEnabled) logger.info('onSendHook: Compression completed');
             if (compressedPayload) {
-                if (isOnSendLogsEnabled) console.log('onSendHook: Compression was successful');
+                if (isOnSendLogsEnabled) logger.info('onSendHook: Compression was successful');
                 reply.header('Content-Encoding', 'br');
-                if (isOnSendLogsEnabled) console.log('onSendHook:', compressedPayload);
+                if (isOnSendLogsEnabled) logger.info('onSendHook:', compressedPayload);
                 return Buffer.from(compressedPayload, 'utf8');
             } else {
-                if (isOnSendLogsEnabled) console.log('onSendHook: Compression failed');
+                if (isOnSendLogsEnabled) logger.info('onSendHook: Compression failed');
             }
-            if (isOnSendLogsEnabled) console.log('onSendHook: Returning original payload');
+            if (isOnSendLogsEnabled) logger.info('onSendHook: Returning original payload');
         }
     } catch (error) {
-        if (isOnSendLogsEnabled) console.log('onSendHook: An error occurred:', error);
-        if (isOnSendLogsEnabled) console.log('onSendHook: Returning original payload');
+        if (isOnSendLogsEnabled) logger.info('onSendHook: An error occurred:', error);
+        if (isOnSendLogsEnabled) logger.info('onSendHook: Returning original payload');
     }
     return payload;
 });
+
+function addErrorResponse(consumerOpts: RouteShorthandOptions): RouteShorthandOptions {
+    const schema = consumerOpts.schema || {};
+    const response = schema.response || {};
+
+    return {
+        ...consumerOpts,
+        schema: {
+            ...schema,
+            response: {
+                ...response,
+                400: {
+                    type: 'object',
+                    properties: {
+                        error: { type: 'string' },
+                    },
+                },
+            },
+        },
+    };
+}
 
 const latestOpts: RouteShorthandOptions = {
     schema: {
@@ -156,11 +187,12 @@ const indexOpts: RouteShorthandOptions = {
     }
 }
 
-server.get('/index', indexOpts, requestCache.handleRequestWithCache(async (request: FastifyRequest, reply: FastifyReply) => {
+server.get('/index', addErrorResponse(indexOpts), requestCache.handleRequestWithCache(async (request: FastifyRequest, reply: FastifyReply) => {
     await checkDb()
-
+    
     //
     const { latestHeight, latestDatetime } = await getLatestBlock()
+    // logger.info(`Latest block: ${latestHeight}, ${latestDatetime}`)
 
     //
     // Get total payments and more
@@ -177,6 +209,7 @@ server.get('/index', indexOpts, requestCache.handleRequestWithCache(async (reque
         relaySum = res[0].relaySum
         rewardSum = res[0].rewardSum
     }
+    // logger.info(`Total payments: cuSum=${cuSum}, relaySum=${relaySum}, rewardSum=${rewardSum}`)
 
     //
     // Get total provider stake
@@ -202,7 +235,8 @@ server.get('/index', indexOpts, requestCache.handleRequestWithCache(async (reque
     })
 
     if (providersAddrs.length == 0) {
-        return { error: 'Provider does not exist' }
+        reply.code(400).send({ error: 'Provider does not exist' });
+        return reply;
     }
 
     //
@@ -242,6 +276,8 @@ server.get('/index', indexOpts, requestCache.handleRequestWithCache(async (reque
             totalStake: totalStake,
         })
     })
+
+    // logger.info(`Provider details: ${JSON.stringify(providersDetails)}`)
 
     //
     // Get top chains
@@ -293,7 +329,6 @@ server.get('/index', indexOpts, requestCache.handleRequestWithCache(async (reque
         groupBy(sql`mydate`).
         orderBy(sql`mydate`)
 
-    console.log("qosData", formatDates(res6))
     //
     return {
         height: latestHeight,
@@ -363,18 +398,20 @@ const providerOpts: RouteShorthandOptions = {
     }
 }
 
-server.get('/provider/:addr', providerOpts, requestCache.handleRequestWithCache(async (request: FastifyRequest, reply: FastifyReply) => {
+server.get('/provider/:addr', addErrorResponse(providerOpts), requestCache.handleRequestWithCache(async (request: FastifyRequest, reply: FastifyReply) => {
     await checkDb()
 
     const { addr } = request.params as { addr: string }
     if (addr.length != 44 || !addr.startsWith('lava@')) {
-        return { error: 'bad address' }
+        reply.code(400).send({ error: 'Bad provider address' });
+        return reply;
     }
 
     //
     const res = await db.select().from(schema.providers).where(eq(schema.providers.address, addr)).limit(1)
     if (res.length != 1) {
-        return { error: 'address does not exist' }
+        reply.code(400).send({ error: 'Provider does not exist' });
+        return reply;
     }
 
     const provider = res[0]
@@ -494,7 +531,7 @@ const providersOpts: RouteShorthandOptions = {
     }
 }
 
-server.get('/providers', providersOpts, requestCache.handleRequestWithCache(async (request: FastifyRequest, reply: FastifyReply) => {
+server.get('/providers', addErrorResponse(providersOpts), requestCache.handleRequestWithCache(async (request: FastifyRequest, reply: FastifyReply) => {
     await checkDb()
 
     const res = await db.select().from(schema.providers)
@@ -518,7 +555,7 @@ const specssOpts: RouteShorthandOptions = {
     }
 }
 
-server.get('/specs', specssOpts, requestCache.handleRequestWithCache(async (request: FastifyRequest, reply: FastifyReply) => {
+server.get('/specs', addErrorResponse(specssOpts), requestCache.handleRequestWithCache(async (request: FastifyRequest, reply: FastifyReply) => {
     await checkDb()
 
     const res = await db.select().from(schema.specs)
@@ -543,7 +580,7 @@ const consumersOpts: RouteShorthandOptions = {
     }
 }
 
-server.get('/consumers', consumersOpts, requestCache.handleRequestWithCache(async (request: FastifyRequest, reply: FastifyReply) => {
+server.get('/consumers', addErrorResponse(consumersOpts), requestCache.handleRequestWithCache(async (request: FastifyRequest, reply: FastifyReply) => {
     await checkDb()
 
     const res = await db.select().from(schema.consumers)
@@ -587,18 +624,20 @@ const consumerOpts: RouteShorthandOptions = {
     }
 }
 
-server.get('/consumer/:addr', consumerOpts, requestCache.handleRequestWithCache(async (request: FastifyRequest, reply: FastifyReply) => {
+server.get('/consumer/:addr', addErrorResponse(consumerOpts), requestCache.handleRequestWithCache(async (request: FastifyRequest, reply: FastifyReply) => {
     await checkDb()
 
     const { addr } = request.params as { addr: string }
     if (addr.length != 44 || !addr.startsWith('lava@')) {
-        return { error: 'invalid address' }
+        reply.code(400).send({ error: 'Bad provider name' });
+        return reply;
     }
 
     //
     const res = await db.select().from(schema.consumers).where(eq(schema.consumers.address, addr)).limit(1)
     if (res.length != 1) {
-        return { error: 'address does not exist' }
+        reply.code(400).send({ error: 'Provider does not exist' });
+        return reply;
     }
 
     //
@@ -687,19 +726,21 @@ const SpecOpts: RouteShorthandOptions = {
     }
 }
 
-server.get('/spec/:specId', SpecOpts, requestCache.handleRequestWithCache(async (request: FastifyRequest, reply: FastifyReply) => {
+server.get('/spec/:specId', addErrorResponse(SpecOpts), requestCache.handleRequestWithCache(async (request: FastifyRequest, reply: FastifyReply) => {
     await checkDb()
 
     const { specId } = request.params as { specId: string }
     if (specId.length <= 0) {
-        return { error: 'invalid specId' }
+        reply.code(400).send({ error: 'invalid specId' });
+        return reply;
     }
     const upSpecId = specId.toUpperCase()
 
     //
     const res = await db.select().from(schema.specs).where(eq(schema.specs.id, upSpecId)).limit(1)
     if (res.length != 1) {
-        return { error: 'specId does not exist' }
+        reply.code(400).send({ error: 'specId does not exist' });
+        return reply;
     }
     const { latestHeight, latestDatetime } = await getLatestBlock()
 
@@ -801,7 +842,7 @@ const eventsOpts: RouteShorthandOptions = {
     }
 }
 
-server.get('/events', eventsOpts, await requestCache.handleRequestWithCache(async (request: FastifyRequest, reply: FastifyReply) => {
+server.get('/events', addErrorResponse(eventsOpts), await requestCache.handleRequestWithCache(async (request: FastifyRequest, reply: FastifyReply) => {
 
     const { latestHeight, latestDatetime } = await getLatestBlock()
 
@@ -837,17 +878,17 @@ export const queryserver = async (): Promise<void> => {
     try {
         try {
             const { latestHeight, latestDatetime } = await getLatestBlock()
-            server.log.info(`block ${latestHeight} block time ${latestDatetime}`)
+            logger.info(`block ${latestHeight} block time ${latestDatetime}`)
         } catch (err) {
-            server.log.error('failed to connect get block from db')
-            server.log.error(String(err))
+            logger.error('failed to connect get block from db')
+            logger.error(String(err))
             process.exit(1)
         }
 
-        server.log.info(`listening on ${port} ${host}`)
+        logger.info(`listening on ${port} ${host}`)
         await server.listen({ port: port, host: host })
     } catch (err) {
-        server.log.error(String(err))
+        logger.error(String(err))
         process.exit(1)
     }
 }

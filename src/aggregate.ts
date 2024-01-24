@@ -1,7 +1,7 @@
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { sql, eq, desc, and } from "drizzle-orm";
 import * as schema from "./schema";
-import { DoInChunks } from "./utils";
+import { DoInChunks, logger } from "./utils";
 
 export async function aggGetStartEnd(db: PostgresJsDatabase): Promise<{ startTime: Date | null, endTime: Date | null }> {
     // Last relay payment time
@@ -11,7 +11,7 @@ export async function aggGetStartEnd(db: PostgresJsDatabase): Promise<{ startTim
         .then(rows => rows[0]?.datehour);
 
     if (!lastRelayPayment) {
-        console.log("No relay payments found");
+        logger.error("No relay payments found");
         return { startTime: null, endTime: null };
     }
     const endTime = lastRelayPayment as Date;
@@ -28,19 +28,19 @@ export async function aggGetStartEnd(db: PostgresJsDatabase): Promise<{ startTim
         startTime = new Date("2000-01-01T00:00:00Z"); // Default start time if no data is found
     }
 
-    console.log("aggGetStartEnd: startTime", startTime, "endTime", endTime);
+    logger.info("aggGetStartEnd: startTime", startTime, "endTime", endTime);
     return { startTime, endTime };
 }
 
 export async function updateAggHourlyPayments(db: PostgresJsDatabase) {
     const { startTime, endTime } = await aggGetStartEnd(db)
-    console.log("updateAggHourlyPayments:", "startTime", startTime, "endTime", endTime)
+    logger.info("updateAggHourlyPayments:", "startTime", startTime, "endTime", endTime)
     if (startTime === null || endTime === null) {
-        console.log("updateAggHourlyPayments: startTime === null || endTime === null")
+        logger.info("updateAggHourlyPayments: startTime === null || endTime === null")
         return
     }
     if (startTime > endTime) {
-        console.log("updateAggHourlyPayments: startTime > endTime")
+        logger.info("updateAggHourlyPayments: startTime > endTime")
         return
     }
 
@@ -71,7 +71,7 @@ export async function updateAggHourlyPayments(db: PostgresJsDatabase) {
             sql`datehour`,
         )
     if (aggResults.length === 0) {
-        console.log("updateAggHourlyPayments:", "no agg results found")
+        logger.info("updateAggHourlyPayments:", "no agg results found")
         return;
     }
 

@@ -210,7 +210,7 @@ async function connectToRpc(rpc: string): Promise<ConnectionResult> {
     const chainId = await client.getChainId();
     const height = await client.getHeight();
     const lavajsClient = await lavajs.lavanet.ClientFactory.createRPCQueryClient({ rpcEndpoint: rpc });
-    console.log('chain', chainId, 'current height', height);
+    console.log('chain', chainId, 'connectToRpc:: current height', height);
 
     return { client, clientTm, chainId, height, lavajsClient };
 }
@@ -220,8 +220,6 @@ const indexer = async (): Promise<void> => {
 
     const { client, clientTm, chainId, height, lavajsClient } =
         await backoffRetry<ConnectionResult>("connectToRpc", () => connectToRpc(rpc));
-
-    console.log('chain', chainId, 'current height', height)
 
     //
     // DB

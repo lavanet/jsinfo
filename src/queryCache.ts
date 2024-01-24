@@ -13,6 +13,7 @@ interface CacheEntry {
     dateOnDisk?: Date;
 }
 
+var QUERY_CACHE_ENABLED: boolean = false;
 class QueryCache {
     private cacheDir: string;
     private memoryCache: Record<string, CacheEntry>;
@@ -135,7 +136,8 @@ class RequestCache {
 
     handleRequestWithCache(handler: (request: FastifyRequest, reply: FastifyReply) => Promise<any>): (request: FastifyRequest, reply: FastifyReply) => Promise<any> {
         return async (request: FastifyRequest, reply: FastifyReply) => {
-            return await this.getOrFetchData(request, reply, handler);
+            if (QUERY_CACHE_ENABLED) return await this.getOrFetchData(request, reply, handler);
+            return await handler(request, reply);
         };
     }
 }

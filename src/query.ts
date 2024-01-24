@@ -201,6 +201,10 @@ server.get('/index', indexOpts, requestCache.handleRequestWithCache(async (reque
         providersAddrs.push(provider.address!)
     })
 
+    if (providersAddrs.length == 0) {
+        return { error: 'Provider does not exist' }
+    }
+
     //
     // provider details
     let res44 = await db.select().from(schema.providers).where(inArray(schema.providers.address, providersAddrs))
@@ -255,6 +259,7 @@ server.get('/index', indexOpts, requestCache.handleRequestWithCache(async (reque
         }
     })
 
+    
     //
     // Get graph with 1 day resolution
     let res3 = await db.select({
@@ -288,6 +293,7 @@ server.get('/index', indexOpts, requestCache.handleRequestWithCache(async (reque
         groupBy(sql`mydate`).
         orderBy(sql`mydate`)
 
+    console.log("qosData", formatDates(res6))
     //
     return {
         height: latestHeight,

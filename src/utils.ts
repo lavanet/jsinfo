@@ -5,8 +5,11 @@ import postgres from 'postgres';
 const postgre_url = process.env['POSTGRESQL_URL']!
 
 export const MigrateDb = async () => {
+    console.log(`MigrateDb:: Starting database migration... ${new Date().toISOString()}`);
     const migrationClient = postgres(postgre_url, { max: 1 });
-    await migrate(drizzle(migrationClient), { migrationsFolder: "drizzle" })
+    console.log(`MigrateDb:: Migration client created. ${new Date().toISOString()}`);
+    await migrate(drizzle(migrationClient), { migrationsFolder: "drizzle" });
+    console.log(`MigrateDb:: Database migration completed. ${new Date().toISOString()}`);
 }
 
 export const GetDb = () => {

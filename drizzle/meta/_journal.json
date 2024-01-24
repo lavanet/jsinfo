@@ -57,6 +57,27 @@
       "when": 1698003040338,
       "tag": "0007_simple_vertigo",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "5",
+      "when": 1705856444128,
+      "tag": "0008_fresh_justice",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "5",
+      "when": 1705864789834,
+      "tag": "0009_brown_quentin_quire",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "5",
+      "when": 1705864967891,
+      "tag": "0010_wakeful_lockheed",
+      "breakpoints": true
     }
   ]
 }

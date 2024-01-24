@@ -5,10 +5,12 @@
 // 2. Pagination
 require('dotenv').config();
 
-import Fastify, { FastifyInstance, RouteShorthandOptions } from 'fastify'
+import Fastify, { FastifyBaseLogger, FastifyInstance, RouteShorthandOptions } from 'fastify'
+import pino from 'pino';
+
 import { sql, desc, eq, gt, and, inArray } from "drizzle-orm";
 import * as schema from './schema';
-import { GetDb } from './utils';
+import { GetDb, logger } from './utils';
 import RequestCache from './queryCache';
 import { FastifyRequest, FastifyReply } from 'fastify';
 import fastifyCors from '@fastify/cors';
@@ -19,11 +21,23 @@ const requestCache = new RequestCache();
 let db = GetDb()
 
 
+function formatDates(dataArray) {
+    return dataArray.map(item => {
+        const date = new Date(item.date);
+        const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        const formattedDate = `${monthNames[date.getMonth()]} ${date.getDate()}`;
+        return {
+            ...item,
+            date: formattedDate
+        };
+    });
+}
+
 async function checkDb() {
     try {
         await db.select().from(schema.blocks).limit(1)
     } catch (e) {
-        console.log('checkDb exception, resetting connection', e)
+        logger.info('checkDb exception, resetting connection', e)
         db = GetDb()
     }
 }
@@ -40,9 +54,17 @@ async function getLatestBlock() {
     return { latestHeight, latestDatetime }
 }
 
-const server: FastifyInstance = Fastify({
-    logger: true,
-})
+const FastifyLogger: FastifyBaseLogger = pino({
+    level: 'error',
+    transport: {
+        target: 'pino-pretty',
+        options: {
+            colorize: true,
+        }
+    }
+});
+
+const server: FastifyInstance = Fastify({ logger: FastifyLogger });
 
 server.register(fastifyCors, { origin: "*" });
 
@@ -50,27 +72,48 @@ const isOnSendLogsEnabled = false;
 
 server.addHook('onSend', async (request, reply, payload) => {
     try {
-        if (isOnSendLogsEnabled) console.log('onSendHook: started');
+        if (isOnSendLogsEnabled) logger.info('onSendHook: started');
         if (request.headers['accept-encoding']?.includes('br')) {
-            if (isOnSendLogsEnabled) console.log('onSendHook: Brotli encoding is accepted');
+            if (isOnSendLogsEnabled) logger.info('onSendHook: Brotli encoding is accepted');
             const compressedPayload = await brotli.compress(Buffer.from(payload as Buffer));
-            if (isOnSendLogsEnabled) console.log('onSendHook: Compression completed');
+            if (isOnSendLogsEnabled) logger.info('onSendHook: Compression completed');
             if (compressedPayload) {
-                if (isOnSendLogsEnabled) console.log('onSendHook: Compression was successful');
+                if (isOnSendLogsEnabled) logger.info('onSendHook: Compression was successful');
                 reply.header('Content-Encoding', 'br');
-                if (isOnSendLogsEnabled) console.log('onSendHook:', compressedPayload);
+                if (isOnSendLogsEnabled) logger.info('onSendHook:', compressedPayload);
                 return Buffer.from(compressedPayload, 'utf8');
             } else {
-                if (isOnSendLogsEnabled) console.log('onSendHook: Compression failed');
+                if (isOnSendLogsEnabled) logger.info('onSendHook: Compression failed');
             }
-            if (isOnSendLogsEnabled) console.log('onSendHook: Returning original payload');
+            if (isOnSendLogsEnabled) logger.info('onSendHook: Returning original payload');
         }
     } catch (error) {
-        if (isOnSendLogsEnabled) console.log('onSendHook: An error occurred:', error);
-        if (isOnSendLogsEnabled) console.log('onSendHook: Returning original payload');
+        if (isOnSendLogsEnabled) logger.info('onSendHook: An error occurred:', error);
+        if (isOnSendLogsEnabled) logger.info('onSendHook: Returning original payload');
     }
     return payload;
 });
+
+function addErrorResponse(consumerOpts: RouteShorthandOptions): RouteShorthandOptions {
+    const schema = consumerOpts.schema || {};
+    const response = schema.response || {};
+
+    return {
+        ...consumerOpts,
+        schema: {
+            ...schema,
+            response: {
+                ...response,
+                400: {
+                    type: 'object',
+                    properties: {
+                        error: { type: 'string' },
+                    },
+                },
+            },
+        },
+    };
+}
 
 const latestOpts: RouteShorthandOptions = {
     schema: {
@@ -144,11 +187,12 @@ const indexOpts: RouteShorthandOptions = {
     }
 }
 
-server.get('/index', indexOpts, requestCache.handleRequestWithCache(async (request: FastifyRequest, reply: FastifyReply) => {
+server.get('/index', addErrorResponse(indexOpts), requestCache.handleRequestWithCache(async (request: FastifyRequest, reply: FastifyReply) => {
     await checkDb()
-
+    
     //
     const { latestHeight, latestDatetime } = await getLatestBlock()
+    // logger.info(`Latest block: ${latestHeight}, ${latestDatetime}`)
 
     //
     // Get total payments and more
@@ -156,15 +200,16 @@ server.get('/index', indexOpts, requestCache.handleRequestWithCache(async (reque
     let relaySum = 0
     let rewardSum = 0
     let res = await db.select({
-        cuSum: sql<number>`sum(${schema.relayPaymentsAggView.cuSum})`,
-        relaySum: sql<number>`sum(${schema.relayPaymentsAggView.relaySum})`,
-        rewardSum: sql<number>`sum(${schema.relayPaymentsAggView.rewardSum})`
-    }).from(schema.relayPaymentsAggView)
+        cuSum: sql<number>`sum(${schema.aggHourlyrelayPayments.cuSum})`,
+        relaySum: sql<number>`sum(${schema.aggHourlyrelayPayments.relaySum})`,
+        rewardSum: sql<number>`sum(${schema.aggHourlyrelayPayments.rewardSum})`
+    }).from(schema.aggHourlyrelayPayments)
     if (res.length != 0) {
         cuSum = res[0].cuSum
         relaySum = res[0].relaySum
         rewardSum = res[0].rewardSum
     }
+    // logger.info(`Total payments: cuSum=${cuSum}, relaySum=${relaySum}, rewardSum=${rewardSum}`)
 
     //
     // Get total provider stake
@@ -179,15 +224,21 @@ server.get('/index', indexOpts, requestCache.handleRequestWithCache(async (reque
     //
     // Get "top" providers
     let res4 = await db.select({
-        address: schema.relayPaymentsAggView.provider,
-        rewardSum: sql<number>`sum(${schema.relayPaymentsAggView.rewardSum})`,
-    }).from(schema.relayPaymentsAggView).
-        groupBy(schema.relayPaymentsAggView.provider).
-        orderBy(desc(sql<number>`sum(${schema.relayPaymentsAggView.rewardSum})`))
+        address: schema.aggHourlyrelayPayments.provider,
+        rewardSum: sql<number>`sum(${schema.aggHourlyrelayPayments.rewardSum})`,
+    }).from(schema.aggHourlyrelayPayments).
+        groupBy(schema.aggHourlyrelayPayments.provider).
+        orderBy(desc(sql<number>`sum(${schema.aggHourlyrelayPayments.rewardSum})`))
     let providersAddrs: string[] = []
     res4.map((provider) => {
         providersAddrs.push(provider.address!)
     })
+
+    if (providersAddrs.length == 0) {
+        reply.code(400).send({ error: 'Provider does not exist' });
+        return reply;
+    }
+
     //
     // provider details
     let res44 = await db.select().from(schema.providers).where(inArray(schema.providers.address, providersAddrs))
@@ -226,15 +277,17 @@ server.get('/index', indexOpts, requestCache.handleRequestWithCache(async (reque
         })
     })
 
+    // logger.info(`Provider details: ${JSON.stringify(providersDetails)}`)
+
     //
     // Get top chains
     let res8 = await db.select({
-        chainId: schema.relayPaymentsAggView.chainId,
-        relaySum: sql<number>`sum(${schema.relayPaymentsAggView.relaySum})`,
-    }).from(schema.relayPaymentsAggView).
-        groupBy(sql`${schema.relayPaymentsAggView.chainId}`).
-        where(gt(sql<Date>`DATE(${schema.relayPaymentsAggView.date})`, sql<Date>`now() - interval '30 day'`)).
-        orderBy(desc(sql<number>`sum(${schema.relayPaymentsAggView.relaySum})`))
+        chainId: schema.aggHourlyrelayPayments.specId,
+        relaySum: sql<number>`sum(${schema.aggHourlyrelayPayments.relaySum})`,
+    }).from(schema.aggHourlyrelayPayments).
+        groupBy(sql`${schema.aggHourlyrelayPayments.specId}`).
+        where(gt(sql<Date>`DATE(${schema.aggHourlyrelayPayments.datehour})`, sql<Date>`now() - interval '30 day'`)).
+        orderBy(desc(sql<number>`sum(${schema.aggHourlyrelayPayments.relaySum})`))
     let getChains: string[] = []
     res8.map((chain) => {
         if (getChains.length < 8) {
@@ -242,39 +295,41 @@ server.get('/index', indexOpts, requestCache.handleRequestWithCache(async (reque
         }
     })
 
+    
     //
     // Get graph with 1 day resolution
     let res3 = await db.select({
-        date: sql<string>`to_char(${schema.relayPaymentsAggView.date}, 'MON dd')`,
-        chainId: schema.relayPaymentsAggView.chainId,
-        cuSum: sql<number>`sum(${schema.relayPaymentsAggView.cuSum})`,
-        relaySum: sql<number>`sum(${schema.relayPaymentsAggView.relaySum})`,
-        rewardSum: sql<number>`sum(${schema.relayPaymentsAggView.rewardSum})`,
-    }).from(schema.relayPaymentsAggView).
+        date: sql<string>`DATE_TRUNC('day', ${schema.aggHourlyrelayPayments.datehour}) as mydate`,
+        chainId: schema.aggHourlyrelayPayments.specId,
+        cuSum: sql<number>`sum(${schema.aggHourlyrelayPayments.cuSum})`,
+        relaySum: sql<number>`sum(${schema.aggHourlyrelayPayments.relaySum})`,
+        rewardSum: sql<number>`sum(${schema.aggHourlyrelayPayments.rewardSum})`,
+    }).from(schema.aggHourlyrelayPayments).
         where(
             and(
-                gt(schema.relayPaymentsAggView.date, sql<Date>`now() - interval '30 day'`),
-                inArray(schema.relayPaymentsAggView.chainId, getChains)
+                gt(sql<string>`DATE_TRUNC('day', ${schema.aggHourlyrelayPayments.datehour})`, sql<Date>`now() - interval '30 day'`),
+                inArray(schema.aggHourlyrelayPayments.specId, getChains)
             )
         ).
-        groupBy(sql`${schema.relayPaymentsAggView.chainId}`, schema.relayPaymentsAggView.date).
-        orderBy(schema.relayPaymentsAggView.date)
+        groupBy(sql`${schema.aggHourlyrelayPayments.specId}`, sql`mydate`).
+        orderBy(sql`mydate`)
 
     //
     // QoS graph
     let res6 = await db.select({
-        date: sql<string>`to_char(${schema.relayPaymentsAggView.date}, 'MON dd')`,
-        qosSyncAvg: sql<number>`sum(${schema.relayPaymentsAggView.qosSyncAvg}*${schema.relayPaymentsAggView.relaySum})/sum(${schema.relayPaymentsAggView.relaySum})`,
-        qosAvailabilityAvg: sql<number>`sum(${schema.relayPaymentsAggView.qosAvailabilityAvg}*${schema.relayPaymentsAggView.relaySum})/sum(${schema.relayPaymentsAggView.relaySum})`,
-        qosLatencyAvg: sql<number>`sum(${schema.relayPaymentsAggView.qosLatencyAvg}*${schema.relayPaymentsAggView.relaySum})/sum(${schema.relayPaymentsAggView.relaySum})`,
-        qosSyncExcAvg: sql<number>`sum(${schema.relayPaymentsAggView.qosSyncExcAvg}*${schema.relayPaymentsAggView.relaySum})/sum(${schema.relayPaymentsAggView.relaySum})`,
-        qosAvailabilityExcAvg: sql<number>`sum(${schema.relayPaymentsAggView.qosAvailabilityAvg}*${schema.relayPaymentsAggView.relaySum})/sum(${schema.relayPaymentsAggView.relaySum})`,
-        qosLatencyExcAv: sql<number>`sum(${schema.relayPaymentsAggView.qosLatencyExcAv}*${schema.relayPaymentsAggView.relaySum})/sum(${schema.relayPaymentsAggView.relaySum})`,
-    }).from(schema.relayPaymentsAggView).
-        where(gt(schema.relayPaymentsAggView.date, sql<Date>`now() - interval '30 day'`)).
-        groupBy(schema.relayPaymentsAggView.date).
-        orderBy(schema.relayPaymentsAggView.date)
+        date: sql`DATE_TRUNC('day', ${schema.aggHourlyrelayPayments.datehour}) as mydate`,
+        qosSyncAvg: sql<number>`sum(${schema.aggHourlyrelayPayments.qosSyncAvg}*${schema.aggHourlyrelayPayments.relaySum})/sum(${schema.aggHourlyrelayPayments.relaySum})`,
+        qosAvailabilityAvg: sql<number>`sum(${schema.aggHourlyrelayPayments.qosAvailabilityAvg}*${schema.aggHourlyrelayPayments.relaySum})/sum(${schema.aggHourlyrelayPayments.relaySum})`,
+        qosLatencyAvg: sql<number>`sum(${schema.aggHourlyrelayPayments.qosLatencyAvg}*${schema.aggHourlyrelayPayments.relaySum})/sum(${schema.aggHourlyrelayPayments.relaySum})`,
+        qosSyncExcAvg: sql<number>`sum(${schema.aggHourlyrelayPayments.qosSyncExcAvg}*${schema.aggHourlyrelayPayments.relaySum})/sum(${schema.aggHourlyrelayPayments.relaySum})`,
+        qosAvailabilityExcAvg: sql<number>`sum(${schema.aggHourlyrelayPayments.qosAvailabilityAvg}*${schema.aggHourlyrelayPayments.relaySum})/sum(${schema.aggHourlyrelayPayments.relaySum})`,
+        qosLatencyExcAv: sql<number>`sum(${schema.aggHourlyrelayPayments.qosLatencyExcAvg}*${schema.aggHourlyrelayPayments.relaySum})/sum(${schema.aggHourlyrelayPayments.relaySum})`,
+    }).from(schema.aggHourlyrelayPayments).
+        where(gt(sql<string>`DATE_TRUNC('day', ${schema.aggHourlyrelayPayments.datehour})`, sql<Date>`now() - interval '30 day'`)).
+        groupBy(sql`mydate`).
+        orderBy(sql`mydate`)
 
+    //
     return {
         height: latestHeight,
         datetime: latestDatetime,
@@ -284,8 +339,8 @@ server.get('/index', indexOpts, requestCache.handleRequestWithCache(async (reque
         stakeSum: stakeSum,
         topProviders: providersDetails,
         allSpecs: res8,
-        qosData: res6,
-        data: res3,
+        qosData: formatDates(res6),
+        data: formatDates(res3),
     }
 }))
 
@@ -343,18 +398,20 @@ const providerOpts: RouteShorthandOptions = {
     }
 }
 
-server.get('/provider/:addr', providerOpts, requestCache.handleRequestWithCache(async (request: FastifyRequest, reply: FastifyReply) => {
+server.get('/provider/:addr', addErrorResponse(providerOpts), requestCache.handleRequestWithCache(async (request: FastifyRequest, reply: FastifyReply) => {
     await checkDb()
 
     const { addr } = request.params as { addr: string }
     if (addr.length != 44 || !addr.startsWith('lava@')) {
-        return { error: 'bad address' }
+        reply.code(400).send({ error: 'Bad provider address' });
+        return reply;
     }
 
     //
     const res = await db.select().from(schema.providers).where(eq(schema.providers.address, addr)).limit(1)
     if (res.length != 1) {
-        return { error: 'address does not exist' }
+        reply.code(400).send({ error: 'Provider does not exist' });
+        return reply;
     }
 
     const provider = res[0]
@@ -366,12 +423,12 @@ server.get('/provider/:addr', providerOpts, requestCache.handleRequestWithCache(
     let relaySum = 0
     let rewardSum = 0
     const res2 = await db.select({
-        cuSum: sql<number>`sum(${schema.relayPaymentsAggView.cuSum})`,
-        relaySum: sql<number>`sum(${schema.relayPaymentsAggView.relaySum})`,
-        rewardSum: sql<number>`sum(${schema.relayPaymentsAggView.rewardSum})`,
-    }).from(schema.relayPaymentsAggView).
-        where(eq(schema.relayPaymentsAggView.provider, addr)).
-        groupBy(schema.relayPaymentsAggView.provider)
+        cuSum: sql<number>`sum(${schema.aggHourlyrelayPayments.cuSum})`,
+        relaySum: sql<number>`sum(${schema.aggHourlyrelayPayments.relaySum})`,
+        rewardSum: sql<number>`sum(${schema.aggHourlyrelayPayments.rewardSum})`,
+    }).from(schema.aggHourlyrelayPayments).
+        where(eq(schema.aggHourlyrelayPayments.provider, addr)).
+        groupBy(schema.aggHourlyrelayPayments.provider)
     if (res2.length == 1) {
         cuSum = res2[0].cuSum
         relaySum = res2[0].relaySum
@@ -406,41 +463,40 @@ server.get('/provider/:addr', providerOpts, requestCache.handleRequestWithCache(
     //
     // Get graph with 1 day resolution
     let data1 = await db.select({
-        date: sql<string>`to_char(${schema.relayPaymentsAggView.date}, 'MON dd')`,
-        chainId: schema.relayPaymentsAggView.chainId,
-        cuSum: sql<number>`sum(${schema.relayPaymentsAggView.cuSum})`,
-        relaySum: sql<number>`sum(${schema.relayPaymentsAggView.relaySum})`,
-        rewardSum: sql<number>`sum(${schema.relayPaymentsAggView.rewardSum})`,
-    }).from(schema.relayPaymentsAggView).
+        date: sql`DATE_TRUNC('day', ${schema.aggHourlyrelayPayments.datehour}) as mydate`,
+        chainId: schema.aggHourlyrelayPayments.specId,
+        cuSum: sql<number>`sum(${schema.aggHourlyrelayPayments.cuSum})`,
+        relaySum: sql<number>`sum(${schema.aggHourlyrelayPayments.relaySum})`,
+        rewardSum: sql<number>`sum(${schema.aggHourlyrelayPayments.rewardSum})`,
+    }).from(schema.aggHourlyrelayPayments).
         where(
             and(
-                gt(schema.relayPaymentsAggView.date, sql<Date>`now() - interval '30 day'`),
-                eq(schema.relayPaymentsAggView.provider, addr)
+                gt(sql<string>`DATE_TRUNC('day', ${schema.aggHourlyrelayPayments.datehour})`, sql<Date>`now() - interval '30 day'`),
+                eq(schema.aggHourlyrelayPayments.provider, addr)
             )
         ).
-        groupBy(sql`${schema.relayPaymentsAggView.chainId}`, schema.relayPaymentsAggView.date).
-        orderBy(schema.relayPaymentsAggView.date)
+        groupBy(sql`${schema.aggHourlyrelayPayments.specId}`, sql`mydate`).
+        orderBy(sql`mydate`)
 
     //
     // QoS graph
     let data2 = await db.select({
-        date: sql<string>`to_char(${schema.relayPaymentsAggView.date}, 'MON dd')`,
-        qosSyncAvg: sql<number>`sum(${schema.relayPaymentsAggView.qosSyncAvg}*${schema.relayPaymentsAggView.relaySum})/sum(${schema.relayPaymentsAggView.relaySum})`,
-        qosAvailabilityAvg: sql<number>`sum(${schema.relayPaymentsAggView.qosAvailabilityAvg}*${schema.relayPaymentsAggView.relaySum})/sum(${schema.relayPaymentsAggView.relaySum})`,
-        qosLatencyAvg: sql<number>`sum(${schema.relayPaymentsAggView.qosLatencyAvg}*${schema.relayPaymentsAggView.relaySum})/sum(${schema.relayPaymentsAggView.relaySum})`,
-        qosSyncExcAvg: sql<number>`sum(${schema.relayPaymentsAggView.qosSyncExcAvg}*${schema.relayPaymentsAggView.relaySum})/sum(${schema.relayPaymentsAggView.relaySum})`,
-        qosAvailabilityExcAvg: sql<number>`sum(${schema.relayPaymentsAggView.qosAvailabilityAvg}*${schema.relayPaymentsAggView.relaySum})/sum(${schema.relayPaymentsAggView.relaySum})`,
-        qosLatencyExcAv: sql<number>`sum(${schema.relayPaymentsAggView.qosLatencyExcAv}*${schema.relayPaymentsAggView.relaySum})/sum(${schema.relayPaymentsAggView.relaySum})`,
-    }).from(schema.relayPaymentsAggView).
+        date: sql`DATE_TRUNC('day', ${schema.aggHourlyrelayPayments.datehour}) as mydate`,
+        qosSyncAvg: sql<number>`sum(${schema.aggHourlyrelayPayments.qosSyncAvg}*${schema.aggHourlyrelayPayments.relaySum})/sum(${schema.aggHourlyrelayPayments.relaySum})`,
+        qosAvailabilityAvg: sql<number>`sum(${schema.aggHourlyrelayPayments.qosAvailabilityAvg}*${schema.aggHourlyrelayPayments.relaySum})/sum(${schema.aggHourlyrelayPayments.relaySum})`,
+        qosLatencyAvg: sql<number>`sum(${schema.aggHourlyrelayPayments.qosLatencyAvg}*${schema.aggHourlyrelayPayments.relaySum})/sum(${schema.aggHourlyrelayPayments.relaySum})`,
+        qosSyncExcAvg: sql<number>`sum(${schema.aggHourlyrelayPayments.qosSyncExcAvg}*${schema.aggHourlyrelayPayments.relaySum})/sum(${schema.aggHourlyrelayPayments.relaySum})`,
+        qosAvailabilityExcAvg: sql<number>`sum(${schema.aggHourlyrelayPayments.qosAvailabilityAvg}*${schema.aggHourlyrelayPayments.relaySum})/sum(${schema.aggHourlyrelayPayments.relaySum})`,
+        qosLatencyExcAv: sql<number>`sum(${schema.aggHourlyrelayPayments.qosLatencyExcAvg}*${schema.aggHourlyrelayPayments.relaySum})/sum(${schema.aggHourlyrelayPayments.relaySum})`,
+    }).from(schema.aggHourlyrelayPayments).
         where(
             and(
-                gt(schema.relayPaymentsAggView.date, sql<Date>`now() - interval '30 day'`),
-                eq(schema.relayPaymentsAggView.provider, addr)
+                gt(sql<string>`DATE_TRUNC('day', ${schema.aggHourlyrelayPayments.datehour})`, sql<Date>`now() - interval '30 day'`),
+                eq(schema.aggHourlyrelayPayments.provider, addr)
             )
         ).
-        groupBy(schema.relayPaymentsAggView.date).
-        orderBy(schema.relayPaymentsAggView.date)
-
+        groupBy(sql`mydate`).
+        orderBy(sql`mydate`)
 
     return {
         height: latestHeight,
@@ -455,8 +511,8 @@ server.get('/provider/:addr', providerOpts, requestCache.handleRequestWithCache(
         stakes: res5,
         payments: res6,
         reports: res7,
-        qosData: data2,
-        data: data1,
+        qosData: formatDates(data2),
+        data: formatDates(data1),
     }
 }))
 
@@ -475,7 +531,7 @@ const providersOpts: RouteShorthandOptions = {
     }
 }
 
-server.get('/providers', providersOpts, requestCache.handleRequestWithCache(async (request: FastifyRequest, reply: FastifyReply) => {
+server.get('/providers', addErrorResponse(providersOpts), requestCache.handleRequestWithCache(async (request: FastifyRequest, reply: FastifyReply) => {
     await checkDb()
 
     const res = await db.select().from(schema.providers)
@@ -499,7 +555,7 @@ const specssOpts: RouteShorthandOptions = {
     }
 }
 
-server.get('/specs', specssOpts, requestCache.handleRequestWithCache(async (request: FastifyRequest, reply: FastifyReply) => {
+server.get('/specs', addErrorResponse(specssOpts), requestCache.handleRequestWithCache(async (request: FastifyRequest, reply: FastifyReply) => {
     await checkDb()
 
     const res = await db.select().from(schema.specs)
@@ -524,7 +580,7 @@ const consumersOpts: RouteShorthandOptions = {
     }
 }
 
-server.get('/consumers', consumersOpts, requestCache.handleRequestWithCache(async (request: FastifyRequest, reply: FastifyReply) => {
+server.get('/consumers', addErrorResponse(consumersOpts), requestCache.handleRequestWithCache(async (request: FastifyRequest, reply: FastifyReply) => {
     await checkDb()
 
     const res = await db.select().from(schema.consumers)
@@ -568,18 +624,20 @@ const consumerOpts: RouteShorthandOptions = {
     }
 }
 
-server.get('/consumer/:addr', consumerOpts, requestCache.handleRequestWithCache(async (request: FastifyRequest, reply: FastifyReply) => {
+server.get('/consumer/:addr', addErrorResponse(consumerOpts), requestCache.handleRequestWithCache(async (request: FastifyRequest, reply: FastifyReply) => {
     await checkDb()
 
     const { addr } = request.params as { addr: string }
     if (addr.length != 44 || !addr.startsWith('lava@')) {
-        return { error: 'invalid address' }
+        reply.code(400).send({ error: 'Bad provider name' });
+        return reply;
     }
 
     //
     const res = await db.select().from(schema.consumers).where(eq(schema.consumers.address, addr)).limit(1)
     if (res.length != 1) {
-        return { error: 'address does not exist' }
+        reply.code(400).send({ error: 'Provider does not exist' });
+        return reply;
     }
 
     //
@@ -668,19 +726,21 @@ const SpecOpts: RouteShorthandOptions = {
     }
 }
 
-server.get('/spec/:specId', SpecOpts, requestCache.handleRequestWithCache(async (request: FastifyRequest, reply: FastifyReply) => {
+server.get('/spec/:specId', addErrorResponse(SpecOpts), requestCache.handleRequestWithCache(async (request: FastifyRequest, reply: FastifyReply) => {
     await checkDb()
 
     const { specId } = request.params as { specId: string }
     if (specId.length <= 0) {
-        return { error: 'invalid specId' }
+        reply.code(400).send({ error: 'invalid specId' });
+        return reply;
     }
     const upSpecId = specId.toUpperCase()
 
     //
     const res = await db.select().from(schema.specs).where(eq(schema.specs.id, upSpecId)).limit(1)
     if (res.length != 1) {
-        return { error: 'specId does not exist' }
+        reply.code(400).send({ error: 'specId does not exist' });
+        return reply;
     }
     const { latestHeight, latestDatetime } = await getLatestBlock()
 
@@ -689,10 +749,10 @@ server.get('/spec/:specId', SpecOpts, requestCache.handleRequestWithCache(async 
     let relaySum = 0
     let rewardSum = 0
     const res2 = await db.select({
-        cuSum: sql<number>`sum(${schema.relayPaymentsAggView.cuSum})`,
-        relaySum: sql<number>`sum(${schema.relayPaymentsAggView.relaySum})`,
-        rewardSum: sql<number>`sum(${schema.relayPaymentsAggView.rewardSum})`
-    }).from(schema.relayPaymentsAggView).where(eq(schema.relayPaymentsAggView.chainId, upSpecId))
+        cuSum: sql<number>`sum(${schema.aggHourlyrelayPayments.cuSum})`,
+        relaySum: sql<number>`sum(${schema.aggHourlyrelayPayments.relaySum})`,
+        rewardSum: sql<number>`sum(${schema.aggHourlyrelayPayments.rewardSum})`
+    }).from(schema.aggHourlyrelayPayments).where(eq(schema.aggHourlyrelayPayments.specId, upSpecId))
     if (res2.length == 1) {
         cuSum = res2[0].cuSum
         relaySum = res2[0].relaySum
@@ -709,38 +769,38 @@ server.get('/spec/:specId', SpecOpts, requestCache.handleRequestWithCache(async 
     //
     // Get graph with 1 day resolution
     let res3 = await db.select({
-        date: sql<string>`to_char(${schema.relayPaymentsAggView.date}, 'MON dd')`,
-        cuSum: sql<number>`sum(${schema.relayPaymentsAggView.cuSum})`,
-        relaySum: sql<number>`sum(${schema.relayPaymentsAggView.relaySum})`,
-        rewardSum: sql<number>`sum(${schema.relayPaymentsAggView.rewardSum})`
-    }).from(schema.relayPaymentsAggView).
-        groupBy(schema.relayPaymentsAggView.date).
+        date: sql`DATE_TRUNC('day', ${schema.aggHourlyrelayPayments.datehour}) as mydate`,
+        cuSum: sql<number>`sum(${schema.aggHourlyrelayPayments.cuSum})`,
+        relaySum: sql<number>`sum(${schema.aggHourlyrelayPayments.relaySum})`,
+        rewardSum: sql<number>`sum(${schema.aggHourlyrelayPayments.rewardSum})`
+    }).from(schema.aggHourlyrelayPayments).
+        groupBy(sql`mydate`).
         where(
             and(
-                gt(schema.relayPaymentsAggView.date, sql<Date>`now() - interval '30 day'`),
-                eq(schema.relayPaymentsAggView.chainId, upSpecId)
+                gt(sql<string>`DATE_TRUNC('day', ${schema.aggHourlyrelayPayments.datehour})`, sql<Date>`now() - interval '30 day'`),
+                eq(schema.aggHourlyrelayPayments.specId, upSpecId)
             )
         ).
-        orderBy(schema.relayPaymentsAggView.date)
+        orderBy(sql`mydate`)
 
     //
     // QoS graph
     let res6 = await db.select({
-        date: sql<string>`to_char(${schema.relayPaymentsAggView.date}, 'MON dd')`,
-        qosSyncAvg: sql<number>`sum(${schema.relayPaymentsAggView.qosSyncAvg}*${schema.relayPaymentsAggView.relaySum})/sum(${schema.relayPaymentsAggView.relaySum})`,
-        qosAvailabilityAvg: sql<number>`sum(${schema.relayPaymentsAggView.qosAvailabilityAvg}*${schema.relayPaymentsAggView.relaySum})/sum(${schema.relayPaymentsAggView.relaySum})`,
-        qosLatencyAvg: sql<number>`sum(${schema.relayPaymentsAggView.qosLatencyAvg}*${schema.relayPaymentsAggView.relaySum})/sum(${schema.relayPaymentsAggView.relaySum})`,
-        qosSyncExcAvg: sql<number>`sum(${schema.relayPaymentsAggView.qosSyncExcAvg}*${schema.relayPaymentsAggView.relaySum})/sum(${schema.relayPaymentsAggView.relaySum})`,
-        qosAvailabilityExcAvg: sql<number>`sum(${schema.relayPaymentsAggView.qosAvailabilityAvg}*${schema.relayPaymentsAggView.relaySum})/sum(${schema.relayPaymentsAggView.relaySum})`,
-        qosLatencyExcAv: sql<number>`sum(${schema.relayPaymentsAggView.qosLatencyExcAv}*${schema.relayPaymentsAggView.relaySum})/sum(${schema.relayPaymentsAggView.relaySum})`,
-    }).from(schema.relayPaymentsAggView).
+        date: sql`DATE_TRUNC('day', ${schema.aggHourlyrelayPayments.datehour}) as mydate`,
+        qosSyncAvg: sql<number>`sum(${schema.aggHourlyrelayPayments.qosSyncAvg}*${schema.aggHourlyrelayPayments.relaySum})/sum(${schema.aggHourlyrelayPayments.relaySum})`,
+        qosAvailabilityAvg: sql<number>`sum(${schema.aggHourlyrelayPayments.qosAvailabilityAvg}*${schema.aggHourlyrelayPayments.relaySum})/sum(${schema.aggHourlyrelayPayments.relaySum})`,
+        qosLatencyAvg: sql<number>`sum(${schema.aggHourlyrelayPayments.qosLatencyAvg}*${schema.aggHourlyrelayPayments.relaySum})/sum(${schema.aggHourlyrelayPayments.relaySum})`,
+        qosSyncExcAvg: sql<number>`sum(${schema.aggHourlyrelayPayments.qosSyncExcAvg}*${schema.aggHourlyrelayPayments.relaySum})/sum(${schema.aggHourlyrelayPayments.relaySum})`,
+        qosAvailabilityExcAvg: sql<number>`sum(${schema.aggHourlyrelayPayments.qosAvailabilityAvg}*${schema.aggHourlyrelayPayments.relaySum})/sum(${schema.aggHourlyrelayPayments.relaySum})`,
+        qosLatencyExcAv: sql<number>`sum(${schema.aggHourlyrelayPayments.qosLatencyExcAvg}*${schema.aggHourlyrelayPayments.relaySum})/sum(${schema.aggHourlyrelayPayments.relaySum})`,
+    }).from(schema.aggHourlyrelayPayments).
         where(
             and(
-                gt(schema.relayPaymentsAggView.date, sql<Date>`now() - interval '30 day'`),
-                eq(schema.relayPaymentsAggView.chainId, upSpecId)
+                gt(sql<string>`DATE_TRUNC('day', ${schema.aggHourlyrelayPayments.datehour})`, sql<Date>`now() - interval '30 day'`),
+                eq(schema.aggHourlyrelayPayments.specId, upSpecId)
             )
-        ).groupBy(schema.relayPaymentsAggView.date).
-        orderBy(schema.relayPaymentsAggView.date)
+        ).groupBy(sql`mydate`).
+        orderBy(sql`mydate`)
 
     return {
         height: latestHeight,
@@ -749,9 +809,9 @@ server.get('/spec/:specId', SpecOpts, requestCache.handleRequestWithCache(async 
         cuSum: cuSum,
         relaySum: relaySum,
         rewardSum: rewardSum,
-        qosData: res6,
+        qosData: formatDates(res6),
         stakes: res5,
-        data: res3,
+        data: formatDates(res3),
     }
 }))
 
@@ -782,7 +842,7 @@ const eventsOpts: RouteShorthandOptions = {
     }
 }
 
-server.get('/events', eventsOpts, await requestCache.handleRequestWithCache(async (request: FastifyRequest, reply: FastifyReply) => {
+server.get('/events', addErrorResponse(eventsOpts), await requestCache.handleRequestWithCache(async (request: FastifyRequest, reply: FastifyReply) => {
 
     const { latestHeight, latestDatetime } = await getLatestBlock()
 
@@ -818,17 +878,17 @@ export const queryserver = async (): Promise<void> => {
     try {
         try {
             const { latestHeight, latestDatetime } = await getLatestBlock()
-            server.log.info(`block ${latestHeight} block time ${latestDatetime}`)
+            logger.info(`block ${latestHeight} block time ${latestDatetime}`)
         } catch (err) {
-            server.log.error('failed to connect get block from db')
-            server.log.error(String(err))
+            logger.error('failed to connect get block from db')
+            logger.error(String(err))
             process.exit(1)
         }
 
-        server.log.info(`listening on ${port} ${host}`)
+        logger.info(`listening on ${port} ${host}`)
         await server.listen({ port: port, host: host })
     } catch (err) {
-        server.log.error(String(err))
+        logger.error(String(err))
         process.exit(1)
     }
 }

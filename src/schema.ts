@@ -1,4 +1,4 @@
-import { pgTable, index, text, integer, serial, bigint, real, primaryKey, timestamp, pgMaterializedView } from 'drizzle-orm/pg-core';
+import { pgTable, index, text, integer, serial, bigint, real, uniqueIndex, primaryKey, timestamp, pgMaterializedView, doublePrecision } from 'drizzle-orm/pg-core';
 
 export const blocks = pgTable('blocks', {
   height: integer('height').unique(),
@@ -71,6 +71,7 @@ export const relayPayments = pgTable('relay_payments', {
   relays: bigint('relays', { mode: 'number' }),
   cu: bigint('cu', { mode: 'number' }),
   pay: bigint('pay', { mode: 'number' }),
+  datetime: timestamp('datetime', { mode: "date" }),
 
   qosSync: real('qos_sync'),
   qosAvailability: real('qos_availability'),
@@ -88,24 +89,32 @@ export const relayPayments = pgTable('relay_payments', {
 }, (table) => {
   return {
     nameIdx: index("name_idx").on(table.specId),
+    tsIdx: index("ts_idx").on(table.datetime),
   };
 });
 export type RelayPayment = typeof relayPayments.$inferSelect
 export type InsertRelayPayment = typeof relayPayments.$inferInsert
-export const relayPaymentsAggView = pgMaterializedView('relay_payments_agg_view', {
-  provider: text('provider'),
-  date: timestamp('date', { mode: "date" }),
-  chainId: text('spec_id'),
+
+export const aggHourlyrelayPayments = pgTable('agg_hourly_relay_payments', {
+  provider: text('provider').references(() => providers.address),
+  datehour: timestamp('datehour', { mode: "string" }), // Note: do not change this to 'date', it will cause bugs
+  specId: text('spec_id').references(() => specs.id),
   cuSum: bigint('cusum', { mode: 'number' }),
   relaySum: bigint('relaysum', { mode: 'number' }),
   rewardSum: bigint('rewardsum', { mode: 'number' }),
-  qosSyncAvg: bigint('qossyncavg', { mode: 'number' }),
-  qosAvailabilityAvg: bigint('qosavailabilityavg', { mode: 'number' }),
-  qosLatencyAvg: bigint('qoslatencyavg', { mode: 'number' }),
-  qosSyncExcAvg: bigint('qossyncexcavg', { mode: 'number' }),
-  qosAvailabilityExcAvg: bigint('qosavailabilityexcavg', { mode: 'number' }),
-  qosLatencyExcAv: bigint('qoslatencyexcavg', { mode: 'number' }),
-}).existing()
+  qosSyncAvg: doublePrecision('qossyncavg'),
+  qosAvailabilityAvg: doublePrecision('qosavailabilityavg'),
+  qosLatencyAvg: doublePrecision('qoslatencyavg'),
+  qosSyncExcAvg: doublePrecision('qossyncexcavg'),
+  qosAvailabilityExcAvg: doublePrecision('qosavailabilityexcavg'),
+  qosLatencyExcAvg: doublePrecision('qoslatencyexcavg'),
+}, (table) => {
+  return {
+    aggHourlyIdx: uniqueIndex("aggHourlyIdx").on(table.datehour, table.specId, table.provider),
+  };
+});
+export type AggHorulyRelayPayment = typeof aggHourlyrelayPayments.$inferSelect
+export type InsertAggHourlyRelayPayment = typeof aggHourlyrelayPayments.$inferInsert
 
 export enum LavaProviderEventType {
   StakeNewProvider = 1,

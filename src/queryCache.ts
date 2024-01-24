@@ -2,6 +2,7 @@
 
 import { FastifyRequest, FastifyReply } from 'fastify';
 import url from 'url';
+import { logger } from './utils';
 
 import fs from 'fs';
 import os from 'os';
@@ -13,6 +14,7 @@ interface CacheEntry {
     dateOnDisk?: Date;
 }
 
+var QUERY_CACHE_ENABLED: boolean = true;
 class QueryCache {
     private cacheDir: string;
     private memoryCache: Record<string, CacheEntry>;
@@ -26,7 +28,7 @@ class QueryCache {
     }
 
     getNewExpiry(): number {
-        return Date.now() + Math.floor(Math.random() * (25 - 15 + 1) + 15) * 1000;
+        return Date.now() + Math.floor(Math.random() * (11) + 15) * 1000;
     }
 
     get(key: string): CacheEntry {
@@ -35,11 +37,12 @@ class QueryCache {
     
         // If the cache entry is not in the in-memory cache, create a new cache entry with empty data
         if (!cacheEntry) {
-            this.memoryCache[key] = cacheEntry = {
+            cacheEntry = {
                 isFetching: null,
                 data: {},
                 expiry: this.getNewExpiry()
             };
+            this.memoryCache[key] = cacheEntry
         }
     
         const cacheFilePath = path.join(this.cacheDir, encodeURIComponent(key));
@@ -51,14 +54,18 @@ class QueryCache {
                 cacheEntry.data = JSON.parse(data);
                 cacheEntry.dateOnDisk = stats.mtime;
             }
-            console.log(`QueryCache: date on disk: ${cacheEntry.dateOnDisk} is newer for: "${key}", file modification date: ${stats.mtime}`);
+            logger.info(`QueryCache: date on disk: ${cacheEntry.dateOnDisk} is newer for: "${key}", file modification date: ${stats.mtime}`);
+        }
+        
+        if (!cacheEntry.data) {
+            cacheEntry.data = {};
         }
         
         // If the data in the cache entry is empty, try to load it from the disk
         if (!this.isFetchInProgress(cacheEntry) && Object.keys(cacheEntry.data).length === 0) {
             if (fs.existsSync(cacheFilePath)) {
                 const data: any = JSON.parse(fs.readFileSync(cacheFilePath, 'utf-8'));
-                console.log(`QueryCache: Loaded data for key "${key}" from disk`);
+                logger.info(`QueryCache: Loaded data for key "${key}" from disk`);
                 cacheEntry.data = data;
                 const stats = fs.statSync(cacheFilePath);
                 cacheEntry.dateOnDisk = stats.mtime;
@@ -97,13 +104,13 @@ class RequestCache {
 
         // refetch data?
         if (Object.keys(this.cache.get(key).data).length === 0) {
-            console.log(`QueryCache: No cache entry for ${key}. Fetching data...`);
+            logger.info(`QueryCache: No cache entry for ${key}. Fetching data...`);
             await this.tryFetchData(key, request, reply, handler);
         }
 
         // refetch data?
         if (Date.now() > this.cache.get(key).expiry) {
-            console.log(`QueryCache: Data for ${key} expiered . Fetching data...`);
+            logger.info(`QueryCache: Data for ${key} expiered . Fetching data...`);
             await this.tryFetchData(key, request, reply, handler);
         }
 
@@ -120,10 +127,9 @@ class RequestCache {
             console.timeEnd(`QueryCache: handler execution time for ${key}.`);
             this.cache.updateData(key, data);
             this.cache.get(key).isFetching = null;
-            console.log(`QueryCache: Data fetched for ${key}.`);
+            logger.info(`QueryCache: Data fetched for ${key}.`);
         } catch (error) {
-            console.log(`QueryCache: Error fetching data for ${key} on attempt ${retryCount + 1}.`);
-            console.log(error);
+            logger.info(`QueryCache: Error fetching data for ${key} on attempt ${retryCount + 1}.`, error);
             this.cache.get(key).isFetching = null;
             if (retryCount < 2) { // If it's not the last attempt
                 setTimeout(() => {
@@ -135,7 +141,8 @@ class RequestCache {
 
     handleRequestWithCache(handler: (request: FastifyRequest, reply: FastifyReply) => Promise<any>): (request: FastifyRequest, reply: FastifyReply) => Promise<any> {
         return async (request: FastifyRequest, reply: FastifyReply) => {
-            return await this.getOrFetchData(request, reply, handler);
+            if (QUERY_CACHE_ENABLED) return await this.getOrFetchData(request, reply, handler);
+            return await handler(request, reply);
         };
     }
 }

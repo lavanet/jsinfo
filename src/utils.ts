@@ -76,6 +76,9 @@ export interface RpcConnection {
     lavajsClient: any;
 }
 
+// assert that this enabled
+GetEnvVar("NODE_TLS_REJECT_UNAUTHORIZED")
+
 export async function ConnectToRpc(rpc: string): Promise<RpcConnection> {
     try {
         await axios.get(rpc);

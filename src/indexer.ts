@@ -42,51 +42,56 @@ async function InsertBlock(
     block: LavaBlock,
     db: PostgresJsDatabase,
 ) {
-    //
-    // We use a transaction to revert insert on any errors
+    logger.info(`Starting InsertBlock for block height: ${block.height}`);
     await db.transaction(async (tx) => {
-        // insert block
+        logger.debug(`Starting transaction for block height: ${block.height}`);
         await tx.insert(schema.blocks).values({ height: block.height, datetime: new Date(block.datetime) })
+        logger.debug(`Inserted block height: ${block.height} into blocks`);
 
-        // Insert all specs
         const arrSpecs = Array.from(block.dbSpecs.values())
+        logger.debug(`Inserting ${arrSpecs.length} specs for block height: ${block.height}`);
         await DoInChunks(100, arrSpecs, async (arr: any) => {
             await tx.insert(schema.specs)
                 .values(arr)
                 .onConflictDoNothing();
         })
+        logger.debug(`Inserted specs for block height: ${block.height}`);
 
-        // Insert all Txs
         const arrTxs = Array.from(block.dbTxs.values())
+        logger.debug(`Inserting ${arrTxs.length} txs for block height: ${block.height}`);
         await DoInChunks(100, arrTxs, async (arr: any) => {
             await tx.insert(schema.txs)
                 .values(arr)
                 .onConflictDoNothing();
         })
+        logger.debug(`Inserted txs for block height: ${block.height}`);
 
-        // Find / create all providers
         const arrProviders = Array.from(block.dbProviders.values())
+        logger.debug(`Inserting ${arrProviders.length} providers for block height: ${block.height}`);
         await DoInChunks(100, arrProviders, async (arr: any) => {
             await tx.insert(schema.providers)
                 .values(arr)
                 .onConflictDoNothing();
         })
+        logger.debug(`Inserted providers for block height: ${block.height}`);
 
-        // Find / create all plans
         const arrPlans = Array.from(block.dbPlans.values())
+        // logger.debug(`Inserting ${arrPlans.length} plans for block height: ${block.height}`);
         await DoInChunks(100, arrPlans, async (arr: any) => {
             await tx.insert(schema.plans)
                 .values(arr)
                 .onConflictDoNothing();
         })
+        //logger.debug(`Inserted plans for block height: ${block.height}`);
 
-        // Find / create all consumers
         const arrConsumers = Array.from(block.dbConsumers.values())
+        // logger.debug(`Inserting ${arrConsumers.length} consumers for block height: ${block.height}`);
         await DoInChunks(100, arrConsumers, async (arr: any) => {
             await tx.insert(schema.consumers)
                 .values(arr)
                 .onConflictDoNothing();
         })
+        // logger.debug(`Inserted consumers for block height: ${block.height}`);
 
         // Create
         await DoInChunks(100, block.dbEvents, async (arr: any) => {
@@ -122,24 +127,27 @@ const doBatch = async (
     dbHeight: number,
     latestHeight: number,
 ) => {
-    //
-    // Start filling up
-    logger.info(`globakWorkList length: ${globakWorkList.length}, globakWorkList: ${JSON.stringify(globakWorkList)}`);
+    logger.info(`doBatch:: Starting doBatch with dbHeight: ${dbHeight}, latestHeight: ${latestHeight}`);
+
     const blockList = [...globakWorkList]
+    logger.info(`doBatch:: Initial blockList length: ${blockList.length}`);
     globakWorkList.length = 0
     for (let i = dbHeight + 1; i <= latestHeight; i++) {
         blockList.push(i)
     }
     const org_len = blockList.length
+    logger.info(`doBatch:: Updated blockList length: ${org_len}`);
     while (blockList.length > 0) {
         let start = performance.now();
 
         const tmpList = blockList.splice(0, JSINFO_BATCH_SIZE);
+        logger.info(`doBatch:: Processing batch of size: ${tmpList.length}`);
         const { results, errors } = await PromisePool
             .withConcurrency(JSINFO_N_WORKERS)
             .for(tmpList)
             .process(async (height) => {
                 if (await isBlockInDb(db, height)) {
+                    logger.info(`doBatch:: Block ${height} already in DB, skipping`);
                     return
                 }
 
@@ -147,26 +155,26 @@ const doBatch = async (
                 block = await GetOneLavaBlock(height, client, clientTm, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
                 if (block != null) {
                     await InsertBlock(block, db)
+                    logger.info(`doBatch:: Inserted block ${height} into DB`);
                 } else {
-                    logger.info(`failed getting block ${height}`);
+                    logger.info(`doBatch:: Failed getting block ${height}`);
                 }
             })
 
         let timeTaken = performance.now() - start;
         logger.info(`
-            Work: ${org_len}
-            Errors: ${errors}
-            Batches remaining: ${blockList.length / JSINFO_BATCH_SIZE}
-            Time: ${timeTaken / 1000}s
-            Estimated remaining: ${Math.trunc((timeTaken / 1000) * blockList.length / JSINFO_BATCH_SIZE)}s
-        `);
-        //
-        // Add errors to global work list
-        // to be tried again on the next iteration
+                Work: ${org_len}
+                Errors: ${errors}
+                Batches remaining: ${blockList.length / JSINFO_BATCH_SIZE}
+                Time: ${timeTaken / 1000}s
+                Estimated remaining: ${Math.trunc((timeTaken / 1000) * blockList.length / JSINFO_BATCH_SIZE)}s
+            `);
         errors.forEach((err) => {
             globakWorkList.push(err.item)
+            logger.info(`doBatch:: Added block ${err.item} to globakWorkList due to error`);
         })
     }
+    logger.info(`doBatch:: Finished doBatch with dbHeight: ${dbHeight}, latestHeight: ${latestHeight}`);
 }
 
 const indexer = async (): Promise<void> => {
@@ -186,7 +194,7 @@ const establishRpcConnection = async (): Promise<RpcConnection> => {
     return rpcConnection;
 }
 
-const migrateAndFetchDb = async (): Promise<PostgresJsDatabase> =>  {
+const migrateAndFetchDb = async (): Promise<PostgresJsDatabase> => {
     logger.info('Migrating DB...');
     await MigrateDb();
     logger.info('DB migrated.');

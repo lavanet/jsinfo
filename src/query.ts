@@ -54,7 +54,7 @@ async function getLatestBlock() {
 }
 
 const FastifyLogger: FastifyBaseLogger = pino({
-    // level: 'warn',
+    level: 'warn',
     transport: {
         target: 'pino-pretty',
         options: {

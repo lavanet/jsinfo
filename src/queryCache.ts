@@ -51,8 +51,13 @@ class QueryCache {
             const stats = fs.statSync(cacheFilePath);
             if (cacheEntry.dateOnDisk && cacheEntry.dateOnDisk < stats.mtime) {
                 const data = fs.readFileSync(cacheFilePath, 'utf8');
-                cacheEntry.data = JSON.parse(data);
-                cacheEntry.dateOnDisk = stats.mtime;
+                try {
+                    const parsedData = JSON.parse(data);
+                    cacheEntry.data = parsedData;
+                    cacheEntry.dateOnDisk = stats.mtime;
+                } catch (error: any) {
+                    logger.error(`Failed to parse JSON data for: "${key}", error: ${error?.message}`);
+                }
             }
             logger.info(`QueryCache: date on disk: ${cacheEntry.dateOnDisk} is newer for: "${key}", file modification date: ${stats.mtime}`);
         }

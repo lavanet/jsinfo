@@ -73,7 +73,7 @@ export async function ConnectToRpc(rpc: string): Promise<RpcConnection> {
     const chainId = await client.getChainId();
     const height = await client.getHeight();
     const lavajsClient = await lavajs.lavanet.ClientFactory.createRPCQueryClient({ rpcEndpoint: rpc });
-    logger.info('chain', chainId, 'ConnectToRpc:: current height', height);
+    logger.info(`ConnectToRpc:: chain ${chainId}, current height ${height}`);
 
     return { client, clientTm, chainId, height, lavajsClient };
 }

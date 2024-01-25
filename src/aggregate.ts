@@ -28,13 +28,13 @@ export async function aggGetStartEnd(db: PostgresJsDatabase): Promise<{ startTim
         startTime = new Date("2000-01-01T00:00:00Z"); // Default start time if no data is found
     }
 
-    logger.info("aggGetStartEnd: startTime", startTime, "endTime", endTime);
+    logger.info(`aggGetStartEnd: startTime ${startTime}, endTime ${endTime}`);
     return { startTime, endTime };
 }
 
 export async function updateAggHourlyPayments(db: PostgresJsDatabase) {
     const { startTime, endTime } = await aggGetStartEnd(db)
-    logger.info("updateAggHourlyPayments:", "startTime", startTime, "endTime", endTime)
+    logger.info(`updateAggHourlyPayments: startTime ${startTime}, endTime ${endTime}`);
     if (startTime === null || endTime === null) {
         logger.info("updateAggHourlyPayments: startTime === null || endTime === null")
         return
@@ -71,7 +71,7 @@ export async function updateAggHourlyPayments(db: PostgresJsDatabase) {
             sql`datehour`,
         )
     if (aggResults.length === 0) {
-        logger.info("updateAggHourlyPayments:", "no agg results found")
+        logger.info("updateAggHourlyPayments: no agg results found")
         return;
     }
 

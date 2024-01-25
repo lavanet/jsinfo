@@ -122,7 +122,7 @@ const doBatch = async (
 ) => {
     //
     // Start filling up
-    logger.info('globakWorkList', globakWorkList.length, globakWorkList)
+    logger.info(`globakWorkList length: ${globakWorkList.length}, globakWorkList: ${JSON.stringify(globakWorkList)}`);
     const blockList = [...globakWorkList]
     globakWorkList.length = 0
     for (let i = dbHeight + 1; i <= latestHeight; i++) {
@@ -146,7 +146,7 @@ const doBatch = async (
                 if (block != null) {
                     await InsertBlock(block, db)
                 } else {
-                    logger.info('failed getting block', height)
+                    logger.info(`failed getting block ${height}`);
                 }
             })
 
@@ -166,128 +166,130 @@ const doBatch = async (
         })
     }
 }
-
 const indexer = async (): Promise<void> => {
-    logger.info(`starting indexer, rpc: ${rpc}, start height: ${lava_testnet2_start_height}`);
+    logger.info(`Starting indexer, rpc: ${rpc}, start height: ${lava_testnet2_start_height}`);
 
-    const { client, clientTm, chainId, height, lavajsClient } =
-        await BackoffRetry<RpcConnection>("ConnectToRpc", () => ConnectToRpc(rpc));
+    const rpcConnection = await establishRpcConnection();
+    const db = await migrateAndFetchDb();
+    await updateBlockMeta(db, rpcConnection);
+    await fillUpBackoffRetry(db, rpcConnection);
+}
 
-    //
-    // DB
-    await MigrateDb()
-    let db = GetDb()
+const establishRpcConnection = async (): Promise<RpcConnection> => {
+    logger.info('Establishing RPC connection...');
+    const rpcConnection: RpcConnection = await BackoffRetry<RpcConnection>("ConnectToRpc", () => ConnectToRpc(rpc));
+    logger.info('RPC connection established.', rpcConnection);
+    return rpcConnection;
+}
 
-    //
-    // Insert providers, specs & plans from latest block 
+const migrateAndFetchDb = async (): Promise<PostgresJsDatabase> =>  {
+    logger.info('Migrating DB...');
+    await MigrateDb();
+    logger.info('DB migrated.');
+    const db = GetDb();
+    logger.info('DB fetched.');
+    return db;
+}
+
+const updateBlockMeta = async (db: PostgresJsDatabase, rpcConnection: RpcConnection) => {
+    logger.info('Updating block meta...');
     await UpdateLatestBlockMeta(
         db,
-        lavajsClient,
-        height,
+        rpcConnection.lavajsClient,
+        rpcConnection.height,
         false,
         static_dbProviders,
         static_dbSpecs,
         static_dbPlans,
         static_dbStakes
-    )
+    );
+    logger.info('Block meta updated.');
+}
 
-    //
-    // Loop forever, filling up blocks
-    const loopFill = () => {
-        logger.info(`loopFill function called at: ${new Date().toISOString()}`);
-        setTimeout(() => {
-            fillUpBackoffRetry();
-            logger.info(`loopFill function finished at: ${new Date().toISOString()}`);
-        }, poll_ms);
+const fillUpBackoffRetry = async (db: PostgresJsDatabase, rpcConnection: RpcConnection) => {
+    logger.info('Filling up blocks...');
+    try {
+        await BackoffRetry<void>("fillUp", async () => { await fillUp(db, rpcConnection); });
+    } catch (e) {
+        logger.info('fillUpBackoffRetry error', e)
+        fillUpBackoffRetryWTimeout(db, rpcConnection)
+        return
+    }
+    logger.info('Blocks filled up.');
+}
+
+const fillUpBackoffRetryWTimeout = (db: PostgresJsDatabase, rpcConnection: RpcConnection) => {
+    logger.info(`fillUpBackoffRetryWTimeout function called at: ${new Date().toISOString()}`);
+    setTimeout(() => {
+        fillUpBackoffRetry(db, rpcConnection);
+        logger.info(`fillUpBackoffRetryWTimeout function finished at: ${new Date().toISOString()}`);
+    }, poll_ms);
+}
+
+const updateAggHourlyPaymentsCaller = async (db: PostgresJsDatabase) => {
+    try {
+        const start = Date.now();
+        await updateAggHourlyPayments(db);
+        const executionTime = Date.now() - start;
+        logger.info(`Successfully executed db.updateAggHourlyPayments. Execution time: ${executionTime} ms`);
+    } catch (e) {
+        logger.error(`Failed to update aggregate hourly payments. Error: ${(e as Error).message}`);
+    }
+}
+
+const fillUp = async (db: PostgresJsDatabase, rpcConnection: RpcConnection) => {
+    let latestHeight = 0;
+    try {
+        latestHeight = await BackoffRetry<number>("getHeight", async () => {
+            return await rpcConnection.client.getHeight();
+        });
+    } catch (e) {
+        logger.info(`client.getHeight ${e}`);
+        fillUpBackoffRetryWTimeout(db, rpcConnection)
+        return
     }
 
-    const updateAggHourlyPaymentsCaller = async () => {
-        try {
-            const start = Date.now();
-            await updateAggHourlyPayments(db);
-            const executionTime = Date.now() - start;
-            logger.info(`Successfully executed db.updateAggHourlyPayments. Execution time: ${executionTime} ms`);
-        } catch (e) {
-            logger.error(`Failed to update aggregate hourly payments. Error: ${(e as Error).message}`);
+    let dbHeight = lava_testnet2_start_height
+    let latestDbBlock
+    try {
+        latestDbBlock = await db.select().from(schema.blocks).orderBy(desc(schema.blocks.height)).limit(1)
+    } catch (e) {
+        logger.info(`failed getting latestDbBlock ${e}`);
+        logger.info('restarting db connection')
+        db = GetDb()
+        fillUpBackoffRetryWTimeout(db, rpcConnection)
+        return
+    }
+    if (latestDbBlock.length != 0) {
+        const tHeight = latestDbBlock[0].height
+        if (tHeight != null) {
+            dbHeight = tHeight
         }
     }
 
-    updateAggHourlyPaymentsCaller();
+    if (latestHeight > dbHeight) {
+        logger.info(`db height ${dbHeight}, blockchain height ${latestHeight}`);
+        await doBatch(db, rpcConnection.client, rpcConnection.clientTm, dbHeight, latestHeight)
 
-    const fillUp = async () => {
-        //
-        // Blockchain latest
-        let latestHeight = 0;
-        try {
-            latestHeight = await BackoffRetry<number>("getHeight", async () => {
-                return await client.getHeight();
-            });
-        } catch (e) {
-            logger.info('client.getHeight', e)
-            loopFill()
-            return
-        }
-
-        //
-        // Find latest block on DB
-        let dbHeight = lava_testnet2_start_height
-        let latestDbBlock
-        try {
-            latestDbBlock = await db.select().from(schema.blocks).orderBy(desc(schema.blocks.height)).limit(1)
-        } catch (e) {
-            logger.info('failed getting latestDbBlock', e)
-            logger.info('restarting db connection')
-            db = GetDb()
-            loopFill()
-            return
-        }
-        if (latestDbBlock.length != 0) {
-            const tHeight = latestDbBlock[0].height
-            if (tHeight != null) {
-                dbHeight = tHeight
+        if (latestHeight - dbHeight == 1) {
+            try {
+                await UpdateLatestBlockMeta(
+                    db,
+                    rpcConnection.lavajsClient,
+                    rpcConnection.height,
+                    true,
+                    static_dbProviders,
+                    static_dbSpecs,
+                    static_dbPlans,
+                    static_dbStakes
+                )
+            } catch (e) {
+                logger.info(`UpdateLatestBlockMeta ${e}`);
             }
-        }
-
-        //
-        // Found diff, start
-        if (latestHeight > dbHeight) {
-            logger.info('db height', dbHeight, 'blockchain height', latestHeight)
-            await doBatch(db, client, clientTm, dbHeight, latestHeight)
-
-            //
-            // Get the latest meta from RPC if not catching up
-            // catching up = more than 1 block being indexed
-            if (latestHeight - dbHeight == 1) {
-                try {
-                    await UpdateLatestBlockMeta(
-                        db,
-                        lavajsClient,
-                        height,
-                        true,
-                        static_dbProviders,
-                        static_dbSpecs,
-                        static_dbPlans,
-                        static_dbStakes
-                    )
-                } catch (e) {
-                    logger.info('UpdateLatestBlockMeta', e)
-                }
-
-                updateAggHourlyPaymentsCaller();
-            }
-        }
-        loopFill()
-    }
-    const fillUpBackoffRetry = async () => {
-        try {
-            await BackoffRetry<void>("fillUp", async () => { await fillUp(); });
-        } catch (e) {
-            logger.info('fillUpBackoffRetry error', e)
-            loopFill()
-            return
+            updateAggHourlyPaymentsCaller(db);
         }
     }
-    fillUpBackoffRetry()
+    fillUpBackoffRetryWTimeout(db, rpcConnection)
 }
 
 const indexerBackoffRetry = async () => {
@@ -298,9 +300,9 @@ try {
     indexerBackoffRetry();
 } catch (error) {
     if (error instanceof Error) {
-        logger.error('An error occurred while running the indexer:', error.message);
-        logger.error('Stack trace:', error.stack);
+        console.log('An error occurred while running the indexer:', error.message);
+        console.log('Stack trace:', error.stack);
     } else {
-        logger.error('An unknown error occurred while running the indexer:', error);
+        console.log('An unknown error occurred while running the indexer:', error);
     }
 }

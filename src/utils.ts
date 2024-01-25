@@ -91,7 +91,7 @@ export async function ConnectToRpc(rpc: string): Promise<RpcConnection> {
 
     proxy.listen(9191);
 
-    console.log('Proxy server is running on port 9191');
+    logger.info('Proxy server is running on port 9191');
 
     rpc = 'http://localhost:9191';
     // ugly hack for staging - END

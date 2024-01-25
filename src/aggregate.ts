@@ -3,7 +3,7 @@ import { sql, eq, desc, and } from "drizzle-orm";
 import * as schema from "./schema";
 import { DoInChunks, logger } from "./utils";
 
-export async function aggGetStartEnd(db: PostgresJsDatabase): Promise<{ startTime: Date | null, endTime: Date | null }> {
+export async function getAggHourlyTimeSpan(db: PostgresJsDatabase): Promise<{ startTime: Date | null, endTime: Date | null }> {
     // Last relay payment time
     const lastRelayPayment = await db.select({
         datehour: sql`DATE_TRUNC('hour', MAX(${schema.relayPayments.datetime}))`,
@@ -11,7 +11,7 @@ export async function aggGetStartEnd(db: PostgresJsDatabase): Promise<{ startTim
         .then(rows => rows[0]?.datehour);
 
     if (!lastRelayPayment) {
-        logger.error("No relay payments found");
+        logger.error("getAggHourlyTimeSpan: No relay payments found");
         return { startTime: null, endTime: null };
     }
     const endTime = lastRelayPayment as Date;
@@ -28,19 +28,19 @@ export async function aggGetStartEnd(db: PostgresJsDatabase): Promise<{ startTim
         startTime = new Date("2000-01-01T00:00:00Z"); // Default start time if no data is found
     }
 
-    logger.info(`aggGetStartEnd: startTime ${startTime}, endTime ${endTime}`);
+    logger.info(`getAggHourlyTimeSpan: startTime ${startTime}, endTime ${endTime}`);
     return { startTime, endTime };
 }
 
 export async function updateAggHourlyPayments(db: PostgresJsDatabase) {
-    const { startTime, endTime } = await aggGetStartEnd(db)
+    const { startTime, endTime } = await getAggHourlyTimeSpan(db)
     logger.info(`updateAggHourlyPayments: startTime ${startTime}, endTime ${endTime}`);
     if (startTime === null || endTime === null) {
-        logger.info("updateAggHourlyPayments: startTime === null || endTime === null")
+        logger.error("updateAggHourlyPayments: startTime === null || endTime === null")
         return
     }
     if (startTime > endTime) {
-        logger.info("updateAggHourlyPayments: startTime > endTime")
+        logger.error("updateAggHourlyPayments: startTime > endTime")
         return
     }
 
@@ -71,7 +71,7 @@ export async function updateAggHourlyPayments(db: PostgresJsDatabase) {
             sql`datehour`,
         )
     if (aggResults.length === 0) {
-        logger.info("updateAggHourlyPayments: no agg results found")
+        logger.error("updateAggHourlyPayments: no agg results found")
         return;
     }
 

@@ -24,9 +24,9 @@ import { ParseEventConflictDetectionVoteUnresolved } from "./events/EventConflic
 import * as schema from './schema';
 import { GetEnvVar } from "./utils";
 
-const JSINFO_IS_SAVE_CACHE = parseInt(GetEnvVar('JSINFO_SAVE_CACHE'));
-const JSINFO_IS_READ_CACHE = parseInt(GetEnvVar('JSINFO_READ_CACHE'));
-const JSINFO_CACHE_PATH = GetEnvVar('JSINFO_CACHE_PATH');
+const JSINFO_IS_SAVE_CACHE = parseInt(GetEnvVar('JSINFO_INDEXER_SAVE_CACHE'));
+const JSINFO_IS_READ_CACHE = parseInt(GetEnvVar('JSINFO_INDEXER_READ_CACHE'));
+const JSINFO_INDEXER_CACHE_PATH = GetEnvVar('JSINFO_INDEXER_CACHE_PATH');
 
 export type LavaBlock = {
     height: number
@@ -51,7 +51,7 @@ const getRpcBlock = async (
     height: number,
     client: StargateClient,
 ): Promise<Block> => {
-    const pathBlocks = `${JSINFO_CACHE_PATH}${height.toString()}.json`
+    const pathBlocks = `${JSINFO_INDEXER_CACHE_PATH}${height.toString()}.json`
     let block: Block;
     let excp = true
 
@@ -84,7 +84,7 @@ const getRpcTxs = async (
 ): Promise<IndexedTx[]> => {
     //
     // Get Txs for block
-    const pathTxs = `${JSINFO_CACHE_PATH}${height.toString()}_txs.json`
+    const pathTxs = `${JSINFO_INDEXER_CACHE_PATH}${height.toString()}_txs.json`
     let txs: IndexedTx[] = []
     let excp = true
 
@@ -116,7 +116,7 @@ const getRpcBlockResultEvents = async (
 ): Promise<Event[]> => {
     //
     // Get Begin/End block events
-    const pathTxs = `${JSINFO_CACHE_PATH}${height.toString()}_block_evts.json`
+    const pathTxs = `${JSINFO_INDEXER_CACHE_PATH}${height.toString()}_block_evts.json`
     let evts: Event[] = []
     let excp = true
 

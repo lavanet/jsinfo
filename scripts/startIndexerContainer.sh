@@ -1,6 +1,8 @@
 #!/bin/sh
 
-# jsinfo/scripts/startIndexerPod.sh
+# jsinfo/scripts/startIndexerContainer.sh
+
+echo "Starting indexer container at $(date)"
 
 trap 'echo \"Warning: Script received SIGSEGV, ignoring\"' 11;
 trap 'echo \"Error: Script terminated by signal\"; exit' 2 15;

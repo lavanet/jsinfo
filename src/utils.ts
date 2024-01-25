@@ -76,9 +76,6 @@ export interface RpcConnection {
     lavajsClient: any;
 }
 
-// assert that this enabled
-GetEnvVar("NODE_TLS_REJECT_UNAUTHORIZED")
-
 export async function ConnectToRpc(rpc: string): Promise<RpcConnection> {
     try {
         await axios.get(rpc);
@@ -90,21 +87,26 @@ export async function ConnectToRpc(rpc: string): Promise<RpcConnection> {
 
     // ugly hack for staging - START
     // https://lavanetxyz.slack.com/archives/C03NVQ5E3H7/p1706179067788329
-    const httpProxy = require('http-proxy');
+    if (process.env.JSINFO_INDEXER_USE_PROXY_ON_RPC_ACCESS === 'true') {
+        // assert that this enabled
+        GetEnvVar("NODE_TLS_REJECT_UNAUTHORIZED")
 
-    const proxy = httpProxy.createProxyServer({
-        target: rpc,
-        changeOrigin: true,
-        secure: false,
-        verbose: true,
-        verifySSL: false,
-    });
+        const httpProxy = require('http-proxy');
 
-    proxy.listen(9191);
+        const proxy = httpProxy.createProxyServer({
+            target: rpc,
+            changeOrigin: true,
+            secure: false,
+            verbose: true,
+            verifySSL: false,
+        });
 
-    logger.info('Proxy server is running on port 9191');
+        proxy.listen(9191);
 
-    rpc = 'http://localhost:9191';
+        logger.info('Proxy server is running on port 9191');
+
+        rpc = 'http://localhost:9191';
+    }
     // ugly hack for staging - END
 
     logger.info(`ConnectToRpc:: connecting to ${rpc}`);

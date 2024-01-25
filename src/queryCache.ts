@@ -20,11 +20,17 @@ class QueryCache {
     private memoryCache: Record<string, CacheEntry>;
 
     constructor() {
-        this.cacheDir = path.join(os.tmpdir(), 'query-cache');
         this.memoryCache = {};
+        if (process.env.JSINFO_QUERY_DISKCACHE && process.env.JSINFO_QUERY_DISKCACHE !== "") {
+            this.cacheDir = process.env.JSINFO_QUERY_DISKCACHE;
+        } else {
+            this.cacheDir = path.join(os.tmpdir(), 'query-cache');
+        }
         if (!fs.existsSync(this.cacheDir)) {
             fs.mkdirSync(this.cacheDir, { recursive: true });
         }
+        logger.info(`QueryCache:: QUERY_CACHE_ENABLED: ${QUERY_CACHE_ENABLED}`);
+        logger.info(`QueryCache:: JSINFO_QUERY_DISKCACHE path: ${this.cacheDir}`);
     }
 
     getNewExpiry(): number {

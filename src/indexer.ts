@@ -13,11 +13,11 @@ import { MigrateDb, GetDb, DoInChunks, logger, BackoffRetry, ConnectToRpc, RpcCo
 import { updateAggHourlyPayments } from "./aggregate";
 import { GetEnvVar } from "./utils";
 
-const JSINFO_LAVA_RPC = GetEnvVar("JSINFO_LAVA_RPC");
-const JSINFO_N_WORKERS = parseInt(GetEnvVar('JSINFO_N_WORKERS'));
-const JSINFO_BATCH_SIZE = parseInt(GetEnvVar('JSINFO_BATCH_SIZE'));
-const JSINFO_POLL_MS = parseInt(GetEnvVar('JSINFO_POLL_MS'));
-const JSINFO_START_BLOCK = parseInt(GetEnvVar('JSINFO_START_BLOCK')); // 340778 has a weird date (9 months ago)
+const JSINFO_INDEXER_LAVA_RPC = GetEnvVar("JSINFO_INDEXER_LAVA_RPC");
+const JSINFO_INDEXER_N_WORKERS = parseInt(GetEnvVar('JSINFO_INDEXER_N_WORKERS'));
+const JSINFO_INDEXER_BATCH_SIZE = parseInt(GetEnvVar('JSINFO_INDEXER_BATCH_SIZE'));
+const JSINFO_INDEXER_POLL_MS = parseInt(GetEnvVar('JSINFO_INDEXER_POLL_MS'));
+const JSINFO_INDEXER_START_BLOCK = parseInt(GetEnvVar('JSINFO_INDEXER_START_BLOCK')); // 340778 has a weird date (9 months ago)
 
 let static_dbProviders: Map<string, schema.Provider> = new Map()
 let static_dbSpecs: Map<string, schema.Spec> = new Map()
@@ -140,10 +140,10 @@ const doBatch = async (
     while (blockList.length > 0) {
         let start = performance.now();
 
-        const tmpList = blockList.splice(0, JSINFO_BATCH_SIZE);
+        const tmpList = blockList.splice(0, JSINFO_INDEXER_BATCH_SIZE);
         logger.info(`doBatch:: Processing batch of size: ${tmpList.length}`);
         const { results, errors } = await PromisePool
-            .withConcurrency(JSINFO_N_WORKERS)
+            .withConcurrency(JSINFO_INDEXER_N_WORKERS)
             .for(tmpList)
             .process(async (height) => {
                 if (await isBlockInDb(db, height)) {
@@ -165,9 +165,9 @@ const doBatch = async (
         logger.info(`
                 Work: ${org_len}
                 Errors: ${errors}
-                Batches remaining: ${blockList.length / JSINFO_BATCH_SIZE}
+                Batches remaining: ${blockList.length / JSINFO_INDEXER_BATCH_SIZE}
                 Time: ${timeTaken / 1000}s
-                Estimated remaining: ${Math.trunc((timeTaken / 1000) * blockList.length / JSINFO_BATCH_SIZE)}s
+                Estimated remaining: ${Math.trunc((timeTaken / 1000) * blockList.length / JSINFO_INDEXER_BATCH_SIZE)}s
             `);
         errors.forEach((err) => {
             globakWorkList.push(err.item)
@@ -178,7 +178,7 @@ const doBatch = async (
 }
 
 const indexer = async (): Promise<void> => {
-    logger.info(`Starting indexer, rpc: ${JSINFO_LAVA_RPC}, start height: ${JSINFO_START_BLOCK}`);
+    logger.info(`Starting indexer, rpc: ${JSINFO_INDEXER_LAVA_RPC}, start height: ${JSINFO_INDEXER_START_BLOCK}`);
 
     const rpcConnection = await establishRpcConnection();
     const db = await migrateAndFetchDb();
@@ -189,7 +189,7 @@ const indexer = async (): Promise<void> => {
 
 const establishRpcConnection = async (): Promise<RpcConnection> => {
     logger.info('Establishing RPC connection...');
-    const rpcConnection: RpcConnection = await BackoffRetry<RpcConnection>("ConnectToRpc", () => ConnectToRpc(JSINFO_LAVA_RPC));
+    const rpcConnection: RpcConnection = await BackoffRetry<RpcConnection>("ConnectToRpc", () => ConnectToRpc(JSINFO_INDEXER_LAVA_RPC));
     logger.info('RPC connection established.', rpcConnection);
     return rpcConnection;
 }
@@ -235,7 +235,7 @@ const fillUpBackoffRetryWTimeout = (db: PostgresJsDatabase, rpcConnection: RpcCo
     setTimeout(() => {
         fillUpBackoffRetry(db, rpcConnection);
         logger.info(`fillUpBackoffRetryWTimeout function finished at: ${new Date().toISOString()}`);
-    }, JSINFO_POLL_MS);
+    }, JSINFO_INDEXER_POLL_MS);
 }
 
 const updateAggHourlyPaymentsCaller = async (db: PostgresJsDatabase) => {
@@ -262,7 +262,7 @@ const fillUp = async (db: PostgresJsDatabase, rpcConnection: RpcConnection) => {
         return
     }
 
-    let dbHeight = JSINFO_START_BLOCK
+    let dbHeight = JSINFO_INDEXER_START_BLOCK
     let latestDbBlock
     try {
         latestDbBlock = await db.select().from(schema.blocks).orderBy(desc(schema.blocks.height)).limit(1)

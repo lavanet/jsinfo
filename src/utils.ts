@@ -71,11 +71,30 @@ export interface RpcConnection {
 export async function ConnectToRpc(rpc: string): Promise<RpcConnection> {
     try {
         await axios.get(rpc);
-        logger.info(`ConnectToRpc:: successfully connected to ${rpc}`);
+        logger.info(`ConnectToRpc:: http tested successfully connected to ${rpc}`);
     } catch (error) {
         logger.error(`ConnectToRpc:: error connecting to ${rpc}: ${error}`);
         throw error;
     }
+
+    // ugly hack for staging - START
+    // https://lavanetxyz.slack.com/archives/C03NVQ5E3H7/p1706179067788329
+    const httpProxy = require('http-proxy');
+
+    const proxy = httpProxy.createProxyServer({
+        target: rpc,
+        changeOrigin: true,
+        secure: false,
+        verbose: true,
+        verifySSL: false,
+    });
+
+    proxy.listen(9191);
+
+    console.log('Proxy server is running on port 9191');
+
+    rpc = 'http://localhost:9191';
+    // ugly hack for staging - END
 
     logger.info(`ConnectToRpc:: connecting to ${rpc}`);
     const client = await StargateClient.connect(rpc);

@@ -123,20 +123,38 @@ export async function ConnectToRpc(rpc: string): Promise<RpcConnection> {
     return { client, clientTm, chainId, height, lavajsClient };
 }
 
-const postgre_url = GetEnvVar("JSINFO_POSTGRESQL_URL");
+export function Sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
 
-export const GetDb = () => {
-    const queryClient = postgres(postgre_url, {
+export async function GetPostgresUrl(): Promise<string> {
+    let postgre_url = "";
+    try {
+        postgre_url = GetEnvVar("JSINFO_POSTGRESQL_URL");
+    } catch (error) {
+        try {
+            postgre_url = GetEnvVar("POSTGRESQL_URL");
+        } catch (error) {
+            console.error("Missing env var for POSTGRESQL_URL or JSINFO_POSTGRESQL_URL");
+            await Sleep(60000); // Sleep for one minute
+            process.exit(1);
+        }
+    }
+    return postgre_url;
+}
+
+export async function GetDb(): Promise<PostgresJsDatabase> {
+    const queryClient = postgres(await GetPostgresUrl(), {
         idle_timeout: 20,
         max_lifetime: 60 * 30,
     });
     const db: PostgresJsDatabase = drizzle(queryClient/*, { logger: true }*/);
-    return db
+    return db;
 }
 
 export const MigrateDb = async () => {
     logger.info(`MigrateDb:: Starting database migration... ${new Date().toISOString()}`);
-    const migrationClient = postgres(postgre_url, { max: 1 });
+    const migrationClient = postgres(await GetPostgresUrl(), { max: 1 });
     logger.info(`MigrateDb:: Migration client created. ${new Date().toISOString()}`);
     await migrate(drizzle(migrationClient), { migrationsFolder: "drizzle" });
     logger.info(`MigrateDb:: Database migration completed. ${new Date().toISOString()}`);

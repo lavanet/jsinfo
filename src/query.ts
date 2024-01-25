@@ -17,9 +17,8 @@ import fastifyCors from '@fastify/cors';
 
 import brotli from 'brotli';
 
-const requestCache = new RequestCache();
-let db = GetDb()
-
+const requestCache: RequestCache = new RequestCache();
+let db: PostgresJsDatabase;
 
 function formatDates(dataArray) {
     return dataArray.map(item => {
@@ -872,6 +871,9 @@ server.get('/events', addErrorResponse(eventsOpts), await requestCache.handleReq
 }))
 
 export const queryserver = async (): Promise<void> => {
+    console.log('Starting queryserver - connecting to db')
+    db = await GetDb();
+
     const portString = process.env['JSINFO_QUERY_PORT']!;
     if (!portString) {
         throw new Error('JSINFO_QUERY_PORT environment variable is not set or is an empty string');

@@ -8,6 +8,14 @@ import { Tendermint37Client } from "@cosmjs/tendermint-rpc";
 import * as lavajs from '@lavanet/lavajs';
 import axios from 'axios';
 
+export function GetEnvVar(key: string): string {
+    const value = process.env[key];
+    if (!value) {
+        throw new Error(`${key} environment variable is not set or is an empty string`);
+    }
+    return value;
+}
+
 const winston = require('winston');
 
 export const logger = winston.createLogger({
@@ -115,7 +123,7 @@ export async function ConnectToRpc(rpc: string): Promise<RpcConnection> {
     return { client, clientTm, chainId, height, lavajsClient };
 }
 
-const postgre_url = process.env['POSTGRESQL_URL']!;
+const postgre_url = GetEnvVar("JSINFO_POSTGRESQL_URL");
 
 export const GetDb = () => {
     const queryClient = postgres(postgre_url, {

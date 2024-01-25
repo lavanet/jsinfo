@@ -158,8 +158,19 @@ class RequestCache {
 
     handleRequestWithCache(handler: (request: FastifyRequest, reply: FastifyReply) => Promise<any>): (request: FastifyRequest, reply: FastifyReply) => Promise<any> {
         return async (request: FastifyRequest, reply: FastifyReply) => {
-            if (QUERY_CACHE_ENABLED) return await this.getOrFetchData(request, reply, handler);
-            return await handler(request, reply);
+            if (QUERY_CACHE_ENABLED) {
+                const data = await this.getOrFetchData(request, reply, handler);
+                if (typeof data !== 'object' || data === null) {
+                    return;
+                }
+                return data;
+            }
+            
+            const handlerData = await handler(request, reply);
+            if (typeof handlerData !== 'object' || handlerData === null) {
+                return;
+            }
+            return handlerData;
         };
     }
 }

@@ -22,9 +22,11 @@ import { ParseEventConflictVoteRevealStarted } from "./events/EventConflictVoteR
 import { ParseEventConflictDetectionVoteResolved } from "./events/EventConflictDetectionVoteResolved";
 import { ParseEventConflictDetectionVoteUnresolved } from "./events/EventConflictDetectionVoteUnresolved";
 import * as schema from './schema';
-const is_save_cache = parseInt(process.env['SAVE_CACHE']!)
-const is_read_cache = parseInt(process.env['READ_CACHE']!)
-const cache_path = process.env['CACHE_PATH']!
+import { GetEnvVar } from "./utils";
+
+const JSINFO_IS_SAVE_CACHE = parseInt(GetEnvVar('JSINFO_SAVE_CACHE'));
+const JSINFO_IS_READ_CACHE = parseInt(GetEnvVar('JSINFO_READ_CACHE'));
+const JSINFO_CACHE_PATH = GetEnvVar('JSINFO_CACHE_PATH');
 
 export type LavaBlock = {
     height: number
@@ -49,11 +51,11 @@ const getRpcBlock = async (
     height: number,
     client: StargateClient,
 ): Promise<Block> => {
-    const pathBlocks = `${cache_path}${height.toString()}.json`
+    const pathBlocks = `${JSINFO_CACHE_PATH}${height.toString()}.json`
     let block: Block;
     let excp = true
 
-    if (is_read_cache) {
+    if (JSINFO_IS_READ_CACHE) {
         try {
             excp = false
             block = JSON.parse(readFileSync(pathBlocks, 'utf-8')) as Block
@@ -67,7 +69,7 @@ const getRpcBlock = async (
         if (block!.header == undefined) {
             throw ('block!.header == undefined')
         }
-        if (is_save_cache) {
+        if (JSINFO_IS_SAVE_CACHE) {
             writeFileSync(pathBlocks, JSON.stringify(block, null, 0), 'utf-8')
         }
     }
@@ -82,11 +84,11 @@ const getRpcTxs = async (
 ): Promise<IndexedTx[]> => {
     //
     // Get Txs for block
-    const pathTxs = `${cache_path}${height.toString()}_txs.json`
+    const pathTxs = `${JSINFO_CACHE_PATH}${height.toString()}_txs.json`
     let txs: IndexedTx[] = []
     let excp = true
 
-    if (is_read_cache) {
+    if (JSINFO_IS_READ_CACHE) {
         try {
             excp = false
             txs = JSON.parse(readFileSync(pathTxs, 'utf-8')) as IndexedTx[]
@@ -100,7 +102,7 @@ const getRpcTxs = async (
         if (txs.length == 0 && block!.txs.length != 0) {
             throw ('txs.length == 0 && block!.txs.length != 0')
         }
-        if (is_save_cache) {
+        if (JSINFO_IS_SAVE_CACHE) {
             writeFileSync(pathTxs, JSON.stringify(txs, null, 0), 'utf-8')
         }
     }
@@ -114,11 +116,11 @@ const getRpcBlockResultEvents = async (
 ): Promise<Event[]> => {
     //
     // Get Begin/End block events
-    const pathTxs = `${cache_path}${height.toString()}_block_evts.json`
+    const pathTxs = `${JSINFO_CACHE_PATH}${height.toString()}_block_evts.json`
     let evts: Event[] = []
     let excp = true
 
-    if (is_read_cache) {
+    if (JSINFO_IS_READ_CACHE) {
         try {
             excp = false
             evts = JSON.parse(readFileSync(pathTxs, 'utf-8')) as Event[]
@@ -134,7 +136,7 @@ const getRpcBlockResultEvents = async (
         if (res.height != height) {
             throw ('res.height != height')
         }
-        if (is_save_cache) {
+        if (JSINFO_IS_SAVE_CACHE) {
             writeFileSync(pathTxs, JSON.stringify(evts, null, 0), 'utf-8')
         }
     }

@@ -55,7 +55,7 @@ async function getLatestBlock() {
 }
 
 const FastifyLogger: FastifyBaseLogger = pino({
-    level: 'error',
+    // level: 'warn',
     transport: {
         target: 'pino-pretty',
         options: {
@@ -236,7 +236,7 @@ server.get('/index', addErrorResponse(indexOpts), requestCache.handleRequestWith
 
     if (providersAddrs.length == 0) {
         reply.code(400).send({ error: 'Provider does not exist' });
-        return reply;
+        return;
     }
 
     //
@@ -404,14 +404,14 @@ server.get('/provider/:addr', addErrorResponse(providerOpts), requestCache.handl
     const { addr } = request.params as { addr: string }
     if (addr.length != 44 || !addr.startsWith('lava@')) {
         reply.code(400).send({ error: 'Bad provider address' });
-        return reply;
+        return;
     }
 
     //
     const res = await db.select().from(schema.providers).where(eq(schema.providers.address, addr)).limit(1)
     if (res.length != 1) {
         reply.code(400).send({ error: 'Provider does not exist' });
-        return reply;
+        return;
     }
 
     const provider = res[0]
@@ -630,14 +630,14 @@ server.get('/consumer/:addr', addErrorResponse(consumerOpts), requestCache.handl
     const { addr } = request.params as { addr: string }
     if (addr.length != 44 || !addr.startsWith('lava@')) {
         reply.code(400).send({ error: 'Bad provider name' });
-        return reply;
+        return;
     }
 
     //
     const res = await db.select().from(schema.consumers).where(eq(schema.consumers.address, addr)).limit(1)
     if (res.length != 1) {
         reply.code(400).send({ error: 'Provider does not exist' });
-        return reply;
+        return;
     }
 
     //
@@ -732,7 +732,7 @@ server.get('/spec/:specId', addErrorResponse(SpecOpts), requestCache.handleReque
     const { specId } = request.params as { specId: string }
     if (specId.length <= 0) {
         reply.code(400).send({ error: 'invalid specId' });
-        return reply;
+        return;
     }
     const upSpecId = specId.toUpperCase()
 
@@ -740,7 +740,7 @@ server.get('/spec/:specId', addErrorResponse(SpecOpts), requestCache.handleReque
     const res = await db.select().from(schema.specs).where(eq(schema.specs.id, upSpecId)).limit(1)
     if (res.length != 1) {
         reply.code(400).send({ error: 'specId does not exist' });
-        return reply;
+        return;
     }
     const { latestHeight, latestDatetime } = await getLatestBlock()
 
@@ -872,8 +872,16 @@ server.get('/events', addErrorResponse(eventsOpts), await requestCache.handleReq
 }))
 
 export const queryserver = async (): Promise<void> => {
-    const port = parseInt(process.env['QUERY_PORT']!)
-    const host = process.env['QUERY_HOST']!
+    const portString = process.env['JSINFO_QUERY_PORT']!;
+    if (!portString) {
+        throw new Error('JSINFO_QUERY_PORT environment variable is not set or is an empty string');
+    }
+    const port = parseInt(portString);
+    
+    const host = process.env['JSINFO_QUERY_HOST']!;
+    if (!host) {
+        throw new Error('JSINFO_QUERY_HOST environment variable is not set or is an empty string');
+    }
 
     try {
         try {

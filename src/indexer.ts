@@ -11,12 +11,14 @@ import { LavaBlock, GetOneLavaBlock } from './lavablock'
 import { UpdateLatestBlockMeta } from './setlatest'
 import { MigrateDb, GetDb, DoInChunks, logger, BackoffRetry, ConnectToRpc, RpcConnection } from "./utils";
 import { updateAggHourlyPayments } from "./aggregate";
+import { GetEnvVar } from "./utils";
 
-const rpc = process.env['LAVA_RPC'] as string
-const n_workers = parseInt(process.env['N_WORKERS']!)
-const batch_size = parseInt(process.env['BATCH_SIZE']!)
-const poll_ms = parseInt(process.env['POLL_MS']!)
-const lava_testnet2_start_height = parseInt(process.env['START_BLOCK']!) // 340778 has a weird date (9 months ago)
+const JSINFO_LAVA_RPC = GetEnvVar("JSINFO_LAVA_RPC");
+const JSINFO_N_WORKERS = parseInt(GetEnvVar('JSINFO_N_WORKERS'));
+const JSINFO_BATCH_SIZE = parseInt(GetEnvVar('JSINFO_BATCH_SIZE'));
+const JSINFO_POLL_MS = parseInt(GetEnvVar('JSINFO_POLL_MS'));
+const JSINFO_START_BLOCK = parseInt(GetEnvVar('JSINFO_START_BLOCK')); // 340778 has a weird date (9 months ago)
+
 let static_dbProviders: Map<string, schema.Provider> = new Map()
 let static_dbSpecs: Map<string, schema.Spec> = new Map()
 let static_dbPlans: Map<string, schema.Plan> = new Map()
@@ -132,9 +134,9 @@ const doBatch = async (
     while (blockList.length > 0) {
         let start = performance.now();
 
-        const tmpList = blockList.splice(0, batch_size);
+        const tmpList = blockList.splice(0, JSINFO_BATCH_SIZE);
         const { results, errors } = await PromisePool
-            .withConcurrency(n_workers)
+            .withConcurrency(JSINFO_N_WORKERS)
             .for(tmpList)
             .process(async (height) => {
                 if (await isBlockInDb(db, height)) {
@@ -154,9 +156,9 @@ const doBatch = async (
         logger.info(`
             Work: ${org_len}
             Errors: ${errors}
-            Batches remaining: ${blockList.length / batch_size}
+            Batches remaining: ${blockList.length / JSINFO_BATCH_SIZE}
             Time: ${timeTaken / 1000}s
-            Estimated remaining: ${Math.trunc((timeTaken / 1000) * blockList.length / batch_size)}s
+            Estimated remaining: ${Math.trunc((timeTaken / 1000) * blockList.length / JSINFO_BATCH_SIZE)}s
         `);
         //
         // Add errors to global work list
@@ -166,18 +168,20 @@ const doBatch = async (
         })
     }
 }
+
 const indexer = async (): Promise<void> => {
-    logger.info(`Starting indexer, rpc: ${rpc}, start height: ${lava_testnet2_start_height}`);
+    logger.info(`Starting indexer, rpc: ${JSINFO_LAVA_RPC}, start height: ${JSINFO_START_BLOCK}`);
 
     const rpcConnection = await establishRpcConnection();
     const db = await migrateAndFetchDb();
-    await updateBlockMeta(db, rpcConnection);
+    await updateBlockMetaInDb(db, rpcConnection);
+    await updateAggHourlyPaymentsCaller(db);
     await fillUpBackoffRetry(db, rpcConnection);
 }
 
 const establishRpcConnection = async (): Promise<RpcConnection> => {
     logger.info('Establishing RPC connection...');
-    const rpcConnection: RpcConnection = await BackoffRetry<RpcConnection>("ConnectToRpc", () => ConnectToRpc(rpc));
+    const rpcConnection: RpcConnection = await BackoffRetry<RpcConnection>("ConnectToRpc", () => ConnectToRpc(JSINFO_LAVA_RPC));
     logger.info('RPC connection established.', rpcConnection);
     return rpcConnection;
 }
@@ -191,7 +195,7 @@ const migrateAndFetchDb = async (): Promise<PostgresJsDatabase> =>  {
     return db;
 }
 
-const updateBlockMeta = async (db: PostgresJsDatabase, rpcConnection: RpcConnection) => {
+const updateBlockMetaInDb = async (db: PostgresJsDatabase, rpcConnection: RpcConnection) => {
     logger.info('Updating block meta...');
     await UpdateLatestBlockMeta(
         db,
@@ -207,7 +211,7 @@ const updateBlockMeta = async (db: PostgresJsDatabase, rpcConnection: RpcConnect
 }
 
 const fillUpBackoffRetry = async (db: PostgresJsDatabase, rpcConnection: RpcConnection) => {
-    logger.info('Filling up blocks...');
+    logger.info('fillUpBackoffRetry:: Filling up blocks...');
     try {
         await BackoffRetry<void>("fillUp", async () => { await fillUp(db, rpcConnection); });
     } catch (e) {
@@ -215,7 +219,7 @@ const fillUpBackoffRetry = async (db: PostgresJsDatabase, rpcConnection: RpcConn
         fillUpBackoffRetryWTimeout(db, rpcConnection)
         return
     }
-    logger.info('Blocks filled up.');
+    logger.info('fillUpBackoffRetry:: Blocks filled up.');
 }
 
 const fillUpBackoffRetryWTimeout = (db: PostgresJsDatabase, rpcConnection: RpcConnection) => {
@@ -223,10 +227,11 @@ const fillUpBackoffRetryWTimeout = (db: PostgresJsDatabase, rpcConnection: RpcCo
     setTimeout(() => {
         fillUpBackoffRetry(db, rpcConnection);
         logger.info(`fillUpBackoffRetryWTimeout function finished at: ${new Date().toISOString()}`);
-    }, poll_ms);
+    }, JSINFO_POLL_MS);
 }
 
 const updateAggHourlyPaymentsCaller = async (db: PostgresJsDatabase) => {
+    logger.info(`updateAggHourlyPaymentsCaller started at: ${new Date().toISOString()}`);
     try {
         const start = Date.now();
         await updateAggHourlyPayments(db);
@@ -249,7 +254,7 @@ const fillUp = async (db: PostgresJsDatabase, rpcConnection: RpcConnection) => {
         return
     }
 
-    let dbHeight = lava_testnet2_start_height
+    let dbHeight = JSINFO_START_BLOCK
     let latestDbBlock
     try {
         latestDbBlock = await db.select().from(schema.blocks).orderBy(desc(schema.blocks.height)).limit(1)

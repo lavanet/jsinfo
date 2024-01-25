@@ -10,7 +10,7 @@ run_docker_compose:
 	docker-compose -f docker-compose.yml up
 
 run_indexer:
-	bun run src/indexer.ts
+	NODE_TLS_REJECT_UNAUTHORIZED=0 bun run src/indexer.ts
 
 run_query:
 	bun run src/query.ts

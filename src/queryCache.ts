@@ -50,16 +50,16 @@ class QueryCache {
         if (!cacheEntry.isFetching && fs.existsSync(cacheFilePath)) {
             const stats = fs.statSync(cacheFilePath);
             if (cacheEntry.dateOnDisk && cacheEntry.dateOnDisk < stats.mtime) {
-                const data = fs.readFileSync(cacheFilePath, 'utf8');
                 try {
+                    const data = fs.readFileSync(cacheFilePath, 'utf8');
                     const parsedData = JSON.parse(data);
                     cacheEntry.data = parsedData;
                     cacheEntry.dateOnDisk = stats.mtime;
                 } catch (error: any) {
-                    logger.error(`Failed to parse JSON data for: "${key}", error: ${error?.message}`);
+                    logger.warn(`Failed to parse JSON data for: "${key}", error: ${error?.message}. cacheFilePath: ${cacheFilePath}`);
                 }
             }
-            logger.info(`QueryCache: date on disk: ${cacheEntry.dateOnDisk} is newer for: "${key}", file modification date: ${stats.mtime}`);
+            logger.info(`QueryCache: date on disk: ${cacheEntry.dateOnDisk} is newer for: "${key}", file modification date: ${stats.mtime}. cacheFilePath: ${cacheFilePath}`);
         }
         
         if (!cacheEntry.data) {
@@ -69,11 +69,15 @@ class QueryCache {
         // If the data in the cache entry is empty, try to load it from the disk
         if (!this.isFetchInProgress(cacheEntry) && Object.keys(cacheEntry.data).length === 0) {
             if (fs.existsSync(cacheFilePath)) {
-                const data: any = JSON.parse(fs.readFileSync(cacheFilePath, 'utf-8'));
-                logger.info(`QueryCache: Loaded data for key "${key}" from disk`);
-                cacheEntry.data = data;
-                const stats = fs.statSync(cacheFilePath);
-                cacheEntry.dateOnDisk = stats.mtime;
+                try {
+                    const data: any = JSON.parse(fs.readFileSync(cacheFilePath, 'utf-8'));
+                    logger.info(`QueryCache: Loaded data for key "${key}" from disk. cacheFilePath: ${cacheFilePath}`);
+                    cacheEntry.data = data;
+                    const stats = fs.statSync(cacheFilePath);
+                    cacheEntry.dateOnDisk = stats.mtime;
+                } catch (error: any) {
+                    logger.warn(`Failed to parse JSON data for: "${key}". cacheFilePath: ${cacheFilePath}, error: ${error?.message}`);
+                }
             }
         }
     

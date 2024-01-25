@@ -261,7 +261,7 @@ const fillUp = async (db: PostgresJsDatabase, rpcConnection: RpcConnection) => {
     } catch (e) {
         logger.info(`failed getting latestDbBlock ${e}`);
         logger.info('restarting db connection')
-        db = GetDb()
+        db = await GetDb()
         fillUpBackoffRetryWTimeout(db, rpcConnection)
         return
     }

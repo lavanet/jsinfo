@@ -127,20 +127,24 @@ export function Sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+let cachedPostgresUrl: string | null = null;
+
 export async function GetPostgresUrl(): Promise<string> {
-    let postgre_url = "";
+    if (cachedPostgresUrl !== null) {
+        return cachedPostgresUrl;
+    }
     try {
-        postgre_url = GetEnvVar("JSINFO_POSTGRESQL_URL");
+        cachedPostgresUrl = GetEnvVar("JSINFO_POSTGRESQL_URL");
     } catch (error) {
         try {
-            postgre_url = GetEnvVar("POSTGRESQL_URL");
+            cachedPostgresUrl = GetEnvVar("POSTGRESQL_URL");
         } catch (error) {
             console.error("Missing env var for POSTGRESQL_URL or JSINFO_POSTGRESQL_URL");
             await Sleep(60000); // Sleep for one minute
             process.exit(1);
         }
     }
-    return postgre_url;
+    return cachedPostgresUrl!;
 }
 
 export async function GetDb(): Promise<PostgresJsDatabase> {

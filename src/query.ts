@@ -14,11 +14,11 @@ import { GetDb, logger } from './utils';
 import RequestCache from './queryCache';
 import { FastifyRequest, FastifyReply } from 'fastify';
 import fastifyCors from '@fastify/cors';
-
 import brotli from 'brotli';
+import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 
 const requestCache: RequestCache = new RequestCache();
-let db: PostgresJsDatabase;
+var db: PostgresJsDatabase;
 
 function formatDates(dataArray) {
     return dataArray.map(item => {
@@ -37,7 +37,7 @@ async function checkDb() {
         await db.select().from(schema.blocks).limit(1)
     } catch (e) {
         logger.info('checkDb exception, resetting connection', e)
-        db = GetDb()
+        db = await GetDb()
     }
 }
 

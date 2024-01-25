@@ -31,6 +31,20 @@ class QueryCache {
         return Date.now() + Math.floor(Math.random() * (11) + 15) * 1000;
     }
 
+    readDataFromDisk(filePath: string): { data: any, stats: fs.Stats } | null {
+        if (fs.existsSync(filePath)) {
+            try {
+                const data = fs.readFileSync(filePath, 'utf8');
+                const parsedData = JSON.parse(data);
+                const stats = fs.statSync(filePath);
+                return { data: parsedData, stats };
+            } catch (error: any) {
+                logger.warn(`Failed to parse JSON data for file: "${filePath}", error: ${error?.message}`);
+            }
+        }
+        return null;
+    }
+
     get(key: string): CacheEntry {
         // First, try to get the cache entry from the in-memory cache
         let cacheEntry = this.memoryCache[key];
@@ -45,39 +59,28 @@ class QueryCache {
             this.memoryCache[key] = cacheEntry
         }
     
-        const cacheFilePath = path.join(this.cacheDir, encodeURIComponent(key));
-
-        if (!cacheEntry.isFetching && fs.existsSync(cacheFilePath)) {
-            const stats = fs.statSync(cacheFilePath);
-            if (cacheEntry.dateOnDisk && cacheEntry.dateOnDisk < stats.mtime) {
-                try {
-                    const data = fs.readFileSync(cacheFilePath, 'utf8');
-                    const parsedData = JSON.parse(data);
-                    cacheEntry.data = parsedData;
-                    cacheEntry.dateOnDisk = stats.mtime;
-                } catch (error: any) {
-                    logger.warn(`Failed to parse JSON data for: "${key}", error: ${error?.message}. cacheFilePath: ${cacheFilePath}`);
-                }
-            }
-            logger.info(`QueryCache: date on disk: ${cacheEntry.dateOnDisk} is newer for: "${key}", file modification date: ${stats.mtime}. cacheFilePath: ${cacheFilePath}`);
-        }
-        
         if (!cacheEntry.data) {
             cacheEntry.data = {};
         }
-        
+
+        const cacheFilePath = path.join(this.cacheDir, encodeURIComponent(key));
+
+        if (!cacheEntry.isFetching && fs.existsSync(cacheFilePath)) {
+            const result = this.readDataFromDisk(cacheFilePath);
+            if (result && cacheEntry.dateOnDisk && cacheEntry.dateOnDisk < result.stats.mtime) {
+                cacheEntry.data = result.data;
+                cacheEntry.dateOnDisk = result.stats.mtime;
+                logger.info(`QueryCache: date on disk: ${cacheEntry.dateOnDisk} is newer for: "${key}", file modification date: ${result.stats.mtime}. cacheFilePath: ${cacheFilePath}`);
+            }
+        }
+
         // If the data in the cache entry is empty, try to load it from the disk
         if (!this.isFetchInProgress(cacheEntry) && Object.keys(cacheEntry.data).length === 0) {
-            if (fs.existsSync(cacheFilePath)) {
-                try {
-                    const data: any = JSON.parse(fs.readFileSync(cacheFilePath, 'utf-8'));
-                    logger.info(`QueryCache: Loaded data for key "${key}" from disk. cacheFilePath: ${cacheFilePath}`);
-                    cacheEntry.data = data;
-                    const stats = fs.statSync(cacheFilePath);
-                    cacheEntry.dateOnDisk = stats.mtime;
-                } catch (error: any) {
-                    logger.warn(`Failed to parse JSON data for: "${key}". cacheFilePath: ${cacheFilePath}, error: ${error?.message}`);
-                }
+            const result = this.readDataFromDisk(cacheFilePath);
+            if (result) {
+                logger.info(`QueryCache: Loaded data for key "${key}" from disk. cacheFilePath: ${cacheFilePath}`);
+                cacheEntry.data = result.data;
+                cacheEntry.dateOnDisk = result.stats.mtime;
             }
         }
     
@@ -91,6 +94,11 @@ class QueryCache {
     }
 
     updateData(key: string, newData: any): void {
+        if (typeof newData !== 'object' || Object.keys(newData).length === 0) {
+            logger.warn(`Invalid data for key: "${key}". Data should be a JSON object with at least one entry. newData: ${newData}`);
+            return;
+        }
+
         const cacheEntry = this.get(key);
         cacheEntry.data = newData;
         const cacheFilePath = path.join(this.cacheDir, encodeURIComponent(key));

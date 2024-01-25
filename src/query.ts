@@ -14,7 +14,6 @@ import { GetDb, logger } from './utils';
 import RequestCache from './queryCache';
 import { FastifyRequest, FastifyReply } from 'fastify';
 import fastifyCors from '@fastify/cors';
-import brotli from 'brotli';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 
 const requestCache: RequestCache = new RequestCache();
@@ -66,32 +65,6 @@ const FastifyLogger: FastifyBaseLogger = pino({
 const server: FastifyInstance = Fastify({ logger: FastifyLogger });
 
 server.register(fastifyCors, { origin: "*" });
-
-const isOnSendLogsEnabled = false;
-
-server.addHook('onSend', async (request, reply, payload) => {
-    try {
-        if (isOnSendLogsEnabled) logger.info('onSendHook: started');
-        if (request.headers['accept-encoding']?.includes('br')) {
-            if (isOnSendLogsEnabled) logger.info('onSendHook: Brotli encoding is accepted');
-            const compressedPayload = await brotli.compress(Buffer.from(payload as Buffer));
-            if (isOnSendLogsEnabled) logger.info('onSendHook: Compression completed');
-            if (compressedPayload) {
-                if (isOnSendLogsEnabled) logger.info('onSendHook: Compression was successful');
-                reply.header('Content-Encoding', 'br');
-                if (isOnSendLogsEnabled) logger.info('onSendHook:', compressedPayload);
-                return Buffer.from(compressedPayload, 'utf8');
-            } else {
-                if (isOnSendLogsEnabled) logger.info('onSendHook: Compression failed');
-            }
-            if (isOnSendLogsEnabled) logger.info('onSendHook: Returning original payload');
-        }
-    } catch (error) {
-        if (isOnSendLogsEnabled) logger.info('onSendHook: An error occurred:', error);
-        if (isOnSendLogsEnabled) logger.info('onSendHook: Returning original payload');
-    }
-    return payload;
-});
 
 function addErrorResponse(consumerOpts: RouteShorthandOptions): RouteShorthandOptions {
     const schema = consumerOpts.schema || {};

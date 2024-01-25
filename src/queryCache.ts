@@ -128,13 +128,13 @@ class RequestCache {
         // refetch data?
         if (Object.keys(this.cache.get(key).data).length === 0) {
             logger.info(`QueryCache: No cache entry for ${key}. Fetching data...`);
-            await this.tryFetchData(key, request, reply, handler);
+            this.tryFetchData(key, request, reply, handler);
         }
 
         // refetch data?
         if (Date.now() > this.cache.get(key).expiry) {
             logger.info(`QueryCache: Data for ${key} expiered . Fetching data...`);
-            await this.tryFetchData(key, request, reply, handler);
+            this.tryFetchData(key, request, reply, handler);
         }
 
         return this.cache.get(key).data;

@@ -130,7 +130,7 @@ class RequestCache {
         // refetch data?
         if (Object.keys(this.cache.get(key).data).length === 0) {
             logger.info(`QueryCache: No cache entry for ${key}. Fetching data...`);
-            if (QUERY_CACHE_POPULTAE_MODE) { 
+            if (QUERY_CACHE_POPULTAE_MODE || Object.keys(this.cache.get(key).data).length === 0) { 
                 await this.tryFetchData(key, request, reply, handler);
             } else {
                 this.tryFetchData(key, request, reply, handler);
@@ -138,9 +138,9 @@ class RequestCache {
         }
 
         // refetch data?
-        if (Date.now() > this.cache.get(key).expiry) {
+        else if (Date.now() > this.cache.get(key).expiry) {
             logger.info(`QueryCache: Data for ${key} expiered . Fetching data...`);
-            if (QUERY_CACHE_POPULTAE_MODE) { 
+            if (QUERY_CACHE_POPULTAE_MODE || Object.keys(this.cache.get(key).data).length === 0) { 
                 await this.tryFetchData(key, request, reply, handler);
             } else {
                 this.tryFetchData(key, request, reply, handler);

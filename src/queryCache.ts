@@ -96,8 +96,8 @@ class QueryCache {
     }
 
     isFetchInProgress(cacheEntry: CacheEntry): boolean {
-        // fetches can only be 30 seconds - after that try again
-        const thirtySecondsAgo = new Date(Date.now() - 30 * 1000);
+        // fetches can only be 3 minutes - after that try again
+        const thirtySecondsAgo = new Date(Date.now() - 60 * 1000);
         return cacheEntry.isFetching != null && cacheEntry.isFetching > thirtySecondsAgo;
     }
 

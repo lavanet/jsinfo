@@ -2,7 +2,7 @@
 
 import { FastifyRequest, FastifyReply } from 'fastify';
 import url from 'url';
-import { logger } from './utils';
+import { GetEnvVar, logger } from './utils';
 
 import fs from 'fs';
 import os from 'os';
@@ -15,6 +15,7 @@ interface CacheEntry {
 }
 
 var QUERY_CACHE_ENABLED: boolean = true;
+var QUERY_CACHE_POPULTAE_MODE = GetEnvVar("JSINFO_QUERY_CACHE_POPULTAE_MODE") === "true";
 class QueryCache {
     private cacheDir: string;
     private memoryCache: Record<string, CacheEntry>;
@@ -128,13 +129,21 @@ class RequestCache {
         // refetch data?
         if (Object.keys(this.cache.get(key).data).length === 0) {
             logger.info(`QueryCache: No cache entry for ${key}. Fetching data...`);
-            this.tryFetchData(key, request, reply, handler);
+            if (QUERY_CACHE_POPULTAE_MODE) { 
+                await this.tryFetchData(key, request, reply, handler);
+            } else {
+                this.tryFetchData(key, request, reply, handler);
+            }
         }
 
         // refetch data?
         if (Date.now() > this.cache.get(key).expiry) {
             logger.info(`QueryCache: Data for ${key} expiered . Fetching data...`);
-            this.tryFetchData(key, request, reply, handler);
+            if (QUERY_CACHE_POPULTAE_MODE) { 
+                await this.tryFetchData(key, request, reply, handler);
+            } else {
+                this.tryFetchData(key, request, reply, handler);
+            }
         }
 
         return this.cache.get(key).data;

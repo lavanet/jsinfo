@@ -1,16 +1,16 @@
-.PHONY: build_bun_docker connect_to_bun_docker run_docker_compose indexer query
+.PHONY: build_jsinfo_docker connect_to_jsinfo_docker run_docker_compose indexer query
 
-build_bun_docker:
-	docker build --progress=plain -t bun-docker .
+build_docker:
+	docker build --progress=plain -t jsinfo-docker .
 
-connect_to_bun_docker:
-	docker run --privileged -it bun-docker /bin/sh
+connect_to_docker:
+	docker run --privileged -it jsinfo-docker /bin/sh
 
 run_docker_compose:
 	docker-compose -f docker-compose.yml up
 
 run_indexer:
-	NODE_TLS_REJECT_UNAUTHORIZED=0 bun run src/indexer.ts
+	NODE_TLS_REJECT_UNAUTHORIZED=0 npx tsx src/indexer.ts
 
 run_query:
-	bun run src/query.ts
+	npx tsx src/query.ts

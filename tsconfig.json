@@ -1,31 +1,24 @@
 {
-  "extends": "@tsconfig/node16/tsconfig.json",
-  "compilerOptions": {   
-    "lib": ["ESNext"],
-    "module": "esnext",
-    "target": "esnext",
-    "moduleDetection": "force",
-    "allowImportingTsExtensions": false,
-    "noEmit": false,
-    "composite": true,
-    "strict": true,
-    "downlevelIteration": true,
-    "skipLibCheck": true,
-    "allowSyntheticDefaultImports": true,
-    "forceConsistentCasingInFileNames": true,
-    "allowJs": true,
-    "esModuleInterop": true,
-    "noImplicitAny": false,
-    "outDir": "dist",
-    "experimentalDecorators": true,
-    "emitDecoratorMetadata": true,
-    "sourceMap": true,
-    "types": ["bun-types"],
+  "extends": "@tsconfig/node20/tsconfig.json",
+  "compilerOptions": {
+      "lib": ["ES2023"],
+      "module": "esnext",
+      "target": "ES2022",
+      "esModuleInterop": true,
+      "allowSyntheticDefaultImports": true,
+      "noImplicitAny": true,
+      "moduleResolution": "node",
+      "sourceMap": true,
+      "outDir": "dist",
+      "baseUrl": ".",
+      "paths": {
+          "*": [
+              "node_modules/*",
+              "src/types/*"
+          ]
+      }
   },
   "include": [
-    "src"
-  ],
-  "exclude": [
-    "node_modules"
+      "src/**/*"
   ]
 }

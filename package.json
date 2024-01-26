@@ -13,7 +13,7 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "@tsconfig/node-lts": "^18.12.4",
+    "@tsconfig/node20": "^1.0.2",
     "@types/async-retry": "^1.4.8",
     "@types/node": "^20.10.4",
     "drizzle-kit": "^0.20.13",

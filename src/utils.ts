@@ -8,6 +8,10 @@ import { Tendermint37Client } from "@cosmjs/tendermint-rpc";
 import * as lavajs from '@lavanet/lavajs';
 import axios from 'axios';
 
+import dotenv from 'dotenv';
+dotenv.config({ path: '.env' });
+dotenv.config({ path: '.env.local' });
+
 export function GetEnvVar(key: string): string {
     const value = process.env[key];
     if (!value) {
@@ -16,7 +20,7 @@ export function GetEnvVar(key: string): string {
     return value;
 }
 
-const winston = require('winston');
+import winston from 'winston';
 
 export const logger = winston.createLogger({
     level: 'silly',
@@ -128,7 +132,7 @@ export async function ConnectToRpc(rpc: string): Promise<RpcConnection> {
     return { client, clientTm, chainId, height, lavajsClient };
 }
 
-export function Sleep(ms) {
+export function Sleep(ms: number) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 

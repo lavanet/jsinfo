@@ -3,7 +3,6 @@
 // TODOs:
 // 1. Errors
 // 2. Pagination
-require('dotenv').config();
 
 import Fastify, { FastifyBaseLogger, FastifyInstance, RouteShorthandOptions } from 'fastify'
 import pino from 'pino';
@@ -19,8 +18,13 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 const requestCache: RequestCache = new RequestCache();
 var db: PostgresJsDatabase;
 
-function formatDates(dataArray) {
-    return dataArray.map(item => {
+interface DataItem {
+    date: string;
+    [key: string]: any;
+}
+
+function formatDates(dataArray: DataItem[]): DataItem[] {
+    return dataArray.map((item: DataItem) => {
         const date = new Date(item.date);
         const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
         const formattedDate = `${monthNames[date.getMonth()]} ${date.getDate()}`;
@@ -161,7 +165,7 @@ const indexOpts: RouteShorthandOptions = {
 
 server.get('/index', addErrorResponse(indexOpts), requestCache.handleRequestWithCache(async (request: FastifyRequest, reply: FastifyReply) => {
     await checkDb()
-    
+
     //
     const { latestHeight, latestDatetime } = await getLatestBlock()
     // logger.info(`Latest block: ${latestHeight}, ${latestDatetime}`)
@@ -267,7 +271,7 @@ server.get('/index', addErrorResponse(indexOpts), requestCache.handleRequestWith
         }
     })
 
-    
+
     //
     // Get graph with 1 day resolution
     let res3 = await db.select({
@@ -311,8 +315,8 @@ server.get('/index', addErrorResponse(indexOpts), requestCache.handleRequestWith
         stakeSum: stakeSum,
         topProviders: providersDetails,
         allSpecs: res8,
-        qosData: formatDates(res6),
-        data: formatDates(res3),
+        qosData: formatDates(res6 as DataItem[]),
+        data: formatDates(res3 as DataItem[]),
     }
 }))
 
@@ -483,8 +487,8 @@ server.get('/provider/:addr', addErrorResponse(providerOpts), requestCache.handl
         stakes: res5,
         payments: res6,
         reports: res7,
-        qosData: formatDates(data2),
-        data: formatDates(data1),
+        qosData: formatDates(data2 as DataItem[]),
+        data: formatDates(data1 as DataItem[]),
     }
 }))
 
@@ -781,9 +785,9 @@ server.get('/spec/:specId', addErrorResponse(SpecOpts), requestCache.handleReque
         cuSum: cuSum,
         relaySum: relaySum,
         rewardSum: rewardSum,
-        qosData: formatDates(res6),
+        qosData: formatDates(res6 as DataItem[]),
         stakes: res5,
-        data: formatDates(res3),
+        data: formatDates(res3 as DataItem[]),
     }
 }))
 
@@ -852,7 +856,7 @@ export const queryserver = async (): Promise<void> => {
         throw new Error('JSINFO_QUERY_PORT environment variable is not set or is an empty string');
     }
     const port = parseInt(portString);
-    
+
     const host = process.env['JSINFO_QUERY_HOST']!;
     if (!host) {
         throw new Error('JSINFO_QUERY_HOST environment variable is not set or is an empty string');

@@ -1,26 +1,12 @@
 #!/bin/sh
 
-# jsinfo/scripts/run.sh
+# jsinfo/scripts/refreshQueryCache.sh
 
-REST_URL="${REST_URL:-http://0.0.0.0:8080}"
+scripts/refreshQueryCache.sh
 
 get() {
     url="$1"
-    retries=5
-    response=""
-    echo "revalidate_cache: calling get on $REST_URL$url" >&2
-    i=0
-    while [ $i -lt $retries ]; do
-        response=$(curl -s -m 120 "$REST_URL$url")
-        if echo "$response" | jq . > /dev/null 2>&1; then
-            if [ "$response" != "{}" ]; then
-                echo "$response"
-                return
-            fi
-        fi
-        i=$((i+1))
-        sleep 0.5
-    done
+    timeout 120 ./scripts/refreshQueryCacheGet.sh "$url"
 }
 
 revalidate_cache_for_specs() {
@@ -28,7 +14,7 @@ revalidate_cache_for_specs() {
     response=$(get "/specs")
     specs=$(echo "$response" | jq -r '.specs[] | .id')
     for spec in $specs; do
-        timeout 120 get "/spec/$spec" > /dev/null
+        get "/spec/$spec" > /dev/null
     done
 }
 
@@ -37,7 +23,7 @@ revalidate_cache_for_consumers() {
     response=$(get "/consumers")
     consumers=$(echo "$response" | jq -r '.consumers[] | .address')
     for consumer in $consumers; do
-        timeout 120 get "/consumer/$consumer" > /dev/null
+        get "/consumer/$consumer" > /dev/null
     done
 }
 
@@ -47,7 +33,7 @@ revalidate_cache_for_providers() {
     providers=$(echo "$response" | jq -r '.providers[] | .address')
     for provider in $providers; do
         if [ "$provider" != "null" ]; then
-            timeout 120 get "/provider/$provider" > /dev/null
+            get "/provider/$provider" > /dev/null
         fi
     done
 }

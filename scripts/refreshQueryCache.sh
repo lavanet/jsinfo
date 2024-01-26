@@ -54,13 +54,26 @@ revalidate_cache_for_providers() {
 
 revalidate_cache() {
     echo "revalidate_cache: Starting revalidation of cache..."
-    revalidate_cache_for_specs
-    revalidate_cache_for_consumers
-    revalidate_cache_for_providers
+
     echo "revalidate_cache: Browsing to /events"
     get "/events" > /dev/null
     echo "revalidate_cache: Browsing to /index"
     get "/index" > /dev/null
+
+    echo "revalidate_cache: Browsing to /events"
+    get "/events" > /dev/null
+    echo "revalidate_cache: Browsing to /index"
+    get "/index" > /dev/null
+
+    revalidate_cache_for_specs
+    revalidate_cache_for_consumers
+    revalidate_cache_for_providers
+
+    echo "revalidate_cache: Browsing to /events"
+    get "/events" > /dev/null
+    echo "revalidate_cache: Browsing to /index"
+    get "/index" > /dev/null
+    
     echo "revalidate_cache: Finished revalidation of cache."
 }
 

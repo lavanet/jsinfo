@@ -32,6 +32,7 @@ class QueryCache {
         }
         logger.info(`QueryCache:: QUERY_CACHE_ENABLED: ${QUERY_CACHE_ENABLED}`);
         logger.info(`QueryCache:: JSINFO_QUERY_DISKCACHE path: ${this.cacheDir}`);
+        logger.info(`QueryCache:: JSINFO_QUERY_CACHE_POPULTAE_MODE: ${QUERY_CACHE_POPULTAE_MODE}`);
     }
 
     getNewExpiry(): number {

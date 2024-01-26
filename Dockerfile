@@ -21,13 +21,10 @@ RUN bun run build --verbose
 
 # copy production dependencies and source code into final image
 FROM base AS release
-COPY --from=install --chown=bun:bun /temp/dev/node_modules node_modules
-COPY --from=prerelease --chown=bun:bun /usr/src/app/drizzle drizzle
-COPY --from=prerelease --chown=bun:bun /usr/src/app/dist .
+COPY --from=install /temp/dev/node_modules node_modules
+COPY --from=prerelease /usr/src/app/drizzle drizzle
+COPY --from=prerelease /usr/src/app/dist .
 
 # Add scripts
 RUN apk add --update curl jq
 COPY scripts scripts
-
-# switch to user
-USER bun

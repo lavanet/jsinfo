@@ -10,8 +10,8 @@ get() {
     response=""
     echo "revalidate_cache: calling get on $REST_URL$url" >&2
     i=0
-    while [ $i -lt $retries ]; do
-        response=$(curl -s "$REST_URL$url")
+    timeout 120 sh -c 'while [ $i -lt $retries ]; do
+        response=$(curl -s -m 120 "$REST_URL$url")
         if echo "$response" | jq . > /dev/null 2>&1; then
             if [ "$response" != "{}" ]; then
                 echo "$response"
@@ -20,7 +20,7 @@ get() {
         fi
         i=$((i+1))
         sleep 0.5
-    done
+    done'
 }
 
 revalidate_cache_for_specs() {

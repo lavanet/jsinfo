@@ -10,7 +10,7 @@ get() {
     response=""
     echo "revalidate_cache: calling get on $REST_URL$url" >&2
     i=0
-    timeout 120 sh -c 'while [ $i -lt $retries ]; do
+    while [ $i -lt $retries ]; do
         response=$(curl -s -m 120 "$REST_URL$url")
         if echo "$response" | jq . > /dev/null 2>&1; then
             if [ "$response" != "{}" ]; then
@@ -20,7 +20,7 @@ get() {
         fi
         i=$((i+1))
         sleep 0.5
-    done'
+    done
 }
 
 revalidate_cache_for_specs() {
@@ -28,7 +28,7 @@ revalidate_cache_for_specs() {
     response=$(get "/specs")
     specs=$(echo "$response" | jq -r '.specs[] | .id')
     for spec in $specs; do
-        get "/spec/$spec" > /dev/null
+        timeout 120 get "/spec/$spec" > /dev/null
     done
 }
 
@@ -37,7 +37,7 @@ revalidate_cache_for_consumers() {
     response=$(get "/consumers")
     consumers=$(echo "$response" | jq -r '.consumers[] | .address')
     for consumer in $consumers; do
-        get "/consumer/$consumer" > /dev/null
+        timeout 120 get "/consumer/$consumer" > /dev/null
     done
 }
 
@@ -47,7 +47,7 @@ revalidate_cache_for_providers() {
     providers=$(echo "$response" | jq -r '.providers[] | .address')
     for provider in $providers; do
         if [ "$provider" != "null" ]; then
-            get "/provider/$provider" > /dev/null
+            timeout 120 get "/provider/$provider" > /dev/null
         fi
     done
 }

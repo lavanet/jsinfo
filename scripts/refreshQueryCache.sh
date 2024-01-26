@@ -37,7 +37,7 @@ revalidate_cache_for_specs() {
     response=$(get "/specs")
     specs=$(echo "$response" | jq -r '.specs[] | .id')
     for spec in $specs; do
-        timeout 120 get "/spec/$spec" > /dev/null
+        get "/spec/$spec" > /dev/null
     done
 }
 
@@ -46,7 +46,7 @@ revalidate_cache_for_consumers() {
     response=$(get "/consumers")
     consumers=$(echo "$response" | jq -r '.consumers[] | .address')
     for consumer in $consumers; do
-        timeout 120 get "/consumer/$consumer" > /dev/null
+        get "/consumer/$consumer" > /dev/null
     done
 }
 
@@ -56,7 +56,7 @@ revalidate_cache_for_providers() {
     providers=$(echo "$response" | jq -r '.providers[] | .address')
     for provider in $providers; do
         if [ "$provider" != "null" ]; then
-            timeout 120 get "/provider/$provider" > /dev/null
+            get "/provider/$provider" > /dev/null
         fi
     done
 }

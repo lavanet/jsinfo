@@ -8,7 +8,7 @@ require('dotenv').config();
 import Fastify, { FastifyBaseLogger, FastifyInstance, RouteShorthandOptions } from 'fastify'
 import pino from 'pino';
 
-import { sql, desc, eq, gt, and, inArray } from "drizzle-orm";
+import { sql, desc, eq, gt, and, inArray, not } from "drizzle-orm";
 import * as schema from './schema';
 import { GetDb, logger } from './utils';
 import RequestCache from './queryCache';
@@ -214,37 +214,41 @@ server.get('/index', addErrorResponse(indexOpts), requestCache.handleRequestWith
     //
     // provider details
     let res44 = await db.select().from(schema.providers).where(inArray(schema.providers.address, providersAddrs))
-    let res444 = await db.select({
+    let providerStakesRes = await db.select({
         provider: schema.providerStakes.provider,
-        nStakes: sql<number>`count(${schema.providerStakes.specId})`,
-        totalStake: sql<number>`sum(${schema.providerStakes.stake})`
-    }).from(schema.providerStakes).groupBy(schema.providerStakes.provider)
+        totalActiveServices: sql<number>`sum(case when ${schema.providerStakes.status} = ${schema.LavaProviderStakeStatus.Active} then 1 else 0 end)`,
+        totalServices: sql<number>`count(${schema.providerStakes.specId})`,
+        totalStake: sql<number>`sum(${schema.providerStakes.stake})`,
+    }).from(schema.providerStakes)
+    .where(not(eq(schema.providerStakes.status, schema.LavaProviderStakeStatus.Frozen)))
+    .groupBy(schema.providerStakes.provider);
+
     type ProviderDetails = {
         addr: string,
         moniker: string,
         rewardSum: number,
-        nStakes: number,
+        totalServices: string,
         totalStake: number,
     };
     let providersDetails: ProviderDetails[] = []
     res4.forEach((provider) => {
         let moniker = ''
-        let nStakes = 0
+        let totalServices = '0'
         let totalStake = 0;
         let tmp1 = res44.find((el) => el.address == provider.address)
         if (tmp1) {
             moniker = tmp1.moniker!
         }
-        let tmp2 = res444.find((el) => el.provider == provider.address)
+        let tmp2 = providerStakesRes.find((el) => el.provider == provider.address)
         if (tmp2) {
-            nStakes = tmp2.nStakes
+            totalServices = `${tmp2.totalActiveServices} / ${tmp2.totalServices}`
             totalStake = tmp2.totalStake
         }
         providersDetails.push({
             addr: provider.address!,
             moniker: moniker,
             rewardSum: provider.rewardSum,
-            nStakes: nStakes,
+            totalServices: totalServices,
             totalStake: totalStake,
         })
     })
@@ -406,28 +410,28 @@ server.get('/provider/:addr', addErrorResponse(providerOpts), requestCache.handl
         relaySum = res2[0].relaySum
         rewardSum = res2[0].rewardSum
     }
-    const res6 = await db.select().from(schema.relayPayments).
+    const paymentsRes = await db.select().from(schema.relayPayments).
         leftJoin(schema.blocks, eq(schema.relayPayments.blockId, schema.blocks.height)).
         where(eq(schema.relayPayments.provider, addr)).
         orderBy(desc(schema.relayPayments.id)).offset(0).limit(50)
     //
-    const res3 = await db.select().from(schema.events).
+    const eventsRes = await db.select().from(schema.events).
         leftJoin(schema.blocks, eq(schema.events.blockId, schema.blocks.height)).
         where(eq(schema.events.provider, addr)).
         orderBy(desc(schema.events.id)).offset(0).limit(50)
 
     //
     // Get stakes
-    let res5 = await db.select().from(schema.providerStakes).
+    let stakesRes = await db.select().from(schema.providerStakes).
         where(eq(schema.providerStakes.provider, addr)).orderBy(desc(schema.providerStakes.stake))
     let stakeSum = 0
-    res5.forEach((stake) => {
+    stakesRes.forEach((stake) => {
         stakeSum += stake.stake!
     })
 
     //
     // Get reports
-    let res7 = await db.select().from(schema.providerReported).
+    let reportsRes = await db.select().from(schema.providerReported).
         leftJoin(schema.blocks, eq(schema.providerReported.blockId, schema.blocks.height)).
         where(eq(schema.providerReported.provider, addr)).
         orderBy(desc(schema.providerReported.blockId)).limit(50)
@@ -479,10 +483,10 @@ server.get('/provider/:addr', addErrorResponse(providerOpts), requestCache.handl
         relaySum: relaySum,
         rewardSum: rewardSum,
         stakeSum: stakeSum,
-        events: res3,
-        stakes: res5,
-        payments: res6,
-        reports: res7,
+        events: eventsRes,
+        stakes: stakesRes,
+        payments: paymentsRes,
+        reports: reportsRes,
         qosData: formatDates(data2),
         data: formatDates(data1),
     }

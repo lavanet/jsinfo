@@ -1,7 +1,6 @@
 // jsinfo/src/query.ts
 
 // TODOs:
-// 1. Errors
 // 2. Pagination
 require('dotenv').config();
 
@@ -106,6 +105,7 @@ const latestOpts: RouteShorthandOptions = {
 }
 
 
+
 server.get('/latest', latestOpts, async (request: FastifyRequest, reply: FastifyReply) => {
     await checkDb()
 
@@ -159,7 +159,14 @@ const indexOpts: RouteShorthandOptions = {
     }
 }
 
-server.get('/index', addErrorResponse(indexOpts), requestCache.handleRequestWithCache(async (request: FastifyRequest, reply: FastifyReply) => {
+function registerServerHeadAndGetCachedHandler(path: string, opts: RouteShorthandOptions, handler: (request: FastifyRequest, reply: FastifyReply) => Promise<any>) {
+    server.get("/last-updated" + path, async (request: FastifyRequest, reply: FastifyReply) => {  
+        await requestCache.handleGetDataLastUpdatedDate(request, reply)
+    });
+    server.get(path, addErrorResponse(opts), requestCache.handleRequestWithCache(handler));
+}
+
+registerServerHeadAndGetCachedHandler('/index', indexOpts, async (request: FastifyRequest, reply: FastifyReply) => {
     await checkDb()
     
     //
@@ -318,7 +325,7 @@ server.get('/index', addErrorResponse(indexOpts), requestCache.handleRequestWith
         qosData: formatDates(res6),
         data: formatDates(res3),
     }
-}))
+})
 
 const providerOpts: RouteShorthandOptions = {
     schema: {
@@ -374,7 +381,7 @@ const providerOpts: RouteShorthandOptions = {
     }
 }
 
-server.get('/provider/:addr', addErrorResponse(providerOpts), requestCache.handleRequestWithCache(async (request: FastifyRequest, reply: FastifyReply) => {
+registerServerHeadAndGetCachedHandler('/provider/:addr', providerOpts, async (request: FastifyRequest, reply: FastifyReply) => {
     await checkDb()
 
     const { addr } = request.params as { addr: string }
@@ -490,7 +497,7 @@ server.get('/provider/:addr', addErrorResponse(providerOpts), requestCache.handl
         qosData: formatDates(data2),
         data: formatDates(data1),
     }
-}))
+})
 
 const providersOpts: RouteShorthandOptions = {
     schema: {
@@ -507,14 +514,14 @@ const providersOpts: RouteShorthandOptions = {
     }
 }
 
-server.get('/providers', addErrorResponse(providersOpts), requestCache.handleRequestWithCache(async (request: FastifyRequest, reply: FastifyReply) => {
+registerServerHeadAndGetCachedHandler('/providers', providersOpts, async (request: FastifyRequest, reply: FastifyReply) => {
     await checkDb()
 
     const res = await db.select().from(schema.providers)
     return {
         providers: res,
     }
-}))
+})
 
 const specssOpts: RouteShorthandOptions = {
     schema: {
@@ -531,7 +538,7 @@ const specssOpts: RouteShorthandOptions = {
     }
 }
 
-server.get('/specs', addErrorResponse(specssOpts), requestCache.handleRequestWithCache(async (request: FastifyRequest, reply: FastifyReply) => {
+registerServerHeadAndGetCachedHandler('/specs', specssOpts, async (request: FastifyRequest, reply: FastifyReply) => {
     await checkDb()
 
     const res = await db.select().from(schema.specs)
@@ -539,7 +546,7 @@ server.get('/specs', addErrorResponse(specssOpts), requestCache.handleRequestWit
     return {
         specs: res,
     }
-}))
+})
 
 const consumersOpts: RouteShorthandOptions = {
     schema: {
@@ -556,7 +563,7 @@ const consumersOpts: RouteShorthandOptions = {
     }
 }
 
-server.get('/consumers', addErrorResponse(consumersOpts), requestCache.handleRequestWithCache(async (request: FastifyRequest, reply: FastifyReply) => {
+registerServerHeadAndGetCachedHandler('/consumers', consumersOpts, async (request: FastifyRequest, reply: FastifyReply) => {
     await checkDb()
 
     const res = await db.select().from(schema.consumers)
@@ -564,7 +571,7 @@ server.get('/consumers', addErrorResponse(consumersOpts), requestCache.handleReq
     return {
         consumers: res,
     }
-}))
+})
 
 
 const consumerOpts: RouteShorthandOptions = {
@@ -600,7 +607,7 @@ const consumerOpts: RouteShorthandOptions = {
     }
 }
 
-server.get('/consumer/:addr', addErrorResponse(consumerOpts), requestCache.handleRequestWithCache(async (request: FastifyRequest, reply: FastifyReply) => {
+registerServerHeadAndGetCachedHandler('/consumer/:addr', consumerOpts, async (request: FastifyRequest, reply: FastifyReply) => {
     await checkDb()
 
     const { addr } = request.params as { addr: string }
@@ -661,7 +668,7 @@ server.get('/consumer/:addr', addErrorResponse(consumerOpts), requestCache.handl
         subsBuy: res4,
         data: res5,
     }
-}))
+})
 
 const SpecOpts: RouteShorthandOptions = {
     schema: {
@@ -702,7 +709,7 @@ const SpecOpts: RouteShorthandOptions = {
     }
 }
 
-server.get('/spec/:specId', addErrorResponse(SpecOpts), requestCache.handleRequestWithCache(async (request: FastifyRequest, reply: FastifyReply) => {
+registerServerHeadAndGetCachedHandler('/spec/:specId', SpecOpts, async (request: FastifyRequest, reply: FastifyReply) => {
     await checkDb()
 
     const { specId } = request.params as { specId: string }
@@ -789,7 +796,7 @@ server.get('/spec/:specId', addErrorResponse(SpecOpts), requestCache.handleReque
         stakes: res5,
         data: formatDates(res3),
     }
-}))
+})
 
 const eventsOpts: RouteShorthandOptions = {
     schema: {
@@ -818,7 +825,7 @@ const eventsOpts: RouteShorthandOptions = {
     }
 }
 
-server.get('/events', addErrorResponse(eventsOpts), await requestCache.handleRequestWithCache(async (request: FastifyRequest, reply: FastifyReply) => {
+registerServerHeadAndGetCachedHandler('/events', eventsOpts, async (request: FastifyRequest, reply: FastifyReply) => {
 
     const { latestHeight, latestDatetime } = await getLatestBlock()
 
@@ -845,7 +852,7 @@ server.get('/events', addErrorResponse(eventsOpts), await requestCache.handleReq
         reports: res7,
     }
 
-}))
+})
 
 export const queryserver = async (): Promise<void> => {
     console.log('Starting queryserver - connecting to db')

@@ -1,14 +1,13 @@
 // jsinfo/src/query.ts
 
 // TODOs:
-// 1. Errors
 // 2. Pagination
 require('dotenv').config();
 
 import Fastify, { FastifyBaseLogger, FastifyInstance, RouteShorthandOptions } from 'fastify'
 import pino from 'pino';
 
-import { sql, desc, eq, gt, and, inArray } from "drizzle-orm";
+import { sql, desc, eq, gt, and, inArray, not } from "drizzle-orm";
 import * as schema from './schema';
 import { GetDb, logger } from './utils';
 import RequestCache from './queryCache';
@@ -106,6 +105,7 @@ const latestOpts: RouteShorthandOptions = {
 }
 
 
+
 server.get('/latest', latestOpts, async (request: FastifyRequest, reply: FastifyReply) => {
     await checkDb()
 
@@ -159,7 +159,14 @@ const indexOpts: RouteShorthandOptions = {
     }
 }
 
-server.get('/index', addErrorResponse(indexOpts), requestCache.handleRequestWithCache(async (request: FastifyRequest, reply: FastifyReply) => {
+function registerServerHeadAndGetCachedHandler(path: string, opts: RouteShorthandOptions, handler: (request: FastifyRequest, reply: FastifyReply) => Promise<any>) {
+    server.get("/last-updated" + path, async (request: FastifyRequest, reply: FastifyReply) => {  
+        await requestCache.handleGetDataLastUpdatedDate(request, reply)
+    });
+    server.get(path, addErrorResponse(opts), requestCache.handleRequestWithCache(handler));
+}
+
+registerServerHeadAndGetCachedHandler('/index', indexOpts, async (request: FastifyRequest, reply: FastifyReply) => {
     await checkDb()
     
     //
@@ -214,37 +221,41 @@ server.get('/index', addErrorResponse(indexOpts), requestCache.handleRequestWith
     //
     // provider details
     let res44 = await db.select().from(schema.providers).where(inArray(schema.providers.address, providersAddrs))
-    let res444 = await db.select({
+    let providerStakesRes = await db.select({
         provider: schema.providerStakes.provider,
-        nStakes: sql<number>`count(${schema.providerStakes.specId})`,
-        totalStake: sql<number>`sum(${schema.providerStakes.stake})`
-    }).from(schema.providerStakes).groupBy(schema.providerStakes.provider)
+        totalActiveServices: sql<number>`sum(case when ${schema.providerStakes.status} = ${schema.LavaProviderStakeStatus.Active} then 1 else 0 end)`,
+        totalServices: sql<number>`count(${schema.providerStakes.specId})`,
+        totalStake: sql<number>`sum(${schema.providerStakes.stake})`,
+    }).from(schema.providerStakes)
+    .where(not(eq(schema.providerStakes.status, schema.LavaProviderStakeStatus.Frozen)))
+    .groupBy(schema.providerStakes.provider);
+
     type ProviderDetails = {
         addr: string,
         moniker: string,
         rewardSum: number,
-        nStakes: number,
+        totalServices: string,
         totalStake: number,
     };
     let providersDetails: ProviderDetails[] = []
     res4.forEach((provider) => {
         let moniker = ''
-        let nStakes = 0
+        let totalServices = '0'
         let totalStake = 0;
         let tmp1 = res44.find((el) => el.address == provider.address)
         if (tmp1) {
             moniker = tmp1.moniker!
         }
-        let tmp2 = res444.find((el) => el.provider == provider.address)
+        let tmp2 = providerStakesRes.find((el) => el.provider == provider.address)
         if (tmp2) {
-            nStakes = tmp2.nStakes
+            totalServices = `${tmp2.totalActiveServices} / ${tmp2.totalServices}`
             totalStake = tmp2.totalStake
         }
         providersDetails.push({
             addr: provider.address!,
             moniker: moniker,
             rewardSum: provider.rewardSum,
-            nStakes: nStakes,
+            totalServices: totalServices,
             totalStake: totalStake,
         })
     })
@@ -314,7 +325,7 @@ server.get('/index', addErrorResponse(indexOpts), requestCache.handleRequestWith
         qosData: formatDates(res6),
         data: formatDates(res3),
     }
-}))
+})
 
 const providerOpts: RouteShorthandOptions = {
     schema: {
@@ -370,7 +381,7 @@ const providerOpts: RouteShorthandOptions = {
     }
 }
 
-server.get('/provider/:addr', addErrorResponse(providerOpts), requestCache.handleRequestWithCache(async (request: FastifyRequest, reply: FastifyReply) => {
+registerServerHeadAndGetCachedHandler('/provider/:addr', providerOpts, async (request: FastifyRequest, reply: FastifyReply) => {
     await checkDb()
 
     const { addr } = request.params as { addr: string }
@@ -406,28 +417,28 @@ server.get('/provider/:addr', addErrorResponse(providerOpts), requestCache.handl
         relaySum = res2[0].relaySum
         rewardSum = res2[0].rewardSum
     }
-    const res6 = await db.select().from(schema.relayPayments).
+    const paymentsRes = await db.select().from(schema.relayPayments).
         leftJoin(schema.blocks, eq(schema.relayPayments.blockId, schema.blocks.height)).
         where(eq(schema.relayPayments.provider, addr)).
         orderBy(desc(schema.relayPayments.id)).offset(0).limit(50)
     //
-    const res3 = await db.select().from(schema.events).
+    const eventsRes = await db.select().from(schema.events).
         leftJoin(schema.blocks, eq(schema.events.blockId, schema.blocks.height)).
         where(eq(schema.events.provider, addr)).
         orderBy(desc(schema.events.id)).offset(0).limit(50)
 
     //
     // Get stakes
-    let res5 = await db.select().from(schema.providerStakes).
+    let stakesRes = await db.select().from(schema.providerStakes).
         where(eq(schema.providerStakes.provider, addr)).orderBy(desc(schema.providerStakes.stake))
     let stakeSum = 0
-    res5.forEach((stake) => {
+    stakesRes.forEach((stake) => {
         stakeSum += stake.stake!
     })
 
     //
     // Get reports
-    let res7 = await db.select().from(schema.providerReported).
+    let reportsRes = await db.select().from(schema.providerReported).
         leftJoin(schema.blocks, eq(schema.providerReported.blockId, schema.blocks.height)).
         where(eq(schema.providerReported.provider, addr)).
         orderBy(desc(schema.providerReported.blockId)).limit(50)
@@ -479,14 +490,14 @@ server.get('/provider/:addr', addErrorResponse(providerOpts), requestCache.handl
         relaySum: relaySum,
         rewardSum: rewardSum,
         stakeSum: stakeSum,
-        events: res3,
-        stakes: res5,
-        payments: res6,
-        reports: res7,
+        events: eventsRes,
+        stakes: stakesRes,
+        payments: paymentsRes,
+        reports: reportsRes,
         qosData: formatDates(data2),
         data: formatDates(data1),
     }
-}))
+})
 
 const providersOpts: RouteShorthandOptions = {
     schema: {
@@ -503,14 +514,14 @@ const providersOpts: RouteShorthandOptions = {
     }
 }
 
-server.get('/providers', addErrorResponse(providersOpts), requestCache.handleRequestWithCache(async (request: FastifyRequest, reply: FastifyReply) => {
+registerServerHeadAndGetCachedHandler('/providers', providersOpts, async (request: FastifyRequest, reply: FastifyReply) => {
     await checkDb()
 
     const res = await db.select().from(schema.providers)
     return {
         providers: res,
     }
-}))
+})
 
 const specssOpts: RouteShorthandOptions = {
     schema: {
@@ -527,7 +538,7 @@ const specssOpts: RouteShorthandOptions = {
     }
 }
 
-server.get('/specs', addErrorResponse(specssOpts), requestCache.handleRequestWithCache(async (request: FastifyRequest, reply: FastifyReply) => {
+registerServerHeadAndGetCachedHandler('/specs', specssOpts, async (request: FastifyRequest, reply: FastifyReply) => {
     await checkDb()
 
     const res = await db.select().from(schema.specs)
@@ -535,7 +546,7 @@ server.get('/specs', addErrorResponse(specssOpts), requestCache.handleRequestWit
     return {
         specs: res,
     }
-}))
+})
 
 const consumersOpts: RouteShorthandOptions = {
     schema: {
@@ -552,7 +563,7 @@ const consumersOpts: RouteShorthandOptions = {
     }
 }
 
-server.get('/consumers', addErrorResponse(consumersOpts), requestCache.handleRequestWithCache(async (request: FastifyRequest, reply: FastifyReply) => {
+registerServerHeadAndGetCachedHandler('/consumers', consumersOpts, async (request: FastifyRequest, reply: FastifyReply) => {
     await checkDb()
 
     const res = await db.select().from(schema.consumers)
@@ -560,7 +571,7 @@ server.get('/consumers', addErrorResponse(consumersOpts), requestCache.handleReq
     return {
         consumers: res,
     }
-}))
+})
 
 
 const consumerOpts: RouteShorthandOptions = {
@@ -596,7 +607,7 @@ const consumerOpts: RouteShorthandOptions = {
     }
 }
 
-server.get('/consumer/:addr', addErrorResponse(consumerOpts), requestCache.handleRequestWithCache(async (request: FastifyRequest, reply: FastifyReply) => {
+registerServerHeadAndGetCachedHandler('/consumer/:addr', consumerOpts, async (request: FastifyRequest, reply: FastifyReply) => {
     await checkDb()
 
     const { addr } = request.params as { addr: string }
@@ -657,7 +668,7 @@ server.get('/consumer/:addr', addErrorResponse(consumerOpts), requestCache.handl
         subsBuy: res4,
         data: res5,
     }
-}))
+})
 
 const SpecOpts: RouteShorthandOptions = {
     schema: {
@@ -698,7 +709,7 @@ const SpecOpts: RouteShorthandOptions = {
     }
 }
 
-server.get('/spec/:specId', addErrorResponse(SpecOpts), requestCache.handleRequestWithCache(async (request: FastifyRequest, reply: FastifyReply) => {
+registerServerHeadAndGetCachedHandler('/spec/:specId', SpecOpts, async (request: FastifyRequest, reply: FastifyReply) => {
     await checkDb()
 
     const { specId } = request.params as { specId: string }
@@ -785,7 +796,7 @@ server.get('/spec/:specId', addErrorResponse(SpecOpts), requestCache.handleReque
         stakes: res5,
         data: formatDates(res3),
     }
-}))
+})
 
 const eventsOpts: RouteShorthandOptions = {
     schema: {
@@ -814,7 +825,7 @@ const eventsOpts: RouteShorthandOptions = {
     }
 }
 
-server.get('/events', addErrorResponse(eventsOpts), await requestCache.handleRequestWithCache(async (request: FastifyRequest, reply: FastifyReply) => {
+registerServerHeadAndGetCachedHandler('/events', eventsOpts, async (request: FastifyRequest, reply: FastifyReply) => {
 
     const { latestHeight, latestDatetime } = await getLatestBlock()
 
@@ -841,7 +852,7 @@ server.get('/events', addErrorResponse(eventsOpts), await requestCache.handleReq
         reports: res7,
     }
 
-}))
+})
 
 export const queryserver = async (): Promise<void> => {
     console.log('Starting queryserver - connecting to db')

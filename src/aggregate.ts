@@ -1,5 +1,5 @@
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { sql, eq, desc, and } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import * as schema from "./schema";
 import { DoInChunks, logger } from "./utils";
 
@@ -33,7 +33,7 @@ export async function getAggHourlyTimeSpan(db: PostgresJsDatabase): Promise<{ st
 }
 
 export async function updateAggHourlyPayments(db: PostgresJsDatabase) {
-    const { startTime, endTime } = await getAggHourlyTimeSpan(db)
+    let { startTime, endTime } = await getAggHourlyTimeSpan(db)
     logger.info(`updateAggHourlyPayments: startTime ${startTime}, endTime ${endTime}`);
     if (startTime === null || endTime === null) {
         logger.error("updateAggHourlyPayments: startTime === null || endTime === null")
@@ -79,10 +79,10 @@ export async function updateAggHourlyPayments(db: PostgresJsDatabase) {
     // Update first the latest aggregate hour rows inserting
     // Note: the latest aggregate hour rows are partial (until updated post their hour)
     const latestHourData = aggResults.filter(r =>
-        (new Date(r.datehour as string)).getTime() == startTime.getTime()
+        (new Date(r.datehour as string)).getTime() == startTime!.getTime()
     );
     const remainingData = aggResults.filter(r =>
-        (new Date(r.datehour as string)).getTime() > startTime.getTime()
+        (new Date(r.datehour as string)).getTime() > startTime!.getTime()
     );
     await db.transaction(async (tx) => {
         for (const row of latestHourData) {

@@ -1,4 +1,5 @@
-import { pgTable, index, text, integer, serial, bigint, real, uniqueIndex, primaryKey, timestamp, pgMaterializedView, doublePrecision } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm'
+import { pgTable, index, text, integer, serial, bigint, real, uniqueIndex, primaryKey, timestamp, doublePrecision, date, varchar } from 'drizzle-orm/pg-core';
 
 export const blocks = pgTable('blocks', {
   height: integer('height').unique(),
@@ -214,3 +215,19 @@ export const providerReported = pgTable('provider_reported', {
 });
 export type ProviderReported = typeof providerReported.$inferSelect
 export type InsertProviderReported = typeof providerReported.$inferInsert
+
+
+export const providerHealthHourly = pgTable('provider_health_hourly', {
+  id: serial('id').primaryKey(),
+  provider: text('provider').references(() => providers.address),
+  timestamp: timestamp('timestamp').notNull(),
+  spec: varchar("spec", { length: 255 }).notNull(),
+  interface: varchar("interface", { length: 255 }).default(sql`NULL`),
+  status: varchar("status", { length: 10 }).notNull(), // 'healthy', 'frozen', 'unhealthy'
+  message: varchar("message", { length: 255 }).default(sql`NULL`),
+  block: integer('block').default(sql`NULL`),
+  latency: integer('latency').default(sql`NULL`),
+});
+
+export type ProviderHealthHourly = typeof providerHealthHourly.$inferSelect;
+export type InsertProviderHealthHourly = typeof providerHealthHourly.$inferInsert;

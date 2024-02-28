@@ -13,4 +13,16 @@ run_indexer:
 	NODE_TLS_REJECT_UNAUTHORIZED=0 bun run src/indexer.ts
 
 run_query:
-	bun run src/query.ts
+	JSINFO_QUERY_IS_DEBUG_MODE=true bun run src/query.ts
+
+run_query_populate_mode:
+	JSINFO_QUERY_IS_DEBUG_MODE=true JSINFO_QUERY_CACHE_POPULTAE_MODE=true bun run src/query.ts
+
+run_query_no_cache_local_debug:
+	JSINFO_QUERY_IS_DEBUG_MODE=true JSINFO_QUERY_CACHE_ENABLED=false bun run src/query.ts
+
+run_lavapProviderHealth:
+	cd lavapProviderHealth && python run.py
+
+create_migrations:
+	bun run generate

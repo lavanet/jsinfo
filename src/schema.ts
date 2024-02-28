@@ -226,6 +226,7 @@ export const providerHealthHourly = pgTable('provider_health_hourly', {
   status: varchar("status", { length: 10 }).notNull(), // 'healthy', 'frozen', 'unhealthy'
   message: varchar("message", { length: 255 }).default(sql`NULL`),
   block: integer('block').default(sql`NULL`),
+  blocksaway: integer('blocksaway').default(sql`NULL`),
   latency: integer('latency').default(sql`NULL`),
 });
 

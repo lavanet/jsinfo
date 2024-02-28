@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS "provider_health_hourly" (
 	"status" varchar(10) NOT NULL,
 	"message" varchar(255) DEFAULT NULL,
 	"block" integer DEFAULT NULL,
+	"blocksaway" integer DEFAULT NULL,
 	"latency" integer DEFAULT NULL
 );
 --> statement-breakpoint

@@ -621,8 +621,8 @@
           "primaryKey": false,
           "notNull": true
         },
-        "chain": {
-          "name": "chain",
+        "spec": {
+          "name": "spec",
           "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true
@@ -649,6 +649,13 @@
         },
         "block": {
           "name": "block",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "NULL"
+        },
+        "blocksaway": {
+          "name": "blocksaway",
           "type": "integer",
           "primaryKey": false,
           "notNull": false,

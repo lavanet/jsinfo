@@ -3,12 +3,12 @@
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import * as schema from '../../schema';
 import { CheckDbInstance, GetDbInstance } from '../dbUtils';
-import { gt } from "drizzle-orm";
+import { lt } from "drizzle-orm";
 import { JSINFO_QUERY_PROVIDER_HEALTH_HOURLY_CUTOFF_DAYS } from '../consts';
 
 type ProviderData = {
     provider: string;
-    chain: string;
+    spec: string;
     interface: string | null;
     status: string;
     message: string | null;
@@ -23,23 +23,23 @@ function validateProvider(provider: string): string {
     return provider;
 }
 
-function validateChain(chain: string): string {
-    if (!/^[A-Z0-9]+$/.test(chain)) {
-        throw new Error(`Invalid chain: ${chain}`);
+function validateSpec(spec: string): string {
+    if (!/^[A-Z0-9]+$/.test(spec)) {
+        throw new Error(`Invalid spec: ${spec}`);
     }
-    return chain;
+    return spec;
 }
 
 function parseProviderKey(key: string): [string, string, string | null] {
     const parts = key.replace(/"/g, '').split('|').map(part => part.trim());
-    return [validateProvider(parts[0]), validateChain(parts[1]), parts[2] || null];
+    return [validateProvider(parts[0]), validateSpec(parts[1]), parts[2] || null];
 }
 
 function parseProvider(data: any, key: string, status: string): ProviderData {
-    const [provider, chain, interfaceName] = parseProviderKey(key);
+    const [provider, spec, interfaceName] = parseProviderKey(key);
     return {
         provider,
-        chain,
+        spec,
         interface: interfaceName,
         status,
         message: status === 'unhealthy' ? data[key] : null,
@@ -81,36 +81,66 @@ export const LavapProviderHealthHandlerOpts: RouteShorthandOptions = {
     }
 }
 
-
-
 export async function LavapProviderHealthHandler(request: FastifyRequest, reply: FastifyReply) {
     await CheckDbInstance();
 
     const cdate = new Date(); // current date
-    console.log(`Lavap Provider Health Timestamp: ${cdate}`);
+    console.log(`LavapProviderHealthHandler:: Lavap Provider Health Timestamp: ${cdate}`);
+
+    let latestBlocks = {};
+    let getBlocksAway = (spec: string, currentBlock: number | null): number | null => null;
+
+    const requestBody = request.body as any;
+
+    if (!requestBody.latestBlocks) {
+        console.error('Error: latestBlocks key does not exist in the request body');
+    } else {
+        latestBlocks = requestBody.latestBlocks;
+
+        getBlocksAway = (spec: string, currentBlock: number | null): number | null => {
+            if (currentBlock == null || currentBlock === 0) return null
+            const block = latestBlocks[spec];
+            if (block === undefined) {
+                console.error(`Error: Spec ${spec} does not exist in latestBlocks`);
+                return null;
+            }
+            return block - currentBlock;
+        };
+    }
 
     const providerData: ProviderData[] = parseData(request.body);
 
-    const insertData: schema.InsertProviderHealthHourly[] = providerData.map(data => ({
-        provider: data.provider,
-        timestamp: cdate,
-        spec: data.chain,
-        interface: data.interface,
-        status: data.status,
-        message: data.message,
-        block: data.block,
-        latency: data.latency,
-    }));
+    const insertData: schema.InsertProviderHealthHourly[] = providerData.map(data => {
+        let blocksaway: number | null = null
+        if (data.status === 'healthy') blocksaway = getBlocksAway(data.spec, data.block);
+        return {
+            provider: data.provider,
+            timestamp: cdate,
+            spec: data.spec,
+            interface: data.interface,
+            status: data.status,
+            message: data.message,
+            block: data.block,
+            blocksaway: blocksaway,
+            latency: data.latency,
+        };
+    });
 
     await GetDbInstance().transaction(async (tx) => {
         console.log(`Starting transaction. Inserting ${insertData.length} records.`);
 
-        // Delete entries older than 60 days
-        const cutoffDate = new Date();
-        cutoffDate.setDate(cutoffDate.getDate() - JSINFO_QUERY_PROVIDER_HEALTH_HOURLY_CUTOFF_DAYS);
-        await tx.delete(schema.providerHealthHourly).where(gt(schema.providerHealthHourly.timestamp, cutoffDate));
+        // Get the current hour
+        const currentHour = new Date().getHours();
 
+        // Check if the current hour is between 3 and 4 AM
+        if (currentHour === 3) {
+            // Delete entries older than JSINFO_QUERY_PROVIDER_HEALTH_HOURLY_CUTOFF_DAYS (60 days)
+            const cutoffDate = new Date();
+            cutoffDate.setDate(cutoffDate.getDate() - JSINFO_QUERY_PROVIDER_HEALTH_HOURLY_CUTOFF_DAYS);
+            await tx.delete(schema.providerHealthHourly).where(lt(schema.providerHealthHourly.timestamp, cutoffDate));
+        }
 
+        // insert in bulk
         const result = await tx.insert(schema.providerHealthHourly).values(insertData);
         console.log(`Transaction completed. Inserted: ${result} `);
     });

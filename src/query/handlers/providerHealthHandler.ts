@@ -51,7 +51,16 @@ export async function ProviderHealthHandler(request: FastifyRequest, reply: Fast
         let message = item.message || '';
 
         if (isNotNullAndNotZero(item.block) || isNotNullAndNotZero(item.latency)) {
-            message = `block: ${item.block}, latency: ${item.latency}`;
+            let latencyInMs = Math.round(item.latency / 1000);
+            let blockMessage = `block: ${item.block}`;
+
+            if (item.blocksaway !== null) {
+                blockMessage += item.blocksaway === 0
+                    ? ' (latest block)'
+                    : ` (${item.blocksaway} blocks away from latest)`;
+            }
+
+            message = `${blockMessage}, latency: ${latencyInMs} ms`;
         }
 
         const { provider, block, latency, interface: interfaceValue, ...rest } = item;

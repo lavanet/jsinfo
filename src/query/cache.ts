@@ -13,7 +13,7 @@ interface CacheEntry {
     data: any;
     expiry: number;
     dataDate: Date | null;
-    dateOnDisk?: Date;
+    dateOnDisk: Date | null;
 }
 
 class QueryCache {
@@ -29,6 +29,7 @@ class QueryCache {
         logger.info(`QueryCache:: JSINFO_QUERY_CACHE_POPULTAE_MODE: ${consts.JSINFO_QUERY_CACHE_POPULTAE_MODE}`);
     }
 
+    // 15-26 second cache expiry
     getNewExpiry(): number {
         return Date.now() + Math.floor(Math.random() * (11) + 15) * 1000;
     }
@@ -75,38 +76,61 @@ class QueryCache {
     }
 
     get(key: string): CacheEntry {
-        // First, try to get the cache entry from the in-memory cache
+        let cacheEntry = this.getOrCreateCacheEntryFromMemoryCache(key);
+
+        const cacheFilePath = this.getCacheFilePath(key);
+        if (!fs.existsSync(cacheFilePath)) return cacheEntry;
+
+        const result = this.readDataFromDisk(cacheFilePath);
+        if (!result) return cacheEntry;
+
+        if (this.shouldUseEntryFromDisk(cacheEntry, result)) {
+            this.updateCacheEntryInMemoryCache(cacheEntry, result, key, cacheFilePath);
+        }
+
+        return cacheEntry;
+    }
+
+    private shouldUseEntryFromDisk(cacheEntry: CacheEntry, result: any): boolean {
+        if (cacheEntry.dateOnDisk === null) {
+            return true;
+        }
+
+        if (cacheEntry.dateOnDisk < result.stats.mtime) {
+            return true;
+        }
+
+        if (Object.keys(cacheEntry.data).length === 0) {
+            return true;
+        }
+
+        return false;
+    }
+
+    private updateCacheEntryInMemoryCache(cacheEntry: CacheEntry, result: any, key: string, cacheFilePath: string): void {
+        cacheEntry.data = result.data;
+        cacheEntry.dateOnDisk = result.stats.mtime;
+        cacheEntry.dataDate = new Date();
+        logger.info(`QueryCache: date on disk: ${cacheEntry.dateOnDisk} is newer for: "${key}", file modification date: ${result.stats.mtime}. cacheFilePath: ${cacheFilePath}`);
+    }
+
+    private getOrCreateCacheEntryFromMemoryCache(key: string): CacheEntry {
         let cacheEntry = this.memoryCache[key];
 
-        // If the cache entry is not in the in-memory cache, create a new cache entry with empty data
         if (!cacheEntry) {
             cacheEntry = {
                 isFetching: null,
                 data: {},
                 expiry: this.getNewExpiry(),
                 dataDate: null,
+                dateOnDisk: null,
             };
-            this.memoryCache[key] = cacheEntry
+            this.memoryCache[key] = cacheEntry;
         }
 
         if (!cacheEntry.data) {
             cacheEntry.data = {};
         }
-
-        const cacheFilePath = this.getCacheFilePath(key);
-        if (!fs.existsSync(cacheFilePath)) return cacheEntry;
-        const result = this.readDataFromDisk(cacheFilePath);
-        if (!result) return cacheEntry;
-
-        // if data is newer on disk or cacheEntry.data is empty - use the data from disk
-        if (cacheEntry.dateOnDisk && cacheEntry.dateOnDisk >= result.stats.mtime && Object.keys(cacheEntry.data).length > 0) {
-            return cacheEntry;
-        }
-
-        cacheEntry.data = result.data;
-        cacheEntry.dateOnDisk = result.stats.mtime;
-        cacheEntry.dataDate = new Date();
-        logger.info(`QueryCache: date on disk: ${cacheEntry.dateOnDisk} is newer for: "${key}", file modification date: ${result.stats.mtime}. cacheFilePath: ${cacheFilePath}`);
 
         return cacheEntry;
     }
@@ -203,23 +227,35 @@ class RequestCache {
         }
     }
 
-    handleRequestWithCache(handler: (request: FastifyRequest, reply: FastifyReply) => Promise<any>): (request: FastifyRequest, reply: FastifyReply) => Promise<any> {
+    handleRequestWithCache(
+        handler: (request: FastifyRequest, reply: FastifyReply) => Promise<any>
+    ): (request: FastifyRequest, reply: FastifyReply) => Promise<any> {
         return async (request: FastifyRequest, reply: FastifyReply) => {
-            if (consts.JSINFO_QUERY_CACHE_ENABLED) {
+            const query = request.query as { [key: string]: unknown };
+            const shouldUseCache = consts.JSINFO_QUERY_CACHE_ENABLED && query.cache !== 'bypass';
+
+            if (query.cache) {
+                console.log(`Request received from ${request.ip} for ${request.url} with query parameters ${JSON.stringify(query)}`);
+            }
+
+            if (shouldUseCache) {
                 const data = await this.getOrFetchData(request, reply, handler);
-                if (typeof data !== 'object' || data === null) {
-                    return;
+                if (this.isValidData(data)) {
+                    return data;
                 }
-                return data;
             }
 
             const handlerData = await handler(request, reply);
-            if (typeof handlerData !== 'object' || handlerData === null) {
-                return;
+            if (this.isValidData(handlerData)) {
+                return handlerData;
             }
-            return handlerData;
         };
     }
+
+    private isValidData(data: any): boolean {
+        return typeof data === 'object' && data !== null;
+    }
+
 }
 
 export default RequestCache;

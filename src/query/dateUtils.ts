@@ -1,6 +1,7 @@
 // ./src/query/dateUtils.ts
 
 export function FormatDates(dataArray) {
+    if (!dataArray) return [];
     return dataArray.map(item => {
         const date = new Date(item.date);
         const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];

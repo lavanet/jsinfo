@@ -33,6 +33,5 @@ COPY --from=prerelease /usr/src/app/drizzle drizzle
 COPY --from=prerelease /usr/src/app/dist .
 
 # Add scripts
-RUN apk add --update curl jq
 COPY scripts scripts
 COPY lavapProviderHealth lavapProviderHealth

@@ -9,6 +9,15 @@ connect_to_bun_docker:
 run_docker_compose:
 	docker-compose -f docker-compose.yml up
 
+run_docker_compose_query_populate:
+	docker-compose up query_populate
+
+run_docker_compose_query:
+	docker-compose up query
+
+run_docker_compose_indexer:
+	docker-compose up indexer
+
 run_indexer:
 	NODE_TLS_REJECT_UNAUTHORIZED=0 bun run src/indexer.ts
 

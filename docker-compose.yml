@@ -3,16 +3,26 @@ services:
     image: bun-docker
     env_file:
       - dockercompose.env
-    entrypoint: bun src/indexer.js
+    entrypoint: ./scripts/startIndexerContainer.sh
+    volumes:
+      - ../static/cache:/static/cache
+
+  query_populate:
+    image: bun-docker
+    ports:
+      - "8081:8081"
+    env_file:
+      - dockercompose.env
+    entrypoint: ./scripts/startQueryPopulateContainer.sh
     volumes:
       - ../static/cache:/static/cache
 
   query:
     image: bun-docker
     ports:
-      - "8081:8081"
+      - "8080:8081"
     env_file:
       - dockercompose.env
-    entrypoint: bun src/query.js
+    entrypoint: ./scripts/startQueryContainer.sh
     volumes:
       - ../static/cache:/static/cache

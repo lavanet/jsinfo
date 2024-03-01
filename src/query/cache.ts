@@ -144,7 +144,7 @@ class QueryCache {
 
     updateData(key: string, newData: any): void {
         if (typeof newData !== 'object' || Object.keys(newData).length === 0) {
-            logger.warn(`Invalid data for key: "${key}". Data should be a JSON object with at least one entry. newData: ${newData}`);
+            logger.warn(`Invalid data for key: "${key}". Data should be a JSON object with at least one entry. newData: ${newData}, typeOfNewData: ${typeof newData}`);
             return;
         }
 

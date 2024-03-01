@@ -305,7 +305,10 @@ const fillUp = async (db: PostgresJsDatabase, rpcConnection: RpcConnection) => {
 }
 
 const indexerBackoffRetry = async () => {
-    return await BackoffRetry<void>("indexer", async () => { await indexer(); });
+    console.log('indexer:: indexerBackoffRetry started.');
+    const result = await BackoffRetry<void>("indexer", async () => { await indexer(); });
+    console.log('indexer:: indexerBackoffRetry ended.');
+    return result;
 }
 
 try {

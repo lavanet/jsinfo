@@ -108,8 +108,8 @@ export async function IndexHandler(request: FastifyRequest, reply: FastifyReply)
         totalServices: sql<number>`count(${schema.providerStakes.specId})`,
         totalStake: sql<number>`sum(${schema.providerStakes.stake})`,
     }).from(schema.providerStakes)
-    .where(not(eq(schema.providerStakes.status, schema.LavaProviderStakeStatus.Frozen)))
-    .groupBy(schema.providerStakes.provider);
+        .where(not(eq(schema.providerStakes.status, schema.LavaProviderStakeStatus.Frozen)))
+        .groupBy(schema.providerStakes.provider);
 
     type ProviderDetails = {
         addr: string,
@@ -145,7 +145,7 @@ export async function IndexHandler(request: FastifyRequest, reply: FastifyReply)
 
     //
     // Get top chains
-    let res8 = await GetDbInstance().select({
+    let topSpecs = await GetDbInstance().select({
         chainId: schema.aggHourlyrelayPayments.specId,
         relaySum: sql<number>`sum(${schema.aggHourlyrelayPayments.relaySum})`,
     }).from(schema.aggHourlyrelayPayments).
@@ -153,30 +153,36 @@ export async function IndexHandler(request: FastifyRequest, reply: FastifyReply)
         where(gt(sql<Date>`DATE(${schema.aggHourlyrelayPayments.datehour})`, sql<Date>`now() - interval '30 day'`)).
         orderBy(desc(sql<number>`sum(${schema.aggHourlyrelayPayments.relaySum})`))
     let getChains: string[] = []
-    res8.map((chain) => {
+    topSpecs.map((chain) => {
         if (getChains.length < 8) {
             getChains.push(chain.chainId!)
         }
     })
 
-    
+    if (getChains.length === 0 || topSpecs.length === 0) {
+        console.log('IndexHandler getChains:', getChains, 'topSpecs:', topSpecs);
+    }
+
     //
     // Get graph with 1 day resolution
-    let res3 = await GetDbInstance().select({
-        date: sql<string>`DATE_TRUNC('day', ${schema.aggHourlyrelayPayments.datehour}) as mydate`,
-        chainId: schema.aggHourlyrelayPayments.specId,
-        cuSum: sql<number>`sum(${schema.aggHourlyrelayPayments.cuSum})`,
-        relaySum: sql<number>`sum(${schema.aggHourlyrelayPayments.relaySum})`,
-        rewardSum: sql<number>`sum(${schema.aggHourlyrelayPayments.rewardSum})`,
-    }).from(schema.aggHourlyrelayPayments).
-        where(
-            and(
-                gt(sql<string>`DATE_TRUNC('day', ${schema.aggHourlyrelayPayments.datehour})`, sql<Date>`now() - interval '30 day'`),
-                inArray(schema.aggHourlyrelayPayments.specId, getChains)
-            )
-        ).
-        groupBy(sql`${schema.aggHourlyrelayPayments.specId}`, sql`mydate`).
-        orderBy(sql`mydate`)
+    let mainChartData = {}
+    if (getChains.length != 0) {
+        mainChartData = await GetDbInstance().select({
+            date: sql<string>`DATE_TRUNC('day', ${schema.aggHourlyrelayPayments.datehour}) as mydate`,
+            chainId: schema.aggHourlyrelayPayments.specId,
+            cuSum: sql<number>`sum(${schema.aggHourlyrelayPayments.cuSum})`,
+            relaySum: sql<number>`sum(${schema.aggHourlyrelayPayments.relaySum})`,
+            rewardSum: sql<number>`sum(${schema.aggHourlyrelayPayments.rewardSum})`,
+        }).from(schema.aggHourlyrelayPayments).
+            where(
+                and(
+                    gt(sql<string>`DATE_TRUNC('day', ${schema.aggHourlyrelayPayments.datehour})`, sql<Date>`now() - interval '30 day'`),
+                    inArray(schema.aggHourlyrelayPayments.specId, getChains)
+                )
+            ).
+            groupBy(sql`${schema.aggHourlyrelayPayments.specId}`, sql`mydate`).
+            orderBy(sql`mydate`)
+    }
 
     //
     // QoS graph
@@ -202,8 +208,8 @@ export async function IndexHandler(request: FastifyRequest, reply: FastifyReply)
         rewardSum: rewardSum,
         stakeSum: stakeSum,
         topProviders: providersDetails,
-        allSpecs: res8,
+        allSpecs: topSpecs,
         qosData: FormatDates(qosDataRaw),
-        data: FormatDates(res3),
+        data: FormatDates(mainChartData),
     }
 }

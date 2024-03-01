@@ -23,6 +23,7 @@ run_script() {
 # Start the scripts in the background
 run_script "env REST_URL=http://0.0.0.0:8081 sh scripts/refreshQueryCache.sh" &
 run_script "env JSINFO_QUERY_CACHE_POPULTAE_MODE=true JSINFO_QUERY_PORT=8081 bun run src/query.js" &
+run_script "cd lavapProviderHealth && python run.py" &
 
 # Wait for all child processes to finish
 wait

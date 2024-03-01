@@ -3,8 +3,7 @@
 import { StargateClient } from "@cosmjs/stargate"
 import { Tendermint37Client } from "@cosmjs/tendermint-rpc";
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { sql, eq, desc, and } from "drizzle-orm";
-import * as lavajs from '@lavanet/lavajs';
+import { eq, desc } from "drizzle-orm";
 import { PromisePool } from '@supercharge/promise-pool'
 import * as schema from "./schema";
 import { LavaBlock, GetOneLavaBlock } from './lavablock'

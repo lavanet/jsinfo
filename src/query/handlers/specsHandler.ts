@@ -1,0 +1,30 @@
+// src/query/handlers/specsHandler.ts
+
+import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
+import { CheckDbInstance, GetDbInstance } from '../dbUtils';
+import * as schema from '../../schema';
+
+export const SpecsHandlerOpts: RouteShorthandOptions = {
+    schema: {
+        response: {
+            200: {
+                type: 'object',
+                properties: {
+                    specs: {
+                        type: 'array',
+                    },
+                }
+            }
+        }
+    }
+}
+
+export async function SpecsHandler(request: FastifyRequest, reply: FastifyReply) {
+    await CheckDbInstance()
+
+    const res = await GetDbInstance().select().from(schema.specs)
+
+    return {
+        specs: res,
+    }
+}

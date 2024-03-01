@@ -1,6 +1,13 @@
 # use the official Bun image
 # see all versions at https://hub.docker.com/r/oven/bun/tags
 FROM oven/bun:1.0.25-alpine as base
+RUN mkdir /lava
+WORKDIR /lava
+RUN apk add --update python3 py3-pip git bash jq curl make gcc go linux-headers
+RUN git clone https://github.com/lavanet/lava.git . && git checkout a84396adf181a218d00f5f046852238313755f0e
+RUN chmod +x ./scripts/init_install.sh && bash ./scripts/init_install.sh
+RUN LAVA_BINARY=lavap make build
+ENV PATH="/lava/build:${PATH}"
 WORKDIR /usr/src/app
 
 # install dependencies into temp directory
@@ -28,3 +35,4 @@ COPY --from=prerelease /usr/src/app/dist .
 # Add scripts
 RUN apk add --update curl jq
 COPY scripts scripts
+COPY lavapProviderHealth lavapProviderHealth

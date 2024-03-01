@@ -8,9 +8,12 @@ import { Tendermint37Client } from "@cosmjs/tendermint-rpc";
 import * as lavajs from '@lavanet/lavajs';
 import axios from 'axios';
 
-export function GetEnvVar(key: string): string {
+export function GetEnvVar(key: string, alt?: string): string {
     const value = process.env[key];
     if (!value) {
+        if (alt !== undefined) {
+            return alt;
+        }
         throw new Error(`${key} environment variable is not set or is an empty string`);
     }
     return value;

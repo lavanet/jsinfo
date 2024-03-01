@@ -119,5 +119,11 @@ export async function ProviderHealthHandler(request: FastifyRequest, reply: Fast
         res = await query.limit(250);
     }
 
-    return modifyResponse(res);
+    const modifiedRes = modifyResponse(res);
+
+    if (!modifiedRes || modifiedRes.length === 0 || Object.keys(modifiedRes).length === 0) {
+        console.log(`ProviderHealthHandler:: No health info for provider ${addr} in database.`);
+    }
+
+    return modifiedRes;
 }

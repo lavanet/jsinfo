@@ -8,13 +8,13 @@ trap 'echo \"Warning: Script received SIGSEGV, ignoring\"' 11;
 trap 'echo \"Error: Script terminated by signal\"; exit' 2 15;
 ulimit -c unlimited;
 while true; do
-    echo 'Starting bun src/indexer.js at:' $(date);
-    bun run src/indexer.js;
+    echo 'Starting bun src/indexer.js in process_monitor at:' $(date);
+    python3 ./scripts/process_monitor.py 600 "bun run src/indexer.js"
     EXIT_CODE=$?;
-    echo 'bun run src/indexer.js exited with code:' $EXIT_CODE;
+    echo 'process_monitor.py bun run src/indexer.js exited with code:' $EXIT_CODE;
     if [ $EXIT_CODE -ne 0 ]; then
-        echo 'Error: bun run src/indexer.js failed';
+        echo 'Error: process_monitor.py bun run src/indexer.js returned a non 0 exit code, restarting...';
     fi;
-    echo 'Finished bun run src/indexer.js at:' $(date);
+    echo 'Finished process_monitor.py bun run src/indexer.js loop at:' $(date);
     sleep 1;
 done

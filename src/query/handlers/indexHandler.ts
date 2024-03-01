@@ -160,7 +160,7 @@ export async function IndexHandler(request: FastifyRequest, reply: FastifyReply)
     })
 
     if (getChains.length === 0 || topSpecs.length === 0) {
-        console.log('IndexHandler getChains:', getChains, 'topSpecs:', topSpecs);
+        console.log('IndexHandler empty data for topSpecs:: getChains:', getChains, 'topSpecs:', topSpecs);
     }
 
     //

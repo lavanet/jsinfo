@@ -134,7 +134,7 @@ export async function LavapProviderHealthHandler(request: FastifyRequest, reply:
 
         // Check if the current hour is between 3 and 4 AM
         if (currentHour === 3) {
-            // Delete entries older than JSINFO_QUERY_PROVIDER_HEALTH_HOURLY_CUTOFF_DAYS (60 days)
+            // Delete entries older than JSINFO_QUERY_PROVIDER_HEALTH_HOURLY_CUTOFF_DAYS (30 days)
             const cutoffDate = new Date();
             cutoffDate.setDate(cutoffDate.getDate() - JSINFO_QUERY_PROVIDER_HEALTH_HOURLY_CUTOFF_DAYS);
             await tx.delete(schema.providerHealthHourly).where(lt(schema.providerHealthHourly.timestamp, cutoffDate));
@@ -151,13 +151,13 @@ export async function LavapProviderHealthHandler(request: FastifyRequest, reply:
     const unhealthyProviders = insertData.filter(data => data.status === 'unhealthy');
 
     const uniqueHealthyProviders = [...new Set(healthyProviders.map(data => data.provider))];
-    console.log(`Healthy (count: ${uniqueHealthyProviders.length}): ${uniqueHealthyProviders.join(', ')}`);
+    console.log(`Healthy (count: ${uniqueHealthyProviders.length}): ${uniqueHealthyProviders.slice(0, 4).join(', ')}`);
 
     const uniqueFrozenProviders = [...new Set(frozenProviders.map(data => data.provider))];
-    console.log(`Frozen (count: ${uniqueFrozenProviders.length}): ${uniqueFrozenProviders.join(', ')}`);
+    console.log(`Frozen (count: ${uniqueFrozenProviders.length}): ${uniqueFrozenProviders.slice(0, 4).join(', ')}`);
 
     const uniqueUnhealthyProviders = [...new Set(unhealthyProviders.map(data => data.provider))];
-    console.log(`Unhealthy (count: ${uniqueUnhealthyProviders.length}): ${uniqueUnhealthyProviders.join(', ')}`);
+    console.log(`Unhealthy (count: ${uniqueUnhealthyProviders.length}): ${uniqueUnhealthyProviders.slice(0, 4).join(', ')}`);
 
     return { "status": "ok" }
 }

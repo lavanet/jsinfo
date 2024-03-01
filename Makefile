@@ -15,6 +15,9 @@ run_indexer:
 run_query:
 	JSINFO_QUERY_IS_DEBUG_MODE=true bun run src/query.ts
 
+run_query_nodemon:
+	npx nodemon --watch src --ext ts --exec "JSINFO_QUERY_IS_DEBUG_MODE=true bun run src/query.ts"
+
 run_query_populate_mode:
 	JSINFO_QUERY_IS_DEBUG_MODE=true JSINFO_QUERY_CACHE_POPULTAE_MODE=true bun run src/query.ts
 

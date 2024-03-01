@@ -7,6 +7,7 @@ import * as consts from './consts';
 
 import fs from 'fs';
 import path from 'path';
+import { validatePaginationString } from './queryUtils';
 
 interface CacheEntry {
     isFetching: Date | null;
@@ -161,7 +162,22 @@ class RequestCache {
     cache: QueryCache = new QueryCache()
 
     getCacheKey(request: FastifyRequest): string {
-        return url.parse(request.url).pathname || request.url;
+        const parsedUrl = url.parse(request.url, true);
+        let cacheKey = parsedUrl.pathname || request.url;
+
+        if (parsedUrl.query.pagination && typeof parsedUrl.query.pagination === 'string') {
+            if (validatePaginationString(parsedUrl.query.pagination)) {
+                cacheKey += '--' + parsedUrl.query.pagination;
+            } else {
+                console.log('Failed to parse pagination:', parsedUrl.query.pagination);
+            }
+        }
+
+        // Replace /, ?, :, and @ with _ and encode special characters
+        cacheKey = cacheKey.replace(/[\/\?:@]/g, '_');
+        cacheKey = encodeURIComponent(cacheKey);
+
+        return cacheKey;
     }
 
     async handleGetDataLastUpdatedDate(request: FastifyRequest, reply: FastifyReply) {
@@ -238,7 +254,16 @@ class RequestCache {
                 console.log(`Request received from ${request.ip} for ${request.url} with query parameters ${JSON.stringify(query)}`);
             }
 
+            if (query.pagination && typeof query.pagination === 'string') {
+                if (!validatePaginationString(query.pagination)) {
+                    console.log('Failed to parse pagination:', query.pagination);
+                    reply.code(400).send({ error: 'Bad pagination argument' });
+                    return;
+                }
+            }
+
             if (shouldUseCache) {
+                console.log(`RequestCache: Using cache for ${request.url}`);
                 const data = await this.getOrFetchData(request, reply, handler);
                 if (this.isValidData(data)) {
                     return data;
@@ -246,6 +271,8 @@ class RequestCache {
             }
 
             const handlerData = await handler(request, reply);
+            console.log("handlerData", JSON.stringify(handlerData).substring(0, 100));
+
             if (this.isValidData(handlerData)) {
                 return handlerData;
             }

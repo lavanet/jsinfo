@@ -4,7 +4,8 @@
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { CheckDbInstance, GetDbInstance } from '../dbUtils';
 import * as schema from '../../schema';
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, asc, sql } from "drizzle-orm";
+import { Pagination, parsePagination } from '../queryUtils';
 
 export const ProviderHealthHandlerOpts: RouteShorthandOptions = {
     schema: {
@@ -27,31 +28,42 @@ export const ProviderHealthHandlerOpts: RouteShorthandOptions = {
     }
 }
 
-export async function ProviderHealthHandler(request: FastifyRequest, reply: FastifyReply) {
-    await CheckDbInstance()
+const createQuery = (pagination: Pagination | null, addr: string) => {
+    const query = GetDbInstance().select().from(schema.providerHealthHourly)
+        .where(eq(schema.providerHealthHourly.provider, addr));
 
-    const { addr } = request.params as { addr: string }
-    if (addr.length != 44 || !addr.startsWith('lava@')) {
-        reply.code(400).send({ error: 'Bad provider address' });
-        return;
+    const validSortKeys = ["timestamp", "spec", "interface", "status", "message"];
+    let sortKey = pagination?.sortKey || "timestamp";
+    const direction = pagination?.direction || 'descending';
+
+    if (!validSortKeys.includes(sortKey)) {
+        sortKey = "timestamp";
+        console.error(`Invalid sortKey: ${sortKey}. SortKey must be one of ${validSortKeys.join(', ')}.`);
     }
 
-    const res = await GetDbInstance().select().from(schema.providerHealthHourly)
-        .where(eq(schema.providerHealthHourly.provider, addr)).orderBy(desc(schema.providerHealthHourly.timestamp))
-        .orderBy(desc(schema.providerHealthHourly.spec)).offset(0).limit(250)
+    query.orderBy(direction === 'ascending' ? asc(schema.providerHealthHourly[sortKey]) : desc(schema.providerHealthHourly[sortKey]));
 
-    if (res.length < 1) {
-        reply.code(400).send({ error: 'Health data for provider does not exist' });
-        return;
-    }
+    return query;
+}
 
+async function getItemCount(addr: string): Promise<number> {
+    const result = await GetDbInstance()
+        .select({ count: sql`cast(count(${schema.providerHealthHourly.id}) as integer)` })
+        .from(schema.providerHealthHourly)
+        .where(eq(schema.providerHealthHourly.provider, addr));
+
+    const count = Number(result[0].count);
+    return count;
+}
+
+const modifyResponse = (res: any[]) => {
     const isNotNullAndNotZero = (value: number | null) => value !== null && value !== 0;
 
-    const modifiedRes = res.map(item => {
+    return res.map(item => {
         let message = item.message || '';
 
         if (isNotNullAndNotZero(item.block) || isNotNullAndNotZero(item.latency)) {
-            let latencyInMs = Math.round(item.latency / 1000);
+            let latencyInMs = item.latency !== null ? Math.round(item.latency / 1000) : 0;
             let blockMessage = `block: ${item.block}`;
 
             if (item.blocksaway !== null) {
@@ -71,6 +83,41 @@ export async function ProviderHealthHandler(request: FastifyRequest, reply: Fast
             interface: interfaceValue === null ? "" : interfaceValue
         };
     });
+}
 
-    return modifiedRes;
+export async function ProviderHealthItemCountHandler(request: FastifyRequest, reply: FastifyReply) {
+    await CheckDbInstance()
+
+    const { addr } = request.params as { addr: string }
+    if (addr.length != 44 || !addr.startsWith('lava@')) {
+        reply.code(400).send({ error: 'Bad provider address' });
+        return;
+    }
+
+    const count = await getItemCount(addr);
+    return { itemCount: count };
+}
+
+export async function ProviderHealthHandler(request: FastifyRequest, reply: FastifyReply) {
+    await CheckDbInstance()
+
+    const { addr } = request.params as { addr: string }
+    if (addr.length != 44 || !addr.startsWith('lava@')) {
+        reply.code(400).send({ error: 'Bad provider address' });
+        return;
+    }
+
+    let pagination: Pagination | null = parsePagination(request)
+
+    let query = createQuery(pagination, addr);
+
+    let res = await query.offset(pagination ? (pagination.page - 1) * pagination.count : 0).limit(pagination ? pagination.count : 250);
+
+    if (res.length === 0 && pagination) {
+        pagination = null;
+        query = createQuery(pagination, addr);
+        res = await query.limit(250);
+    }
+
+    return modifyResponse(res);
 }

@@ -6,12 +6,12 @@ import fastifyCors from '@fastify/cors';
 import pino from 'pino';
 import RequestCache from './cache';
 
-import { JSINFO_QUERY_HIGH_POST_BODY_LIMIT } from './consts';
+import { JSINFO_QUERY_HIGH_POST_BODY_LIMIT, JSINFO_QUERY_FASITY_PRINT_LOGS } from './consts';
 
 const requestCache: RequestCache = new RequestCache();
 
 const FastifyLogger: FastifyBaseLogger = pino({
-    level: 'info',
+    level: 'warn',
     transport: {
         target: 'pino-pretty',
         options: {
@@ -21,7 +21,7 @@ const FastifyLogger: FastifyBaseLogger = pino({
 });
 
 const server: FastifyInstance = Fastify({
-    logger: FastifyLogger,
+    logger: JSINFO_QUERY_FASITY_PRINT_LOGS ? FastifyLogger : false,
     bodyLimit: JSINFO_QUERY_HIGH_POST_BODY_LIMIT ? 10 * 1024 * 1024 : undefined // 10 MB
 });
 
@@ -48,11 +48,62 @@ export function AddErrorResponseToFastifyServerOpts(consumerOpts: RouteShorthand
     };
 }
 
-export function RegisterServerHandlerWithCache(path: string, opts: RouteShorthandOptions, handler: (request: FastifyRequest, reply: FastifyReply) => Promise<any>) {
+export function AddItemCountResponseToFastifyServerOpts(consumerOpts: RouteShorthandOptions): RouteShorthandOptions {
+    const schema = consumerOpts.schema || {};
+    const response = schema.response || {};
+    const existing200Response = response[200] || {};
+
+    return {
+        ...consumerOpts,
+        schema: {
+            ...schema,
+            response: {
+                ...response,
+                200: {
+                    anyOf: [
+                        existing200Response,
+                        {
+                            type: 'object',
+                            properties: {
+                                itemCount: { type: 'number' },
+                            },
+                        },
+                    ],
+                },
+            },
+        },
+    };
+}
+
+const itemCountOpts: RouteShorthandOptions = {
+    schema: {
+        response: {
+            200: {
+                type: 'object',
+                properties: {
+                    itemCount: { type: 'number' },
+                },
+            },
+        },
+    },
+};
+
+export function RegisterServerHandlerWithCache(
+    path: string,
+    opts: RouteShorthandOptions,
+    handler: (request: FastifyRequest, reply: FastifyReply) => Promise<any>,
+    itemCountHandler?: (request: FastifyRequest, reply: FastifyReply) => Promise<any>
+) {
     server.get("/last-updated" + path, async (request: FastifyRequest, reply: FastifyReply) => {
         await requestCache.handleGetDataLastUpdatedDate(request, reply)
     });
-    server.get(path, AddErrorResponseToFastifyServerOpts(opts), requestCache.handleRequestWithCache(handler));
+
+    opts = AddErrorResponseToFastifyServerOpts(opts);
+    server.get(path, opts, requestCache.handleRequestWithCache(handler));
+
+    if (itemCountHandler) {
+        server.get("/item-count" + path, itemCountOpts, itemCountHandler);
+    }
 }
 
 export function GetServerInstance() {

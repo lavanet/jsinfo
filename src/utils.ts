@@ -110,7 +110,7 @@ export async function ConnectToRpc(rpc: string): Promise<RpcConnection> {
 
         rpc = 'http://localhost:9191';
     }
-    // ugly hack for staging - END
+    // ugly hack for staging - END 
 
     logger.info(`ConnectToRpc:: connecting to ${rpc}`);
     const client = await StargateClient.connect(rpc);

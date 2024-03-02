@@ -67,12 +67,12 @@ const modifyResponse = (res: any[]) => {
             let blockMessage = `block: ${item.block}`;
 
             if (item.blocksaway !== null) {
-                if (item.blocksaway > 100) {
+                if (item.blocksaway != 0) {
                     let latestBlock = item.block + item.blocksaway;
                     blockMessage += ` (latest block was ${latestBlock})`;
                 } else {
                     blockMessage += item.blocksaway === 0
-                        ? ' (latest block)'
+                        ? ' (was on latest block)'
                         : ` (${item.blocksaway} blocks away from latest)`;
                 }
             }

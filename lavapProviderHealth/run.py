@@ -7,13 +7,7 @@ import os
 import threading
 from datetime import datetime
 
-current_dir = os.path.dirname(os.path.realpath(__file__))
-health_file_path = os.path.join(current_dir, 'healthAllProviders.yml')
-
-if not os.path.exists(health_file_path):
-    raise FileNotFoundError(f"No such file: '{health_file_path}'")
-
-JSINFO_LAVAP_PROVIDER_HEALTH_COMMAND_TEMPLATE = f"lavap test health {health_file_path} --node {{}}"
+JSINFO_LAVAP_PROVIDER_HEALTH_COMMAND_TEMPLATE = f"lavap test health healthAllProviders.yml --node {{}}"
 
 JSINFO_LAVAP_PROVIDER_HEALTH_EXCLUDE_TERMS = ['health_all_providers', 'frozen_provider_alert']
 JSINFO_LAVAP_PROVIDER_HEALTH_COMPLETED_STRING = "completed health run" 

@@ -63,7 +63,7 @@ const modifyResponse = (res: any[]) => {
         let message = item.message || '';
 
         if (isNotNullAndNotZero(item.block) || isNotNullAndNotZero(item.latency)) {
-            let latencyInMs = item.latency !== null ? Math.round(item.latency / 1000) : 0;
+            let latencyInMs = item.latency !== null ? Math.round(item.latency / 1e6) : 0;
             let blockMessage = `block: ${item.block}`;
 
             if (item.blocksaway !== null) {

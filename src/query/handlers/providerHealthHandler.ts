@@ -67,9 +67,14 @@ const modifyResponse = (res: any[]) => {
             let blockMessage = `block: ${item.block}`;
 
             if (item.blocksaway !== null) {
-                blockMessage += item.blocksaway === 0
-                    ? ' (latest block)'
-                    : ` (${item.blocksaway} blocks away from latest)`;
+                if (item.blocksaway > 100) {
+                    let latestBlock = item.block + item.blocksaway;
+                    blockMessage += ` (latest block was ${latestBlock})`;
+                } else {
+                    blockMessage += item.blocksaway === 0
+                        ? ' (latest block)'
+                        : ` (${item.blocksaway} blocks away from latest)`;
+                }
             }
 
             message = `${blockMessage}, latency: ${latencyInMs} ms`;

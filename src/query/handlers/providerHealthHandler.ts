@@ -64,13 +64,13 @@ const modifyResponse = (res: any[]) => {
 
         if (isNotNullAndNotZero(item.block) || isNotNullAndNotZero(item.latency)) {
             let latencyInMs = item.latency !== null ? Math.round(item.latency / 1e6) : 0;
-            let blockMessage = `Block: ${item.block.toString(16)}`;
+            let blockMessage = `Block: 0x${item.block.toString(16)}`;
 
             // Block: <0x>/ Others: <0x>
 
             if (item.blocksaway !== null) {
                 let latestBlock = item.block + item.blocksaway;
-                blockMessage += ` / Others: ${latestBlock.toString(16)}`;
+                blockMessage += ` / Others: 0x${latestBlock.toString(16)}`;
             }
 
             message = `${blockMessage}, latency: ${latencyInMs} ms`;

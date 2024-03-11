@@ -15,7 +15,7 @@ trap 'echo "Error: Script terminated by signal"; exit' 2 15;
 # Run the first script in an endless loop
 while true; do
     echo "QueryPod $(date) :: Starting 'python3 lavapProviderHealth/run.py'..."
-    python3 lavapProviderHealth/run.py || true
+    python3 -u lavapProviderHealth/run.py 2>&1 || true
     echo "QueryPod $(date) :: 'python3 lavapProviderHealth/run.py' stopped, restarting..."
     sleep 1
 done &

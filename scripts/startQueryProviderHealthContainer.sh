@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# jsinfo/scripts/startQueryPopulateContainer.sh
+# jsinfo/scripts/startQueryProviderHealthContainer.sh
 
 echo "Starting query - populate container at $(date)"
 

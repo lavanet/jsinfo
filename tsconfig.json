@@ -1,7 +1,9 @@
 {
   "extends": "@tsconfig/node16/tsconfig.json",
-  "compilerOptions": {   
-    "lib": ["ESNext"],
+  "compilerOptions": {
+    "lib": [
+      "ESNext"
+    ],
     "module": "esnext",
     "target": "esnext",
     "moduleDetection": "force",
@@ -20,7 +22,10 @@
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "sourceMap": true,
-    "types": ["bun-types"],
+    "types": [
+      "bun-types",
+      "jest"
+    ],
   },
   "include": [
     "src"

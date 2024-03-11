@@ -17,11 +17,7 @@ if (!JSINFO_QUERY_PORT_STRING) {
     throw new Error('JSINFO_QUERY_PORT environment variable is not set or is an empty string');
 }
 export const JSINFO_QUERY_PORT = parseInt(JSINFO_QUERY_PORT_STRING);
-
-export const JSINFO_QUERY_HOST = process.env['JSINFO_QUERY_HOST']!;
-if (!JSINFO_QUERY_HOST) {
-    throw new Error('JSINFO_QUERY_HOST environment variable is not set or is an empty string');
-}
+export const JSINFO_QUERY_HOST = GetEnvVar('JSINFO_QUERY_HOST', '0.0.0.0');
 
 // the lavapProviderHealthHandler endpoint is sending alot of data
 export const JSINFO_QUERY_HIGH_POST_BODY_LIMIT = JSINFO_QUERY_CACHE_POPULTAE_MODE || JSINFO_QUERY_IS_DEBUG_MODE;

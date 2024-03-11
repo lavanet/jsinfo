@@ -56,3 +56,4 @@ bun.lockb
 package-lock.json
 
 stdout.txt
+yarn.lock

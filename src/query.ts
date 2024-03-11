@@ -17,7 +17,7 @@ import { SpecHandler, SpecHandlerOpts } from './query/handlers/specHandler';
 import { ConsumersHandler, ConsumersHandlerOpts } from './query/handlers/consumersHandler';
 import { ConsumerHandler, ConsumerHandlerOpts } from './query/handlers/consumerHandler';
 import { EventsHandler, EventsHandlerOpts } from './query/handlers/eventsHandler';
-import { ProviderHealthHandler, ProviderHealthHandlerOpts, ProviderHealthItemCountHandler } from './query/handlers/providerHealthHandler';
+import { ProviderHealthHandler, ProviderHealthHandlerOpts, ProviderHealthItemCountHandler, ProviderHealthCSVHandler } from './query/handlers/providerHealthHandler';
 
 import { LatestHandler, LatestHandlerOpts } from './query/handlers/latestHandler';
 import { LavapProviderHealthHandler, LavapProviderHealthHandlerOpts } from './query/handlers/lavapProviderHealthHandler';
@@ -31,6 +31,7 @@ RegisterServerHandlerWithCache('/consumer/:addr', ConsumerHandlerOpts, ConsumerH
 RegisterServerHandlerWithCache('/spec/:specId', SpecHandlerOpts, SpecHandler);
 RegisterServerHandlerWithCache('/events', EventsHandlerOpts, EventsHandler);
 RegisterServerHandlerWithCache('/providerHealth/:addr', ProviderHealthHandlerOpts, ProviderHealthHandler, ProviderHealthItemCountHandler);
+GetServerInstance().get('/providerHealthCsv/:addr', ProviderHealthCSVHandler);
 
 GetServerInstance().get('/latest', LatestHandlerOpts, LatestHandler);
 

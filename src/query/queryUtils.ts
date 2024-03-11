@@ -52,7 +52,7 @@ export function validatePaginationString(paginationString: string): boolean {
     return true;
 }
 
-export function parsePagination(request: FastifyRequest): Pagination | null {
+export function ParsePagination(request: FastifyRequest): Pagination | null {
     try {
         const parsedUrl = url.parse(request.url, true);
         const serializedPagination = parsedUrl.query.pagination;
@@ -74,3 +74,13 @@ export function parsePagination(request: FastifyRequest): Pagination | null {
         return null;
     }
 }
+
+export function SerializePagination(pagination: Pagination): string {
+    const { sortKey, direction, page, count } = pagination;
+    const directionShort = direction === 'ascending' ? 'a' : 'd';
+    const sortKeyString = sortKey === null ? '-' : sortKey;
+
+    return `${sortKeyString},${directionShort},${page},${count}`;
+}
+
+export const IsNotNullAndNotZero = (value: number | null) => value !== null && value !== 0;

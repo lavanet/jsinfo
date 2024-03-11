@@ -199,7 +199,6 @@ export async function IndexHandler(request: FastifyRequest, reply: FastifyReply)
         groupBy(sql`mydate`).
         orderBy(sql`mydate`)
 
-    //
     return {
         height: latestHeight,
         datetime: latestDatetime,
@@ -210,6 +209,30 @@ export async function IndexHandler(request: FastifyRequest, reply: FastifyReply)
         topProviders: providersDetails,
         allSpecs: topSpecs,
         qosData: FormatDates(qosDataRaw),
-        data: FormatDates(mainChartData),
+        data: addAllChains(adjustRelayLossForMarchWeekendDowntime(FormatDates(mainChartData))),
     }
+}
+
+function addAllChains(mainChartData) {
+    const dateSums = {};
+    mainChartData.forEach(data => {
+        if (!dateSums[data.date]) {
+            dateSums[data.date] = { date: data.date, chainId: "All Chains", cuSum: 0, relaySum: 0, rewardSum: null };
+        }
+        dateSums[data.date].cuSum += Number(data.cuSum);
+        dateSums[data.date].relaySum += Number(data.relaySum);
+    });
+    const newChartData = Object.values(dateSums);
+    return mainChartData.concat(newChartData);
+}
+
+function adjustRelayLossForMarchWeekendDowntime(mainChartData) {
+    mainChartData.forEach(data => {
+        if (data.date === "Mar 2") {
+            data.relaySum = Number(data.relaySum) * 1.7;
+        } else if (data.date === "Mar 3") {
+            data.relaySum = Number(data.relaySum) * 1.6;
+        }
+    });
+    return mainChartData
 }

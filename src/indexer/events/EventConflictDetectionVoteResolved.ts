@@ -1,29 +1,12 @@
 import { Event } from "@cosmjs/stargate"
 import { LavaBlock } from "../lavablock";
-import * as schema from '../schema';
-import { SetTx } from "../setlatest";
+import * as schema from '../../schema';
+import { GetOrSetProvider, SetTx } from "../setlatest";
 
 /*
-486510 {
-  type: 'lava_conflict_detection_vote_unresolved',
-  attributes: [
-      { key: 'FirstProviderVotes', value: '0' },
-      { key: 'NoneProviderVotes', value: '0' },
-      { key: 'NumOfNoVoters', value: '6' },
-      { key: 'NumOfVoters', value: '0' },
-      { key: 'RewardPool', value: '0' },
-      { key: 'SecondProviderVotes', value: '0' },
-      { key: 'TotalVotes', value: '12964000000000' },
-      { key: 'voteFailed', value: 'not_enough_voters' },
-      {
-      key: 'voteID',
-      value: 'lava@1mh9d3vdthekxvc0aflnvzhurv2585aakzs9e3alava@1f8kg6htavv67x4e54j6zvlg6pwzcsg52k3wu80lava@1uhwudw7vzqtnffu2hf5yhv4n8trj79ezl66z99486360'
-      }
-  ]
-}
 */
 
-export const ParseEventConflictDetectionVoteUnresolved = (
+export const ParseEventConflictDetectionVoteResolved = (
   evt: Event,
   height: number,
   txHash: string | null,
@@ -36,7 +19,7 @@ export const ParseEventConflictDetectionVoteUnresolved = (
   const evtEvent: schema.InsertEvent = {
     tx: txHash,
     blockId: height,
-    eventType: schema.LavaProviderEventType.DetectionVoteUnresolved,
+    eventType: schema.LavaProviderEventType.DetectionVoteResolved,
     consumer: null,
     provider: null,
   }
@@ -50,10 +33,10 @@ export const ParseEventConflictDetectionVoteUnresolved = (
       case 'voteID':
         evtEvent.t1 = attr.value
         break
-      case 'voteFailed':
-        evtEvent.t2 = attr.value
+      case 'winner':
+        evtEvent.provider = attr.value
         break
-        
+
       case 'NumOfNoVoters':
         evtEvent.i1 = parseInt(attr.value) // len https://github.com/lavanet/lava/blob/main/x/conflict/keeper/vote.go#L135
         break
@@ -81,5 +64,6 @@ export const ParseEventConflictDetectionVoteUnresolved = (
   })
 
   SetTx(lavaBlock.dbTxs, txHash, height)
+  GetOrSetProvider(lavaBlock.dbProviders, static_dbProviders, evtEvent.provider!, '')
   lavaBlock.dbEvents.push(evtEvent)
 }

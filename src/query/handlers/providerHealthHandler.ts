@@ -2,11 +2,11 @@
 // src/query/handlers/providerHealth.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { CheckDbInstance, GetDbInstance } from '../dbUtils';
+import { CheckReadDbInstance, GetReadDbInstance } from '../queryDb';
 import * as schema from '../../schema';
 import { eq, desc, asc } from "drizzle-orm";
 import { Pagination, ParsePagination, IsNotNullAndNotZero, SerializePagination } from '../queryUtils';
-import { JSINFO_QUERY_CACHEDIR, JSINFO_QUERY_CACHE_ENABLED } from '../consts';
+import { JSINFO_QUERY_CACHEDIR, JSINFO_QUERY_CACHE_ENABLED } from '../queryConsts';
 import fs from 'fs';
 import path from 'path';
 export interface HealthReport {
@@ -141,7 +141,7 @@ class ProviderHealthData {
 }
 
 const createHealthReportQuery = (addr: string) => {
-    return GetDbInstance().select().from(schema.providerHealthHourly)
+    return GetReadDbInstance().select().from(schema.providerHealthHourly)
         .where(eq(schema.providerHealthHourly.provider, addr))
         .orderBy(desc(schema.providerHealthHourly.timestamp));
 }
@@ -249,7 +249,7 @@ export const ApplyHealthResponseGroupingAndTextFormatting = (res: HealthReport[]
 }
 
 export async function ProviderHealthItemCountHandler(request: FastifyRequest, reply: FastifyReply) {
-    await CheckDbInstance()
+    await CheckReadDbInstance()
 
     const { addr } = request.params as { addr: string }
     if (addr.length != 44 || !addr.startsWith('lava@')) {
@@ -264,7 +264,7 @@ export async function ProviderHealthItemCountHandler(request: FastifyRequest, re
 }
 
 export async function ProviderHealthHandler(request: FastifyRequest, reply: FastifyReply) {
-    await CheckDbInstance()
+    await CheckReadDbInstance()
 
     const { addr } = request.params as { addr: string }
     if (addr.length != 44 || !addr.startsWith('lava@')) {
@@ -284,7 +284,7 @@ export async function ProviderHealthHandler(request: FastifyRequest, reply: Fast
 }
 
 export async function ProviderHealthCSVHandler(request: FastifyRequest, reply: FastifyReply) {
-    await CheckDbInstance()
+    await CheckReadDbInstance()
 
     const { addr } = request.params as { addr: string }
     if (addr.length != 44 || !addr.startsWith('lava@')) {

@@ -5,9 +5,9 @@
 require('dotenv').config();
 
 import { logger } from './utils';
-import { InitDbInstance, GetLatestBlock } from './query/dbUtils';
-import { RegisterServerHandlerWithCache, GetServerInstance } from './query/server';
-import * as consts from './query/consts';
+import { InitDbInstance, GetLatestBlock, InitReadDbInstance } from './query/queryDb';
+import { RegisterServerHandlerWithCache, GetServerInstance } from './query/queryServer';
+import * as consts from './query/queryConsts';
 
 import { IndexHandler, IndexHandlerOpts } from './query/handlers/indexHandler';
 import { ProvidersHandler, ProvidersHandlerOpts } from './query/handlers/providersHandler';
@@ -43,6 +43,7 @@ export const queryServerMain = async (): Promise<void> => {
     logger.info('Starting query server')
 
     await InitDbInstance()
+    await InitReadDbInstance()
 
     try {
         try {

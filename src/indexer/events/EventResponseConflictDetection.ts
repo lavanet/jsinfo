@@ -1,6 +1,6 @@
 import { Event } from "@cosmjs/stargate"
 import { LavaBlock } from "../lavablock";
-import * as schema from '../schema';
+import * as schema from '../../schema';
 import { GetOrSetConsumer, SetTx, GetOrSetSpec } from "../setlatest";
 
 /*

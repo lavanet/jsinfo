@@ -1,7 +1,7 @@
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { sql } from "drizzle-orm";
-import * as schema from "./schema";
-import { DoInChunks, logger } from "./utils";
+import * as schema from "../schema";
+import { DoInChunks, logger } from "../utils";
 
 export async function getAggHourlyTimeSpan(db: PostgresJsDatabase): Promise<{ startTime: Date | null, endTime: Date | null }> {
     // Last relay payment time

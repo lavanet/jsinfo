@@ -21,8 +21,8 @@ import { ParseEventConflictVoteGotReveal } from "./events/EventConflictVoteGotRe
 import { ParseEventConflictVoteRevealStarted } from "./events/EventConflictVoteRevealStarted";
 import { ParseEventConflictDetectionVoteResolved } from "./events/EventConflictDetectionVoteResolved";
 import { ParseEventConflictDetectionVoteUnresolved } from "./events/EventConflictDetectionVoteUnresolved";
-import * as schema from './schema';
-import { GetEnvVar } from "./utils";
+import * as schema from '../schema';
+import { GetEnvVar } from "../utils";
 
 const JSINFO_IS_SAVE_CACHE = parseInt(GetEnvVar('JSINFO_INDEXER_SAVE_CACHE'));
 const JSINFO_IS_READ_CACHE = parseInt(GetEnvVar('JSINFO_INDEXER_READ_CACHE'));

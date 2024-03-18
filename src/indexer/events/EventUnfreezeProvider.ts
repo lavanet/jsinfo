@@ -1,22 +1,25 @@
 import { Event } from "@cosmjs/stargate"
 import { LavaBlock } from "../lavablock";
-import * as schema from '../schema';
-import { SetTx } from "../setlatest";
+import * as schema from '../../schema';
+import { GetOrSetProvider, SetTx } from "../setlatest";
 
 /*
-486510 {
-  type: 'lava_conflict_vote_reveal_started',
+459042 {
+  type: 'lava_unfreeze_provider',
   attributes: [
-      { key: 'voteDeadline', value: '486570' },
-      {
-      key: 'voteID',
-      value: 'lava@1mh9d3vdthekxvc0aflnvzhurv2585aakzs9e3alava@1f8kg6htavv67x4e54j6zvlg6pwzcsg52k3wu80lava@1q7jyftyahuf66jefc36254rldk6je9xkf5t79z486390'
-      }
+    {
+      key: 'providerAddress',
+      value: 'lava@13mmqeu332calsmzwzcvhjedx4mdmywurydmrd4'
+    },
+    {
+      key: 'chainIDs',
+      value: 'EVMOS,EVMOST,CANTO,JUN1,AXELAR,AXELART'
+    }
   ]
 }
 */
 
-export const ParseEventConflictVoteRevealStarted = (
+export const ParseEventUnfreezeProvider = (
   evt: Event,
   height: number,
   txHash: string | null,
@@ -29,9 +32,8 @@ export const ParseEventConflictVoteRevealStarted = (
   const evtEvent: schema.InsertEvent = {
     tx: txHash,
     blockId: height,
-    eventType: schema.LavaProviderEventType.VoteRevealStarted,
+    eventType: schema.LavaProviderEventType.UnfreezeProvider,
     consumer: null,
-    provider: null,
   }
 
   evt.attributes.forEach((attr) => {
@@ -40,15 +42,16 @@ export const ParseEventConflictVoteRevealStarted = (
       key = attr.key.substring(0, attr.key.lastIndexOf('.'))
     }
     switch (key) {
-      case 'voteDeadline':
-        evtEvent.i1 = parseInt(attr.value)
+      case 'providerAddress':
+        evtEvent.provider = attr.value;
         break
-      case 'voteID':
+      case 'chainIDs':
         evtEvent.t1 = attr.value;
         break
     }
   })
 
   SetTx(lavaBlock.dbTxs, txHash, height)
+  GetOrSetProvider(lavaBlock.dbProviders, static_dbProviders, evtEvent.provider!, '')
   lavaBlock.dbEvents.push(evtEvent)
 }

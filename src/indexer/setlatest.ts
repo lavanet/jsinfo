@@ -1,10 +1,10 @@
 import * as lavajs from '@lavanet/lavajs';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import * as schema from './schema';
+import * as schema from '../schema';
 import { ne } from "drizzle-orm";
-import { DoInChunks } from "./utils";
+import { DoInChunks } from "../utils";
 import { StakeEntry } from '@lavanet/lavajs/dist/codegen/lavanet/lava/epochstorage/stake_entry';
-
+import { JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE } from './indexerConsts';
 export type LavaClient = Awaited<ReturnType<typeof lavajs.lavanet.ClientFactory.createRPCQueryClient>>
 
 export function GetOrSetProvider(
@@ -235,7 +235,7 @@ export async function UpdateLatestBlockMeta(
         //
         // Insert all specs
         const arrSpecs = Array.from(static_dbSpecs.values())
-        await DoInChunks(100, arrSpecs, async (arr: any) => {
+        await DoInChunks(JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, arrSpecs, async (arr: any) => {
             await tx.insert(schema.specs)
                 .values(arr)
                 .onConflictDoNothing();
@@ -243,7 +243,7 @@ export async function UpdateLatestBlockMeta(
 
         // Find / create all providers
         const arrProviders = Array.from(static_dbProviders.values())
-        await DoInChunks(100, arrProviders, async (arr: any) => {
+        await DoInChunks(JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, arrProviders, async (arr: any) => {
             return arr.map(async (provider: any) => {
                 return await tx.insert(schema.providers)
                     .values(provider)

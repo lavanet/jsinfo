@@ -1,25 +1,26 @@
 import { Event } from "@cosmjs/stargate"
 import { LavaBlock } from "../lavablock";
-import * as schema from '../schema';
+import * as schema from '../../schema';
 import { GetOrSetProvider, SetTx } from "../setlatest";
 
 /*
-462618 {
-  type: 'lava_provider_unstake_commit',
+//block 340898
+lava_stake_update_provider {
+  type: 'lava_stake_update_provider',
   attributes: [
-    { key: 'stake', value: '50000000000' },
+    { key: 'stakeAppliedBlock', value: '340899' },
+    { key: 'stake', value: '50000000000ulava' },
+    { key: 'moniker', value: 'MELLIFERA' },
+    { key: 'spec', value: 'LAV1' },
     {
-      key: 'address',
-      value: 'lava@1m5p9cc4lp6jxdsk3pdf56tek2muzu3sm4rhp5f'
-    },
-    { key: 'chainID', value: 'COS5' },
-    { key: 'geolocation', value: '2' },
-    { key: 'moniker', value: 'Iryna' }
+      key: 'provider',
+      value: 'lava@1rgs6cp3vleue3vwffrvttjtl4laqhk8fthu466'
+    }
   ]
 }
 */
 
-export const ParseEventProviderUnstakeCommit = (
+export const ParseEventStakeUpdateProvider = (
     evt: Event,
     height: number,
     txHash: string | null,
@@ -32,9 +33,9 @@ export const ParseEventProviderUnstakeCommit = (
     const evtEvent: schema.InsertEvent = {
         tx: txHash,
         blockId: height,
-        eventType: schema.LavaProviderEventType.ProviderUnstakeCommit,
+        eventType: schema.LavaProviderEventType.StakeUpdateProvider,
         consumer: null,
-    }   
+    }
 
     evt.attributes.forEach((attr) => {
         let key: string = attr.key;
@@ -42,23 +43,22 @@ export const ParseEventProviderUnstakeCommit = (
             key = attr.key.substring(0, attr.key.lastIndexOf('.'))
         }
         switch (key) {
-            case 'geolocation':
+            case 'stakeAppliedBlock':
                 evtEvent.i1 = parseInt(attr.value)
-                break
-            case 'moniker':
-                evtEvent.t1 = attr.value;
                 break
             case 'stake':
                 evtEvent.b1 = parseInt(attr.value)
                 break
-            case 'address':
-                evtEvent.provider = attr.value;
+            case 'moniker':
+                evtEvent.t1 = attr.value;
                 break
-            case 'chainID':
+            case 'spec':
                 evtEvent.t2 = attr.value;
                 break
-            case 'effectiveImmediately':
-         }
+            case 'provider':
+                evtEvent.provider = attr.value;
+                break
+        }
     })
 
     SetTx(lavaBlock.dbTxs, txHash, height)

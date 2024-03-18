@@ -1,24 +1,28 @@
 import { Event } from "@cosmjs/stargate"
 import { LavaBlock } from "../lavablock";
-import * as schema from '../schema';
+import * as schema from '../../schema';
 import { GetOrSetProvider, SetTx } from "../setlatest";
 
 /*
-462524 {
-  type: 'lava_freeze_provider',
+//block 340870
+lava_stake_new_provider {
+  type: 'lava_stake_new_provider',
   attributes: [
-    { key: 'freezeReason', value: 'maintenance' },
+    { key: 'spec', value: 'AVAX' },
     {
-      key: 'providerAddress',
-      value: 'lava@1m5p9cc4lp6jxdsk3pdf56tek2muzu3sm4rhp5f'
+      key: 'provider',
+      value: 'lava@16slsjlavjlm8ganzrqtqhm8tnzj7w3xqycnhv9'
     },
-    { key: 'chainIDs', value: 'COS5' },
-    { key: 'freezeRequestBlock', value: '462524' }
+    { key: 'stakeAppliedBlock', value: '340871' },
+    { key: 'stake', value: '50000000000ulava' },
+    { key: 'geolocation', value: '2' },
+    { key: 'effectiveImmediately', value: 'false' },
+    { key: 'moniker', value: 'mahof' }
   ]
 }
 */
 
-export const ParseEventFreezeProvider = (
+export const ParseEventStakeNewProvider = (
     evt: Event,
     height: number,
     txHash: string | null,
@@ -30,8 +34,8 @@ export const ParseEventFreezeProvider = (
 ) => {
     const evtEvent: schema.InsertEvent = {
         tx: txHash,
-        blockId: height,  
-        eventType: schema.LavaProviderEventType.FreezeProvider,
+        blockId: height,
+        eventType: schema.LavaProviderEventType.StakeNewProvider,
         consumer: null,
     }
 
@@ -41,22 +45,32 @@ export const ParseEventFreezeProvider = (
             key = attr.key.substring(0, attr.key.lastIndexOf('.'))
         }
         switch (key) {
-            case 'providerAddress':
-                evtEvent.provider = attr.value;
-                break
-            case 'freezeReason':
+            case 'spec':
                 evtEvent.t1 = attr.value;
                 break
-            case 'chainIDs':
-                evtEvent.t2 = attr.value;
+            case 'provider':
+                evtEvent.provider = attr.value;
                 break
-            case 'freezeRequestBlock':
+            case 'stakeAppliedBlock':
                 evtEvent.i1 = parseInt(attr.value)
                 break
-         }
+            case 'stake':
+                evtEvent.b1 = parseInt(attr.value)
+                break
+            case 'geolocation':
+                evtEvent.i1 = parseInt(attr.value)
+                break
+            case 'effectiveImmediately':
+                evtEvent.i2 = attr.value == 'false' ? 0 : 1;
+                break
+            case 'moniker':
+                evtEvent.t2 = attr.value;
+                break
+        }
     })
 
     SetTx(lavaBlock.dbTxs, txHash, height)
     GetOrSetProvider(lavaBlock.dbProviders, static_dbProviders, evtEvent.provider!, '')
     lavaBlock.dbEvents.push(evtEvent)
+
 }

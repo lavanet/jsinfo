@@ -1,7 +1,7 @@
 // src/query/handlers/specsHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { CheckDbInstance, GetDbInstance } from '../dbUtils';
+import { CheckReadDbInstance, GetReadDbInstance } from '../queryDb';
 import * as schema from '../../schema';
 
 export const SpecsHandlerOpts: RouteShorthandOptions = {
@@ -20,9 +20,9 @@ export const SpecsHandlerOpts: RouteShorthandOptions = {
 }
 
 export async function SpecsHandler(request: FastifyRequest, reply: FastifyReply) {
-    await CheckDbInstance()
+    await CheckReadDbInstance()
 
-    const res = await GetDbInstance().select().from(schema.specs)
+    const res = await GetReadDbInstance().select().from(schema.specs)
 
     return {
         specs: res,

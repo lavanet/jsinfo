@@ -4,9 +4,9 @@ import Fastify, { FastifyBaseLogger, FastifyInstance, RouteShorthandOptions, Fas
 import fastifyCors from '@fastify/cors';
 
 import pino from 'pino';
-import RequestCache from './cache';
+import RequestCache from './queryCache';
 
-import { JSINFO_QUERY_HIGH_POST_BODY_LIMIT, JSINFO_QUERY_FASITY_PRINT_LOGS } from './consts';
+import { JSINFO_QUERY_HIGH_POST_BODY_LIMIT, JSINFO_QUERY_FASITY_PRINT_LOGS } from './queryConsts';
 
 const requestCache: RequestCache = new RequestCache();
 

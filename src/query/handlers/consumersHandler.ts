@@ -1,7 +1,7 @@
 // src/query/handlers/consumersHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { CheckDbInstance, GetDbInstance } from '../dbUtils';
+import { CheckReadDbInstance, GetReadDbInstance } from '../queryDb';
 import * as schema from '../../schema';
 
 export const ConsumersHandlerOpts: RouteShorthandOptions = {
@@ -20,9 +20,9 @@ export const ConsumersHandlerOpts: RouteShorthandOptions = {
 }
 
 export async function ConsumersHandler(request: FastifyRequest, reply: FastifyReply) {
-    await CheckDbInstance()
+    await CheckReadDbInstance()
 
-    const res = await GetDbInstance().select().from(schema.consumers)
+    const res = await GetReadDbInstance().select().from(schema.consumers)
 
     return {
         consumers: res,

@@ -1,11 +1,11 @@
 import { Event } from "@cosmjs/stargate"
 import { LavaBlock } from "../lavablock";
-import * as schema from '../schema';
+import * as schema from '../../schema';
 import { GetOrSetConsumer, SetTx } from "../setlatest";
 
 /*
-351669  {
-  type: 'lava_del_key_from_project_event',
+353983  {
+  type: 'lava_add_key_to_project_event',
   attributes: [
     {
       key: 'project',
@@ -13,15 +13,15 @@ import { GetOrSetConsumer, SetTx } from "../setlatest";
     },
     {
       key: 'key',
-      value: 'lava@1h5klcufu5ldyqzjcwdzz8qlx6yh7ytwvwa9ra3'
+      value: 'lava@1jups4splwaywrn0vsar59zg2z3l7sa9m7uhx4e'
     },
     { key: 'keytype', value: '2' },
-    { key: 'block', value: '351669' }
+    { key: 'block', value: '353983' }
   ]
 }
 */
 
-export const ParseEventDelKeyFromProject = (
+export const ParseEventAddKeyToProject = (
     evt: Event,
     height: number,
     txHash: string | null,
@@ -34,10 +34,9 @@ export const ParseEventDelKeyFromProject = (
     const evtEvent: schema.InsertEvent = {
         tx: txHash,
         blockId: height,
-        eventType: schema.LavaProviderEventType.DelKeyFromProject,
+        eventType: schema.LavaProviderEventType.AddKeyToProject,
         provider: null,
-    }   
-
+    }
     evt.attributes.forEach((attr) => {
         let key: string = attr.key;
         if (attr.key.lastIndexOf('.') != -1) {
@@ -45,6 +44,7 @@ export const ParseEventDelKeyFromProject = (
         }
         switch (key) {
             case 'project':
+                evtEvent.t1 = attr.value;
                 evtEvent.consumer = attr.value.split('-')[0];
                 break
             case 'key':
@@ -54,7 +54,7 @@ export const ParseEventDelKeyFromProject = (
                 evtEvent.i1 = parseInt(attr.value)
                 break
             case 'block':
-                evtEvent.i2 = parseInt(attr.value)
+                evtEvent.blockId = parseInt(attr.value)
                 break
         }
     })

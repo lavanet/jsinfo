@@ -1,22 +1,23 @@
 import { Event } from "@cosmjs/stargate"
 import { LavaBlock } from "../lavablock";
-import * as schema from '../schema';
+import * as schema from '../../schema';
 import { GetOrSetConsumer, SetTx } from "../setlatest";
 
 /*
-371879  {
-  type: 'lava_del_project_to_subscription_event',
+360227  {
+  type: 'lava_buy_subscription_event',
   attributes: [
     {
-      key: 'subscription',
-      value: 'lava@1qu0jm3ev9hl3l285wn8ppw8n7jtn9d2a2d5uch'
+      key: 'consumer',
+      value: 'lava@1zw9r5rrslceh5c6pkxy73lrsnr2a7ntdt36gxc'
     },
-    { key: 'projectName', value: '07042678b43520acb7e2c2e50d18a89e' }
+    { key: 'duration', value: '6' },
+    { key: 'plan', value: 'whale' }
   ]
 }
 */
 
-export const ParseEventDelProjectToSubscription = (
+export const ParseEventBuySubscription = (
     evt: Event,
     height: number,
     txHash: string | null,
@@ -26,29 +27,29 @@ export const ParseEventDelProjectToSubscription = (
     static_dbPlans: Map<string, schema.Plan>,
     static_dbStakes: Map<string, schema.ProviderStake[]>,
 ) => {
-    const evtEvent: schema.InsertEvent = {
-        tx: txHash,
+    const evtEvent: schema.InsertSubscriptionBuy = {
         blockId: height,
-        eventType: schema.LavaProviderEventType.DelProjectToSubscription,
-        provider: null,
-    }   
-
+        tx: txHash,
+    }
     evt.attributes.forEach((attr) => {
         let key: string = attr.key;
         if (attr.key.lastIndexOf('.') != -1) {
             key = attr.key.substring(0, attr.key.lastIndexOf('.'))
         }
         switch (key) {
-            case 'subscription':
+            case 'consumer':
                 evtEvent.consumer = attr.value;
                 break
-            case 'projectName':
-                evtEvent.t1 = attr.value;
+            case 'duration':
+                evtEvent.duration = parseInt(attr.value)
                 break
-         }
+            case 'plan':
+                evtEvent.plan = attr.value;
+                break
+        }
     })
 
     SetTx(lavaBlock.dbTxs, txHash, height)
     GetOrSetConsumer(lavaBlock.dbConsumers, evtEvent.consumer!)
-    lavaBlock.dbEvents.push(evtEvent)
- }
+    lavaBlock.dbSubscriptionBuys.push(evtEvent)
+}

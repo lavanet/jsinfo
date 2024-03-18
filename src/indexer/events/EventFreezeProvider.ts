@@ -1,22 +1,24 @@
 import { Event } from "@cosmjs/stargate"
 import { LavaBlock } from "../lavablock";
-import * as schema from '../schema';
-import { GetOrSetConsumer, SetTx } from "../setlatest";
+import * as schema from '../../schema';
+import { GetOrSetProvider, SetTx } from "../setlatest";
 
 /*
-461785 {
-  type: 'lava_add_project_to_subscription_event',
+462524 {
+  type: 'lava_freeze_provider',
   attributes: [
+    { key: 'freezeReason', value: 'maintenance' },
     {
-      key: 'subscription',
-      value: 'lava@1qu0jm3ev9hl3l285wn8ppw8n7jtn9d2a2d5uch'
+      key: 'providerAddress',
+      value: 'lava@1m5p9cc4lp6jxdsk3pdf56tek2muzu3sm4rhp5f'
     },
-    { key: 'projectName', value: '10e1d3dec0ab282312ea912f327596a1' }
+    { key: 'chainIDs', value: 'COS5' },
+    { key: 'freezeRequestBlock', value: '462524' }
   ]
 }
 */
 
-export const ParseEventAddProjectToSubscription = (
+export const ParseEventFreezeProvider = (
     evt: Event,
     height: number,
     txHash: string | null,
@@ -29,8 +31,8 @@ export const ParseEventAddProjectToSubscription = (
     const evtEvent: schema.InsertEvent = {
         tx: txHash,
         blockId: height,
-        eventType: schema.LavaProviderEventType.AddProjectToSubscription,
-        provider: null,
+        eventType: schema.LavaProviderEventType.FreezeProvider,
+        consumer: null,
     }
 
     evt.attributes.forEach((attr) => {
@@ -39,16 +41,22 @@ export const ParseEventAddProjectToSubscription = (
             key = attr.key.substring(0, attr.key.lastIndexOf('.'))
         }
         switch (key) {
-            case 'subscription':
-                evtEvent.consumer = attr.value;
+            case 'providerAddress':
+                evtEvent.provider = attr.value;
                 break
-            case 'projectName':
+            case 'freezeReason':
                 evtEvent.t1 = attr.value;
                 break
-         }
+            case 'chainIDs':
+                evtEvent.t2 = attr.value;
+                break
+            case 'freezeRequestBlock':
+                evtEvent.i1 = parseInt(attr.value)
+                break
+        }
     })
 
     SetTx(lavaBlock.dbTxs, txHash, height)
-    GetOrSetConsumer(lavaBlock.dbConsumers, evtEvent.consumer!)
+    GetOrSetProvider(lavaBlock.dbProviders, static_dbProviders, evtEvent.provider!, '')
     lavaBlock.dbEvents.push(evtEvent)
 }

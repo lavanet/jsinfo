@@ -6,11 +6,13 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { eq, desc } from "drizzle-orm";
 import { PromisePool } from '@supercharge/promise-pool'
 import * as schema from "./schema";
-import { LavaBlock, GetOneLavaBlock } from './lavablock'
-import { UpdateLatestBlockMeta } from './setlatest'
-import { MigrateDb, GetDb, DoInChunks, logger, BackoffRetry, ConnectToRpc, RpcConnection } from "./utils";
-import { updateAggHourlyPayments } from "./aggregate";
+import { LavaBlock, GetOneLavaBlock } from './indexer/lavablock'
+import { UpdateLatestBlockMeta } from './indexer/setlatest'
+import { DoInChunks, logger, BackoffRetry, ConnectToRpc, RpcConnection } from "./utils";
+import { MigrateDb, GetDb } from "./dbUtils";
+import { updateAggHourlyPayments } from "./indexer/aggregate";
 import { GetEnvVar } from "./utils";
+import { JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE } from './indexer/indexerConsts';
 
 const JSINFO_INDEXER_LAVA_RPC = GetEnvVar("JSINFO_INDEXER_LAVA_RPC");
 const JSINFO_INDEXER_N_WORKERS = parseInt(GetEnvVar('JSINFO_INDEXER_N_WORKERS'));
@@ -37,6 +39,7 @@ async function isBlockInDb(
     return false
 }
 
+
 async function InsertBlock(
     block: LavaBlock,
     db: PostgresJsDatabase,
@@ -49,7 +52,7 @@ async function InsertBlock(
 
         const arrSpecs = Array.from(block.dbSpecs.values())
         logger.debug(`Inserting ${arrSpecs.length} specs for block height: ${block.height}`);
-        await DoInChunks(100, arrSpecs, async (arr: any) => {
+        await DoInChunks(JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, arrSpecs, async (arr: any) => {
             await tx.insert(schema.specs)
                 .values(arr)
                 .onConflictDoNothing();
@@ -58,7 +61,7 @@ async function InsertBlock(
 
         const arrTxs = Array.from(block.dbTxs.values())
         logger.debug(`Inserting ${arrTxs.length} txs for block height: ${block.height}`);
-        await DoInChunks(100, arrTxs, async (arr: any) => {
+        await DoInChunks(JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, arrTxs, async (arr: any) => {
             await tx.insert(schema.txs)
                 .values(arr)
                 .onConflictDoNothing();
@@ -67,7 +70,7 @@ async function InsertBlock(
 
         const arrProviders = Array.from(block.dbProviders.values())
         logger.debug(`Inserting ${arrProviders.length} providers for block height: ${block.height}`);
-        await DoInChunks(100, arrProviders, async (arr: any) => {
+        await DoInChunks(JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, arrProviders, async (arr: any) => {
             await tx.insert(schema.providers)
                 .values(arr)
                 .onConflictDoNothing();
@@ -76,7 +79,7 @@ async function InsertBlock(
 
         const arrPlans = Array.from(block.dbPlans.values())
         // logger.debug(`Inserting ${arrPlans.length} plans for block height: ${block.height}`);
-        await DoInChunks(100, arrPlans, async (arr: any) => {
+        await DoInChunks(JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, arrPlans, async (arr: any) => {
             await tx.insert(schema.plans)
                 .values(arr)
                 .onConflictDoNothing();
@@ -85,7 +88,7 @@ async function InsertBlock(
 
         const arrConsumers = Array.from(block.dbConsumers.values())
         // logger.debug(`Inserting ${arrConsumers.length} consumers for block height: ${block.height}`);
-        await DoInChunks(100, arrConsumers, async (arr: any) => {
+        await DoInChunks(JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, arrConsumers, async (arr: any) => {
             await tx.insert(schema.consumers)
                 .values(arr)
                 .onConflictDoNothing();
@@ -93,27 +96,27 @@ async function InsertBlock(
         // logger.debug(`Inserted consumers for block height: ${block.height}`);
 
         // Create
-        await DoInChunks(100, block.dbEvents, async (arr: any) => {
+        await DoInChunks(JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, block.dbEvents, async (arr: any) => {
             await tx.insert(schema.events).values(arr)
         })
 
-        await DoInChunks(100, block.dbPayments, async (arr: any) => {
+        await DoInChunks(JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, block.dbPayments, async (arr: any) => {
             await tx.insert(schema.relayPayments).values(arr)
         })
 
-        await DoInChunks(100, block.dbConflictResponses, async (arr: any) => {
+        await DoInChunks(JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, block.dbConflictResponses, async (arr: any) => {
             await tx.insert(schema.conflictResponses).values(arr)
         })
 
-        await DoInChunks(100, block.dbSubscriptionBuys, async (arr: any) => {
+        await DoInChunks(JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, block.dbSubscriptionBuys, async (arr: any) => {
             await tx.insert(schema.subscriptionBuys).values(arr)
         })
 
-        await DoInChunks(100, block.dbConflictVote, async (arr: any) => {
+        await DoInChunks(JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, block.dbConflictVote, async (arr: any) => {
             await tx.insert(schema.conflictVotes).values(arr)
         })
 
-        await DoInChunks(100, block.dbProviderReports, async (arr: any) => {
+        await DoInChunks(JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, block.dbProviderReports, async (arr: any) => {
             await tx.insert(schema.providerReported).values(arr)
         })
     })

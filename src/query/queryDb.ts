@@ -1,11 +1,13 @@
 // ./src/query/dbUtils.ts
 
-import { GetDb, logger } from '../utils';
+import { logger } from '../utils';
+import { GetDb, GetReadDb } from '../dbUtils';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { desc } from "drizzle-orm";
 import * as schema from '../schema';
 
 let db: PostgresJsDatabase;
+let readDb: PostgresJsDatabase;
 
 export async function CheckDbInstance() {
     try {
@@ -26,6 +28,27 @@ export function GetDbInstance(): PostgresJsDatabase {
         throw new Error('Database instance is not initialized');
     }
     return db;
+}
+
+export async function CheckReadDbInstance() {
+    try {
+        await readDb.select().from(schema.blocks).limit(1)
+    } catch (e) {
+        logger.info('CheckReadDbInstance exception, resetting connection', e)
+        readDb = await GetReadDb()
+    }
+}
+
+export async function InitReadDbInstance() {
+    console.log('Starting queryserver - connecting to readDb')
+    readDb = await GetReadDb();
+}
+
+export function GetReadDbInstance(): PostgresJsDatabase {
+    if (!readDb) {
+        throw new Error('Read database instance is not initialized');
+    }
+    return readDb;
 }
 
 export async function GetLatestBlock() {

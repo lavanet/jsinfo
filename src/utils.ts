@@ -158,8 +158,9 @@ export async function GetPostgresUrl(): Promise<string> {
 export async function GetDb(): Promise<PostgresJsDatabase> {
     const queryClient = postgres(await GetPostgresUrl(), {
         idle_timeout: 20,
-        max_lifetime: 60 * 30,
-        max: 100,
+        connect_timeout: 20,
+        max_lifetime: 75,
+        max: 60,
     });
     const db: PostgresJsDatabase = drizzle(queryClient/*, { logger: true }*/);
     return db;

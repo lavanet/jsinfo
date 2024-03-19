@@ -4,13 +4,12 @@
 
 echo "Starting query - populate container at $(date)"
 
-#!/bin/sh
-
-echo "Starting query - populate container at $(date)"
-
 # Set traps
 trap 'echo "Warning: Script received SIGSEGV, ignoring"' 11;
 trap 'echo "Error: Script terminated by signal"; exit' 2 15;
+
+echo "QueryPod $(date) :: Sleeping 1 minute before starting the first script..."
+sleep 60
 
 # Run the first script in an endless loop
 while true; do
@@ -20,6 +19,7 @@ while true; do
     sleep 1
 done &
 
+echo "QueryPod $(date) :: Sleeping 1 minute before starting the second script..."
 sleep 60
 
 # Run the second script in an endless loop
@@ -31,4 +31,4 @@ while true; do
 done &
 
 # Wait for all child processes to finish
-wait
+sleep

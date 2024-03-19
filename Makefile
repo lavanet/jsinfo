@@ -19,7 +19,13 @@ run_docker_compose_indexer:
 	docker-compose up indexer
 
 run_indexer:
-	NODE_TLS_REJECT_UNAUTHORIZED=0 bun run src/indexer.ts
+	JSINFO_INDEXER_BLOCK_TYPE=both NODE_TLS_REJECT_UNAUTHORIZED=0 bun run src/indexer.ts
+
+run_indexer_even:
+	JSINFO_INDEXER_BLOCK_TYPE=even NODE_TLS_REJECT_UNAUTHORIZED=0 bun run src/indexer.ts
+
+run_indexer_odd:
+	JSINFO_INDEXER_BLOCK_TYPE=odd NODE_TLS_REJECT_UNAUTHORIZED=0 bun run src/indexer.ts
 
 run_query:
 	JSINFO_QUERY_IS_DEBUG_MODE=true bun run src/query.ts

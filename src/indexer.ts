@@ -11,14 +11,10 @@ import { UpdateLatestBlockMeta } from './indexer/setlatest'
 import { DoInChunks, logger, BackoffRetry, ConnectToRpc, RpcConnection } from "./utils";
 import { MigrateDb, GetDb } from "./dbUtils";
 import { updateAggHourlyPayments } from "./indexer/aggregate";
-import { GetEnvVar } from "./utils";
-import { JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE } from './indexer/indexerConsts';
 
-const JSINFO_INDEXER_LAVA_RPC = GetEnvVar("JSINFO_INDEXER_LAVA_RPC");
-const JSINFO_INDEXER_N_WORKERS = parseInt(GetEnvVar('JSINFO_INDEXER_N_WORKERS'));
-const JSINFO_INDEXER_BATCH_SIZE = parseInt(GetEnvVar('JSINFO_INDEXER_BATCH_SIZE'));
-const JSINFO_INDEXER_POLL_MS = parseInt(GetEnvVar('JSINFO_INDEXER_POLL_MS'));
-const JSINFO_INDEXER_START_BLOCK = parseInt(GetEnvVar('JSINFO_INDEXER_START_BLOCK')); // 340778 has a weird date (9 months ago)
+import * as consts from './indexer/indexerConsts';
+
+
 
 let static_dbProviders: Map<string, schema.Provider> = new Map()
 let static_dbSpecs: Map<string, schema.Spec> = new Map()
@@ -52,7 +48,7 @@ async function InsertBlock(
 
         const arrSpecs = Array.from(block.dbSpecs.values())
         logger.debug(`Inserting ${arrSpecs.length} specs for block height: ${block.height}`);
-        await DoInChunks(JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, arrSpecs, async (arr: any) => {
+        await DoInChunks(consts.JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, arrSpecs, async (arr: any) => {
             await tx.insert(schema.specs)
                 .values(arr)
                 .onConflictDoNothing();
@@ -61,7 +57,7 @@ async function InsertBlock(
 
         const arrTxs = Array.from(block.dbTxs.values())
         logger.debug(`Inserting ${arrTxs.length} txs for block height: ${block.height}`);
-        await DoInChunks(JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, arrTxs, async (arr: any) => {
+        await DoInChunks(consts.JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, arrTxs, async (arr: any) => {
             await tx.insert(schema.txs)
                 .values(arr)
                 .onConflictDoNothing();
@@ -70,7 +66,7 @@ async function InsertBlock(
 
         const arrProviders = Array.from(block.dbProviders.values())
         logger.debug(`Inserting ${arrProviders.length} providers for block height: ${block.height}`);
-        await DoInChunks(JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, arrProviders, async (arr: any) => {
+        await DoInChunks(consts.JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, arrProviders, async (arr: any) => {
             await tx.insert(schema.providers)
                 .values(arr)
                 .onConflictDoNothing();
@@ -79,7 +75,7 @@ async function InsertBlock(
 
         const arrPlans = Array.from(block.dbPlans.values())
         // logger.debug(`Inserting ${arrPlans.length} plans for block height: ${block.height}`);
-        await DoInChunks(JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, arrPlans, async (arr: any) => {
+        await DoInChunks(consts.JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, arrPlans, async (arr: any) => {
             await tx.insert(schema.plans)
                 .values(arr)
                 .onConflictDoNothing();
@@ -88,7 +84,7 @@ async function InsertBlock(
 
         const arrConsumers = Array.from(block.dbConsumers.values())
         // logger.debug(`Inserting ${arrConsumers.length} consumers for block height: ${block.height}`);
-        await DoInChunks(JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, arrConsumers, async (arr: any) => {
+        await DoInChunks(consts.JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, arrConsumers, async (arr: any) => {
             await tx.insert(schema.consumers)
                 .values(arr)
                 .onConflictDoNothing();
@@ -96,27 +92,27 @@ async function InsertBlock(
         // logger.debug(`Inserted consumers for block height: ${block.height}`);
 
         // Create
-        await DoInChunks(JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, block.dbEvents, async (arr: any) => {
+        await DoInChunks(consts.JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, block.dbEvents, async (arr: any) => {
             await tx.insert(schema.events).values(arr)
         })
 
-        await DoInChunks(JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, block.dbPayments, async (arr: any) => {
+        await DoInChunks(consts.JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, block.dbPayments, async (arr: any) => {
             await tx.insert(schema.relayPayments).values(arr)
         })
 
-        await DoInChunks(JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, block.dbConflictResponses, async (arr: any) => {
+        await DoInChunks(consts.JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, block.dbConflictResponses, async (arr: any) => {
             await tx.insert(schema.conflictResponses).values(arr)
         })
 
-        await DoInChunks(JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, block.dbSubscriptionBuys, async (arr: any) => {
+        await DoInChunks(consts.JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, block.dbSubscriptionBuys, async (arr: any) => {
             await tx.insert(schema.subscriptionBuys).values(arr)
         })
 
-        await DoInChunks(JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, block.dbConflictVote, async (arr: any) => {
+        await DoInChunks(consts.JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, block.dbConflictVote, async (arr: any) => {
             await tx.insert(schema.conflictVotes).values(arr)
         })
 
-        await DoInChunks(JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, block.dbProviderReports, async (arr: any) => {
+        await DoInChunks(consts.JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, block.dbProviderReports, async (arr: any) => {
             await tx.insert(schema.providerReported).values(arr)
         })
     })
@@ -134,18 +130,28 @@ const doBatch = async (
     const blockList = [...globakWorkList]
     logger.info(`doBatch:: Initial blockList length: ${blockList.length}`);
     globakWorkList.length = 0
+
+    const blockType = process.env.JSINFO_INDEXER_BLOCK_TYPE || 'both';
+
     for (let i = dbHeight + 1; i <= latestHeight; i++) {
-        blockList.push(i)
+        if (blockType === 'even' && i % 2 === 0) {
+            blockList.push(i);
+        } else if (blockType === 'odd' && i % 2 !== 0) {
+            blockList.push(i);
+        } else if (blockType === 'both') {
+            blockList.push(i);
+        }
     }
+
     const org_len = blockList.length
     logger.info(`doBatch:: Updated blockList length: ${org_len}`);
     while (blockList.length > 0) {
         let start = performance.now();
 
-        const tmpList = blockList.splice(0, JSINFO_INDEXER_BATCH_SIZE);
+        const tmpList = blockList.splice(0, consts.JSINFO_INDEXER_BATCH_SIZE);
         logger.info(`doBatch:: Processing batch of size: ${tmpList.length}`);
         const { results, errors } = await PromisePool
-            .withConcurrency(JSINFO_INDEXER_N_WORKERS)
+            .withConcurrency(consts.JSINFO_INDEXER_N_WORKERS)
             .for(tmpList)
             .process(async (height) => {
                 if (await isBlockInDb(db, height)) {
@@ -167,9 +173,9 @@ const doBatch = async (
         logger.info(`
                 Work: ${org_len}
                 Errors: ${errors}
-                Batches remaining: ${blockList.length / JSINFO_INDEXER_BATCH_SIZE}
+                Batches remaining: ${blockList.length / consts.JSINFO_INDEXER_BATCH_SIZE}
                 Time: ${timeTaken / 1000}s
-                Estimated remaining: ${Math.trunc((timeTaken / 1000) * blockList.length / JSINFO_INDEXER_BATCH_SIZE)}s
+                Estimated remaining: ${Math.trunc((timeTaken / 1000) * blockList.length / consts.JSINFO_INDEXER_BATCH_SIZE)}s
             `);
         errors.forEach((err) => {
             globakWorkList.push(err.item)
@@ -180,7 +186,15 @@ const doBatch = async (
 }
 
 const indexer = async (): Promise<void> => {
-    logger.info(`Starting indexer, rpc: ${JSINFO_INDEXER_LAVA_RPC}, start height: ${JSINFO_INDEXER_START_BLOCK}`);
+    logger.info(`Starting indexer, rpc: ${consts.JSINFO_INDEXER_LAVA_RPC}, start height: ${consts.JSINFO_INDEXER_START_BLOCK}`);
+
+    logger.info(`JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE: ${consts.JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE}`);
+    logger.info(`JSINFO_INDEXER_LAVA_RPC: ${consts.JSINFO_INDEXER_LAVA_RPC}`);
+    logger.info(`JSINFO_INDEXER_N_WORKERS: ${consts.JSINFO_INDEXER_N_WORKERS}`);
+    logger.info(`JSINFO_INDEXER_BATCH_SIZE: ${consts.JSINFO_INDEXER_BATCH_SIZE}`);
+    logger.info(`JSINFO_INDEXER_POLL_MS: ${consts.JSINFO_INDEXER_POLL_MS}`);
+    logger.info(`JSINFO_INDEXER_START_BLOCK: ${consts.JSINFO_INDEXER_START_BLOCK}`);
+    logger.info(`JSINFO_INDEXER_BLOCK_TYPE: ${consts.JSINFO_INDEXER_BLOCK_TYPE}`);
 
     const rpcConnection = await establishRpcConnection();
     const db = await migrateAndFetchDb();
@@ -191,7 +205,7 @@ const indexer = async (): Promise<void> => {
 
 const establishRpcConnection = async (): Promise<RpcConnection> => {
     logger.info('Establishing RPC connection...');
-    const rpcConnection: RpcConnection = await BackoffRetry<RpcConnection>("ConnectToRpc", () => ConnectToRpc(JSINFO_INDEXER_LAVA_RPC));
+    const rpcConnection: RpcConnection = await BackoffRetry<RpcConnection>("ConnectToRpc", () => ConnectToRpc(consts.JSINFO_INDEXER_LAVA_RPC));
     logger.info('RPC connection established.', rpcConnection);
     return rpcConnection;
 }
@@ -237,7 +251,7 @@ const fillUpBackoffRetryWTimeout = (db: PostgresJsDatabase, rpcConnection: RpcCo
     setTimeout(() => {
         fillUpBackoffRetry(db, rpcConnection);
         logger.info(`fillUpBackoffRetryWTimeout function finished at: ${new Date().toISOString()}`);
-    }, JSINFO_INDEXER_POLL_MS);
+    }, consts.JSINFO_INDEXER_POLL_MS);
 }
 
 const updateAggHourlyPaymentsCaller = async (db: PostgresJsDatabase) => {
@@ -264,7 +278,7 @@ const fillUp = async (db: PostgresJsDatabase, rpcConnection: RpcConnection) => {
         return
     }
 
-    let dbHeight = JSINFO_INDEXER_START_BLOCK
+    let dbHeight = consts.JSINFO_INDEXER_START_BLOCK
     let latestDbBlock
     try {
         latestDbBlock = await db.select().from(schema.blocks).orderBy(desc(schema.blocks.height)).limit(1)
@@ -307,15 +321,8 @@ const fillUp = async (db: PostgresJsDatabase, rpcConnection: RpcConnection) => {
     fillUpBackoffRetryWTimeout(db, rpcConnection)
 }
 
-const indexerBackoffRetry = async () => {
-    console.log('indexer:: indexerBackoffRetry started.');
-    const result = await BackoffRetry<void>("indexer", async () => { await indexer(); });
-    console.log('indexer:: indexerBackoffRetry ended.');
-    return result;
-}
-
 try {
-    indexerBackoffRetry();
+    indexer()
 } catch (error) {
     if (error instanceof Error) {
         console.log('An error occurred while running the indexer:', error.message);

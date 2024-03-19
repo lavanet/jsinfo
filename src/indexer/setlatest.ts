@@ -279,6 +279,8 @@ export async function UpdateLatestBlockMeta(
             // Insert all stakes
             await Promise.all(Array.from(static_dbStakes.values()).map(async (stakes) => {
                 return stakes.map(async (stake) => {
+                    if (stake.specId == null || stake.specId == "") return;
+                    // console.log("schema.providerStakes.provider, schema.providerStakes.specId", stake)
                     return await tx.insert(schema.providerStakes)
                         .values(stake)
                         .onConflictDoUpdate(

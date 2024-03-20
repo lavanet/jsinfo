@@ -7,6 +7,7 @@ export const JSINFO_INDEXER_BATCH_SIZE = parseInt(GetEnvVar('JSINFO_INDEXER_BATC
 export const JSINFO_INDEXER_POLL_MS = parseInt(GetEnvVar('JSINFO_INDEXER_POLL_MS', "5000"));
 export const JSINFO_INDEXER_START_BLOCK = parseInt(GetEnvVar('JSINFO_INDEXER_START_BLOCK', "340778")); // 340778 has a weird date (9 months ago)
 export const JSINFO_INDEXER_BLOCK_TYPE = GetEnvVar('JSINFO_INDEXER_BLOCK_TYPE', "both"); // 340778 has a weird date (9 months ago)
+export const JSINFO_INDEXER_GRACEFULL_EXIT_AFTER_X_HOURS = parseInt(GetEnvVar('JSINFO_INDEXER_GRACEFULL_EXIT_AFTER_X_HOURS', "2"))
 
 const JSINFO_INDEXER_BLOCK_TYPE_VALID_VALUES = ['even', 'odd', 'both'];
 

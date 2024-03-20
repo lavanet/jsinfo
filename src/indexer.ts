@@ -266,7 +266,21 @@ const updateAggHourlyPaymentsCaller = async (db: PostgresJsDatabase) => {
     }
 }
 
+// Global variable to store the start time
+let fullUpStartTime: number | null = null;
+
 const fillUp = async (db: PostgresJsDatabase, rpcConnection: RpcConnection) => {
+    // Set the start time on the first call
+    if (fullUpStartTime === null) {
+        fullUpStartTime = Date.now();
+    }
+
+    // Check if JSINFO_INDEXER_GRACEFULL_EXIT_AFTER_X_HOURS has passed
+    if (Date.now() - fullUpStartTime > consts.JSINFO_INDEXER_GRACEFULL_EXIT_AFTER_X_HOURS * 60 * 60 * 1000) {
+        console.log('JSINFO_INDEXER_GRACEFULL_EXIT_AFTER_X_HOURS has passed. Exiting process.', consts.JSINFO_INDEXER_GRACEFULL_EXIT_AFTER_X_HOURS);
+        process.exit();
+    }
+
     let latestHeight = 0;
     try {
         latestHeight = await BackoffRetry<number>("getHeight", async () => {

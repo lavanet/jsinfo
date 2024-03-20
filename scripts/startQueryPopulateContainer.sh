@@ -22,7 +22,7 @@ run_script() {
 
 # Start the scripts in the background
 run_script "env REST_URL=http://0.0.0.0:8082 sh scripts/refreshQueryCache.sh" &
-run_script "env JSINFO_QUERY_CACHE_POPULTAE_MODE=true JSINFO_QUERY_PORT=8082 bun run src/query.js" &
+run_script "env JSINFO_QUERY_CACHE_POPULTAE_MODE=true JSINFO_QUERY_PORT=8082 timeout 2h bun run src/query.js" &
 
 # Wait for all child processes to finish
 wait

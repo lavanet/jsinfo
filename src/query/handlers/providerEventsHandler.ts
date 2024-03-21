@@ -4,9 +4,11 @@
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { CheckReadDbInstance, GetReadDbInstance } from '../queryDb';
 import * as schema from '../../schema';
-import { asc, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, gte } from "drizzle-orm";
 import { Pagination, ParsePaginationFromRequest, ParsePaginationFromString } from '../queryPagination';
-import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE } from '../queryConsts';
+import { JSINFO_QUERY_CACHEDIR, JSINFO_QUERY_CACHE_ENABLED, JSINFO_QUERY_HANDLER_CACHE_TIME_SECONDS, JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE } from '../queryConsts';
+import fs from 'fs';
+import path from 'path';
 
 export const ProviderEventsHandlerOpts: RouteShorthandOptions = {
     schema: {
@@ -61,6 +63,123 @@ export const ProviderEventsHandlerOpts: RouteShorthandOptions = {
     }
 }
 
+
+class ProviderEventsData {
+    private addr: string;
+    private cacheDir: string = JSINFO_QUERY_CACHEDIR;
+    private cacheAgeLimit: number = JSINFO_QUERY_HANDLER_CACHE_TIME_SECONDS; // 15 minutes in seconds
+
+    constructor(addr: string) {
+        this.addr = addr;
+    }
+
+    private getCacheFilePath(): string {
+        return path.join(this.cacheDir, `ProviderEventsData_${this.addr}`);
+    }
+
+    private async fetchDataFromDb(): Promise<any[]> {
+        let thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+        const eventsRes = await GetReadDbInstance().select().from(schema.events).
+            leftJoin(schema.blocks, eq(schema.events.blockId, schema.blocks.height)).
+            where(
+                and(
+                    eq(schema.events.provider, this.addr),
+                    gte(schema.blocks.datetime, thirtyDaysAgo)
+                )
+            ).
+            orderBy(desc(schema.events.id)).offset(0).limit(5000)
+
+        return eventsRes;
+    }
+
+    private async fetchDataFromCache(): Promise<any[]> {
+        const cacheFilePath = this.getCacheFilePath();
+        if (JSINFO_QUERY_CACHE_ENABLED && fs.existsSync(cacheFilePath)) {
+            const stats = fs.statSync(cacheFilePath);
+            const ageInSeconds = (Date.now() - stats.mtime.getTime()) / 1000;
+            if (ageInSeconds <= this.cacheAgeLimit) {
+                return JSON.parse(fs.readFileSync(cacheFilePath, 'utf-8'));
+            }
+        }
+
+        const data = await this.fetchDataFromDb();
+        fs.writeFileSync(cacheFilePath, JSON.stringify(data));
+        return data;
+    }
+
+    public async getPaginatedItems(request: FastifyRequest): Promise<{ data: any[] }> {
+        let data = await this.fetchDataFromCache();
+
+        let pagination: Pagination = ParsePaginationFromRequest(request) || ParsePaginationFromString("blocks.datetime,descending,1," + JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE)
+        if (pagination.sortKey === null) pagination.sortKey = "blocks.datetime";
+
+        // Validate sortKey
+        const validKeys = ["events.eventType", "blocks.height", "blocks.datetime", "events.b1", "events.b2", "events.b3", "events.i1", "events.i2", "events.i3", "events.t1", "events.t2", "events.t3"];
+        if (!validKeys.includes(pagination.sortKey)) {
+            throw new Error('Invalid sort key');
+        }
+
+        // Apply sorting
+        const sortKeyParts = pagination.sortKey.split('.');
+        data.sort((a, b) => {
+            const aValue = sortKeyParts.reduce((obj, key) => (obj && obj[key] !== undefined) ? obj[key] : null, a);
+            const bValue = sortKeyParts.reduce((obj, key) => (obj && obj[key] !== undefined) ? obj[key] : null, b);
+
+            if (pagination.direction === 'ascending') {
+                return aValue > bValue ? 1 : -1;
+            } else {
+                return aValue < bValue ? 1 : -1;
+            }
+        });
+
+        data = data.slice((pagination.page - 1) * pagination.count, pagination.page * pagination.count);
+
+        return { data: data };
+    }
+
+    public async getTotalItemCount(): Promise<number> {
+        const data = await this.fetchDataFromCache();
+        return data.length;
+    }
+
+    public async getCSV(): Promise<string> {
+        const data = await this.fetchDataFromCache();
+        const columns = [
+            { key: "events.eventType", name: "Event Type" },
+            { key: "blocks.height", name: "Block Height" },
+            { key: "blocks.datetime", name: "Time" },
+            { key: "events.b1", name: "b1" },
+            { key: "events.b2", name: "b2" },
+            { key: "events.b3", name: "b3" },
+            { key: "events.i1", name: "i1" },
+            { key: "events.i2", name: "i2" },
+            { key: "events.i3", name: "i3" },
+            { key: "events.t1", name: "t1" },
+            { key: "events.t2", name: "t2" },
+            { key: "events.t3", name: "t3" },
+        ];
+
+        let csv = columns.map(column => this.escape(column.name)).join(',') + '\n';
+
+        data.forEach((item: any) => {
+            csv += columns.map(column => {
+                const keys = column.key.split('.');
+                const value = keys.reduce((obj, key) => (obj && obj[key] !== undefined) ? obj[key] : '', item);
+                return this.escape(String(value));
+            }).join(',') + '\n';
+        });
+
+        return csv;
+    }
+
+    private escape(str: string): string {
+        return `"${str.replace(/"/g, '""')}"`;
+    }
+
+}
+
 export async function ProviderEventsHandler(request: FastifyRequest, reply: FastifyReply) {
     await CheckReadDbInstance()
 
@@ -76,32 +195,14 @@ export async function ProviderEventsHandler(request: FastifyRequest, reply: Fast
         return;
     }
 
-    let pagination: Pagination = ParsePaginationFromRequest(request) || ParsePaginationFromString("events.id,descending,1," + JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE)
-    if (pagination.sortKey === null) pagination.sortKey = "events.id";
-
-    // Validate sortKey
-    const validKeys = ["events.eventType", "blocks.height", "blocks.datetime", "events.b1", "events.b2", "events.b3", "events.i1", "events.i2", "events.i3", "events.t1", "events.t2", "events.t3"];
-    if (!validKeys.includes(pagination.sortKey)) {
-        reply.code(400).send({ error: 'Invalid sort key' });
-        return;
+    const providerEventsData = new ProviderEventsData(addr);
+    try {
+        const data = await providerEventsData.getPaginatedItems(request);
+        return data;
+    } catch (error) {
+        const err = error as Error;
+        reply.code(400).send({ error: String(err.message) });
     }
-
-    // Get events
-    const eventsRes = await GetReadDbInstance().select().from(schema.events).
-        leftJoin(schema.blocks, eq(schema.events.blockId, schema.blocks.height)).
-        where(eq(schema.events.provider, addr)).
-        orderBy(
-            pagination.sortKey.startsWith('blocks.')
-                ? (pagination.direction === 'ascending' ?
-                    asc(schema.blocks[pagination.sortKey.split('.')[1]]) :
-                    desc(schema.blocks[pagination.sortKey.split('.')[1]]))
-                : (pagination.direction === 'ascending' ?
-                    asc(schema.events[pagination.sortKey.split('.')[1]]) :
-                    desc(schema.events[pagination.sortKey.split('.')[1]]))
-        ).
-        offset((pagination.page - 1) * pagination.count).limit(pagination.count)
-
-    return { data: eventsRes }
 }
 
 export async function ProviderEventsItemCountHandler(request: FastifyRequest, reply: FastifyReply) {
@@ -119,9 +220,24 @@ export async function ProviderEventsItemCountHandler(request: FastifyRequest, re
         return;
     }
 
-    const eventsCount = await GetReadDbInstance().select({ count: sql`count(*)`.mapWith(Number) }).from(schema.events).
-        leftJoin(schema.blocks, eq(schema.events.blockId, schema.blocks.height)).
-        where(eq(schema.events.provider, addr));
+    const providerEventsData = new ProviderEventsData(addr);
+    const itemCount = await providerEventsData.getTotalItemCount();
+    return { itemCount: itemCount }
+}
 
-    return { itemCount: eventsCount[0].count }
+export async function ProviderEventsCSVHandler(request: FastifyRequest, reply: FastifyReply) {
+    await CheckReadDbInstance()
+
+    const { addr } = request.params as { addr: string }
+    if (addr.length != 44 || !addr.startsWith('lava@')) {
+        reply.code(400).send({ error: 'Bad provider address' });
+        return;
+    }
+
+    const providerHealthData = new ProviderEventsData(addr);
+    const csv = await providerHealthData.getCSV();
+
+    reply.header('Content-Type', 'text/csv');
+    reply.header('Content-Disposition', `attachment; filename=ProviderEvents_${addr}.csv`);
+    reply.send(csv);
 }

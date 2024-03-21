@@ -6,7 +6,7 @@ import { CheckReadDbInstance, GetReadDbInstance } from '../queryDb';
 import * as schema from '../../schema';
 import { eq, desc } from "drizzle-orm";
 import { Pagination, ParsePaginationFromRequest, IsNotNullAndNotZero } from '../queryPagination';
-import { JSINFO_QUERY_CACHEDIR, JSINFO_QUERY_CACHE_ENABLED } from '../queryConsts';
+import { JSINFO_QUERY_CACHEDIR, JSINFO_QUERY_CACHE_ENABLED, JSINFO_QUERY_HANDLER_CACHE_TIME_SECONDS } from '../queryConsts';
 import fs from 'fs';
 import path from 'path';
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE } from '../queryConsts';
@@ -52,7 +52,7 @@ export const ProviderHealthHandlerOpts: RouteShorthandOptions = {
 class ProviderHealthData {
     private addr: string;
     private cacheDir: string = JSINFO_QUERY_CACHEDIR;
-    private cacheAgeLimit: number = 15 * 60; // 15 minutes in seconds - same as agregation time - same as block time
+    private cacheAgeLimit: number = JSINFO_QUERY_HANDLER_CACHE_TIME_SECONDS;
 
     constructor(addr: string) {
         this.addr = addr;

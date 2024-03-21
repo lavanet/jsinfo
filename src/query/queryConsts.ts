@@ -45,3 +45,5 @@ export const JSINFO_QUERY_PROVIDER_HEALTH_HOURLY_CUTOFF_DAYS = parseInt(GetEnvVa
 // how many items to show per page in the sorted table
 export const JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE = parseInt(GetEnvVar("JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE", "20"));
 export const JSINFO_QUERY_ALLOWED_ITEMS_PER_PAGE = JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE
+
+export const JSINFO_QUERY_HANDLER_CACHE_TIME_SECONDS = parseInt(GetEnvVar("JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE", (15 * 60) + "")); // 15 minutes in seconds - same as agregation time - same as block time

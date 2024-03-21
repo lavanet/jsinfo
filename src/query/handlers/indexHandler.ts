@@ -3,7 +3,7 @@
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { CheckReadDbInstance, GetLatestBlock, GetReadDbInstance } from '../queryDb';
 import * as schema from '../../schema';
-import { sql, desc, gt, and, inArray, not, eq } from "drizzle-orm";
+import { sql, desc, gt, and, inArray } from "drizzle-orm";
 import { FormatDates } from '../dateUtils';
 
 export const IndexHandlerOpts: RouteShorthandOptions = {
@@ -29,9 +29,6 @@ export const IndexHandlerOpts: RouteShorthandOptions = {
                     },
                     stakeSum: {
                         type: 'number'
-                    },
-                    topProviders: {
-                        type: 'array',
                     },
                     allSpecs: {
                         type: 'array',
@@ -95,53 +92,9 @@ export async function IndexHandler(request: FastifyRequest, reply: FastifyReply)
     })
 
     if (providersAddrs.length == 0) {
-        reply.code(400).send({ error: 'Provider does not exist' });
+        reply.code(400).send({ error: 'Providers does not exist' });
         return;
     }
-
-    //
-    // provider details
-    let res44 = await GetReadDbInstance().select().from(schema.providers).where(inArray(schema.providers.address, providersAddrs))
-    let providerStakesRes = await GetReadDbInstance().select({
-        provider: schema.providerStakes.provider,
-        totalActiveServices: sql<number>`sum(case when ${schema.providerStakes.status} = ${schema.LavaProviderStakeStatus.Active} then 1 else 0 end)`,
-        totalServices: sql<number>`count(${schema.providerStakes.specId})`,
-        totalStake: sql<number>`sum(${schema.providerStakes.stake})`,
-    }).from(schema.providerStakes)
-        .where(not(eq(schema.providerStakes.status, schema.LavaProviderStakeStatus.Frozen)))
-        .groupBy(schema.providerStakes.provider);
-
-    type ProviderDetails = {
-        addr: string,
-        moniker: string,
-        rewardSum: number,
-        totalServices: string,
-        totalStake: number,
-    };
-    let providersDetails: ProviderDetails[] = []
-    res4.forEach((provider) => {
-        let moniker = ''
-        let totalServices = '0'
-        let totalStake = 0;
-        let tmp1 = res44.find((el) => el.address == provider.address)
-        if (tmp1) {
-            moniker = tmp1.moniker!
-        }
-        let tmp2 = providerStakesRes.find((el) => el.provider == provider.address)
-        if (tmp2) {
-            totalServices = `${tmp2.totalActiveServices} / ${tmp2.totalServices}`
-            totalStake = tmp2.totalStake
-        }
-        providersDetails.push({
-            addr: provider.address!,
-            moniker: moniker,
-            rewardSum: provider.rewardSum,
-            totalServices: totalServices,
-            totalStake: totalStake,
-        })
-    })
-
-    // logger.info(`Provider details: ${JSON.stringify(providersDetails)}`)
 
     //
     // Get top chains
@@ -206,7 +159,6 @@ export async function IndexHandler(request: FastifyRequest, reply: FastifyReply)
         relaySum: relaySum,
         rewardSum: rewardSum,
         stakeSum: stakeSum,
-        topProviders: providersDetails,
         allSpecs: topSpecs,
         qosData: FormatDates(qosDataRaw),
         data: addAllChains(adjustRelayLossForMarchWeekendDowntime(FormatDates(mainChartData))),

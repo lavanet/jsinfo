@@ -1,7 +1,5 @@
 // jsinfo/src/query.ts
 
-// TODOs:
-// 2. Pagination
 require('dotenv').config();
 
 import { logger } from './utils';
@@ -10,8 +8,15 @@ import { RegisterServerHandlerWithCache, GetServerInstance } from './query/query
 import * as consts from './query/queryConsts';
 
 import { IndexHandler, IndexHandlerOpts } from './query/handlers/indexHandler';
-import { ProvidersHandler, ProvidersHandlerOpts } from './query/handlers/providersHandler';
+import { IndexProvidersHandler, IndexProviderHandlerOpts, IndexProvidersItemCountHandler } from './query/handlers/indexProvidersHandler';
+
 import { ProviderHandler, ProviderHandlerOpts } from './query/handlers/providerHandler';
+import { ProviderStakesHandlerOpts, ProviderStakesHandler, ProviderStakesItemCountHandler } from './query/handlers/providerStakesHandler';
+import { ProviderEventsHandlerOpts, ProviderEventsHandler, ProviderEventsItemCountHandler } from './query/handlers/providerEventsHandler';
+import { ProviderRewardsHandlerOpts, ProviderRewardsHandler, ProviderRewardsItemCountHandler } from './query/handlers/providerRewardsHandler';
+import { ProviderReportsHandlerOpts, ProviderReportsHandler, ProviderReportsItemCountHandler } from './query/handlers/providerReportsHandler';
+
+import { ProvidersHandler, ProvidersHandlerOpts } from './query/handlers/providersHandler';
 import { SpecsHandler, SpecsHandlerOpts } from './query/handlers/specsHandler';
 import { SpecHandler, SpecHandlerOpts } from './query/handlers/specHandler';
 import { ConsumersHandler, ConsumersHandlerOpts } from './query/handlers/consumersHandler';
@@ -23,7 +28,12 @@ import { LatestHandler, LatestHandlerOpts } from './query/handlers/latestHandler
 import { LavapProviderHealthHandler, LavapProviderHealthHandlerOpts } from './query/handlers/lavapProviderHealthHandler';
 
 RegisterServerHandlerWithCache('/index', IndexHandlerOpts, IndexHandler);
+RegisterServerHandlerWithCache('/indexProviders', IndexProviderHandlerOpts, IndexProvidersHandler, IndexProvidersItemCountHandler);
 RegisterServerHandlerWithCache('/provider/:addr', ProviderHandlerOpts, ProviderHandler);
+RegisterServerHandlerWithCache('/providerStakes/:addr', ProviderStakesHandlerOpts, ProviderStakesHandler, ProviderStakesItemCountHandler);
+RegisterServerHandlerWithCache('/providerEvents/:addr', ProviderEventsHandlerOpts, ProviderEventsHandler, ProviderEventsItemCountHandler);
+RegisterServerHandlerWithCache('/providerRewards/:addr', ProviderRewardsHandlerOpts, ProviderRewardsHandler, ProviderRewardsItemCountHandler);
+RegisterServerHandlerWithCache('/providerReports/:addr', ProviderReportsHandlerOpts, ProviderReportsHandler, ProviderReportsItemCountHandler);
 RegisterServerHandlerWithCache('/providers', ProvidersHandlerOpts, ProvidersHandler);
 RegisterServerHandlerWithCache('/specs', SpecsHandlerOpts, SpecsHandler);
 RegisterServerHandlerWithCache('/consumers', ConsumersHandlerOpts, ConsumersHandler);

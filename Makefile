@@ -19,28 +19,28 @@ run_docker_compose_indexer:
 	docker-compose up indexer
 
 run_indexer:
-	JSINFO_INDEXER_BLOCK_TYPE=both NODE_TLS_REJECT_UNAUTHORIZED=0 bun run src/indexer.ts
+	NODE_TLS_REJECT_UNAUTHORIZED=0 bun run src/indexer.ts
 
-run_indexer_even:
-	JSINFO_INDEXER_BLOCK_TYPE=even NODE_TLS_REJECT_UNAUTHORIZED=0 bun run src/indexer.ts
+# run_indexer_even:
+# 	JSINFO_INDEXER_BLOCK_TYPE=even NODE_TLS_REJECT_UNAUTHORIZED=0 bun run src/indexer.ts
 
-run_indexer_odd:
-	JSINFO_INDEXER_BLOCK_TYPE=odd NODE_TLS_REJECT_UNAUTHORIZED=0 bun run src/indexer.ts
+# run_indexer_odd:
+# 	JSINFO_INDEXER_BLOCK_TYPE=odd NODE_TLS_REJECT_UNAUTHORIZED=0 bun run src/indexer.ts
 
 run_query:
-	JSINFO_QUERY_IS_DEBUG_MODE=true bun run src/query.ts
+	JSINFO_QUERY_CLEAR_DISKCACHE_ON_START=true JSINFO_QUERY_IS_DEBUG_MODE=true bun run src/query.ts
 
 run_query_nodemon:
-	npx nodemon --watch src --ext ts --exec "JSINFO_QUERY_IS_DEBUG_MODE=true bun run src/query.ts"
+	npx nodemon --watch src --ext ts --exec "JSINFO_QUERY_CLEAR_DISKCACHE_ON_START=true JSINFO_QUERY_IS_DEBUG_MODE=true bun run src/query.ts"
 
 run_query_nodemon_no_cache:
-	npx nodemon --watch src --ext ts --exec "JSINFO_QUERY_IS_DEBUG_MODE=true bun run src/query.ts"
+	npx nodemon --watch src --ext ts --exec "JSINFO_QUERY_CLEAR_DISKCACHE_ON_START=true JSINFO_QUERY_IS_DEBUG_MODE=true bun run src/query.ts"
 
 run_query_populate_mode:
-	JSINFO_QUERY_IS_DEBUG_MODE=true JSINFO_QUERY_CACHE_POPULTAE_MODE=true bun run src/query.ts
+	JSINFO_QUERY_CLEAR_DISKCACHE_ON_START=true JSINFO_QUERY_IS_DEBUG_MODE=true JSINFO_QUERY_CACHE_POPULTAE_MODE=true bun run src/query.ts
 
 run_query_no_cache_local_debug:
-	JSINFO_QUERY_IS_DEBUG_MODE=true JSINFO_QUERY_CACHE_ENABLED=false bun run src/query.ts
+	JSINFO_QUERY_CLEAR_DISKCACHE_ON_START=true JSINFO_QUERY_IS_DEBUG_MODE=true JSINFO_QUERY_CACHE_ENABLED=false bun run src/query.ts
 
 run_lavapProviderHealth:
 	cd lavapProviderHealth && python run.py

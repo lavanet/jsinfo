@@ -8,13 +8,13 @@ import { RegisterServerHandlerWithCache, GetServerInstance } from './query/query
 import * as consts from './query/queryConsts';
 
 import { IndexHandler, IndexHandlerOpts } from './query/handlers/indexHandler';
-import { IndexProvidersHandler, IndexProviderHandlerOpts, IndexProvidersItemCountHandler } from './query/handlers/indexProvidersHandler';
+import { IndexProvidersHandler, IndexProvidersHandlerOpts, IndexProvidersItemCountHandler, IndexProvidersCSVHandler } from './query/handlers/indexProvidersHandler';
 
 import { ProviderHandler, ProviderHandlerOpts } from './query/handlers/providerHandler';
-import { ProviderStakesHandlerOpts, ProviderStakesHandler, ProviderStakesItemCountHandler } from './query/handlers/providerStakesHandler';
-import { ProviderEventsHandlerOpts, ProviderEventsHandler, ProviderEventsItemCountHandler } from './query/handlers/providerEventsHandler';
-import { ProviderRewardsHandlerOpts, ProviderRewardsHandler, ProviderRewardsItemCountHandler } from './query/handlers/providerRewardsHandler';
-import { ProviderReportsHandlerOpts, ProviderReportsHandler, ProviderReportsItemCountHandler } from './query/handlers/providerReportsHandler';
+import { ProviderStakesHandlerOpts, ProviderStakesHandler, ProviderStakesItemCountHandler, ProviderStakesCSVHandler } from './query/handlers/providerStakesHandler';
+import { ProviderEventsHandlerOpts, ProviderEventsHandler, ProviderEventsItemCountHandler, ProviderEventsCSVHandler } from './query/handlers/providerEventsHandler';
+import { ProviderRewardsHandlerOpts, ProviderRewardsHandler, ProviderRewardsItemCountHandler, ProviderRewardsCSVHandler } from './query/handlers/providerRewardsHandler';
+import { ProviderReportsHandlerOpts, ProviderReportsHandler, ProviderReportsItemCountHandler, ProviderReportsCSVHandler } from './query/handlers/providerReportsHandler';
 
 import { ProvidersHandler, ProvidersHandlerOpts } from './query/handlers/providersHandler';
 import { SpecsHandler, SpecsHandlerOpts } from './query/handlers/specsHandler';
@@ -28,20 +28,31 @@ import { LatestHandler, LatestHandlerOpts } from './query/handlers/latestHandler
 import { LavapProviderHealthHandler, LavapProviderHealthHandlerOpts } from './query/handlers/lavapProviderHealthHandler';
 
 RegisterServerHandlerWithCache('/index', IndexHandlerOpts, IndexHandler);
-RegisterServerHandlerWithCache('/indexProviders', IndexProviderHandlerOpts, IndexProvidersHandler, IndexProvidersItemCountHandler);
+RegisterServerHandlerWithCache('/indexProviders', IndexProvidersHandlerOpts, IndexProvidersHandler, IndexProvidersItemCountHandler);
+GetServerInstance().get('/indexProvidersCsv', IndexProvidersCSVHandler);
+
 RegisterServerHandlerWithCache('/provider/:addr', ProviderHandlerOpts, ProviderHandler);
+
 RegisterServerHandlerWithCache('/providerStakes/:addr', ProviderStakesHandlerOpts, ProviderStakesHandler, ProviderStakesItemCountHandler);
 RegisterServerHandlerWithCache('/providerEvents/:addr', ProviderEventsHandlerOpts, ProviderEventsHandler, ProviderEventsItemCountHandler);
 RegisterServerHandlerWithCache('/providerRewards/:addr', ProviderRewardsHandlerOpts, ProviderRewardsHandler, ProviderRewardsItemCountHandler);
 RegisterServerHandlerWithCache('/providerReports/:addr', ProviderReportsHandlerOpts, ProviderReportsHandler, ProviderReportsItemCountHandler);
+
+GetServerInstance().get('/providerStakesCsv/:addr', ProviderStakesCSVHandler);
+GetServerInstance().get('/providerEventsCsv/:addr', ProviderEventsCSVHandler);
+GetServerInstance().get('/providerRewardsCsv/:addr', ProviderRewardsCSVHandler);
+GetServerInstance().get('/providerReportsCsv/:addr', ProviderReportsCSVHandler);
+
 RegisterServerHandlerWithCache('/providers', ProvidersHandlerOpts, ProvidersHandler);
 RegisterServerHandlerWithCache('/specs', SpecsHandlerOpts, SpecsHandler);
 RegisterServerHandlerWithCache('/consumers', ConsumersHandlerOpts, ConsumersHandler);
 RegisterServerHandlerWithCache('/consumer/:addr', ConsumerHandlerOpts, ConsumerHandler);
 RegisterServerHandlerWithCache('/spec/:specId', SpecHandlerOpts, SpecHandler);
 RegisterServerHandlerWithCache('/events', EventsHandlerOpts, EventsHandler);
+
 RegisterServerHandlerWithCache('/providerHealth/:addr', ProviderHealthHandlerOpts, ProviderHealthHandler, ProviderHealthItemCountHandler);
 GetServerInstance().get('/providerHealthCsv/:addr', ProviderHealthCSVHandler);
+
 
 GetServerInstance().get('/latest', LatestHandlerOpts, LatestHandler);
 

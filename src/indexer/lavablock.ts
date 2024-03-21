@@ -286,10 +286,26 @@ export const GetOneLavaBlock = async (
     static_dbStakes: Map<string, schema.ProviderStake[]>,
 ): Promise<LavaBlock> => {
 
+    const startTimeBlock = Date.now();
+    const block = await getRpcBlock(height, client);
+    const endTimeBlock = Date.now();
+    if (endTimeBlock - startTimeBlock > 30000) {
+        console.log('getRpcBlock took', endTimeBlock - startTimeBlock, 'milliseconds. It returned', block, 'items at block height', height);
+    }
 
-    const block = await getRpcBlock(height, client)
-    const txs = await getRpcTxs(height, client, block)
-    const evts = await getRpcBlockResultEvents(height, clientTm)
+    const startTimeTxs = Date.now();
+    const txs = await getRpcTxs(height, client, block);
+    const endTimeTxs = Date.now();
+    if (endTimeTxs - startTimeTxs > 30000) {
+        console.log('getRpcTxs took', endTimeTxs - startTimeTxs, 'milliseconds. It returned', txs.length, 'items at block height', height);
+    }
+
+    const startTimeEvts = Date.now();
+    const evts = await getRpcBlockResultEvents(height, clientTm);
+    const endTimeEvts = Date.now();
+    if (endTimeEvts - startTimeEvts > 30000) {
+        console.log('getRpcBlockResultEvents took', endTimeEvts - startTimeEvts, 'milliseconds. It returned', evts.length, 'items at block height', height);
+    }
 
     //
     // Block object to return

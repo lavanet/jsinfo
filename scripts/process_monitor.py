@@ -5,31 +5,42 @@ import time
 import os
 import signal
 import sys
+import threading
 
 def monitor_command(cmd, timeout):
     # Start the command
-    process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize=1, universal_newlines=True)
 
     last_output_time = time.time()
 
-    while True:
-        # Wait for output or a timeout
-        try:
-            output = process.stdout.readline().decode().strip()
+    def check_output():
+        nonlocal last_output_time
+        while True:
+            if process.poll() is not None:
+                os.kill(os.getpid(), signal.SIGTERM)
+            output = process.stdout.readline().strip()
             if output:
                 print(output)
                 last_output_time = time.time()
-            elif time.time() - last_output_time > timeout:
+
+    def check_timeout():
+        nonlocal last_output_time
+        while True:
+            if time.time() - last_output_time > timeout:
                 print('No output for', timeout, 'seconds. Killing command.')
                 os.kill(process.pid, signal.SIGKILL)
-                return
-        except Exception as e:
-            print('Error while monitoring command:', e)
-            return
+                os.kill(os.getpid(), signal.SIGTERM)
+            time.sleep(1)
 
-        # Check if the process has finished
-        if process.poll() is not None:
-            return
+    # Start the threads
+    thread_output = threading.Thread(target=check_output)
+    thread_output.start()
+    thread_timeout = threading.Thread(target=check_timeout)
+    thread_timeout.start()
+
+    # Wait for the threads to finish
+    thread_output.join()
+    thread_timeout.join()
 
 if __name__ == '__main__':
     if len(sys.argv) != 3:

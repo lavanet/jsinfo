@@ -97,15 +97,6 @@ export async function ProviderHandler(request: FastifyRequest, reply: FastifyRep
         relaySum = res2[0].relaySum
         rewardSum = res2[0].rewardSum
     }
-    const paymentsRes = await GetReadDbInstance().select().from(schema.relayPayments).
-        leftJoin(schema.blocks, eq(schema.relayPayments.blockId, schema.blocks.height)).
-        where(eq(schema.relayPayments.provider, addr)).
-        orderBy(desc(schema.relayPayments.id)).offset(0).limit(50)
-    //
-    const eventsRes = await GetReadDbInstance().select().from(schema.events).
-        leftJoin(schema.blocks, eq(schema.events.blockId, schema.blocks.height)).
-        where(eq(schema.events.provider, addr)).
-        orderBy(desc(schema.events.id)).offset(0).limit(50)
 
     //
     // Get stakes
@@ -115,13 +106,6 @@ export async function ProviderHandler(request: FastifyRequest, reply: FastifyRep
     stakesRes.forEach((stake) => {
         stakeSum += stake.stake!
     })
-
-    //
-    // Get reports
-    let reportsRes = await GetReadDbInstance().select().from(schema.providerReported).
-        leftJoin(schema.blocks, eq(schema.providerReported.blockId, schema.blocks.height)).
-        where(eq(schema.providerReported.provider, addr)).
-        orderBy(desc(schema.providerReported.blockId)).limit(50)
 
     //
     // Get graph with 1 day resolution
@@ -171,10 +155,6 @@ export async function ProviderHandler(request: FastifyRequest, reply: FastifyRep
         relaySum: relaySum,
         rewardSum: rewardSum,
         stakeSum: stakeSum,
-        events: eventsRes,
-        stakes: stakesRes,
-        payments: paymentsRes,
-        reports: reportsRes,
         qosData: FormatDates(qosDataRaw),
         data: FormatDates(data1),
     }

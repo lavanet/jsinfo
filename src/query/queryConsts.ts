@@ -2,6 +2,7 @@
 
 import os from 'os';
 import path from 'path';
+import fs from 'fs';
 import { GetEnvVar } from '../utils';
 
 export const JSINFO_QUERY_IS_DEBUG_MODE: boolean = GetEnvVar("JSINFO_QUERY_IS_DEBUG_MODE", "false") === "true";
@@ -11,6 +12,20 @@ export const JSINFO_QUERY_FASITY_PRINT_LOGS: boolean = GetEnvVar("JSINFO_QUERY_F
 
 export const JSINFO_QUERY_DISKCACHE = process.env.JSINFO_QUERY_DISKCACHE || "";
 export const JSINFO_QUERY_CACHEDIR = JSINFO_QUERY_DISKCACHE && JSINFO_QUERY_DISKCACHE !== "" ? JSINFO_QUERY_DISKCACHE : path.join(os.tmpdir(), 'query-cache');
+
+export const JSINFO_QUERY_CLEAR_DISKCACHE_ON_START: boolean = GetEnvVar("JSINFO_QUERY_CLEAR_DISKCACHE_ON_START", "false") === "true";
+
+if (JSINFO_QUERY_CLEAR_DISKCACHE_ON_START) {
+    fs.readdir(JSINFO_QUERY_CACHEDIR, (err, files) => {
+        if (err) throw err;
+
+        for (const file of files) {
+            fs.unlink(path.join(JSINFO_QUERY_CACHEDIR, file), err => {
+                if (err) throw err;
+            });
+        }
+    });
+}
 
 const JSINFO_QUERY_PORT_STRING = process.env['JSINFO_QUERY_PORT']!;
 if (!JSINFO_QUERY_PORT_STRING) {
@@ -27,4 +42,6 @@ export const JSINFO_QUERY_LAVAP_PROVIDER_HEALTH_ENDPOINT_ENABLED = JSINFO_QUERY_
 // how many days back to store in the table
 export const JSINFO_QUERY_PROVIDER_HEALTH_HOURLY_CUTOFF_DAYS = parseInt(GetEnvVar("JSINFO_QUERY_FASITY_PRINT_LOGS", "30"));
 
-
+// how many items to show per page in the sorted table
+export const JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE = parseInt(GetEnvVar("JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE", "20"));
+export const JSINFO_QUERY_ALLOWED_ITEMS_PER_PAGE = JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE

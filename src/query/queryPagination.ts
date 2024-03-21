@@ -1,5 +1,6 @@
 import { FastifyRequest } from "fastify";
 import * as url from 'url';
+import { JSINFO_QUERY_ALLOWED_ITEMS_PER_PAGE } from "./queryConsts";
 
 export interface Pagination {
     sortKey: string | null;
@@ -49,10 +50,72 @@ export function validatePaginationString(paginationString: string): boolean {
         return false;
     }
 
+    if (JSINFO_QUERY_ALLOWED_ITEMS_PER_PAGE != 0 && JSINFO_QUERY_ALLOWED_ITEMS_PER_PAGE && Number(count) != JSINFO_QUERY_ALLOWED_ITEMS_PER_PAGE) {
+        console.error(`validatePaginationString:: Invalid count: ${count} in ${paginationString}. Count must be : ${JSINFO_QUERY_ALLOWED_ITEMS_PER_PAGE}`);
+        return false;
+    }
+
     return true;
 }
 
-export function ParsePagination(request: FastifyRequest): Pagination | null {
+export function ParsePaginationFromString(paginationString: string): Pagination {
+    let parts = paginationString.split(',');
+
+    if (parts.length === 3) {
+        parts = parsePaginationStringHandleThreeParts(parts);
+    }
+
+    if (parts.length !== 4) {
+        const error = new Error(`Invalid format: the string must have exactly two or three commas. Received: ${paginationString}`);
+        console.error(`Error parsing pagination string: ${paginationString}`);
+        console.error(error);
+        throw error;
+    }
+
+    const [sortKey, direction, page, itemCountPerPage] = parts;
+
+    if (!sortKey || !['a', 'asc', 'ascending', 'd', 'desc', 'descending'].includes(direction) || isNaN(Number(page)) || isNaN(Number(itemCountPerPage))) {
+        const error = new Error(`Invalid format: the string must be in the format <sortKey>,<direction>,<page>,<itemCountPerPage>. Received: ${paginationString}`);
+        console.error(`Error parsing pagination string: ${paginationString}`);
+        console.error(error);
+        throw error;
+    }
+
+    let finalDirection = parsePaginationStringGetFinalDirection(direction);
+
+    return {
+        sortKey: sortKey === '-' ? null : sortKey,
+        direction: finalDirection,
+        page: parseInt(page, 10),
+        count: parseInt(itemCountPerPage, 10)
+    };
+}
+
+function parsePaginationStringHandleThreeParts(parts: string[]): string[] {
+    let sortKeyParts = parts[0].split('|');
+    if (sortKeyParts.length === 2 && ['a', 'asc', 'ascending', 'd', 'desc', 'descending'].includes(sortKeyParts[1])) {
+        return [sortKeyParts[0], sortKeyParts[1], ...parts.slice(1)];
+    } else {
+        return [sortKeyParts[0], 'a', ...parts.slice(1)];
+    }
+}
+
+function parsePaginationStringGetFinalDirection(direction: string): "ascending" | "descending" {
+    switch (direction) {
+        case 'a':
+        case 'asc':
+        case 'ascending':
+            return 'ascending';
+        case 'd':
+        case 'desc':
+        case 'descending':
+            return 'descending';
+        default:
+            throw new Error(`Invalid direction: ${direction}. Expected 'a', 'asc', 'ascending', 'd', 'desc', or 'descending'`);
+    }
+}
+
+export function ParsePaginationFromRequest(request: FastifyRequest): Pagination | null {
     try {
         const parsedUrl = url.parse(request.url, true);
         const serializedPagination = parsedUrl.query.pagination;
@@ -61,14 +124,8 @@ export function ParsePagination(request: FastifyRequest): Pagination | null {
             return null;
         }
 
-        const [sortKey, direction, page, count] = serializedPagination.split(',');
+        return ParsePaginationFromString(serializedPagination);
 
-        return {
-            sortKey: sortKey === '-' ? null : sortKey,
-            direction: direction === 'a' ? 'ascending' : 'descending',
-            page: parseInt(page, 10),
-            count: parseInt(count, 10),
-        };
     } catch (error) {
         console.log('Failed to parse pagination from request:', error);
         return null;

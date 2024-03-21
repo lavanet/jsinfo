@@ -4,11 +4,12 @@
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { CheckReadDbInstance, GetReadDbInstance } from '../queryDb';
 import * as schema from '../../schema';
-import { eq, desc, asc } from "drizzle-orm";
-import { Pagination, ParsePagination, IsNotNullAndNotZero, SerializePagination } from '../queryUtils';
+import { eq, desc } from "drizzle-orm";
+import { Pagination, ParsePaginationFromRequest, IsNotNullAndNotZero } from '../queryPagination';
 import { JSINFO_QUERY_CACHEDIR, JSINFO_QUERY_CACHE_ENABLED } from '../queryConsts';
 import fs from 'fs';
 import path from 'path';
+import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE } from '../queryConsts';
 export interface HealthReport {
     message: string | null;
     block: number | null;
@@ -26,22 +27,28 @@ export const ProviderHealthHandlerOpts: RouteShorthandOptions = {
     schema: {
         response: {
             200: {
-                type: 'array',
-                items: {
-                    type: 'object',
-                    properties: {
-                        id: { type: 'string' },
-                        timestamp: { type: 'string' },
-                        spec: { type: 'string' },
-                        interface: { type: 'string' },
-                        status: { type: 'string' },
-                        message: { type: 'string' },
+                type: 'object',
+                properties: {
+                    data: {
+                        type: 'array',
+                        items: {
+                            type: 'object',
+                            properties: {
+                                id: { type: 'string' },
+                                timestamp: { type: 'string' },
+                                spec: { type: 'string' },
+                                interface: { type: 'string' },
+                                status: { type: 'string' },
+                                message: { type: 'string' },
+                            }
+                        }
                     }
                 }
             }
         }
     }
 }
+
 class ProviderHealthData {
     private addr: string;
     private cacheDir: string = JSINFO_QUERY_CACHEDIR;
@@ -85,7 +92,7 @@ class ProviderHealthData {
         let data = await this.fetchDataFromCache();
 
         if (pagination == null) {
-            return data.slice(0, 20);
+            return data.slice(0, JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE);
         }
 
         data = this.sortData(data, pagination.sortKey || "", pagination.direction);
@@ -95,7 +102,7 @@ class ProviderHealthData {
 
         // If slice would fail, return a [0,20] slice
         if (start < 0 || end < 0 || start > data.length || end > data.length) {
-            return data.slice(0, 20);
+            return data.slice(0, JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE);
         }
 
         return data.slice(start, end);
@@ -272,7 +279,7 @@ export async function ProviderHealthHandler(request: FastifyRequest, reply: Fast
         return;
     }
 
-    let pagination: Pagination | null = ParsePagination(request)
+    let pagination: Pagination | null = ParsePaginationFromRequest(request)
     const providerHealthData = new ProviderHealthData(addr);
     const res: HealthReport[] = await providerHealthData.getPaginatedItems(pagination);
 
@@ -280,7 +287,7 @@ export async function ProviderHealthHandler(request: FastifyRequest, reply: Fast
         console.log(`ProviderHealthHandler:: No health info for provider ${addr} in database.`);
     }
 
-    return res;
+    return { data: res };
 }
 
 export async function ProviderHealthCSVHandler(request: FastifyRequest, reply: FastifyReply) {

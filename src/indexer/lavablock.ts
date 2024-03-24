@@ -157,6 +157,13 @@ const processOneEvent = (
     switch (evt.type) {
         //
         // Providers
+        // https://github.com/lavanet/lava/blob/main/x/pairing/types/types.go#L8
+        /*
+            TODO: add missing events:
+            LatestBlocksReportEventName = "provider_latest_block_report"
+            RejectedCuEventName         = "rejected_cu"
+            UnstakeProposalEventName    = "unstake_gov_proposal"
+        */
         case 'lava_relay_payment':
             ParseEventRelayPayment(evt, height, txHash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
             break
@@ -181,9 +188,24 @@ const processOneEvent = (
         case 'lava_provider_jailed':
             ParseEventProviderJailed(evt, height, txHash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
             break
+        case 'lava_provider_latest_block_report':
+            // TODO
+            break
 
         //
         // Subscription
+        // https://github.com/lavanet/lava/blob/main/x/subscription/types/types.go#L5
+        /*
+            TODO: add missing events:
+            AdvancedBuySubscriptionEventName        = "advanced_buy_subscription_event"
+            AdvancedBuyUpgradeSubscriptionEventName = "advanced_buy_upgrade_subscription_event"
+            SubscriptionAutoRenewChangeEventName    = "subscription_auto_renew_change_event"
+            UpgradeSubscriptionEventName            = "upgrade_subscription_event"
+            ExpireSubscriptionEventName             = "expire_subscription_event"
+            AddTrackedCuEventName                   = "add_tracked_cu_event"
+            MonthlyCuTrackerProviderRewardEventName = "monthly_cu_tracker_provider_reward"
+            RemainingCreditEventName                = "subscription_remaining_credit"
+        */
         case 'lava_buy_subscription_event':
             ParseEventBuySubscription(evt, height, txHash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
             break
@@ -200,8 +222,15 @@ const processOneEvent = (
             ParseEventAddKeyToProject(evt, height, txHash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
             break
 
+
         //
         // Conflict
+        // https://github.com/lavanet/lava/blob/main/x/conflict/types/types.go#L28
+        //
+        /*
+            TODO: add missing events:
+            ConflictUnstakeFraudVoterEventName = "conflict_unstake_fraud_voter"
+        */
         case 'lava_conflict_vote_got_commit':
             // sealed vote by provider
             ParseEventConflictVoteGotCommit(evt, height, txHash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
@@ -226,8 +255,38 @@ const processOneEvent = (
         case 'lava_conflict_detection_vote_unresolved':
             ParseEventConflictDetectionVoteUnresolved(evt, height, txHash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
             break
-        case 'lava_provider_latest_block_report':
-            // TODO
+
+        //
+        // Dual stacking
+        // https://github.com/lavanet/lava/blob/main/x/dualstaking/types/types.go#L4
+        //
+        /*
+            TODO: add missing events:
+            ConflictUnstakeFraudVoterEventName = "conflict_unstake_fraud_voter"
+        */
+        // a successful provider delegation
+        case 'lava_delegate_to_provider':
+            // do this one
+            break
+        // a successful provider delegation unbond
+        case 'lava_unbond_from_provider':
+            // do this one
+            break
+        // a successful provider redelegation
+        case 'lava_redelegate_between_providers':
+            break
+        // a successful provider delegator reward claim
+        case 'lava_delegator_claim_rewards':
+            break
+        // spec contributor got new rewards
+        case 'lava_contributor_rewards':
+            break
+        // validator slashed happened, providers slashed accordingly
+        case 'lava_validator_slash':
+            break
+        case 'lava_freeze_from_unbond':
+            break
+        case 'lava_unstake_from_unbond':
             break
 
         case 'lava_fixated_params_clean':
@@ -271,7 +330,7 @@ const processOneEvent = (
             break
 
         default:
-            console.log('uknown event', height, evt.type)
+            console.log('processOneEvent:: Uknown event', height, evt.type, evt)
             break
     }
 }

@@ -9,6 +9,7 @@ import { Pagination, ParsePaginationFromRequest, ParsePaginationFromString } fro
 import { JSINFO_QUERY_CACHEDIR, JSINFO_QUERY_CACHE_ENABLED, JSINFO_QUERY_HANDLER_CACHE_TIME_SECONDS, JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE } from '../queryConsts';
 import fs from 'fs';
 import path from 'path';
+import { CompareValues } from '../queryUtils';
 
 export const ProviderStakesHandlerOpts: RouteShorthandOptions = {
     schema: {
@@ -114,12 +115,7 @@ class ProviderStakesData {
         data.sort((a, b) => {
             const aValue = sortKeyParts.reduce((obj, key) => (obj && obj[key] !== undefined) ? obj[key] : null, a);
             const bValue = sortKeyParts.reduce((obj, key) => (obj && obj[key] !== undefined) ? obj[key] : null, b);
-
-            if (pagination.direction === 'ascending') {
-                return aValue > bValue ? 1 : -1;
-            } else {
-                return aValue < bValue ? 1 : -1;
-            }
+            return CompareValues(aValue, bValue, pagination.direction);
         });
 
         data = data.slice((pagination.page - 1) * pagination.count, pagination.page * pagination.count);

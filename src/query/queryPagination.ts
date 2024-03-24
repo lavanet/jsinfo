@@ -139,5 +139,3 @@ export function SerializePagination(pagination: Pagination): string {
 
     return `${sortKeyString},${directionShort},${page},${count}`;
 }
-
-export const IsNotNullAndNotZero = (value: number | null) => value !== null && value !== 0;

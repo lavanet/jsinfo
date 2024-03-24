@@ -5,7 +5,9 @@ import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { CheckReadDbInstance, GetReadDbInstance } from '../queryDb';
 import * as schema from '../../schema';
 import { eq, desc } from "drizzle-orm";
-import { Pagination, ParsePaginationFromRequest, IsNotNullAndNotZero } from '../queryPagination';
+import { Pagination, ParsePaginationFromRequest } from '../queryPagination';
+import { IsNotNullAndNotZero } from '../queryUtils';
+import { CompareValues } from '../queryUtils';
 import { JSINFO_QUERY_CACHEDIR, JSINFO_QUERY_CACHE_ENABLED, JSINFO_QUERY_HANDLER_CACHE_TIME_SECONDS } from '../queryConsts';
 import fs from 'fs';
 import path from 'path';
@@ -122,14 +124,7 @@ class ProviderHealthData {
         return data.sort((a, b) => {
             const aValue = a[sortKey];
             const bValue = b[sortKey];
-
-            if (aValue < bValue) {
-                return direction === 'ascending' ? -1 : 1;
-            } else if (aValue > bValue) {
-                return direction === 'ascending' ? 1 : -1;
-            } else {
-                return 0;
-            }
+            return CompareValues(aValue, bValue, direction);
         });
     }
 

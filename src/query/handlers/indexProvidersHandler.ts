@@ -1,7 +1,7 @@
 // src/query/handlers/indexProvidersHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { CheckReadDbInstance, GetReadDbInstance } from '../queryDb';
+import { QueryCheckReadDbInstance, QueryGetReadDbInstance } from '../queryDb';
 import * as schema from '../../schema';
 import { sql, desc, inArray, not, eq } from "drizzle-orm";
 import { Pagination, ParsePaginationFromRequest, ParsePaginationFromString } from '../queryPagination';
@@ -57,7 +57,7 @@ class IndexProvidersData {
     }
 
     private async fetchDataFromDb(): Promise<any[]> {
-        let res4 = await GetReadDbInstance().select({
+        let res4 = await QueryGetReadDbInstance().select({
             address: schema.aggHourlyrelayPayments.provider,
             rewardSum: sql<number>`sum(${schema.aggHourlyrelayPayments.rewardSum})`,
         }).from(schema.aggHourlyrelayPayments).
@@ -73,8 +73,8 @@ class IndexProvidersData {
         }
 
         // provider details
-        let res44 = await GetReadDbInstance().select().from(schema.providers).where(inArray(schema.providers.address, providersAddrs))
-        let providerStakesRes = await GetReadDbInstance().select({
+        let res44 = await QueryGetReadDbInstance().select().from(schema.providers).where(inArray(schema.providers.address, providersAddrs))
+        let providerStakesRes = await QueryGetReadDbInstance().select({
             provider: schema.providerStakes.provider,
             totalActiveServices: sql<number>`sum(case when ${schema.providerStakes.status} = ${schema.LavaProviderStakeStatus.Active} then 1 else 0 end)`,
             totalServices: sql<number>`count(${schema.providerStakes.specId})`,
@@ -192,7 +192,7 @@ class IndexProvidersData {
 }
 
 export async function IndexProvidersHandler(request: FastifyRequest, reply: FastifyReply) {
-    await CheckReadDbInstance()
+    await QueryCheckReadDbInstance()
 
     const providerRewardsData = new IndexProvidersData();
     try {
@@ -205,7 +205,7 @@ export async function IndexProvidersHandler(request: FastifyRequest, reply: Fast
 }
 
 export async function IndexProvidersItemCountHandler(request: FastifyRequest, reply: FastifyReply) {
-    await CheckReadDbInstance()
+    await QueryCheckReadDbInstance()
 
     const providerRewardsData = new IndexProvidersData();
     const itemCount = await providerRewardsData.getTotalItemCount();
@@ -213,7 +213,7 @@ export async function IndexProvidersItemCountHandler(request: FastifyRequest, re
 }
 
 export async function IndexProvidersCSVHandler(request: FastifyRequest, reply: FastifyReply) {
-    await CheckReadDbInstance()
+    await QueryCheckReadDbInstance()
 
     const providerHealthData = new IndexProvidersData();
     const csv = await providerHealthData.getCSV();

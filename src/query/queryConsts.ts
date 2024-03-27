@@ -40,10 +40,26 @@ export const JSINFO_QUERY_HIGH_POST_BODY_LIMIT = JSINFO_QUERY_CACHE_POPULTAE_MOD
 export const JSINFO_QUERY_LAVAP_PROVIDER_HEALTH_ENDPOINT_ENABLED = JSINFO_QUERY_CACHE_POPULTAE_MODE || JSINFO_QUERY_IS_DEBUG_MODE;
 
 // how many days back to store in the table
-export const JSINFO_QUERY_PROVIDER_HEALTH_HOURLY_CUTOFF_DAYS = parseInt(GetEnvVar("JSINFO_QUERY_FASITY_PRINT_LOGS", "30"));
+export const JSINFO_QUERY_PROVIDER_HEALTH_HOURLY_CUTOFF_DAYS = parseInt(GetEnvVar("JSINFO_QUERY_PROVIDER_HEALTH_HOURLY_CUTOFF_DAYS", "30"));
 
 // how many items to show per page in the sorted table
 export const JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE = parseInt(GetEnvVar("JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE", "20"));
 export const JSINFO_QUERY_ALLOWED_ITEMS_PER_PAGE = JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE
 
 export const JSINFO_QUERY_HANDLER_CACHE_TIME_SECONDS = parseInt(GetEnvVar("JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE", (15 * 60) + "")); // 15 minutes in seconds - same as agregation time - same as block time
+
+export const JSINFO_NO_READ_DB = GetEnvVar("JSINFO_NO_READ_DB", "true") === "true";
+
+const numberQueryConsts = [
+    'JSINFO_QUERY_PORT',
+    'JSINFO_QUERY_PROVIDER_HEALTH_HOURLY_CUTOFF_DAYS',
+    'JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE',
+    'JSINFO_QUERY_ALLOWED_ITEMS_PER_PAGE',
+    'JSINFO_QUERY_HANDLER_CACHE_TIME_SECONDS'
+];
+
+numberQueryConsts.forEach(key => {
+    if (Number.isNaN(global[key])) {
+        throw new Error(`${key} is NaN`);
+    }
+});

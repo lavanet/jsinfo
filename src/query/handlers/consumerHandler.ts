@@ -2,7 +2,7 @@
 // src/query/handlers/consumersHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { CheckReadDbInstance, GetReadDbInstance } from '../queryDb';
+import { QueryCheckReadDbInstance, QueryGetReadDbInstance } from '../queryDb';
 import * as schema from '../../schema';
 import { sql, desc, gt, and, eq } from "drizzle-orm";
 
@@ -40,7 +40,7 @@ export const ConsumerHandlerOpts: RouteShorthandOptions = {
 }
 
 export async function ConsumerHandler(request: FastifyRequest, reply: FastifyReply) {
-    await CheckReadDbInstance()
+    await QueryCheckReadDbInstance()
 
     const { addr } = request.params as { addr: string }
     if (addr.length != 44 || !addr.startsWith('lava@')) {
@@ -49,7 +49,7 @@ export async function ConsumerHandler(request: FastifyRequest, reply: FastifyRep
     }
 
     //
-    const res = await GetReadDbInstance().select().from(schema.consumers).where(eq(schema.consumers.address, addr)).limit(1)
+    const res = await QueryGetReadDbInstance().select().from(schema.consumers).where(eq(schema.consumers.address, addr)).limit(1)
     if (res.length != 1) {
         reply.code(400).send({ error: 'Provider does not exist' });
         return;
@@ -59,7 +59,7 @@ export async function ConsumerHandler(request: FastifyRequest, reply: FastifyRep
     let cuSum = 0
     let relaySum = 0
     let rewardSum = 0
-    const res2 = await GetReadDbInstance().select({
+    const res2 = await QueryGetReadDbInstance().select({
         cuSum: sql<number>`sum(${schema.relayPayments.cu})`,
         relaySum: sql<number>`sum(${schema.relayPayments.relays})`,
         rewardSum: sql<number>`sum(${schema.relayPayments.pay})`
@@ -72,7 +72,7 @@ export async function ConsumerHandler(request: FastifyRequest, reply: FastifyRep
 
     //
     // Get graph with 1 day resolution
-    let res5 = await GetReadDbInstance().select({
+    let res5 = await QueryGetReadDbInstance().select({
         date: sql<Date>`DATE(${schema.blocks.datetime})`,
         cuSum: sql<number>`sum(${schema.relayPayments.cu})`,
         relaySum: sql<number>`sum(${schema.relayPayments.relays})`,
@@ -87,9 +87,9 @@ export async function ConsumerHandler(request: FastifyRequest, reply: FastifyRep
         orderBy(sql<Date>`DATE(${schema.blocks.datetime})`)
 
     //
-    const res3 = await GetReadDbInstance().select().from(schema.conflictResponses).where(eq(schema.conflictResponses.consumer, addr)).
+    const res3 = await QueryGetReadDbInstance().select().from(schema.conflictResponses).where(eq(schema.conflictResponses.consumer, addr)).
         orderBy(desc(schema.conflictResponses.id)).offset(0).limit(50)
-    const res4 = await GetReadDbInstance().select().from(schema.subscriptionBuys).where(eq(schema.subscriptionBuys.consumer, addr)).
+    const res4 = await QueryGetReadDbInstance().select().from(schema.subscriptionBuys).where(eq(schema.subscriptionBuys.consumer, addr)).
         orderBy(desc(schema.subscriptionBuys.blockId)).offset(0).limit(50)
     return {
         addr: addr,

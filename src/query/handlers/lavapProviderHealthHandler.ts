@@ -2,7 +2,7 @@
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import * as schema from '../../schema';
-import { CheckReadDbInstance, GetReadDbInstance } from '../queryDb';
+import { QueryCheckDbInstance, QueryGetDbInstance } from '../queryDb';
 import { lt } from "drizzle-orm";
 import { JSINFO_QUERY_PROVIDER_HEALTH_HOURLY_CUTOFF_DAYS } from '../queryConsts';
 
@@ -82,7 +82,7 @@ export const LavapProviderHealthHandlerOpts: RouteShorthandOptions = {
 }
 
 export async function LavapProviderHealthHandler(request: FastifyRequest, reply: FastifyReply) {
-    await CheckReadDbInstance();
+    await QueryCheckDbInstance();
 
     const cdate = new Date(); // current date
     console.log(`LavapProviderHealthHandler:: Lavap Provider Health Timestamp: ${cdate}`);
@@ -126,7 +126,7 @@ export async function LavapProviderHealthHandler(request: FastifyRequest, reply:
         };
     });
 
-    await GetReadDbInstance().transaction(async (tx) => {
+    await QueryGetDbInstance().transaction(async (tx) => {
         console.log(`Starting transaction. Inserting ${insertData.length} records.`);
 
         // Get the current hour

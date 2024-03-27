@@ -2,7 +2,7 @@
 // src/query/handlers/providerHealth.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { CheckReadDbInstance, GetReadDbInstance } from '../queryDb';
+import { QueryCheckReadDbInstance, QueryGetReadDbInstance } from '../queryDb';
 import * as schema from '../../schema';
 import { eq, desc } from "drizzle-orm";
 import { Pagination, ParsePaginationFromRequest } from '../queryPagination';
@@ -143,7 +143,7 @@ class ProviderHealthData {
 }
 
 const createHealthReportQuery = (addr: string) => {
-    return GetReadDbInstance().select().from(schema.providerHealthHourly)
+    return QueryGetReadDbInstance().select().from(schema.providerHealthHourly)
         .where(eq(schema.providerHealthHourly.provider, addr))
         .orderBy(desc(schema.providerHealthHourly.timestamp));
 }
@@ -251,7 +251,7 @@ export const ApplyHealthResponseGroupingAndTextFormatting = (res: HealthReport[]
 }
 
 export async function ProviderHealthItemCountHandler(request: FastifyRequest, reply: FastifyReply) {
-    await CheckReadDbInstance()
+    await QueryCheckReadDbInstance()
 
     const { addr } = request.params as { addr: string }
     if (addr.length != 44 || !addr.startsWith('lava@')) {
@@ -266,7 +266,7 @@ export async function ProviderHealthItemCountHandler(request: FastifyRequest, re
 }
 
 export async function ProviderHealthHandler(request: FastifyRequest, reply: FastifyReply) {
-    await CheckReadDbInstance()
+    await QueryCheckReadDbInstance()
 
     const { addr } = request.params as { addr: string }
     if (addr.length != 44 || !addr.startsWith('lava@')) {
@@ -286,7 +286,7 @@ export async function ProviderHealthHandler(request: FastifyRequest, reply: Fast
 }
 
 export async function ProviderHealthCSVHandler(request: FastifyRequest, reply: FastifyReply) {
-    await CheckReadDbInstance()
+    await QueryCheckReadDbInstance()
 
     const { addr } = request.params as { addr: string }
     if (addr.length != 44 || !addr.startsWith('lava@')) {

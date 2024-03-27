@@ -44,6 +44,22 @@ export async function GetReadPostgresUrl(): Promise<string> {
     return cachedReadPostgresUrl!;
 }
 
+let cachedRelaysReadPostgresUrl: string | null = null;
+
+export async function GetRelaysReadPostgresUrl(): Promise<string> {
+    if (cachedRelaysReadPostgresUrl !== null) {
+        return cachedRelaysReadPostgresUrl;
+    }
+    try {
+        cachedRelaysReadPostgresUrl = GetEnvVar("RELAYS_READ_POSTGRESQL_URL");
+    } catch (error) {
+        console.error("Missing env var for RELAYS_READ_POSTGRESQL_URL or RELAYS_READ_POSTGRESQL_URL");
+        await Sleep(60000); // Sleep for one minute
+        process.exit(1);
+    }
+    return cachedRelaysReadPostgresUrl!;
+}
+
 // https://github.com/porsager/postgres?tab=readme-ov-file#connection-timeout
 
 export async function GetDb(): Promise<PostgresJsDatabase> {
@@ -54,12 +70,23 @@ export async function GetDb(): Promise<PostgresJsDatabase> {
         max: 60,
     });
     const db: PostgresJsDatabase = drizzle(queryClient/*, { logger: true }*/);
-    db
     return db;
 }
 
 export async function GetReadDb(): Promise<PostgresJsDatabase> {
+    // use one db
     const queryClient = postgres(await GetReadPostgresUrl(), {
+        idle_timeout: 20,
+        connect_timeout: 20,
+        max_lifetime: 75,
+        max: 60,
+    });
+    const db: PostgresJsDatabase = drizzle(queryClient/*, { logger: true }*/);
+    return db;
+}
+
+export async function GetRelaysReadDb(): Promise<PostgresJsDatabase> {
+    const queryClient = postgres(await GetRelaysReadPostgresUrl(), {
         idle_timeout: 20,
         connect_timeout: 20,
         max_lifetime: 75,

@@ -1,59 +1,85 @@
 // ./src/query/dbUtils.ts
 
 import { logger } from '../utils';
-import { GetDb, GetReadDb } from '../dbUtils';
+import { GetDb, GetReadDb, GetRelaysReadDb } from '../dbUtils';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { desc } from "drizzle-orm";
 import * as schema from '../schema';
+import { JSINFO_NO_READ_DB } from './queryConsts';
 
-let db: PostgresJsDatabase;
-let readDb: PostgresJsDatabase;
+let db: PostgresJsDatabase | null = null;
+let readDb: PostgresJsDatabase | null = null;
+let relaysReadDb: PostgresJsDatabase | null = null;
 
-export async function CheckDbInstance() {
+export async function QueryCheckDbInstance() {
     try {
-        await db.select().from(schema.blocks).limit(1)
+        await db!.select().from(schema.blocks).limit(1)
     } catch (e) {
-        logger.info('CheckDbInstance exception, resetting connection', e)
+        logger.info('QueryCheckDbInstance exception, resetting connection', e)
         db = await GetDb()
     }
 }
 
-export async function InitDbInstance() {
+export async function QueryInitDbInstance() {
     console.log('Starting queryserver - connecting to db')
-    db = await GetDb();
+    db = db || await GetDb();
 }
 
-export function GetDbInstance(): PostgresJsDatabase {
+export function QueryGetDbInstance(): PostgresJsDatabase {
     if (!db) {
         throw new Error('Database instance is not initialized');
     }
     return db;
 }
 
-export async function CheckReadDbInstance() {
+export async function QueryCheckReadDbInstance() {
+    if (JSINFO_NO_READ_DB) return QueryCheckDbInstance();
     try {
-        await readDb.select().from(schema.blocks).limit(1)
+        await readDb!.select().from(schema.blocks).limit(1)
     } catch (e) {
-        logger.info('CheckReadDbInstance exception, resetting connection', e)
+        logger.info('QueryCheckReadDbInstance exception, resetting connection', e)
         readDb = await GetReadDb()
     }
 }
 
-export async function InitReadDbInstance() {
+export async function QueryInitReadDbInstance() {
+    if (JSINFO_NO_READ_DB) return QueryInitDbInstance();
     console.log('Starting queryserver - connecting to readDb')
-    readDb = await GetReadDb();
+    readDb = readDb || await GetReadDb();
 }
 
-export function GetReadDbInstance(): PostgresJsDatabase {
+export function QueryGetReadDbInstance(): PostgresJsDatabase {
+    if (JSINFO_NO_READ_DB) return QueryGetDbInstance();
     if (!readDb) {
         throw new Error('Read database instance is not initialized');
     }
     return readDb;
 }
 
+export async function QueryCheckRelaysReadDbInstance() {
+    try {
+        await relaysReadDb!.select().from(schema.lavaReportError).limit(1)
+    } catch (e) {
+        logger.info('QueryCheckReadDbInstance exception, resetting connection', e)
+        relaysReadDb = await GetRelaysReadDb()
+    }
+}
+
+export async function QueryInitRelaysReadDbInstance() {
+    console.log('Starting queryserver - connecting to relaysReadDb')
+    relaysReadDb = relaysReadDb || await GetRelaysReadDb();
+}
+
+export function QueryGetRelaysReadDbInstance(): PostgresJsDatabase {
+    if (!relaysReadDb) {
+        throw new Error('relaysReadDb database instance is not initialized');
+    }
+    return relaysReadDb;
+}
+
 export async function GetLatestBlock() {
     //
-    const latestDbBlocks = await GetDbInstance().select().from(schema.blocks).orderBy(desc(schema.blocks.height)).limit(1)
+    const latestDbBlocks = await QueryGetDbInstance().select().from(schema.blocks).orderBy(desc(schema.blocks.height)).limit(1)
     let latestHeight = 0
     let latestDatetime = 0
     if (latestDbBlocks.length != 0) {

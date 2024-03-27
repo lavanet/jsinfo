@@ -2,7 +2,7 @@
 // src/query/handlers/providerRewardsHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { CheckReadDbInstance, GetReadDbInstance } from '../queryDb';
+import { QueryCheckReadDbInstance, QueryGetReadDbInstance } from '../queryDb';
 import * as schema from '../../schema';
 import { and, desc, eq, gte } from "drizzle-orm";
 import { Pagination, ParsePaginationFromRequest, ParsePaginationFromString } from '../queryPagination';
@@ -115,7 +115,7 @@ class ProviderRewardsData {
         let thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-        const paymentsRes = await GetReadDbInstance().select().from(schema.relayPayments).
+        const paymentsRes = await QueryGetReadDbInstance().select().from(schema.relayPayments).
             leftJoin(schema.blocks, eq(schema.relayPayments.blockId, schema.blocks.height)).
             where(
                 and(
@@ -206,7 +206,7 @@ class ProviderRewardsData {
 }
 
 export async function ProviderRewardsHandler(request: FastifyRequest, reply: FastifyReply) {
-    await CheckReadDbInstance()
+    await QueryCheckReadDbInstance()
 
     const { addr } = request.params as { addr: string }
     if (addr.length != 44 || !addr.startsWith('lava@')) {
@@ -214,7 +214,7 @@ export async function ProviderRewardsHandler(request: FastifyRequest, reply: Fas
         return;
     }
 
-    const res = await GetReadDbInstance().select().from(schema.providers).where(eq(schema.providers.address, addr)).limit(1)
+    const res = await QueryGetReadDbInstance().select().from(schema.providers).where(eq(schema.providers.address, addr)).limit(1)
     if (res.length != 1) {
         reply.code(400).send({ error: 'Provider does not exist' });
         return;
@@ -231,7 +231,7 @@ export async function ProviderRewardsHandler(request: FastifyRequest, reply: Fas
 }
 
 export async function ProviderRewardsItemCountHandler(request: FastifyRequest, reply: FastifyReply) {
-    await CheckReadDbInstance()
+    await QueryCheckReadDbInstance()
 
     const { addr } = request.params as { addr: string }
     if (addr.length != 44 || !addr.startsWith('lava@')) {
@@ -239,7 +239,7 @@ export async function ProviderRewardsItemCountHandler(request: FastifyRequest, r
         return;
     }
 
-    const res = await GetReadDbInstance().select().from(schema.providers).where(eq(schema.providers.address, addr)).limit(1)
+    const res = await QueryGetReadDbInstance().select().from(schema.providers).where(eq(schema.providers.address, addr)).limit(1)
     if (res.length != 1) {
         reply.code(400).send({ error: 'Provider does not exist' });
         return;
@@ -251,7 +251,7 @@ export async function ProviderRewardsItemCountHandler(request: FastifyRequest, r
 }
 
 export async function ProviderRewardsCSVHandler(request: FastifyRequest, reply: FastifyReply) {
-    await CheckReadDbInstance()
+    await QueryCheckReadDbInstance()
 
     const { addr } = request.params as { addr: string }
     if (addr.length != 44 || !addr.startsWith('lava@')) {

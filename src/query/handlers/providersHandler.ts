@@ -2,7 +2,7 @@
 // src/query/handlers/providersHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { CheckReadDbInstance, GetReadDbInstance } from '../queryDb';
+import { QueryCheckReadDbInstance, QueryGetReadDbInstance } from '../queryDb';
 import * as schema from '../../schema';
 
 export const ProvidersHandlerOpts: RouteShorthandOptions = {
@@ -21,9 +21,9 @@ export const ProvidersHandlerOpts: RouteShorthandOptions = {
 }
 
 export async function ProvidersHandler(request: FastifyRequest, reply: FastifyReply) {
-    await CheckReadDbInstance()
+    await QueryCheckReadDbInstance()
 
-    const res = await GetReadDbInstance().select().from(schema.providers)
+    const res = await QueryGetReadDbInstance().select().from(schema.providers)
     return {
         providers: res,
     }

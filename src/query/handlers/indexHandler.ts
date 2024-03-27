@@ -1,7 +1,7 @@
 // src/query/handlers/indexHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { CheckReadDbInstance, GetLatestBlock, GetReadDbInstance } from '../queryDb';
+import { QueryCheckReadDbInstance, GetLatestBlock, QueryGetReadDbInstance } from '../queryDb';
 import * as schema from '../../schema';
 import { sql, desc, gt, and, inArray } from "drizzle-orm";
 import { FormatDates } from '../dateUtils';
@@ -46,7 +46,7 @@ export const IndexHandlerOpts: RouteShorthandOptions = {
 }
 
 export async function IndexHandler(request: FastifyRequest, reply: FastifyReply) {
-    await CheckReadDbInstance()
+    await QueryCheckReadDbInstance()
     //
     const { latestHeight, latestDatetime } = await GetLatestBlock()
     // logger.info(`Latest block: ${latestHeight}, ${latestDatetime}`)
@@ -56,7 +56,7 @@ export async function IndexHandler(request: FastifyRequest, reply: FastifyReply)
     let cuSum = 0
     let relaySum = 0
     let rewardSum = 0
-    let res = await GetReadDbInstance().select({
+    let res = await QueryGetReadDbInstance().select({
         cuSum: sql<number>`sum(${schema.aggHourlyrelayPayments.cuSum})`,
         relaySum: sql<number>`sum(${schema.aggHourlyrelayPayments.relaySum})`,
         rewardSum: sql<number>`sum(${schema.aggHourlyrelayPayments.rewardSum})`
@@ -71,7 +71,7 @@ export async function IndexHandler(request: FastifyRequest, reply: FastifyReply)
     //
     // Get total provider stake
     let stakeSum = 0
-    let res2 = await GetReadDbInstance().select({
+    let res2 = await QueryGetReadDbInstance().select({
         stakeSum: sql<number>`sum(${schema.providerStakes.stake})`,
     }).from(schema.providerStakes)
     if (res2.length != 0) {
@@ -80,7 +80,7 @@ export async function IndexHandler(request: FastifyRequest, reply: FastifyReply)
 
     //
     // Get "top" providers
-    let res4 = await GetReadDbInstance().select({
+    let res4 = await QueryGetReadDbInstance().select({
         address: schema.aggHourlyrelayPayments.provider,
         rewardSum: sql<number>`sum(${schema.aggHourlyrelayPayments.rewardSum})`,
     }).from(schema.aggHourlyrelayPayments).
@@ -98,7 +98,7 @@ export async function IndexHandler(request: FastifyRequest, reply: FastifyReply)
 
     //
     // Get top chains
-    let topSpecs = await GetReadDbInstance().select({
+    let topSpecs = await QueryGetReadDbInstance().select({
         chainId: schema.aggHourlyrelayPayments.specId,
         relaySum: sql<number>`sum(${schema.aggHourlyrelayPayments.relaySum})`,
     }).from(schema.aggHourlyrelayPayments).
@@ -120,7 +120,7 @@ export async function IndexHandler(request: FastifyRequest, reply: FastifyReply)
     // Get graph with 1 day resolution
     let mainChartData = {}
     if (getChains.length != 0) {
-        mainChartData = await GetReadDbInstance().select({
+        mainChartData = await QueryGetReadDbInstance().select({
             date: sql<string>`DATE_TRUNC('day', ${schema.aggHourlyrelayPayments.datehour}) as mydate`,
             chainId: schema.aggHourlyrelayPayments.specId,
             cuSum: sql<number>`sum(${schema.aggHourlyrelayPayments.cuSum})`,
@@ -139,7 +139,7 @@ export async function IndexHandler(request: FastifyRequest, reply: FastifyReply)
 
     //
     // QoS graph
-    let qosDataRaw = await GetReadDbInstance().select({
+    let qosDataRaw = await QueryGetReadDbInstance().select({
         date: sql`DATE_TRUNC('day', ${schema.aggHourlyrelayPayments.datehour}) as mydate`,
         qosSyncAvg: sql<number>`sum(${schema.aggHourlyrelayPayments.qosSyncAvg}*${schema.aggHourlyrelayPayments.relaySum})/sum(${schema.aggHourlyrelayPayments.relaySum})`,
         qosAvailabilityAvg: sql<number>`sum(${schema.aggHourlyrelayPayments.qosAvailabilityAvg}*${schema.aggHourlyrelayPayments.relaySum})/sum(${schema.aggHourlyrelayPayments.relaySum})`,

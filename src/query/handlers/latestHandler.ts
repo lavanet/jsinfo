@@ -1,7 +1,7 @@
 // src/query/handlers/latestHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { CheckReadDbInstance, GetLatestBlock } from '../queryDb';
+import { QueryCheckReadDbInstance, GetLatestBlock } from '../queryDb';
 
 export const LatestHandlerOpts: RouteShorthandOptions = {
     schema: {
@@ -22,7 +22,7 @@ export const LatestHandlerOpts: RouteShorthandOptions = {
 }
 
 export async function LatestHandler(request: FastifyRequest, reply: FastifyReply) {
-    await CheckReadDbInstance()
+    await QueryCheckReadDbInstance()
 
     const { latestHeight, latestDatetime } = await GetLatestBlock()
     return {

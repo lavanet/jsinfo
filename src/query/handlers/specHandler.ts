@@ -97,7 +97,7 @@ export async function SpecHandler(request: FastifyRequest, reply: FastifyReply) 
         groupBy(sql`mydate`).
         where(
             and(
-                gt(sql<string>`DATE_TRUNC('day', ${schema.aggHourlyrelayPayments.datehour})`, sql<Date>`now() - interval '30 day'`),
+                gt(sql<string>`DATE_TRUNC('day', ${schema.aggHourlyrelayPayments.datehour})`, sql<Date>`now() - interval '90 day'`),
                 eq(schema.aggHourlyrelayPayments.specId, upSpecId)
             )
         ).
@@ -116,7 +116,7 @@ export async function SpecHandler(request: FastifyRequest, reply: FastifyReply) 
     }).from(schema.aggHourlyrelayPayments).
         where(
             and(
-                gt(sql<string>`DATE_TRUNC('day', ${schema.aggHourlyrelayPayments.datehour})`, sql<Date>`now() - interval '30 day'`),
+                gt(sql<string>`DATE_TRUNC('day', ${schema.aggHourlyrelayPayments.datehour})`, sql<Date>`now() - interval '90 day'`),
                 eq(schema.aggHourlyrelayPayments.specId, upSpecId)
             )
         ).groupBy(sql`mydate`).

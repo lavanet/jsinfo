@@ -22,27 +22,27 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: 'Authenticate to Google Cloud'
-        uses: 'google-github-actions/auth@v1'
+      - name: "Authenticate to Google Cloud"
+        uses: "google-github-actions/auth@v1"
         with:
-          workload_identity_provider: '${{secrets.staging_workload_identity_provider}}'
-          service_account: '${{secrets.staging_service_account}}'
+          workload_identity_provider: "${{secrets.staging_workload_identity_provider}}"
+          service_account: "${{secrets.staging_service_account}}"
 
-      - name: 'Set up GCP CLI'
-        uses: 'google-github-actions/setup-gcloud@v1'
+      - name: "Set up GCP CLI"
+        uses: "google-github-actions/setup-gcloud@v1"
 
-      - name: 'GCP CLI Info'
+      - name: "GCP CLI Info"
         run: |
           gcloud info
           gcloud auth list --filter=status:ACTIVE --format="value(account)"
 
-      - name: 'GCP set project'
+      - name: "GCP set project"
         env:
           PROJECT_SECRET: ${{secrets.staging_project}}
         run: |
           gcloud config set project "$PROJECT_SECRET"
 
-      - name: 'Authenticate to Google Artifact'
+      - name: "Authenticate to Google Artifact"
         run: |
           gcloud auth configure-docker us-central1-docker.pkg.dev,europe-west4-docker.pkg.dev
 
@@ -67,7 +67,7 @@ jobs:
           IMAGE_TAG: ${{ github.sha }}
           NOW: ${{ env.NOW }}
         run: echo "${IMAGE_TAG}""-""${NOW}"
-        
+
       - name: Build, tag, and push docker image to GCP
         env:
           REGISTRY: ${{ secrets.staging_registry }}
@@ -80,9 +80,34 @@ jobs:
             --cache-to="type=local,dest=/tmp/.buildx-cache-new" \
             --push -f Dockerfile .
 
-        # Necessary if you don't want your cache to grow forever, until
-        # https://github.com/docker/build-push-action/issues/252
-        # https://github.com/moby/buildkit/issues/1896
+      # - name: DeployOnCommit - Checkout growth-deployments repository
+      #   uses: actions/checkout@v2
+      #   with:
+      #     repository: lavanet/growth-deployments
+      #     token: ${{ secrets.GH_PAT }}
+      #     path: growth-deployments
+      #     ref: main
+
+      # - name: DeployOnCommit - Update growth-deployments/jsinfo/helm/values.staging.yaml
+      #   env:
+      #     IMAGE_TAG: ${{ github.sha }}
+      #     NOW: ${{ env.NOW }}
+      #   run: |
+      #     sed -i 's|tag:.*|tag: '"${IMAGE_TAG}-${NOW}"'|' growth-deployments/jsinfo/helm/values.staging.yaml
+
+      # - name: DeployOnCommit - Commit and push changes
+      #   run: |
+      #     cd growth-deployments
+      #     git config --global user.name 'GitHub Action'
+      #     git config --global user.email 'action@github.com'
+      #     git config --global pull.ff only
+      #     git add jsinfo/helm/values.staging.yaml
+      #     git commit -m 'Update jsinfo backend staging image tag'
+      #     git push origin
+
+      # Necessary if you don't want your cache to grow forever, until
+      # https://github.com/docker/build-push-action/issues/252
+      # https://github.com/moby/buildkit/issues/1896
       - name: Move cache
         run: |
           rm -rf /tmp/.buildx-cache || true

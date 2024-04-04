@@ -7,11 +7,11 @@ import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryCheckReadDbInstance, QueryGetRelaysReadDbInstance } from '../queryDb';
 import * as schema from '../../schema';
 import { eq, desc } from "drizzle-orm";
-import { Pagination, ParsePaginationFromRequest } from '../queryPagination';
-import { CompareValues } from '../queryUtils';
+import { Pagination, ParsePaginationFromRequest } from '../utils/queryPagination';
+import { CompareValues } from '../utils/queryUtils';
 import { JSINFO_QUERY_CACHEDIR, JSINFO_QUERY_CACHE_ENABLED, JSINFO_QUERY_HANDLER_CACHE_TIME_SECONDS } from '../queryConsts';
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE } from '../queryConsts';
-
+import { ParseLavapProviderError } from '../utils/lavapProvidersErrorParser';
 export interface ErrorsReport {
     id: number;
     created_at: Date | null;
@@ -51,30 +51,6 @@ export const ProviderErrorsHandlerOpts: RouteShorthandOptions = {
     }
 }
 
-const parseError = (error: string): string => {
-    if (error.includes("Code(3369)")) {
-        return "provider does not handle requested api interface and spec";
-    } else if (error.includes("502 (Bad Gateway); transport: received unexpected content-type")) {
-        return 'transport: received unexpected content-type "text/html"';
-    } else if (error.includes("Consistency Error code 3368")) {
-        return "Requested a block that is too new and does not meet consistency requirements";
-    } else if (error.includes("malformed header: missing HTTP content-type")) {
-        return "malformed header: missing HTTP content-type";
-    }
-
-    let errMsgIndex = error.indexOf("ErrMsg:");
-    let descIndex = error.indexOf("desc =");
-    if (errMsgIndex !== -1) {
-        let end = error.slice(errMsgIndex).search(/[(,.:;)]/);
-        return error.slice(errMsgIndex, errMsgIndex + end).trim();
-    } else if (descIndex !== -1) {
-        let end = error.slice(descIndex).search(/[(,.:;)]/);
-        return error.slice(descIndex, descIndex + end).trim();
-    } else {
-        return error.slice(0, 200).trim();
-    }
-}
-
 class ProviderErrorsData {
     private addr: string;
     private cacheDir: string = JSINFO_QUERY_CACHEDIR;
@@ -97,7 +73,7 @@ class ProviderErrorsData {
             id: row.id,
             date: row.created_at?.toISOString() || '',
             spec: row.spec_id || '',
-            error: parseError(row.errors || ''),
+            error: ParseLavapProviderError(row.errors || ''),
         })).filter((report: ErrorsReportReponse) => report.date && report.error);
     }
 

@@ -7,7 +7,7 @@ import * as consts from './queryConsts';
 
 import fs from 'fs';
 import path from 'path';
-import { validatePaginationString } from './queryPagination';
+import { validatePaginationString } from './utils/queryPagination';
 
 interface CacheEntry {
     isFetching: Date | null;

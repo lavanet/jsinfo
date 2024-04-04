@@ -1,4 +1,4 @@
-// ./src/query/dateUtils.ts
+// ./src/query/utils/dateUtils.ts
 
 export function FormatDates(dataArray) {
     if (!dataArray || dataArray === '' || Array.isArray(dataArray) && dataArray.length === 0 || typeof dataArray === 'object' && Object.keys(dataArray).length === 0) {

@@ -1,3 +1,5 @@
+// jsinfo/src/query/utils/queryUtils.ts
+
 export function CompareValues(aValue: string | number, bValue: string | number, direction: 'ascending' | 'descending') {
     // Check if direction is 'ascending' or 'descending'
     if (direction !== 'ascending' && direction !== 'descending') {

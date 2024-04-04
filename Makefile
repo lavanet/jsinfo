@@ -21,12 +21,6 @@ run_docker_compose_indexer:
 run_indexer:
 	NODE_TLS_REJECT_UNAUTHORIZED=0 bun run src/indexer.ts
 
-# run_indexer_even:
-# 	JSINFO_INDEXER_BLOCK_TYPE=even NODE_TLS_REJECT_UNAUTHORIZED=0 bun run src/indexer.ts
-
-# run_indexer_odd:
-# 	JSINFO_INDEXER_BLOCK_TYPE=odd NODE_TLS_REJECT_UNAUTHORIZED=0 bun run src/indexer.ts
-
 run_query:
 	JSINFO_QUERY_CLEAR_DISKCACHE_ON_START=true JSINFO_QUERY_IS_DEBUG_MODE=true bun run src/query.ts
 
@@ -48,5 +42,8 @@ run_lavapProviderHealth:
 create_migrations:
 	bun run generate
 
-bun_query_health_handeler_test:
+bun_query_test_health_handeler:
 	bun test providerHealthHandler.test.ts 
+
+bun_query_teset_lavap_prodiver_error_parsing:
+	bun run ./src/query/utils/lavapProvidersErrorParser.test.ts 

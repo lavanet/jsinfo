@@ -4,7 +4,7 @@ import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryCheckReadDbInstance, GetLatestBlock, QueryGetReadDbInstance } from '../queryDb';
 import * as schema from '../../schema';
 import { sql, desc, gt, and, inArray } from "drizzle-orm";
-import { FormatDates } from '../dateUtils';
+import { FormatDates } from '../utils/queryDateUtils';
 
 export const IndexHandlerOpts: RouteShorthandOptions = {
     schema: {
@@ -129,7 +129,7 @@ export async function IndexHandler(request: FastifyRequest, reply: FastifyReply)
         }).from(schema.aggHourlyrelayPayments).
             where(
                 and(
-                    gt(sql<string>`DATE_TRUNC('day', ${schema.aggHourlyrelayPayments.datehour})`, sql<Date>`now() - interval '30 day'`),
+                    gt(sql<string>`DATE_TRUNC('day', ${schema.aggHourlyrelayPayments.datehour})`, sql<Date>`now() - interval '90 day'`),
                     inArray(schema.aggHourlyrelayPayments.specId, getChains)
                 )
             ).
@@ -148,7 +148,7 @@ export async function IndexHandler(request: FastifyRequest, reply: FastifyReply)
         qosAvailabilityExcAvg: sql<number>`sum(${schema.aggHourlyrelayPayments.qosAvailabilityAvg}*${schema.aggHourlyrelayPayments.relaySum})/sum(${schema.aggHourlyrelayPayments.relaySum})`,
         qosLatencyExcAv: sql<number>`sum(${schema.aggHourlyrelayPayments.qosLatencyExcAvg}*${schema.aggHourlyrelayPayments.relaySum})/sum(${schema.aggHourlyrelayPayments.relaySum})`,
     }).from(schema.aggHourlyrelayPayments).
-        where(gt(sql<string>`DATE_TRUNC('day', ${schema.aggHourlyrelayPayments.datehour})`, sql<Date>`now() - interval '30 day'`)).
+        where(gt(sql<string>`DATE_TRUNC('day', ${schema.aggHourlyrelayPayments.datehour})`, sql<Date>`now() - interval '90 day'`)).
         groupBy(sql`mydate`).
         orderBy(sql`mydate`)
 

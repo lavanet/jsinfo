@@ -5,7 +5,7 @@ import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryCheckReadDbInstance, GetLatestBlock, QueryGetReadDbInstance } from '../queryDb';
 import * as schema from '../../schema';
 import { sql, desc, gt, and, eq } from "drizzle-orm";
-import { FormatDates } from '../dateUtils';
+import { FormatDates } from '../utils/queryDateUtils';
 
 export const ProviderHandlerOpts: RouteShorthandOptions = {
     schema: {

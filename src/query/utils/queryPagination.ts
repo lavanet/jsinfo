@@ -1,6 +1,8 @@
+// jsinfo/src/query/utils/queryPagination.ts
+
 import { FastifyRequest } from "fastify";
 import * as url from 'url';
-import { JSINFO_QUERY_ALLOWED_ITEMS_PER_PAGE } from "./queryConsts";
+import { JSINFO_QUERY_ALLOWED_ITEMS_PER_PAGE } from "../queryConsts";
 
 export interface Pagination {
     sortKey: string | null;

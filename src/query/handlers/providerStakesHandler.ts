@@ -5,11 +5,11 @@ import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryCheckReadDbInstance, QueryGetReadDbInstance } from '../queryDb';
 import * as schema from '../../schema';
 import { desc, eq } from "drizzle-orm";
-import { Pagination, ParsePaginationFromRequest, ParsePaginationFromString } from '../queryPagination';
+import { Pagination, ParsePaginationFromRequest, ParsePaginationFromString } from '../utils/queryPagination';
 import { JSINFO_QUERY_CACHEDIR, JSINFO_QUERY_CACHE_ENABLED, JSINFO_QUERY_HANDLER_CACHE_TIME_SECONDS, JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE } from '../queryConsts';
 import fs from 'fs';
 import path from 'path';
-import { CompareValues } from '../queryUtils';
+import { CompareValues } from '../utils/queryUtils';
 
 export const ProviderStakesHandlerOpts: RouteShorthandOptions = {
     schema: {

@@ -52,8 +52,8 @@ export function validatePaginationString(paginationString: string): boolean {
         return false;
     }
 
-    if (JSINFO_QUERY_ALLOWED_ITEMS_PER_PAGE != 0 && JSINFO_QUERY_ALLOWED_ITEMS_PER_PAGE && Number(count) != JSINFO_QUERY_ALLOWED_ITEMS_PER_PAGE) {
-        console.error(`validatePaginationString:: Invalid count: ${count} in ${paginationString}. Count must be : ${JSINFO_QUERY_ALLOWED_ITEMS_PER_PAGE}`);
+    if (JSINFO_QUERY_ALLOWED_ITEMS_PER_PAGE != 0 && JSINFO_QUERY_ALLOWED_ITEMS_PER_PAGE && Number(count) > JSINFO_QUERY_ALLOWED_ITEMS_PER_PAGE) {
+        console.error(`validatePaginationString:: Invalid count: ${count} in ${paginationString}. Count must be lower then : ${JSINFO_QUERY_ALLOWED_ITEMS_PER_PAGE}`);
         return false;
     }
 

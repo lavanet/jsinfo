@@ -113,12 +113,9 @@ class ProviderHealthData {
     private sortData(data: HealthReport[], sortKey: string, direction: 'ascending' | 'descending'): HealthReport[] {
         if (sortKey === "-" || sortKey === "") sortKey = "timestamp";
 
-        if (sortKey && ["timestamp", "spec", "interface", "status", "message"].includes(sortKey)) {
-            if (sortKey !== "timestamp" || direction !== "descending") {
-
-            }
-        } else {
+        if (!["timestamp", "spec", "interface", "status", "message"].includes(sortKey)) {
             console.log(`Invalid sortKey: ${sortKey}`);
+            sortKey = "timestamp"
         }
 
         return data.sort((a, b) => {
@@ -184,7 +181,7 @@ export const RoundDateToNearest15Minutes = (date: Date) => {
     return new Date(date.getFullYear(), date.getMonth(), date.getDate(), date.getHours(), roundedMinutes);
 }
 
-const healthReportsStatusCompareOrder = ['frozen', 'unhealthy', 'healthy'];
+const healthReportsStatusCompareOrder = ['healthy', 'unhealthy', 'frozen'];
 
 export const CompareHealthReportByStatusLatency = (a: HealthReport, b: HealthReport) => {
     const aStatusIndex = healthReportsStatusCompareOrder.indexOf(a.status);
@@ -227,15 +224,36 @@ export const CompareHealthReportByStatusLatency = (a: HealthReport, b: HealthRep
     return 0;
 }
 
+export const validateOneProvider = (res: HealthReport[]) => {
+    if (res.length === 0) {
+        return;
+    }
+
+    const provider = res[0].provider;
+
+    if (provider === null) {
+        throw new Error('Provider is null');
+    }
+
+    for (const item of res) {
+        if (item.provider !== provider) {
+            throw new Error('Not all items have the same provider');
+        }
+    }
+}
+
 export const GroupHealthReportBy15MinutesWithSort = (res: HealthReport[]) => {
+    validateOneProvider(res);
+
     const groups = res.reduce((groups: { [key: string]: HealthReport[] }, item: HealthReport) => {
         const timestamp = RoundDateToNearest15Minutes(new Date(item.timestamp)).toISOString();
+        const key = `${item.spec}-${item.interface}-${timestamp}`;
 
-        if (!groups[timestamp]) {
-            groups[timestamp] = [];
+        if (!groups[key]) {
+            groups[key] = [];
         }
 
-        groups[timestamp].push(item);
+        groups[key].push(item);
 
         return groups;
     }, {});

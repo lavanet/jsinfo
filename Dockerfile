@@ -4,7 +4,9 @@ FROM oven/bun:1.0.25-alpine as base
 RUN mkdir /lava
 WORKDIR /lava
 RUN apk add --update python3 py3-pip git bash jq curl make gcc go linux-headers
-RUN git clone https://github.com/lavanet/lava.git . && git checkout a84396adf181a218d00f5f046852238313755f0e
+
+# version  1.2.1
+RUN git clone https://github.com/lavanet/lava.git . && git checkout 201f062ffc6296f383e4e25eb4acd872423fe4c2
 RUN chmod +x ./scripts/init_install.sh && bash ./scripts/init_install.sh
 RUN LAVA_BINARY=lavap make build
 ENV PATH="/lava/build:${PATH}"

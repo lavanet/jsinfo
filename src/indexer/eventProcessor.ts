@@ -34,9 +34,9 @@ import { ParseEventConflictDetectionVoteUnresolved } from "./events/EventConflic
 // Dual Staking Events
 import { ParseEventDelegateToProvider } from "./events/EventDelegateToProvider";
 import { ParseEventUbondFromProvider } from "./events/EventUnbondFromProvider";
+import { ParseEventRedelegateBetweenProviders } from "./events/EventRedelegateBetweenProviders";
 import { ParseEventLavaFreezeFromUnbound } from "./events/EventFreezeFromUnbond";
 import { ParseEventUnstakeFromUnbound } from "./events/EventUnstakeFromUnbound";
-
 
 export const ProcessOneEvent = (
     evt: Event,
@@ -191,7 +191,7 @@ export const ProcessOneEvent = (
 
         // // a successful provider redelegation
         case 'lava_redelegate_between_providers':
-            ParseRedelegateBetweenProviders(evt, height, txHash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
+            ParseEventRedelegateBetweenProviders(evt, height, txHash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
             break
 
         // // a successful provider delegator reward claim
@@ -212,6 +212,15 @@ export const ProcessOneEvent = (
 
         case 'lava_unstake_from_unbond':
             ParseEventUnstakeFromUnbound(evt, height, txHash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
+            break
+
+        //
+        // Dual stacking
+        // https://github.com/lavanet/lava/blob/main/x/projects/types/types.go#L20
+        //
+
+        case 'lava_set_subscription_policy_event':
+            // TODO - maybe?
             break
 
         //

@@ -15,6 +15,8 @@ export const JSINFO_QUERY_CACHEDIR = JSINFO_QUERY_DISKCACHE && JSINFO_QUERY_DISK
 
 export const JSINFO_QUERY_CLEAR_DISKCACHE_ON_START: boolean = GetEnvVar("JSINFO_QUERY_CLEAR_DISKCACHE_ON_START", "false").toLowerCase() === "true";
 
+fs.mkdirSync(JSINFO_QUERY_CACHEDIR, { recursive: true });
+
 if (JSINFO_QUERY_CLEAR_DISKCACHE_ON_START) {
     fs.readdir(JSINFO_QUERY_CACHEDIR, (err, files) => {
         if (err) throw err;

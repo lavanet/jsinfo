@@ -91,6 +91,7 @@ export async function ConsumerHandler(request: FastifyRequest, reply: FastifyRep
         orderBy(desc(schema.conflictResponses.id)).offset(0).limit(50)
     const res4 = await QueryGetReadDbInstance().select().from(schema.subscriptionBuys).where(eq(schema.subscriptionBuys.consumer, addr)).
         orderBy(desc(schema.subscriptionBuys.blockId)).offset(0).limit(50)
+
     return {
         addr: addr,
         cuSum: cuSum,

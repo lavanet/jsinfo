@@ -13,7 +13,11 @@ get() {
     while [ $i -lt $retries ]; do
         echo "Attempt number: $((i+1))" >&2
         response=$(curl -s -m 120 "$REST_URL$url")
-        if echo "$response" | jq . > /dev/null 2>&1; then
+        if echo "$url" | grep -q "Csv"; then
+            echo "Received a CSV response." >&2
+            echo "$response"
+            return
+        elif echo "$response" | jq . > /dev/null 2>&1; then
             echo "Received a valid JSON response." >&2
             if [ "$response" != "{}" ]; then
                 echo "Response is not empty, returning the response." >&2
@@ -23,7 +27,7 @@ get() {
                 echo "Response is an empty JSON object." >&2
             fi
         else
-            echo "Received an invalid JSON response." >&2
+            echo "Received an invalid response." >&2
         fi
         i=$((i+1))
         echo "Sleeping for 0.5 seconds before the next attempt..." >&2
@@ -32,56 +36,17 @@ get() {
     echo "Exceeded maximum number of retries ($retries), exiting the function." >&2
 }
 
-revalidate_cache_for_specs() {
-    echo "revalidate_cache: Revalidating cache for specs..."
-    response=$(get "/specs")
-    specs=$(echo "$response" | jq -r '.specs[] | .id')
-    for spec in $specs; do
-        get "/spec/$spec" > /dev/null
-    done
-}
-
-revalidate_cache_for_consumers() {
-    echo "revalidate_cache: Revalidating cache for consumers..."
-    response=$(get "/consumers")
-    consumers=$(echo "$response" | jq -r '.consumers[] | .address')
-    for consumer in $consumers; do
-        get "/consumer/$consumer" > /dev/null
-    done
-}
-
-revalidate_cache_for_providers() {
-    echo "revalidate_cache: Revalidating cache for providers..."
-    response=$(get "/providers")
-    providers=$(echo "$response" | jq -r '.providers[] | .address')
-    for provider in $providers; do
-        if [ "$provider" != "null" ]; then
-            get "/provider/$provider" > /dev/null
-        fi
-    done
-}
-
 revalidate_cache() {
     echo "revalidate_cache: Starting revalidation of cache..."
 
-    echo "revalidate_cache: Browsing to /events"
-    get "/events" > /dev/null
-    echo "revalidate_cache: Browsing to /index"
-    get "/index" > /dev/null
+    echo "revalidate_cache: Browsing to /cacheLinks"
+    response=$(get "/cacheLinks")
+    urls=$(echo "$response" | jq -r '.urls[]')
 
-    echo "revalidate_cache: Browsing to /events"
-    get "/events" > /dev/null
-    echo "revalidate_cache: Browsing to /index"
-    get "/index" > /dev/null
-
-    revalidate_cache_for_providers
-    revalidate_cache_for_specs
-    revalidate_cache_for_consumers
-
-    echo "revalidate_cache: Browsing to /events"
-    get "/events" > /dev/null
-    echo "revalidate_cache: Browsing to /index"
-    get "/index" > /dev/null
+    for url in $urls; do
+        echo "revalidate_cache: Browsing to $url"
+        get "$url" > /dev/null
+    done
 
     echo "revalidate_cache: Finished revalidation of cache."
 }

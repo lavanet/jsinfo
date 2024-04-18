@@ -3,6 +3,7 @@
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryCheckReadDbInstance, QueryGetReadDbInstance } from '../queryDb';
+import { isNotNull } from "drizzle-orm";
 import * as schema from '../../schema';
 
 export const ProvidersHandlerOpts: RouteShorthandOptions = {
@@ -23,7 +24,8 @@ export const ProvidersHandlerOpts: RouteShorthandOptions = {
 export async function ProvidersHandler(request: FastifyRequest, reply: FastifyReply) {
     await QueryCheckReadDbInstance()
 
-    const res = await QueryGetReadDbInstance().select().from(schema.providers)
+    const res = await QueryGetReadDbInstance().select().from(schema.providers).where(isNotNull(schema.providers.address))
+
     return {
         providers: res,
     }

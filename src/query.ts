@@ -2,65 +2,13 @@
 
 require('dotenv').config();
 
-import { logger } from './utils';
-import { QueryInitDbInstance, QueryInitReadDbInstance, QueryInitRelaysReadDbInstance, GetLatestBlock } from './query/queryDb';
-import { RegisterServerHandlerWithCache, GetServerInstance } from './query/queryServer';
-import * as consts from './query/queryConsts';
+import * as consts from './query/queryConsts'
+import { logger } from './utils'
 
-import { LatestHandler, LatestHandlerOpts } from './query/handlers/latestHandler';
+import { GetServerInstance } from './query/queryServer'
+import { QueryInitDbInstance, QueryInitReadDbInstance, QueryInitRelaysReadDbInstance, GetLatestBlock } from './query/queryDb'
 
-import { IndexHandler, IndexHandlerOpts } from './query/handlers/indexHandler';
-import { IndexProvidersHandler, IndexProvidersHandlerOpts, IndexProvidersItemCountHandler, IndexProvidersCSVHandler } from './query/handlers/indexProvidersHandler';
-
-import { ProviderHandler, ProviderHandlerOpts } from './query/handlers/providerHandler';
-import { ProviderHealthHandler, ProviderHealthHandlerOpts, ProviderHealthItemCountHandler, ProviderHealthCSVHandler } from './query/handlers/providerHealthHandler';
-import { ProviderErrorsHandler, ProviderErrorsHandlerOpts, ProviderErrorsItemCountHandler, ProviderErrorsCSVHandler } from './query/handlers/providerErrorsHandler';
-import { ProviderStakesHandlerOpts, ProviderStakesHandler, ProviderStakesItemCountHandler, ProviderStakesCSVHandler } from './query/handlers/providerStakesHandler';
-import { ProviderEventsHandlerOpts, ProviderEventsHandler, ProviderEventsItemCountHandler, ProviderEventsCSVHandler } from './query/handlers/providerEventsHandler';
-import { ProviderRewardsHandlerOpts, ProviderRewardsHandler, ProviderRewardsItemCountHandler, ProviderRewardsCSVHandler } from './query/handlers/providerRewardsHandler';
-import { ProviderReportsHandlerOpts, ProviderReportsHandler, ProviderReportsItemCountHandler, ProviderReportsCSVHandler } from './query/handlers/providerReportsHandler';
-
-import { ProvidersHandler, ProvidersHandlerOpts } from './query/handlers/providersHandler';
-import { SpecsHandler, SpecsHandlerOpts } from './query/handlers/specsHandler';
-import { SpecHandler, SpecHandlerOpts } from './query/handlers/specHandler';
-import { ConsumersHandler, ConsumersHandlerOpts } from './query/handlers/consumersHandler';
-import { ConsumerHandler, ConsumerHandlerOpts } from './query/handlers/consumerHandler';
-import { EventsHandler, EventsHandlerOpts } from './query/handlers/eventsHandler';
-
-import { LavapProviderHealthHandler, LavapProviderHealthHandlerOpts } from './query/handlers/lavapProviderHealthHandler';
-
-GetServerInstance().get('/latest', LatestHandlerOpts, LatestHandler);
-
-RegisterServerHandlerWithCache('/index', IndexHandlerOpts, IndexHandler);
-RegisterServerHandlerWithCache('/indexProviders', IndexProvidersHandlerOpts, IndexProvidersHandler, IndexProvidersItemCountHandler);
-GetServerInstance().get('/indexProvidersCsv', IndexProvidersCSVHandler);
-
-RegisterServerHandlerWithCache('/provider/:addr', ProviderHandlerOpts, ProviderHandler);
-
-RegisterServerHandlerWithCache('/providerHealth/:addr', ProviderHealthHandlerOpts, ProviderHealthHandler, ProviderHealthItemCountHandler);
-RegisterServerHandlerWithCache('/providerErrors/:addr', ProviderErrorsHandlerOpts, ProviderErrorsHandler, ProviderErrorsItemCountHandler);
-RegisterServerHandlerWithCache('/providerStakes/:addr', ProviderStakesHandlerOpts, ProviderStakesHandler, ProviderStakesItemCountHandler);
-RegisterServerHandlerWithCache('/providerEvents/:addr', ProviderEventsHandlerOpts, ProviderEventsHandler, ProviderEventsItemCountHandler);
-RegisterServerHandlerWithCache('/providerRewards/:addr', ProviderRewardsHandlerOpts, ProviderRewardsHandler, ProviderRewardsItemCountHandler);
-RegisterServerHandlerWithCache('/providerReports/:addr', ProviderReportsHandlerOpts, ProviderReportsHandler, ProviderReportsItemCountHandler);
-
-GetServerInstance().get('/providerHealthCsv/:addr', ProviderHealthCSVHandler);
-GetServerInstance().get('/providerErrorsCsv/:addr', ProviderErrorsCSVHandler);
-GetServerInstance().get('/providerStakesCsv/:addr', ProviderStakesCSVHandler);
-GetServerInstance().get('/providerEventsCsv/:addr', ProviderEventsCSVHandler);
-GetServerInstance().get('/providerRewardsCsv/:addr', ProviderRewardsCSVHandler);
-GetServerInstance().get('/providerReportsCsv/:addr', ProviderReportsCSVHandler);
-
-RegisterServerHandlerWithCache('/providers', ProvidersHandlerOpts, ProvidersHandler);
-RegisterServerHandlerWithCache('/specs', SpecsHandlerOpts, SpecsHandler);
-RegisterServerHandlerWithCache('/consumers', ConsumersHandlerOpts, ConsumersHandler);
-RegisterServerHandlerWithCache('/consumer/:addr', ConsumerHandlerOpts, ConsumerHandler);
-RegisterServerHandlerWithCache('/spec/:specId', SpecHandlerOpts, SpecHandler);
-RegisterServerHandlerWithCache('/events', EventsHandlerOpts, EventsHandler);
-
-if (consts.JSINFO_QUERY_LAVAP_PROVIDER_HEALTH_ENDPOINT_ENABLED) {
-    GetServerInstance().post('/lavapProviderHealth', LavapProviderHealthHandlerOpts, LavapProviderHealthHandler);
-}
+import './query/queryRoutes'
 
 export const queryServerMain = async (): Promise<void> => {
     logger.info('Starting query server')

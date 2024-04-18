@@ -1,7 +1,8 @@
 import { Event } from "@cosmjs/stargate"
-import { LavaBlock } from "../lavablock";
+import { LavaBlock } from "../types";
 import * as schema from '../../schema';
 import { GetOrSetConsumer, SetTx } from "../setlatest";
+import { EventProcessAttributes, EventParseProviderAddress, EventParseInt } from "../eventUtils";
 
 /*
 351669  {
@@ -38,26 +39,28 @@ export const ParseEventDelKeyFromProject = (
         provider: null,
     }
 
-    evt.attributes.forEach((attr) => {
-        let key: string = attr.key;
-        if (attr.key.lastIndexOf('.') != -1) {
-            key = attr.key.substring(0, attr.key.lastIndexOf('.'))
-        }
-        switch (key) {
-            case 'project':
-                evtEvent.consumer = attr.value.split('-')[0];
-                break
-            case 'key':
-                evtEvent.t2 = attr.value;
-                break
-            case 'keytype':
-                evtEvent.i1 = parseInt(attr.value)
-                break
-            case 'block':
-                evtEvent.i2 = parseInt(attr.value)
-                break
-        }
-    })
+    if (!EventProcessAttributes("ParseEventDelKeyFromProject", {
+        evt: evt,
+        height: height,
+        txHash: txHash,
+        processAttribute: (key: string, value: string) => {
+            switch (key) {
+                case 'project':
+                    evtEvent.consumer = value.split('-')[0];
+                    break
+                case 'key':
+                    evtEvent.t2 = EventParseProviderAddress(value);
+                    break
+                case 'keytype':
+                    evtEvent.i1 = EventParseInt(value)
+                    break
+                case 'block':
+                    evtEvent.i2 = EventParseInt(value)
+                    break
+            }
+        },
+        verifyFunction: () => !!evtEvent.consumer
+    })) return;
 
     SetTx(lavaBlock.dbTxs, txHash, height)
     GetOrSetConsumer(lavaBlock.dbConsumers, evtEvent.consumer!)

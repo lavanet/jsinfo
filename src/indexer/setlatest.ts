@@ -1,10 +1,12 @@
 import * as lavajs from '@lavanet/lavajs';
-import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../schema';
+
+import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { ne } from "drizzle-orm";
 import { DoInChunks } from "../utils";
 import { StakeEntry } from '@lavanet/lavajs/dist/codegen/lavanet/lava/epochstorage/stake_entry';
 import { JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE } from './indexerConsts';
+
 export type LavaClient = Awaited<ReturnType<typeof lavajs.lavanet.ClientFactory.createRPCQueryClient>>
 
 export function GetOrSetProvider(
@@ -119,7 +121,7 @@ export function GetOrSetPlan(
     return dbPlan
 }
 
-function _doStake(
+function processStakeEntry(
     height: number,
     dbProviders: Map<string, schema.Provider>,
     dbStakes: Map<string, schema.ProviderStake[]>,
@@ -181,7 +183,7 @@ async function getLatestProvidersAndSpecsAndStakes(
 
         let providers = await lavaClient.pairing.providers({ chainID: spec.chainID, showFrozen: true })
         providers.stakeEntry.forEach((stake) => {
-            _doStake(height, dbProviders, dbStakes, stake, false)
+            processStakeEntry(height, dbProviders, dbStakes, stake, false)
         })
     }))
 
@@ -201,7 +203,7 @@ async function getLatestProvidersAndSpecsAndStakes(
                 }
             })
         }
-        _doStake(height, dbProviders, dbStakes, stake, true)
+        processStakeEntry(height, dbProviders, dbStakes, stake, true)
     })
 }
 

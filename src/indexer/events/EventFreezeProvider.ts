@@ -1,7 +1,8 @@
 import { Event } from "@cosmjs/stargate"
-import { LavaBlock } from "../lavablock";
+import { LavaBlock } from "../types";
 import * as schema from '../../schema';
 import { GetOrSetProvider, SetTx } from "../setlatest";
+import { EventProcessAttributes, EventParseProviderAddress, EventParseInt } from "../eventUtils";
 
 /*
 462524 {
@@ -35,26 +36,28 @@ export const ParseEventFreezeProvider = (
         consumer: null,
     }
 
-    evt.attributes.forEach((attr) => {
-        let key: string = attr.key;
-        if (attr.key.lastIndexOf('.') != -1) {
-            key = attr.key.substring(0, attr.key.lastIndexOf('.'))
-        }
-        switch (key) {
-            case 'providerAddress':
-                evtEvent.provider = attr.value;
-                break
-            case 'freezeReason':
-                evtEvent.t1 = attr.value;
-                break
-            case 'chainIDs':
-                evtEvent.t2 = attr.value;
-                break
-            case 'freezeRequestBlock':
-                evtEvent.i1 = parseInt(attr.value)
-                break
-        }
-    })
+    if (!EventProcessAttributes("ParseEventFreezeProvider", {
+        evt: evt,
+        height: height,
+        txHash: txHash,
+        processAttribute: (key: string, value: string) => {
+            switch (key) {
+                case 'providerAddress':
+                    evtEvent.provider = EventParseProviderAddress(value);
+                    break
+                case 'freezeReason':
+                    evtEvent.t1 = value;
+                    break
+                case 'chainIDs':
+                    evtEvent.t2 = value;
+                    break
+                case 'freezeRequestBlock':
+                    evtEvent.i1 = EventParseInt(value)
+                    break
+            }
+        },
+        verifyFunction: () => !!evtEvent.provider
+    })) return;
 
     SetTx(lavaBlock.dbTxs, txHash, height)
     GetOrSetProvider(lavaBlock.dbProviders, static_dbProviders, evtEvent.provider!, '')

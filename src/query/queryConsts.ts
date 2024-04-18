@@ -5,15 +5,15 @@ import path from 'path';
 import fs from 'fs';
 import { GetEnvVar } from '../utils';
 
-export const JSINFO_QUERY_IS_DEBUG_MODE: boolean = GetEnvVar("JSINFO_QUERY_IS_DEBUG_MODE", "false") === "true";
-export const JSINFO_QUERY_CACHE_ENABLED: boolean = GetEnvVar("JSINFO_QUERY_CACHE_ENABLED", "true") === "true";
-export const JSINFO_QUERY_CACHE_POPULTAE_MODE: boolean = GetEnvVar("JSINFO_QUERY_CACHE_POPULTAE_MODE", "false") === "true";
-export const JSINFO_QUERY_FASITY_PRINT_LOGS: boolean = GetEnvVar("JSINFO_QUERY_FASITY_PRINT_LOGS", "false") === "true";
+export const JSINFO_QUERY_IS_DEBUG_MODE: boolean = GetEnvVar("JSINFO_QUERY_IS_DEBUG_MODE", "false").toLowerCase() === "true";
+export const JSINFO_QUERY_CACHE_ENABLED: boolean = GetEnvVar("JSINFO_QUERY_CACHE_ENABLED", "true").toLowerCase() === "true";
+export const JSINFO_QUERY_CACHE_POPULTAE_MODE: boolean = GetEnvVar("JSINFO_QUERY_CACHE_POPULTAE_MODE", "false").toLowerCase() === "true";
+export const JSINFO_QUERY_FASITY_PRINT_LOGS: boolean = GetEnvVar("JSINFO_QUERY_FASITY_PRINT_LOGS", "false").toLowerCase() === "true";
 
 export const JSINFO_QUERY_DISKCACHE = process.env.JSINFO_QUERY_DISKCACHE || "";
 export const JSINFO_QUERY_CACHEDIR = JSINFO_QUERY_DISKCACHE && JSINFO_QUERY_DISKCACHE !== "" ? JSINFO_QUERY_DISKCACHE : path.join(os.tmpdir(), 'query-cache');
 
-export const JSINFO_QUERY_CLEAR_DISKCACHE_ON_START: boolean = GetEnvVar("JSINFO_QUERY_CLEAR_DISKCACHE_ON_START", "false") === "true";
+export const JSINFO_QUERY_CLEAR_DISKCACHE_ON_START: boolean = GetEnvVar("JSINFO_QUERY_CLEAR_DISKCACHE_ON_START", "false").toLowerCase() === "true";
 
 if (JSINFO_QUERY_CLEAR_DISKCACHE_ON_START) {
     fs.readdir(JSINFO_QUERY_CACHEDIR, (err, files) => {
@@ -48,7 +48,7 @@ export const JSINFO_QUERY_ALLOWED_ITEMS_PER_PAGE = parseInt(GetEnvVar("JSINFO_QU
 
 export const JSINFO_QUERY_HANDLER_CACHE_TIME_SECONDS = parseInt(GetEnvVar("JSINFO_QUERY_HANDLER_CACHE_TIME_SECONDS", (15 * 60) + "")); // 15 minutes in seconds - same as agregation time - same as block time
 
-export const JSINFO_NO_READ_DB = GetEnvVar("JSINFO_NO_READ_DB", "true") === "true";
+export const JSINFO_NO_READ_DB = GetEnvVar("JSINFO_NO_READ_DB", "true").toLowerCase() === "true";
 
 const numberQueryConsts = [
     'JSINFO_QUERY_PORT',

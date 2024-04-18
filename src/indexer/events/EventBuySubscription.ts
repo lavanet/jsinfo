@@ -1,7 +1,8 @@
 import { Event } from "@cosmjs/stargate"
-import { LavaBlock } from "../lavablock";
+import { LavaBlock } from "../types";
 import * as schema from '../../schema';
 import { GetOrSetConsumer, SetTx } from "../setlatest";
+import { EventProcessAttributes, EventParseProviderAddress, EventParseInt } from "../eventUtils";
 
 /*
 360227  {
@@ -31,23 +32,26 @@ export const ParseEventBuySubscription = (
         blockId: height,
         tx: txHash,
     }
-    evt.attributes.forEach((attr) => {
-        let key: string = attr.key;
-        if (attr.key.lastIndexOf('.') != -1) {
-            key = attr.key.substring(0, attr.key.lastIndexOf('.'))
-        }
-        switch (key) {
-            case 'consumer':
-                evtEvent.consumer = attr.value;
-                break
-            case 'duration':
-                evtEvent.duration = parseInt(attr.value)
-                break
-            case 'plan':
-                evtEvent.plan = attr.value;
-                break
-        }
-    })
+
+    if (!EventProcessAttributes("ParseEventBuySubscription", {
+        evt: evt,
+        height: height,
+        txHash: txHash,
+        processAttribute: (key: string, value: string) => {
+            switch (key) {
+                case 'consumer':
+                    evtEvent.consumer = EventParseProviderAddress(value);
+                    break
+                case 'duration':
+                    evtEvent.duration = EventParseInt(value)
+                    break
+                case 'plan':
+                    evtEvent.plan = value;
+                    break
+            }
+        },
+        verifyFunction: () => !!evtEvent.consumer
+    })) return;
 
     SetTx(lavaBlock.dbTxs, txHash, height)
     GetOrSetConsumer(lavaBlock.dbConsumers, evtEvent.consumer!)

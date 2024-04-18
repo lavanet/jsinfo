@@ -1,7 +1,8 @@
 import { Event } from "@cosmjs/stargate"
-import { LavaBlock } from "../lavablock";
+import { LavaBlock } from "../types";
 import * as schema from '../../schema';
 import { GetOrSetProvider, SetTx } from "../setlatest";
+import { EventProcessAttributes, EventParseProviderAddress } from "../eventUtils";
 
 /*
 458352 {
@@ -37,20 +38,22 @@ export const ParseEventConflictVoteGotReveal = (
     provider: null,
   }
 
-  evt.attributes.forEach((attr) => {
-    let key: string = attr.key;
-    if (attr.key.lastIndexOf('.') != -1) {
-      key = attr.key.substring(0, attr.key.lastIndexOf('.'))
-    }
-    switch (key) {
-      case 'voteID':
-        evtEvent.t1 = attr.value;
-        break
-      case 'provider':
-        evtEvent.provider = attr.value;
-        break
-    }
-  })
+  if (!EventProcessAttributes("ParseEventConflictVoteGotReveal", {
+    evt: evt,
+    height: height,
+    txHash: txHash,
+    processAttribute: (key: string, value: string) => {
+      switch (key) {
+        case 'voteID':
+          evtEvent.t1 = value;
+          break
+        case 'provider':
+          evtEvent.provider = EventParseProviderAddress(value);
+          break
+      }
+    },
+    verifyFunction: () => !!evtEvent.provider
+  })) return;
 
   SetTx(lavaBlock.dbTxs, txHash, height)
   GetOrSetProvider(lavaBlock.dbProviders, static_dbProviders, evtEvent.provider!, '')

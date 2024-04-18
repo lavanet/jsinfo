@@ -1,9 +1,44 @@
 import { Event } from "@cosmjs/stargate"
-import { LavaBlock } from "../lavablock";
+import { LavaBlock } from "../types";
 import * as schema from '../../schema';
 import { SetTx } from "../setlatest";
+import { EventParseInt, EventProcessAttributes } from "../eventUtils";
 
 /*
+LavaBlockDebugDumpEvents event 1083240 lava_conflict_detection_vote_unresolved {
+  type: "lava_conflict_detection_vote_unresolved",
+  attributes: [
+    {
+      key: "FirstProviderVotes",
+      value: "0",
+    }, {
+      key: "NoneProviderVotes",
+      value: "0",
+    }, {
+      key: "NumOfNoVoters",
+      value: "8",
+    }, {
+      key: "NumOfVoters",
+      value: "0",
+    }, {
+      key: "RewardPool",
+      value: "0",
+    }, {
+      key: "SecondProviderVotes",
+      value: "0",
+    }, {
+      key: "TotalVotes",
+      value: "2745108140281",
+    }, {
+      key: "voteFailed",
+      value: "not_enough_voters",
+    }, {
+      key: "voteID",
+      value: "lava@1t74mf6pkerr0s7lren5uhfh9elru24n77rmxpnlava@1fpprhv40h9z058ez0hxdattjvg0fjsrhkqc7culava@1yx3c6h0gceg3pwz7vsed6mqwftu0456mcs4am91082940",
+    }
+  ],
+}
+
 486510 {
   type: 'lava_conflict_detection_vote_unresolved',
   attributes: [
@@ -41,44 +76,46 @@ export const ParseEventConflictDetectionVoteUnresolved = (
     provider: null,
   }
 
-  evt.attributes.forEach((attr) => {
-    let key: string = attr.key;
-    if (attr.key.lastIndexOf('.') != -1) {
-      key = attr.key.substring(0, attr.key.lastIndexOf('.'))
-    }
-    switch (key) {
-      case 'voteID':
-        evtEvent.t1 = attr.value
-        break
-      case 'voteFailed':
-        evtEvent.t2 = attr.value
-        break
+  if (!EventProcessAttributes("ParseEventConflictDetectionVoteUnresolved", {
+    evt: evt,
+    height: height,
+    txHash: txHash,
+    processAttribute: (key: string, value: string) => {
+      switch (key) {
+        case 'voteID':
+          evtEvent.t1 = value
+          break
+        case 'voteFailed':
+          evtEvent.t2 = value
+          break
 
-      case 'NumOfNoVoters':
-        evtEvent.i1 = parseInt(attr.value) // len https://github.com/lavanet/lava/blob/main/x/conflict/keeper/vote.go#L135
-        break
-      case 'NumOfVoters':
-        evtEvent.i2 = parseInt(attr.value) // leb
-        break
+        case 'NumOfNoVoters':
+          evtEvent.i1 = EventParseInt(value) // len https://github.com/lavanet/lava/blob/main/x/conflict/keeper/vote.go#L135
+          break
+        case 'NumOfVoters':
+          evtEvent.i2 = EventParseInt(value) // leb
+          break
 
-      case 'RewardPool':
-        evtEvent.b1 = parseInt(attr.value)
-        break
-      case 'TotalVotes':
-        evtEvent.b2 = parseInt(attr.value) // stake
-        break
+        case 'RewardPool':
+          evtEvent.b1 = EventParseInt(value)
+          break
+        case 'TotalVotes':
+          evtEvent.b2 = EventParseInt(value) // stake
+          break
 
-      /*case 'FirstProviderVotes':
-        evtEvent.b1 = parseInt(attr.value) // stake
-        break
-      case 'NoneProviderVotes':
-        evtEvent.b2 = parseInt(attr.value) // stake
-        break
-      case 'SecondProviderVotes':
-        evtEvent.b2 = parseInt(attr.value)
-        break*/
-    }
-  })
+        /*case 'FirstProviderVotes':
+          evtEvent.b1 = EventParseInt(value) // stake
+          break
+        case 'NoneProviderVotes':
+          evtEvent.b2 = EventParseInt(value) // stake
+          break
+        case 'SecondProviderVotes':
+          evtEvent.b2 = EventParseInt(value)
+          break*/
+      }
+    },
+    verifyFunction: null
+  })) return;
 
   SetTx(lavaBlock.dbTxs, txHash, height)
   lavaBlock.dbEvents.push(evtEvent)

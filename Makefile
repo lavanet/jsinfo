@@ -1,4 +1,4 @@
-.PHONY: build_bun_docker connect_to_bun_docker run_docker_compose indexer query
+.PHONY: build_bun_docker connect_to_bun_docker docker_compose indexer query
 
 build_bun_docker:
 	docker build --progress=plain -t bun-docker .
@@ -6,34 +6,37 @@ build_bun_docker:
 connect_to_bun_docker:
 	docker run --privileged -it bun-docker /bin/sh
 
-run_docker_compose:
+docker_compose:
 	docker-compose -f docker-compose.yml up
 
-run_docker_compose_query_populate:
+docker_compose_query_populate:
 	docker-compose up query_populate
 
-run_docker_compose_query:
+docker_compose_query:
 	docker-compose up query
 
-run_docker_compose_indexer:
+docker_compose_indexer:
 	docker-compose up indexer
 
-run_indexer:
+indexer:
 	NODE_TLS_REJECT_UNAUTHORIZED=0 bun run src/indexer.ts
 
-run_query:
+indexer_debug_events:
+	JSINFO_INDEXER_DEBUG_DUMP_EVENTS=true NODE_TLS_REJECT_UNAUTHORIZED=0 bun run src/indexer.ts
+
+query:
 	JSINFO_QUERY_CLEAR_DISKCACHE_ON_START=true JSINFO_QUERY_IS_DEBUG_MODE=true bun run src/query.ts
 
-run_query_nodemon:
+query_nodemon:
 	npx nodemon --watch src --ext ts --exec "JSINFO_QUERY_CLEAR_DISKCACHE_ON_START=true JSINFO_QUERY_IS_DEBUG_MODE=true bun run src/query.ts"
 
-run_query_nodemon_no_cache:
+query_nodemon_no_cache:
 	npx nodemon --watch src --ext ts --exec "JSINFO_QUERY_CLEAR_DISKCACHE_ON_START=true JSINFO_QUERY_IS_DEBUG_MODE=true bun run src/query.ts"
 
-run_query_populate_mode:
+query_populate_mode:
 	JSINFO_QUERY_CLEAR_DISKCACHE_ON_START=true JSINFO_QUERY_IS_DEBUG_MODE=true JSINFO_QUERY_CACHE_POPULTAE_MODE=true bun run src/query.ts
 
-run_query_no_cache_local_debug:
+query_no_cache_local_debug:
 	JSINFO_QUERY_CLEAR_DISKCACHE_ON_START=true JSINFO_QUERY_IS_DEBUG_MODE=true JSINFO_QUERY_CACHE_ENABLED=false bun run src/query.ts
 
 run_lavapProviderHealth:
@@ -42,8 +45,8 @@ run_lavapProviderHealth:
 create_migrations:
 	bun run generate
 
-bun_query_test_health_handeler:
+query_test_health_handeler:
 	bun test providerHealthHandler.test.ts 
 
-bun_query_teset_lavap_prodiver_error_parsing:
+query_teset_lavap_prodiver_error_parsing:
 	bun run ./src/query/utils/lavapProvidersErrorParser.test.ts 

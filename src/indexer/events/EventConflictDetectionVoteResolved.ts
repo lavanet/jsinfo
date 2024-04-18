@@ -1,7 +1,8 @@
 import { Event } from "@cosmjs/stargate"
-import { LavaBlock } from "../lavablock";
+import { LavaBlock } from "../types";
 import * as schema from '../../schema';
 import { GetOrSetProvider, SetTx } from "../setlatest";
+import { EventProcessAttributes, EventParseProviderAddress, EventParseInt } from "../eventUtils";
 
 /*
 */
@@ -24,44 +25,46 @@ export const ParseEventConflictDetectionVoteResolved = (
     provider: null,
   }
 
-  evt.attributes.forEach((attr) => {
-    let key: string = attr.key;
-    if (attr.key.lastIndexOf('.') != -1) {
-      key = attr.key.substring(0, attr.key.lastIndexOf('.'))
-    }
-    switch (key) {
-      case 'voteID':
-        evtEvent.t1 = attr.value
-        break
-      case 'winner':
-        evtEvent.provider = attr.value
-        break
+  if (!EventProcessAttributes("ParseEventConflictDetectionVoteResolved", {
+    evt: evt,
+    height: height,
+    txHash: txHash,
+    processAttribute: (key: string, value: string) => {
+      switch (key) {
+        case 'voteID':
+          evtEvent.t1 = value
+          break
+        case 'winner':
+          evtEvent.provider = EventParseProviderAddress(value)
+          break
 
-      case 'NumOfNoVoters':
-        evtEvent.i1 = parseInt(attr.value) // len https://github.com/lavanet/lava/blob/main/x/conflict/keeper/vote.go#L135
-        break
-      case 'NumOfVoters':
-        evtEvent.i2 = parseInt(attr.value) // leb
-        break
+        case 'NumOfNoVoters':
+          evtEvent.i1 = EventParseInt(value) // len https://github.com/lavanet/lava/blob/main/x/conflict/keeper/vote.go#L135
+          break
+        case 'NumOfVoters':
+          evtEvent.i2 = EventParseInt(value) // leb
+          break
 
-      case 'RewardPool':
-        evtEvent.b1 = parseInt(attr.value)
-        break
-      case 'TotalVotes':
-        evtEvent.b2 = parseInt(attr.value) // stake
-        break
+        case 'RewardPool':
+          evtEvent.b1 = EventParseInt(value)
+          break
+        case 'TotalVotes':
+          evtEvent.b2 = EventParseInt(value) // stake
+          break
 
-      /*case 'FirstProviderVotes':
-        evtEvent.b1 = parseInt(attr.value) // stake
-        break
-      case 'NoneProviderVotes':
-        evtEvent.b2 = parseInt(attr.value) // stake
-        break
-      case 'SecondProviderVotes':
-        evtEvent.b2 = parseInt(attr.value)
-        break*/
-    }
-  })
+        /*case 'FirstProviderVotes':
+          evtEvent.b1 = EventParseInt(value) // stake
+          break
+        case 'NoneProviderVotes':
+          evtEvent.b2 = EventParseInt(value) // stake
+          break
+        case 'SecondProviderVotes':
+          evtEvent.b2 = EventParseInt(value)
+          break*/
+      }
+    },
+    verifyFunction: () => !!evtEvent.provider
+  })) return;
 
   SetTx(lavaBlock.dbTxs, txHash, height)
   GetOrSetProvider(lavaBlock.dbProviders, static_dbProviders, evtEvent.provider!, '')

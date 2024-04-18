@@ -1,7 +1,8 @@
 import { Event } from "@cosmjs/stargate"
-import { LavaBlock } from "../lavablock";
+import { LavaBlock } from "../types";
 import * as schema from '../../schema';
 import { GetOrSetProvider, SetTx } from "../setlatest";
+import { EventProcessAttributes, EventParseProviderAddress, EventParseInt } from "../eventUtils";
 
 /*
 //block 472892
@@ -40,38 +41,41 @@ export const ParseEventProviderReported = (
     blockId: height,
     tx: txHash,
   }
-  evt.attributes.forEach((attr) => {
-    let key: string = attr.key;
-    if (attr.key.lastIndexOf('.') != -1) {
-      key = attr.key.substring(0, attr.key.lastIndexOf('.'))
-    }
-    switch (key) {
-      case 'cu':
-        evtEvent.cu = parseInt(attr.value)
-        break
-      case 'disconnections':
-        evtEvent.disconnections = parseInt(attr.value)
-        break
-      case 'epoch':
-        evtEvent.epoch = parseInt(attr.value)
-        break
-      case 'errors':
-        evtEvent.errors = parseInt(attr.value)
-        break
-      case 'project':
-        evtEvent.project = attr.value;
-        break
-      case 'provider':
-        evtEvent.provider = attr.value;
-        break
-      case 'timestamp':
-        evtEvent.datetime = new Date(Date.parse(attr.value));
-        break
-      case 'total_complaint_this_epoch':
-        evtEvent.totalComplaintEpoch = parseInt(attr.value)
-        break
-    }
-  })
+
+  if (!EventProcessAttributes("ParseEventProviderReported", {
+    evt: evt,
+    height: height,
+    txHash: txHash,
+    processAttribute: (key: string, value: string) => {
+      switch (key) {
+        case 'cu':
+          evtEvent.cu = EventParseInt(value)
+          break
+        case 'disconnections':
+          evtEvent.disconnections = EventParseInt(value)
+          break
+        case 'epoch':
+          evtEvent.epoch = EventParseInt(value)
+          break
+        case 'errors':
+          evtEvent.errors = EventParseInt(value)
+          break
+        case 'project':
+          evtEvent.project = value;
+          break
+        case 'provider':
+          evtEvent.provider = EventParseProviderAddress(value);
+          break
+        case 'timestamp':
+          evtEvent.datetime = new Date(Date.parse(value));
+          break
+        case 'total_complaint_this_epoch':
+          evtEvent.totalComplaintEpoch = EventParseInt(value)
+          break
+      }
+    },
+    verifyFunction: () => !!evtEvent.provider
+  })) return;
 
   SetTx(lavaBlock.dbTxs, txHash, height)
   GetOrSetProvider(lavaBlock.dbProviders, static_dbProviders, evtEvent.provider!, '')

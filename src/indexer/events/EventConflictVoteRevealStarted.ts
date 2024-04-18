@@ -1,9 +1,23 @@
 import { Event } from "@cosmjs/stargate"
-import { LavaBlock } from "../lavablock";
+import { LavaBlock } from "../types";
 import * as schema from '../../schema';
 import { SetTx } from "../setlatest";
+import { EventParseInt, EventProcessAttributes } from "../eventUtils";
 
 /*
+LavaBlockDebugDumpEvents event 1083120 lava_conflict_vote_reveal_started {
+  type: "lava_conflict_vote_reveal_started",
+  attributes: [
+    {
+      key: "voteDeadline",
+      value: "1083240",
+    }, {
+      key: "voteID",
+      value: "lava@1t74mf6pkerr0s7lren5uhfh9elru24n77rmxpnlava@1fpprhv40h9z058ez0hxdattjvg0fjsrhkqc7culava@1yx3c6h0gceg3pwz7vsed6mqwftu0456mcs4am91082940",
+    }
+  ],
+}
+
 486510 {
   type: 'lava_conflict_vote_reveal_started',
   attributes: [
@@ -14,6 +28,13 @@ import { SetTx } from "../setlatest";
       }
   ]
 }
+*/
+
+/*
+  eventData := map[string]string{}
+  eventData["voteID"] = conflictVote.Index
+  eventData["voteDeadline"] = strconv.FormatUint(conflictVote.VoteDeadline, 10)
+  utils.LogLavaEvent(ctx, logger, types.ConflictVoteRevealEventName, eventData, "Vote is now in reveal state")
 */
 
 export const ParseEventConflictVoteRevealStarted = (
@@ -34,20 +55,23 @@ export const ParseEventConflictVoteRevealStarted = (
     provider: null,
   }
 
-  evt.attributes.forEach((attr) => {
-    let key: string = attr.key;
-    if (attr.key.lastIndexOf('.') != -1) {
-      key = attr.key.substring(0, attr.key.lastIndexOf('.'))
-    }
-    switch (key) {
-      case 'voteDeadline':
-        evtEvent.i1 = parseInt(attr.value)
-        break
-      case 'voteID':
-        evtEvent.t1 = attr.value;
-        break
-    }
-  })
+  if (!EventProcessAttributes("ParseEventConflictVoteRevealStarted", {
+    evt: evt,
+    height: height,
+    txHash: txHash,
+    processAttribute: (key: string, value: string) => {
+      switch (key) {
+        case 'voteDeadline':
+          evtEvent.i1 = EventParseInt(value)
+          break
+        case 'voteID':
+          evtEvent.t1 = value;
+          break
+      }
+    },
+    verifyFunction: null
+  })) return;
+
 
   SetTx(lavaBlock.dbTxs, txHash, height)
   lavaBlock.dbEvents.push(evtEvent)

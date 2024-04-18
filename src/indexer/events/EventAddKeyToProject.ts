@@ -1,9 +1,12 @@
 import { Event } from "@cosmjs/stargate"
-import { LavaBlock } from "../lavablock";
+import { LavaBlock } from "../types";
 import * as schema from '../../schema';
 import { GetOrSetConsumer, SetTx } from "../setlatest";
+import { EventParseInt, EventProcessAttributes } from "../eventUtils";
 
 /*
+error: {"code":-32603,"message":"Internal error","data":"height 799327 is not available, lowest height is 833001"}
+
 353983  {
   type: 'lava_add_key_to_project_event',
   attributes: [
@@ -37,27 +40,30 @@ export const ParseEventAddKeyToProject = (
         eventType: schema.LavaProviderEventType.AddKeyToProject,
         provider: null,
     }
-    evt.attributes.forEach((attr) => {
-        let key: string = attr.key;
-        if (attr.key.lastIndexOf('.') != -1) {
-            key = attr.key.substring(0, attr.key.lastIndexOf('.'))
-        }
-        switch (key) {
-            case 'project':
-                evtEvent.t1 = attr.value;
-                evtEvent.consumer = attr.value.split('-')[0];
-                break
-            case 'key':
-                evtEvent.t2 = attr.value;
-                break
-            case 'keytype':
-                evtEvent.i1 = parseInt(attr.value)
-                break
-            case 'block':
-                evtEvent.blockId = parseInt(attr.value)
-                break
-        }
-    })
+
+    if (!EventProcessAttributes("ParseEventAddKeyToProject", {
+        evt: evt,
+        height: height,
+        txHash: txHash,
+        processAttribute: (key: string, value: string) => {
+            switch (key) {
+                case 'project':
+                    evtEvent.t1 = value;
+                    evtEvent.consumer = value.split('-')[0];
+                    break
+                case 'key':
+                    evtEvent.t2 = value;
+                    break
+                case 'keytype':
+                    evtEvent.i1 = EventParseInt(value)
+                    break
+                case 'block':
+                    evtEvent.blockId = EventParseInt(value)
+                    break
+            }
+        },
+        verifyFunction: () => !!evtEvent.consumer
+    })) return;
 
     SetTx(lavaBlock.dbTxs, txHash, height)
     GetOrSetConsumer(lavaBlock.dbConsumers, evtEvent.consumer!)

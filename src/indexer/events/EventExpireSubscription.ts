@@ -5,19 +5,25 @@ import { GetOrSetConsumer, SetTx } from "../setlatest";
 import { EventProcessAttributes, EventParseProviderAddress } from "../eventUtils";
 
 /*
-371879  {
-  type: 'lava_del_project_to_subscription_event',
+https://github.com/lavanet/lava/blob/976bbd1063c66742b2f49465d39fe57ef6edff8a/x/subscription/keeper/subscription.go#L694
+
+  details := map[string]string{"consumer": consumer}
+  utils.LogLavaEvent(ctx, k.Logger(ctx), types.ExpireSubscriptionEventName, details, "subscription expired")
+*/
+
+/*
+LavaBlockDebugDumpEvents event 1062747 lava_expire_subscription_event {
+  type: "lava_expire_subscription_event",
   attributes: [
     {
-      key: 'subscription',
-      value: 'lava@1qu0jm3ev9hl3l285wn8ppw8n7jtn9d2a2d5uch'
-    },
-    { key: 'projectName', value: '07042678b43520acb7e2c2e50d18a89e' }
-  ]
+      key: "consumer",
+      value: "lava@1qwaszenhu2jmmd2frr8g0e4kj5q54cp2l6nrfn",
+    }
+  ],
 }
 */
 
-export const ParseEventDelProjectToSubscription = (
+export const ParseEventExpireSubscrption = (
   evt: Event,
   height: number,
   txHash: string | null,
@@ -27,28 +33,27 @@ export const ParseEventDelProjectToSubscription = (
   static_dbPlans: Map<string, schema.Plan>,
   static_dbStakes: Map<string, schema.ProviderStake[]>,
 ) => {
+
   const evtEvent: schema.InsertEvent = {
     tx: txHash,
     blockId: height,
-    eventType: schema.LavaProviderEventType.DelProjectToSubscription,
+    eventType: schema.LavaProviderEventType.ExpireSubscription,
+    consumer: null,
     provider: null,
   }
 
-  if (!EventProcessAttributes("ParseEventDelProjectToSubscription", {
+  if (!EventProcessAttributes("ParseEventExpireSubscrption", {
     evt: evt,
     height: height,
     txHash: txHash,
     processAttribute: (key: string, value: string) => {
       switch (key) {
-        case 'subscription':
+        case 'consumer':
           evtEvent.consumer = EventParseProviderAddress(value);
-          break
-        case 'projectName':
-          evtEvent.t1 = value;
-          break
+          break;
       }
     },
-    verifyFunction: () => !evtEvent.consumer
+    verifyFunction: () => !!evtEvent.consumer
   })) return;
 
   SetTx(lavaBlock.dbTxs, txHash, height)

@@ -1,9 +1,23 @@
 import { Event } from "@cosmjs/stargate"
-import { LavaBlock } from "../lavablock";
+import { LavaBlock } from "../types";
 import * as schema from '../../schema';
 import { GetOrSetProvider, SetTx } from "../setlatest";
+import { EventProcessAttributes, EventParseProviderAddress } from "../eventUtils";
 
 /*
+LavaBlockDebugDumpEvents txs event 1082976 lava_conflict_vote_got_commit {
+  type: "lava_conflict_vote_got_commit",
+  attributes: [
+    {
+      key: "provider",
+      value: "lava@1pphkhh9g0aqmq6jpksr54w8a8hypr8g4jngx9y",
+    }, {
+      key: "voteID",
+      value: "lava@1t74mf6pkerr0s7lren5uhfh9elru24n77rmxpnlava@1fpprhv40h9z058ez0hxdattjvg0fjsrhkqc7culava@1yx3c6h0gceg3pwz7vsed6mqwftu0456mcs4am91082940",
+    }
+  ],
+}
+
 461844 {
   type: 'lava_conflict_vote_got_commit',
   attributes: [
@@ -33,20 +47,23 @@ export const ParseEventConflictVoteGotCommit = (
     blockId: height,
     tx: txHash,
   }
-  evt.attributes.forEach((attr) => {
-    let key: string = attr.key;
-    if (attr.key.lastIndexOf('.') != -1) {
-      key = attr.key.substring(0, attr.key.lastIndexOf('.'))
-    }
-    switch (key) {
-      case 'voteID':
-        evtEvent.voteId = attr.value;
-        break
-      case 'provider':
-        evtEvent.provider = attr.value;
-        break
-    }
-  })
+
+  if (!EventProcessAttributes("ParseEventConflictVoteGotCommit", {
+    evt: evt,
+    height: height,
+    txHash: txHash,
+    processAttribute: (key: string, value: string) => {
+      switch (key) {
+        case 'voteID':
+          evtEvent.voteId = value;
+          break
+        case 'provider':
+          evtEvent.provider = EventParseProviderAddress(value);
+          break
+      }
+    },
+    verifyFunction: () => !!evtEvent.provider
+  })) return;
 
   SetTx(lavaBlock.dbTxs, txHash, height)
   GetOrSetProvider(lavaBlock.dbProviders, static_dbProviders, evtEvent.provider!, '')

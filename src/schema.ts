@@ -133,6 +133,12 @@ export enum LavaProviderEventType {
   VoteRevealStarted,
   DetectionVoteResolved,
   DetectionVoteUnresolved,
+  DelegateToProvider,
+  ExpireSubscription,
+  FreezeFromUnbond,
+  UbnondFromProvider,
+  UnstakeFromUnbound,
+  RedelegateBetweenProviders,
 }
 
 export const events = pgTable('events', {
@@ -148,9 +154,6 @@ export const events = pgTable('events', {
   i1: integer('i1'),
   i2: integer('i2'),
   i3: integer('i3'),
-  r1: real('r1'),
-  r2: real('r2'),
-  r3: real('r3'),
 
   provider: text('provider').references(() => providers.address),
   consumer: text('consumer').references(() => consumers.address),

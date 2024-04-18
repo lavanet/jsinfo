@@ -1,20 +1,20 @@
 // jsinfo/src/indexer.ts
 
+import * as schema from "./schema";
+import * as consts from './indexer/indexerConsts';
+
 import { StargateClient } from "@cosmjs/stargate"
 import { Tendermint37Client } from "@cosmjs/tendermint-rpc";
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { eq, desc } from "drizzle-orm";
 import { PromisePool } from '@supercharge/promise-pool'
-import * as schema from "./schema";
-import { LavaBlock, GetOneLavaBlock } from './indexer/lavablock'
+import { GetOneLavaBlock } from './indexer/lavablock'
+import { LavaBlockDebugDumpEvents } from './indexer/lavablockDebug'
+import { LavaBlock } from './indexer/types'
 import { UpdateLatestBlockMeta } from './indexer/setlatest'
 import { DoInChunks, logger, BackoffRetry, ConnectToRpc, RpcConnection } from "./utils";
 import { MigrateDb, GetDb } from "./dbUtils";
 import { updateAggHourlyPayments } from "./indexer/aggregate";
-
-import * as consts from './indexer/indexerConsts';
-
-
 
 let static_dbProviders: Map<string, schema.Provider> = new Map()
 let static_dbSpecs: Map<string, schema.Spec> = new Map()
@@ -26,7 +26,6 @@ async function isBlockInDb(
     db: PostgresJsDatabase,
     height: number,
 ): Promise<boolean> {
-    //
     // Is in DB already?
     const dbBlock = await db.select().from(schema.blocks).where(eq(schema.blocks.height, height));
     if (dbBlock.length != 0) {
@@ -131,7 +130,7 @@ const doBatch = async (
     logger.info(`doBatch:: Initial blockList length: ${blockList.length}`);
     globakWorkList.length = 0
 
-    const blockType = process.env.JSINFO_INDEXER_BLOCK_TYPE || 'both';
+    const blockType = consts.JSINFO_INDEXER_BLOCK_TYPE || 'both';
 
     for (let i = dbHeight + 1; i <= latestHeight; i++) {
         if (blockType === 'even' && i % 2 === 0) {
@@ -188,15 +187,19 @@ const doBatch = async (
 const indexer = async (): Promise<void> => {
     logger.info(`Starting indexer, rpc: ${consts.JSINFO_INDEXER_LAVA_RPC}, start height: ${consts.JSINFO_INDEXER_START_BLOCK}`);
 
-    logger.info(`JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE: ${consts.JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE}`);
-    logger.info(`JSINFO_INDEXER_LAVA_RPC: ${consts.JSINFO_INDEXER_LAVA_RPC}`);
-    logger.info(`JSINFO_INDEXER_N_WORKERS: ${consts.JSINFO_INDEXER_N_WORKERS}`);
-    logger.info(`JSINFO_INDEXER_BATCH_SIZE: ${consts.JSINFO_INDEXER_BATCH_SIZE}`);
-    logger.info(`JSINFO_INDEXER_POLL_MS: ${consts.JSINFO_INDEXER_POLL_MS}`);
-    logger.info(`JSINFO_INDEXER_START_BLOCK: ${consts.JSINFO_INDEXER_START_BLOCK}`);
-    logger.info(`JSINFO_INDEXER_BLOCK_TYPE: ${consts.JSINFO_INDEXER_BLOCK_TYPE}`);
+    for (const key in consts) {
+        if (Object.hasOwnProperty.call(consts, key)) {
+            logger.info(`${key}: ${consts[key]}`);
+        }
+    }
 
     const rpcConnection = await establishRpcConnection();
+
+    if (consts.JSINFO_INDEXER_DEBUG_DUMP_EVENTS) {
+        await LavaBlockDebugDumpEvents(rpcConnection);
+        return
+    }
+
     const db = await migrateAndFetchDb();
     await updateBlockMetaInDb(db, rpcConnection);
     await updateAggHourlyPaymentsCaller(db);

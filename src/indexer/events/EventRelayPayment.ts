@@ -1,9 +1,141 @@
 import { Event } from "@cosmjs/stargate"
-import { LavaBlock } from "../lavablock";
+import { LavaBlock } from "../types";
 import * as schema from '../../schema';
 import { GetOrSetConsumer, GetOrSetProvider, GetOrSetSpec, SetTx } from "../setlatest";
+import { EventParseUlava, EventProcessAttributes, EventParseProviderAddress, EventParseInt, EventParseFloat } from "../eventUtils";
+
+// Mint is not used
 
 /*
+LavaBlockDebugDumpEvents txs event 1085946 lava_relay_payment {
+  type: "lava_relay_payment",
+  attributes: [
+    {
+      key: "CU.0",
+      value: "20",
+    }, {
+      key: "Mint.0",
+      value: "0ulava",
+    }, {
+      key: "badge.0",
+      value: "[]",
+    }, {
+      key: "chainID.0",
+      value: "NEAR",
+    }, {
+      key: "client.0",
+      value: "lava@1qu0jm3ev9hl3l285wn8ppw8n7jtn9d2a2d5uch",
+    }, {
+      key: "clientFee.0",
+      value: "0",
+    }, {
+      key: "descriptionString.0",
+      value: "5114258776193815566",
+    }, {
+      key: "epoch.0",
+      value: "1085760",
+    }, {
+      key: "projectID.0",
+      value: "lava@1qu0jm3ev9hl3l285wn8ppw8n7jtn9d2a2d5uch-admin",
+    }, {
+      key: "provider.0",
+      value: "lava@1zvfemd9cagdw4aey6jl07nes6zvx43u6vfzf7y",
+    }, {
+      key: "relayNumber.0",
+      value: "1",
+    }, {
+      key: "reliabilityPay.0",
+      value: "false",
+    }, {
+      key: "rewardedCU.0",
+      value: "20",
+    }, {
+      key: "totalCUInEpoch.0",
+      value: "20",
+    }, {
+      key: "uniqueIdentifier.0",
+      value: "4666018930052472881",
+    }
+  ],
+}
+
+LavaBlockDebugDumpEvents txs event 1085946 lava_relay_payment {
+  type: "lava_relay_payment",
+  attributes: [
+    {
+      key: "CU.77",
+      value: "3180",
+    }, {
+      key: "ExcellenceQoSAvailability.77",
+      value: "0.988059910000000000",
+    }, {
+      key: "ExcellenceQoSLatency.77",
+      value: "0.133539060000000000",
+    }, {
+      key: "ExcellenceQoSSync.77",
+      value: "0.001692650000000000",
+    }, {
+      key: "Mint.77",
+      value: "0ulava",
+    }, {
+      key: "QoSAvailability.77",
+      value: "0.875389408099688470",
+    }, {
+      key: "QoSLatency.77",
+      value: "1.000000000000000000",
+    }, {
+      key: "QoSReport.77",
+      value: "Latency: 1.000000000000000000, Availability: 0.875389408099688470, Sync: 1.000000000000000000",
+    },
+    {
+      key: "QoSScore.77",
+      value: "0.956607458132770241",
+    }, {
+      key: "QoSSync.77",
+      value: "1.000000000000000000",
+    }, {
+      key: "badge.77",
+      value: "[]",
+    }, {
+      key: "chainID.77",
+      value: "AXELART",
+    }, {
+      key: "client.77",
+      value: "lava@1t74mf6pkerr0s7lren5uhfh9elru24n77rmxpn",
+    }, {
+      key: "clientFee.77",
+      value: "0",
+    }, {
+      key: "descriptionString.77",
+      value: "1645439606670551043",
+    }, {
+      key: "epoch.77",
+      value: "1085760",
+    }, {
+      key: "projectID.77",
+      value: "lava@1t74mf6pkerr0s7lren5uhfh9elru24n77rmxpn-admin",
+    }, {
+      key: "provider.77",
+      value: "lava@1rgs6cp3vleue3vwffrvttjtl4laqhk8fthu466",
+    }, {
+      key: "relayNumber.77",
+      value: "322",
+    }, {
+      key: "reliabilityPay.77",
+      value: "false",
+    }, {
+      key: "rewardedCU.77",
+      value: "3180",
+    }, {
+      key: "totalCUInEpoch.77",
+      value: "13280",
+    }, {
+      key: "uniqueIdentifier.77",
+      value: "4340323419503293897",
+    }
+  ],
+}
+
 462631 {
   type: 'lava_relay_payment',
   attributes: [
@@ -63,84 +195,87 @@ export const ParseEventRelayPayment = (
     blockId: height,
     datetime: new Date(lavaBlock.datetime),
   }
-  evt.attributes.forEach((attr) => {
-    let key: string = attr.key;
-    if (attr.key.lastIndexOf('.') != -1) {
-      key = attr.key.substring(0, attr.key.lastIndexOf('.'))
-    }
-    switch (key) {
-      /*
-      case 'clientFee':
-        break
-      case 'uniqueIdentifier':
-        break
-      case 'reliabilityPay':
-        break
-      case 'QoSScore':
-        break
-      case 'Mint':
-        break
-      case 'totalCUInEpoch':
-        break
-      case 'projectID':
-        break
-      case 'descriptionString':
-        break
-      case 'QoSReport':
-        break
-      case 'badge':
-        if (attr.value.length == 2) {
-          break
-        }
-        let s = attr.value.substring(1, attr.value.length - 2);
-        let sT = s.split(' ');
-        let res = '0x';
-        for (var i = 0; i < sT.length; i++) {
-          let h = parseInt(sT[i]).toString(16);
-          res += h.length % 2 ? '0' + h : h;
-        }
-        evtEvent.badge = res;
-        break
-      */
 
-      case 'relayNumber':
-        evtEvent.relays = parseInt(attr.value)
-        break
-      case 'ExcellenceQoSAvailability':
-        evtEvent.qosAvailabilityExc = parseFloat(attr.value);
-        break
-      case 'ExcellenceQoSLatency':
-        evtEvent.qosLatencyExc = parseFloat(attr.value);
-        break
-      case 'ExcellenceQoSSync':
-        evtEvent.qosSyncExc = parseFloat(attr.value);
-        break
-      case 'QoSSync':
-        evtEvent.qosSync = parseFloat(attr.value);
-        break
-      case 'QoSLatency':
-        evtEvent.qosLatency = parseFloat(attr.value);
-        break
-      case 'QoSAvailability':
-        evtEvent.qosAvailability = parseFloat(attr.value);
-        break
-      case 'provider':
-        evtEvent.provider = attr.value;
-        break
-      case 'chainID':
-        evtEvent.specId = attr.value;
-        break
-      case 'CU':
-        evtEvent.cu = parseInt(attr.value)
-        break
-      case 'client':
-        evtEvent.consumer = attr.value;
-        break
-      case 'BasePay':
-        evtEvent.pay = parseInt(attr.value)
-        break
-    }
-  })
+  if (!EventProcessAttributes("ParseEventRelayPayment", {
+    evt: evt,
+    height: height,
+    txHash: txHash,
+    processAttribute: (key: string, value: string) => {
+      switch (key) {
+        /*
+              case 'clientFee':
+                break
+              case 'uniqueIdentifier':
+                break
+              case 'reliabilityPay':
+                break
+              case 'QoSScore':
+                break
+              case 'Mint':
+                break
+              case 'totalCUInEpoch':
+                break
+              case 'projectID':
+                break
+              case 'descriptionString':
+                break
+              case 'QoSReport':
+                break
+              case 'badge':
+                if (value.length == 2) {
+                  break
+                }
+                let s = value.substring(1, value.length - 2);
+                let sT = s.split(' ');
+                let res = '0x';
+                for (var i = 0; i < sT.length; i++) {
+                  let h = EventParseInt(sT[i]).toString(16);
+                  res += h.length % 2 ? '0' + h : h;
+                }
+                evtEvent.badge = res;
+                break
+              */
+
+        case 'relayNumber':
+          evtEvent.relays = EventParseInt(value)
+          break
+        case 'ExcellenceQoSAvailability':
+          evtEvent.qosAvailabilityExc = EventParseFloat(value);
+          break
+        case 'ExcellenceQoSLatency':
+          evtEvent.qosLatencyExc = EventParseFloat(value);
+          break
+        case 'ExcellenceQoSSync':
+          evtEvent.qosSyncExc = EventParseFloat(value);
+          break
+        case 'QoSSync':
+          evtEvent.qosSync = EventParseFloat(value);
+          break
+        case 'QoSLatency':
+          evtEvent.qosLatency = EventParseFloat(value);
+          break
+        case 'QoSAvailability':
+          evtEvent.qosAvailability = EventParseFloat(value);
+          break
+        case 'provider':
+          evtEvent.provider = EventParseProviderAddress(value);
+          break
+        case 'chainID':
+          evtEvent.specId = value;
+          break
+        case 'CU':
+          evtEvent.cu = EventParseInt(value)
+          break
+        case 'client':
+          evtEvent.consumer = value;
+          break
+        case 'BasePay':
+          evtEvent.pay = EventParseUlava(value)
+          break
+      }
+    },
+    verifyFunction: () => !!evtEvent.provider
+  })) return;
 
   SetTx(lavaBlock.dbTxs, txHash, height)
   GetOrSetProvider(lavaBlock.dbProviders, static_dbProviders, evtEvent.provider!, '')

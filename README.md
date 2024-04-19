@@ -47,7 +47,6 @@ make run_docker_compose
 ### Todo
 
 - QOS per chain per provider graph
-- Pagination
 - Screen provider CU by subscription address
 - Move important events from generic events table to custom events table
 - Add QoS Excellence

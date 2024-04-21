@@ -41,7 +41,7 @@ export function validatePaginationString(paginationString: string): boolean {
     }
 
     // Check if page is within 1 and 100 (including)
-    if (isNaN(Number(page)) || Number(page) < 1 || Number(page) > 1000) {
+    if (isNaN(Number(page)) || Number(page) < 1 || Number(page) > 4000) {
         console.error(`validatePaginationString:: Invalid page: ${page} in ${paginationString}. Page must be a number between 1 and 1000 (including).`);
         return false;
     }

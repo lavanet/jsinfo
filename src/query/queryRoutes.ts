@@ -7,6 +7,8 @@ import { LatestHandler, LatestHandlerOpts } from './handlers/latestHandler';
 
 import { CacheLinksHandler, CacheLinksHandlerOpts } from './handlers/cacheLinksHandler';
 
+import { AutoCompleteLinksHandler, AutoCompleteLinksHandlerOpts } from './handlers/autoCompleteLinksHandler';
+
 import { IndexHandler, IndexHandlerOpts } from './handlers/indexHandler';
 import { IndexProvidersHandler, IndexProvidersHandlerOpts, IndexProvidersItemCountHandler, IndexProvidersCSVHandler } from './handlers/indexProvidersHandler';
 
@@ -31,6 +33,8 @@ import { LavapProviderHealthHandler, LavapProviderHealthHandlerOpts } from './ha
 GetServerInstance().get('/latest', LatestHandlerOpts, LatestHandler);
 
 RegisterServerHandlerWithCache('/cacheLinks', CacheLinksHandlerOpts, CacheLinksHandler);
+
+RegisterServerHandlerWithCache('/autoCompleteLinksHandler', AutoCompleteLinksHandlerOpts, AutoCompleteLinksHandler);
 
 RegisterServerHandlerWithCache('/index', IndexHandlerOpts, IndexHandler);
 RegisterServerHandlerWithCache('/indexProviders', IndexProvidersHandlerOpts, IndexProvidersHandler, IndexProvidersItemCountHandler);

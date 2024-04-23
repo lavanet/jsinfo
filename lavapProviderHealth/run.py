@@ -15,10 +15,12 @@ JSINFO_LAVAP_PROVIDER_HEALTH_TIMEOUT = 10 * 60
 
 JSINFO_LAVAP_PROVIDER_HEALTH_DEFAULT_NODE_URL = os.getenv('JSINFO_LAVAP_PROVIDER_HEALTH_DEFAULT_NODE_URL', "https://public-rpc.lavanet.xyz:443")
 
+JSINFO_LAVAP_LOG_PREFIX = os.getenv('JSINFO_LAVAP_LOG_PREFIX', "")
+
 JSINFO_LAVAP_PROVIDER_HEALTH_INTERVAL = 5 * 60
 
 def logger(message):
-    print(f"{datetime.now()} LavapHealthRunner - {message}")
+    print(f"{datetime.now()} {JSINFO_LAVAP_LOG_PREFIX} LavapHealthRunner - {message}")
 
 
 def run_command(node_url):

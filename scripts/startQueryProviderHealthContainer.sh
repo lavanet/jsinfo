@@ -14,9 +14,9 @@ sleep 60
 
 # Run the first script in an endless loop
 while true; do
-    echo "QueryPod $(date) :: Starting 'python3 lavapProviderHealth/run.py'..."
-    python3 -u lavapProviderHealth/run.py 2>&1 || true
-    echo "QueryPod $(date) :: 'python3 lavapProviderHealth/run.py' stopped, restarting..."
+    echo "QueryPod $(date) probe1 :: Starting 'python3 lavapProviderHealth/run.py'..."
+    JSINFO_LAVAP_LOG_PREFIX="probe1" python3 -u lavapProviderHealth/run.py 2>&1 || true
+    echo "QueryPod $(date) probe1 :: 'python3 lavapProviderHealth/run.py' stopped, restarting..."
     sleep 60
 done &
 
@@ -25,9 +25,9 @@ sleep 120
 
 # Run the first script in an endless loop
 while true; do
-    echo "QueryPod $(date) :: Starting 'python3 lavapProviderHealth/run.py'..."
-    python3 -u lavapProviderHealth/run.py 2>&1 || true
-    echo "QueryPod $(date) :: 'python3 lavapProviderHealth/run.py' stopped, restarting..."
+    echo "QueryPod $(date) probe2 :: Starting 'python3 lavapProviderHealth/run.py'..."
+    JSINFO_LAVAP_LOG_PREFIX="probe2" python3 -u lavapProviderHealth/run.py 2>&1 || true
+    echo "QueryPod $(date) probe2 :: 'python3 lavapProviderHealth/run.py' stopped, restarting..."
     sleep 120
 done &
 

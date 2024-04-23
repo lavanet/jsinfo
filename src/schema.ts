@@ -239,6 +239,18 @@ export const providerHealthHourly = pgTable('provider_health_hourly', {
 export type ProviderHealthHourly = typeof providerHealthHourly.$inferSelect;
 export type InsertProviderHealthHourly = typeof providerHealthHourly.$inferInsert;
 
+export const dualStackingDelegatorRewards = pgTable('dual_stacking_delegator_rewards', {
+  id: serial('id').primaryKey(),
+  timestamp: timestamp('timestamp').notNull(),
+  provider: text('provider').notNull(),
+  chain_id: text('chain_id').notNull(),
+  amount: integer('amount').notNull(),
+  denom: text('denom').notNull(),
+});
+
+export type DualStackingDelegatorRewards = typeof dualStackingDelegatorRewards.$inferSelect;
+export type InsertDualStackingDelegatorRewards = typeof dualStackingDelegatorRewards.$inferInsert;
+
 export const lavaReportError = pgTable('lava_report_error', {
   id: serial('id').primaryKey(),
   created_at: timestamp('created_at'),

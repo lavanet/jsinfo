@@ -1,10 +1,10 @@
-// src/query/handlers/lavapProviderHealthHandler.ts
+// src/query/handlers/lavapDualStackingDelegatorRewardsHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import * as schema from '../../schema';
 import { QueryCheckDbInstance, QueryGetDbInstance } from '../queryDb';
 import { lt } from "drizzle-orm";
-import { JSINFO_QUERY_PROVIDER_HEALTH_HOURLY_CUTOFF_DAYS } from '../queryConsts';
+import { JSINFO_QUERY_PROVIDER_DUAL_STACKING_DELEGATOR_REWARDS_CUTOFF_DAYS } from '../queryConsts';
 
 type ProviderData = {
     provider: string;
@@ -136,7 +136,7 @@ export async function LavapProviderHealthHandler(request: FastifyRequest, reply:
         if (currentHour === 3) {
             // Delete entries older than JSINFO_QUERY_PROVIDER_HEALTH_HOURLY_CUTOFF_DAYS (30 days)
             const cutoffDate = new Date();
-            cutoffDate.setDate(cutoffDate.getDate() - JSINFO_QUERY_PROVIDER_HEALTH_HOURLY_CUTOFF_DAYS);
+            cutoffDate.setDate(cutoffDate.getDate() - JSINFO_QUERY_PROVIDER_DUAL_STACKING_DELEGATOR_REWARDS_CUTOFF_DAYS);
             await tx.delete(schema.providerHealthHourly).where(lt(schema.providerHealthHourly.timestamp, cutoffDate));
         }
 

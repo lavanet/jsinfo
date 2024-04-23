@@ -4,7 +4,6 @@ name: Build jsinfo (Staging)
 on:
   push:
     branches:
-      - main
       - staging
 
   # Allows you to run this workflow manually from the Actions tab

@@ -58,14 +58,20 @@ while true; do
             sleep 1
         done
 
-        if [ "$(echo $rewards | jq '.rewards | length')" -ne 0 ]; then
-            echo $rewards > temp.json
-            echo "Rewards fetched for provider $provider:"
-            cat temp.json
-            echo "QueryProviderDualStackingDelegatorRewardsPod $(date) :: Posting rewards to the API endpoint for provider $provider..."
-            curl -X POST http://localhost:$JSINFO_QUERY_PORT/lavapDualStackingDelegatorRewards -H 'Content-Type: application/json' -d @temp.json
-            echo
-            rm temp.json
+        rewards_json=$(echo $rewards | jq '.')
+        if [ $? -eq 0 ]; then
+            rewards_length=$(echo $rewards_json | jq '.rewards | length')
+            if [ $? -eq 0 ]; then
+                if [ "$rewards_length" -ne 0 ]; then
+                    echo $rewards > temp.json
+                    echo "Rewards fetched for provider $provider:"
+                    cat temp.json
+                    echo "QueryProviderDualStackingDelegatorRewardsPod $(date) :: Posting rewards to the API endpoint for provider $provider..."
+                    curl -X POST http://localhost:$JSINFO_QUERY_PORT/lavapDualStackingDelegatorRewards -H 'Content-Type: application/json' -d @temp.json
+                    echo
+                    rm temp.json
+                fi
+            fi
         fi
     done
 

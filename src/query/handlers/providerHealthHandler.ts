@@ -3,7 +3,7 @@
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryCheckReadDbInstance, QueryGetReadDbInstance } from '../queryDb';
-import * as schema from '../../schema';
+import * as JsinfoSchema from '../../schemas/jsinfo_schema';
 import { eq, desc } from "drizzle-orm";
 import { Pagination, ParsePaginationFromRequest } from '../utils/queryPagination';
 import { IsNotNullAndNotZero } from '../utils/queryUtils';
@@ -140,9 +140,9 @@ class ProviderHealthData {
 }
 
 const createHealthReportQuery = (addr: string) => {
-    return QueryGetReadDbInstance().select().from(schema.providerHealthHourly)
-        .where(eq(schema.providerHealthHourly.provider, addr))
-        .orderBy(desc(schema.providerHealthHourly.timestamp));
+    return QueryGetReadDbInstance().select().from(JsinfoSchema.providerHealthHourly)
+        .where(eq(JsinfoSchema.providerHealthHourly.provider, addr))
+        .orderBy(desc(JsinfoSchema.providerHealthHourly.timestamp));
 }
 
 const getHealthReportBlocksMessage = (item: HealthReport) => {

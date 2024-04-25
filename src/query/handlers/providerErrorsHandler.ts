@@ -5,13 +5,13 @@ import fs from 'fs';
 import path from 'path';
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryCheckReadDbInstance, QueryGetRelaysReadDbInstance } from '../queryDb';
-import * as schema from '../../schema';
 import { eq, desc } from "drizzle-orm";
 import { Pagination, ParsePaginationFromRequest } from '../utils/queryPagination';
 import { CompareValues } from '../utils/queryUtils';
 import { JSINFO_QUERY_CACHEDIR, JSINFO_QUERY_CACHE_ENABLED, JSINFO_QUERY_HANDLER_CACHE_TIME_SECONDS } from '../queryConsts';
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE } from '../queryConsts';
 import { ParseLavapProviderError } from '../utils/lavapProvidersErrorParser';
+import * as RelaysSchema from '../../schemas/relays_schema';
 export interface ErrorsReport {
     id: number;
     created_at: Date | null;
@@ -65,9 +65,9 @@ class ProviderErrorsData {
     }
 
     private async fetchDataFromDb(): Promise<ErrorsReportReponse[]> {
-        const result = await QueryGetRelaysReadDbInstance().select().from(schema.lavaReportError)
-            .where(eq(schema.lavaReportError.provider, this.addr))
-            .orderBy(desc(schema.lavaReportError.created_at)).offset(0).limit(5000)
+        const result = await QueryGetRelaysReadDbInstance().select().from(RelaysSchema.lavaReportError)
+            .where(eq(RelaysSchema.lavaReportError.provider, this.addr))
+            .orderBy(desc(RelaysSchema.lavaReportError.created_at)).offset(0).limit(5000)
 
         return result.map((row: ErrorsReport) => ({
             id: row.id,

@@ -1,7 +1,7 @@
 
 import { Event } from "@cosmjs/stargate"
 import { LavaBlock } from "../types";
-import * as schema from '../../schema';
+import * as JsinfoSchema from '../../schemas/jsinfo_schema';
 import { GetOrSetProvider, SetTx } from "../setlatest";
 import { EventParseUlava, EventProcessAttributes, EventParseProviderAddress } from "../eventUtils";
 
@@ -37,10 +37,10 @@ export const ParseEventRedelegateBetweenProviders = (
   height: number,
   txHash: string | null,
   lavaBlock: LavaBlock,
-  static_dbProviders: Map<string, schema.Provider>,
-  static_dbSpecs: Map<string, schema.Spec>,
-  static_dbPlans: Map<string, schema.Plan>,
-  static_dbStakes: Map<string, schema.ProviderStake[]>,
+  static_dbProviders: Map<string, JsinfoSchema.Provider>,
+  static_dbSpecs: Map<string, JsinfoSchema.Spec>,
+  static_dbPlans: Map<string, JsinfoSchema.Plan>,
+  static_dbStakes: Map<string, JsinfoSchema.ProviderStake[]>,
 ) => {
   let delegator: string | null = null;
   let from_provider: string | null = null;
@@ -48,10 +48,10 @@ export const ParseEventRedelegateBetweenProviders = (
   let from_chainID: string | null = null;
   let to_chainID: string | null = null;
 
-  const evtEvent: schema.InsertEvent = {
+  const evtEvent: JsinfoSchema.InsertEvent = {
     tx: txHash,
     blockId: height,
-    eventType: schema.LavaProviderEventType.RedelegateBetweenProviders,
+    eventType: JsinfoSchema.LavaProviderEventType.RedelegateBetweenProviders,
     consumer: null,
     provider: null,
   }

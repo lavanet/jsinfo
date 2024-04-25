@@ -2,7 +2,7 @@
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryCheckReadDbInstance, QueryGetReadDbInstance } from '../queryDb';
-import * as schema from '../../schema';
+import * as JsinfoSchema from '../../schemas/jsinfo_schema';
 import { sql, desc, inArray, not, eq } from "drizzle-orm";
 import { Pagination, ParsePaginationFromRequest, ParsePaginationFromString } from '../utils/queryPagination';
 import { JSINFO_QUERY_CACHEDIR, JSINFO_QUERY_CACHE_ENABLED, JSINFO_QUERY_HANDLER_CACHE_TIME_SECONDS, JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE } from '../queryConsts';
@@ -58,11 +58,11 @@ class IndexProvidersData {
 
     private async fetchDataFromDb(): Promise<any[]> {
         let res4 = await QueryGetReadDbInstance().select({
-            address: schema.aggHourlyrelayPayments.provider,
-            rewardSum: sql<number>`sum(${schema.aggHourlyrelayPayments.rewardSum})`,
-        }).from(schema.aggHourlyrelayPayments).
-            groupBy(schema.aggHourlyrelayPayments.provider).
-            orderBy(desc(sql<number>`sum(${schema.aggHourlyrelayPayments.rewardSum})`))
+            address: JsinfoSchema.aggHourlyrelayPayments.provider,
+            rewardSum: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.rewardSum})`,
+        }).from(JsinfoSchema.aggHourlyrelayPayments).
+            groupBy(JsinfoSchema.aggHourlyrelayPayments.provider).
+            orderBy(desc(sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.rewardSum})`))
         let providersAddrs: string[] = []
         res4.map((provider) => {
             providersAddrs.push(provider.address!)
@@ -73,15 +73,15 @@ class IndexProvidersData {
         }
 
         // provider details
-        let res44 = await QueryGetReadDbInstance().select().from(schema.providers).where(inArray(schema.providers.address, providersAddrs))
+        let res44 = await QueryGetReadDbInstance().select().from(JsinfoSchema.providers).where(inArray(JsinfoSchema.providers.address, providersAddrs))
         let providerStakesRes = await QueryGetReadDbInstance().select({
-            provider: schema.providerStakes.provider,
-            totalActiveServices: sql<number>`sum(case when ${schema.providerStakes.status} = ${schema.LavaProviderStakeStatus.Active} then 1 else 0 end)`,
-            totalServices: sql<number>`count(${schema.providerStakes.specId})`,
-            totalStake: sql<number>`sum(${schema.providerStakes.stake})`,
-        }).from(schema.providerStakes)
-            .where(not(eq(schema.providerStakes.status, schema.LavaProviderStakeStatus.Frozen)))
-            .groupBy(schema.providerStakes.provider);
+            provider: JsinfoSchema.providerStakes.provider,
+            totalActiveServices: sql<number>`sum(case when ${JsinfoSchema.providerStakes.status} = ${JsinfoSchema.LavaProviderStakeStatus.Active} then 1 else 0 end)`,
+            totalServices: sql<number>`count(${JsinfoSchema.providerStakes.specId})`,
+            totalStake: sql<number>`sum(${JsinfoSchema.providerStakes.stake})`,
+        }).from(JsinfoSchema.providerStakes)
+            .where(not(eq(JsinfoSchema.providerStakes.status, JsinfoSchema.LavaProviderStakeStatus.Frozen)))
+            .groupBy(JsinfoSchema.providerStakes.provider);
 
         type ProviderDetails = {
             addr: string,

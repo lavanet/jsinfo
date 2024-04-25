@@ -1,7 +1,7 @@
 // src/query/handlers/lavapProviderHealthHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import * as schema from '../../schema';
+import * as JsinfoSchema from '../../schemas/jsinfo_schema';
 import { QueryCheckDbInstance, QueryGetDbInstance } from '../queryDb';
 import { lt } from "drizzle-orm";
 import { JSINFO_QUERY_PROVIDER_HEALTH_HOURLY_CUTOFF_DAYS } from '../queryConsts';
@@ -110,7 +110,7 @@ export async function LavapProviderHealthHandler(request: FastifyRequest, reply:
 
     const providerData: ProviderData[] = parseData(request.body);
 
-    const insertData: schema.InsertProviderHealthHourly[] = providerData.map(data => {
+    const insertData: JsinfoSchema.InsertProviderHealthHourly[] = providerData.map(data => {
         let blocksaway: number | null = null
         if (data.status === 'healthy') blocksaway = getBlocksAway(data.spec, data.block);
         return {
@@ -137,12 +137,12 @@ export async function LavapProviderHealthHandler(request: FastifyRequest, reply:
             // Delete entries older than JSINFO_QUERY_PROVIDER_HEALTH_HOURLY_CUTOFF_DAYS (30 days)
             const cutoffDate = new Date();
             cutoffDate.setDate(cutoffDate.getDate() - JSINFO_QUERY_PROVIDER_HEALTH_HOURLY_CUTOFF_DAYS);
-            await tx.delete(schema.providerHealthHourly).where(lt(schema.providerHealthHourly.timestamp, cutoffDate));
+            await tx.delete(JsinfoSchema.providerHealthHourly).where(lt(JsinfoSchema.providerHealthHourly.timestamp, cutoffDate));
         }
 
         // insert in bulk
-        const result = await tx.insert(schema.providerHealthHourly).values(insertData);
-        console.log(`Transaction completed. Inserted: ${result} `);
+        const result = await tx.insert(JsinfoSchema.providerHealthHourly).values(insertData);
+        console.log(`Transaction completed. Inserted: ${JSON.stringify(result)} `);
     });
 
     // Print stats

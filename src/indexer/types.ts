@@ -1,18 +1,18 @@
-import * as schema from '../schema';
+import * as JsinfoSchema from '../schemas/jsinfo_schema';
 
 export type LavaBlock = {
     height: number
     datetime: number,
 
-    dbProviders: Map<string, schema.Provider>
-    dbSpecs: Map<string, schema.Spec>
-    dbConsumers: Map<string, schema.Consumer>
-    dbPlans: Map<string, schema.Plan>
-    dbTxs: Map<string, schema.Tx>
-    dbEvents: schema.InsertEvent[]
-    dbPayments: schema.InsertRelayPayment[]
-    dbConflictResponses: schema.InsertConflictResponse[]
-    dbSubscriptionBuys: schema.InsertSubscriptionBuy[]
-    dbConflictVote: schema.InsertConflictVote[]
-    dbProviderReports: schema.InsertProviderReported[]
+    dbProviders: Map<string, JsinfoSchema.Provider>
+    dbSpecs: Map<string, JsinfoSchema.Spec>
+    dbConsumers: Map<string, JsinfoSchema.Consumer>
+    dbPlans: Map<string, JsinfoSchema.Plan>
+    dbTxs: Map<string, JsinfoSchema.Tx>
+    dbEvents: JsinfoSchema.InsertEvent[]
+    dbPayments: JsinfoSchema.InsertRelayPayment[]
+    dbConflictResponses: JsinfoSchema.InsertConflictResponse[]
+    dbSubscriptionBuys: JsinfoSchema.InsertSubscriptionBuy[]
+    dbConflictVote: JsinfoSchema.InsertConflictVote[]
+    dbProviderReports: JsinfoSchema.InsertProviderReported[]
 }

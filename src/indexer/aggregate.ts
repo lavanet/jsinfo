@@ -1,13 +1,13 @@
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { sql } from "drizzle-orm";
-import * as schema from "../schema";
+import * as JsinfoSchema from "../schemas/jsinfo_schema";
 import { DoInChunks, logger } from "../utils";
 
 export async function getAggHourlyTimeSpan(db: PostgresJsDatabase): Promise<{ startTime: Date | null, endTime: Date | null }> {
     // Last relay payment time
     const lastRelayPayment = await db.select({
-        datehour: sql`DATE_TRUNC('hour', MAX(${schema.relayPayments.datetime}))`,
-    }).from(schema.relayPayments)
+        datehour: sql`DATE_TRUNC('hour', MAX(${JsinfoSchema.relayPayments.datetime}))`,
+    }).from(JsinfoSchema.relayPayments)
         .then(rows => rows[0]?.datehour);
 
     if (!lastRelayPayment) {
@@ -18,8 +18,8 @@ export async function getAggHourlyTimeSpan(db: PostgresJsDatabase): Promise<{ st
 
     // Last aggregated hour
     const lastAggHour = await db.select({
-        datehour: sql`MAX(${schema.aggHourlyrelayPayments.datehour})`,
-    }).from(schema.aggHourlyrelayPayments)
+        datehour: sql`MAX(${JsinfoSchema.aggHourlyrelayPayments.datehour})`,
+    }).from(JsinfoSchema.aggHourlyrelayPayments)
         .then(rows => rows[0]?.datehour);
     let startTime: Date;
     if (lastAggHour) {
@@ -46,26 +46,26 @@ export async function updateAggHourlyPayments(db: PostgresJsDatabase) {
 
     //
     const aggResults = await db.select({
-        provider: sql`${schema.relayPayments.provider}`,
-        datehour: sql`DATE_TRUNC('hour', ${schema.relayPayments.datetime}) as datehour`,
-        specId: sql`${schema.relayPayments.specId}`,
-        cuSum: sql`SUM(${schema.relayPayments.cu})`,
-        relaySum: sql`SUM(${schema.relayPayments.relays})`,
-        rewardSum: sql`SUM(${schema.relayPayments.pay})`,
-        qosSyncAvg: sql`SUM(${schema.relayPayments.qosSync} * ${schema.relayPayments.relays}) / SUM(${schema.relayPayments.relays})`,
-        qosAvailabilityAvg: sql`SUM(${schema.relayPayments.qosAvailability} * ${schema.relayPayments.relays}) / SUM(${schema.relayPayments.relays})`,
-        qosLatencyAvg: sql`SUM(${schema.relayPayments.qosLatency} * ${schema.relayPayments.relays}) / SUM(${schema.relayPayments.relays})`,
-        qosSyncExcAvg: sql`SUM(${schema.relayPayments.qosSyncExc} * ${schema.relayPayments.relays}) / SUM(${schema.relayPayments.relays})`,
-        qosAvailabilityExcAvg: sql`SUM(${schema.relayPayments.qosAvailabilityExc} * ${schema.relayPayments.relays}) / SUM(${schema.relayPayments.relays})`,
-        qosLatencyExcAvg: sql`SUM(${schema.relayPayments.qosLatencyExc} * ${schema.relayPayments.relays}) / SUM(${schema.relayPayments.relays})`,
-    }).from(schema.relayPayments)
+        provider: sql`${JsinfoSchema.relayPayments.provider}`,
+        datehour: sql`DATE_TRUNC('hour', ${JsinfoSchema.relayPayments.datetime}) as datehour`,
+        specId: sql`${JsinfoSchema.relayPayments.specId}`,
+        cuSum: sql`SUM(${JsinfoSchema.relayPayments.cu})`,
+        relaySum: sql`SUM(${JsinfoSchema.relayPayments.relays})`,
+        rewardSum: sql`SUM(${JsinfoSchema.relayPayments.pay})`,
+        qosSyncAvg: sql`SUM(${JsinfoSchema.relayPayments.qosSync} * ${JsinfoSchema.relayPayments.relays}) / SUM(${JsinfoSchema.relayPayments.relays})`,
+        qosAvailabilityAvg: sql`SUM(${JsinfoSchema.relayPayments.qosAvailability} * ${JsinfoSchema.relayPayments.relays}) / SUM(${JsinfoSchema.relayPayments.relays})`,
+        qosLatencyAvg: sql`SUM(${JsinfoSchema.relayPayments.qosLatency} * ${JsinfoSchema.relayPayments.relays}) / SUM(${JsinfoSchema.relayPayments.relays})`,
+        qosSyncExcAvg: sql`SUM(${JsinfoSchema.relayPayments.qosSyncExc} * ${JsinfoSchema.relayPayments.relays}) / SUM(${JsinfoSchema.relayPayments.relays})`,
+        qosAvailabilityExcAvg: sql`SUM(${JsinfoSchema.relayPayments.qosAvailabilityExc} * ${JsinfoSchema.relayPayments.relays}) / SUM(${JsinfoSchema.relayPayments.relays})`,
+        qosLatencyExcAvg: sql`SUM(${JsinfoSchema.relayPayments.qosLatencyExc} * ${JsinfoSchema.relayPayments.relays}) / SUM(${JsinfoSchema.relayPayments.relays})`,
+    }).from(JsinfoSchema.relayPayments)
         .where(
-            sql`${schema.relayPayments.datetime} >= ${startTime}`
+            sql`${JsinfoSchema.relayPayments.datetime} >= ${startTime}`
         )
         .groupBy(
             sql`datehour`,
-            schema.relayPayments.provider,
-            schema.relayPayments.specId
+            JsinfoSchema.relayPayments.provider,
+            JsinfoSchema.relayPayments.specId
         )
         .orderBy(
             sql`datehour`,
@@ -86,14 +86,14 @@ export async function updateAggHourlyPayments(db: PostgresJsDatabase) {
     );
     await db.transaction(async (tx) => {
         for (const row of latestHourData) {
-            await tx.insert(schema.aggHourlyrelayPayments)
+            await tx.insert(JsinfoSchema.aggHourlyrelayPayments)
                 .values(row as any)
                 .onConflictDoUpdate(
                     {
                         target: [
-                            schema.aggHourlyrelayPayments.datehour,
-                            schema.aggHourlyrelayPayments.provider,
-                            schema.aggHourlyrelayPayments.specId,
+                            JsinfoSchema.aggHourlyrelayPayments.datehour,
+                            JsinfoSchema.aggHourlyrelayPayments.provider,
+                            JsinfoSchema.aggHourlyrelayPayments.specId,
                         ],
                         set: {
                             cuSum: row.cuSum,
@@ -116,7 +116,7 @@ export async function updateAggHourlyPayments(db: PostgresJsDatabase) {
             return;
         }
         await DoInChunks(250, remainingData, async (arr: any) => {
-            await tx.insert(schema.aggHourlyrelayPayments)
+            await tx.insert(JsinfoSchema.aggHourlyrelayPayments)
                 .values(arr)
         })
     })

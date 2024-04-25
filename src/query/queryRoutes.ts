@@ -28,7 +28,7 @@ import { ConsumerHandler, ConsumerHandlerOpts } from './handlers/consumerHandler
 import { EventsHandler, EventsHandlerOpts } from './handlers/eventsHandler';
 
 import { LavapProviderHealthHandler, LavapProviderHealthHandlerOpts } from './handlers/lavapProviderHealthHandler';
-
+import { LavapDualStackingDelegatorRewardsHandler, LavapDualStackingDelegatorRewardsOpts } from './handlers/lavapDualStackingDelegatorRewardsHandler';
 
 GetServerInstance().get('/latest', LatestHandlerOpts, LatestHandler);
 
@@ -65,6 +65,10 @@ RegisterServerHandlerWithCache('/events', EventsHandlerOpts, EventsHandler);
 
 if (consts.JSINFO_QUERY_LAVAP_PROVIDER_HEALTH_ENDPOINT_ENABLED) {
     GetServerInstance().post('/lavapProviderHealth', LavapProviderHealthHandlerOpts, LavapProviderHealthHandler);
+}
+
+if (consts.JSINFO_QUERY_LAVAP_DUAL_STACKING_DELEGATOR_REWARDS_ENDPOINT_ENABLED) {
+    GetServerInstance().post('/lavapDualStackingDelegatorRewards', LavapDualStackingDelegatorRewardsOpts, LavapDualStackingDelegatorRewardsHandler);
 }
 
 

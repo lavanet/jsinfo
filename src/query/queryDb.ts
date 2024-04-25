@@ -4,8 +4,9 @@ import { logger } from '../utils';
 import { GetDb, GetReadDb, GetRelaysReadDb } from '../dbUtils';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { desc } from "drizzle-orm";
-import * as schema from '../schema';
 import { JSINFO_NO_READ_DB } from './queryConsts';
+import * as JsinfoSchema from '../schemas/jsinfo_schema';
+import * as RelaysSchema from '../schemas/relays_schema';
 
 let db: PostgresJsDatabase | null = null;
 let readDb: PostgresJsDatabase | null = null;
@@ -13,7 +14,7 @@ let relaysReadDb: PostgresJsDatabase | null = null;
 
 export async function QueryCheckDbInstance() {
     try {
-        await db!.select().from(schema.blocks).limit(1)
+        await db!.select().from(JsinfoSchema.blocks).limit(1)
     } catch (e) {
         logger.info('QueryCheckDbInstance exception, resetting connection', e)
         db = await GetDb()
@@ -35,7 +36,7 @@ export function QueryGetDbInstance(): PostgresJsDatabase {
 export async function QueryCheckReadDbInstance() {
     if (JSINFO_NO_READ_DB) return QueryCheckDbInstance();
     try {
-        await readDb!.select().from(schema.blocks).limit(1)
+        await readDb!.select().from(JsinfoSchema.blocks).limit(1)
     } catch (e) {
         logger.info('QueryCheckReadDbInstance exception, resetting connection', e)
         readDb = await GetReadDb()
@@ -58,7 +59,7 @@ export function QueryGetReadDbInstance(): PostgresJsDatabase {
 
 export async function QueryCheckRelaysReadDbInstance() {
     try {
-        await relaysReadDb!.select().from(schema.lavaReportError).limit(1)
+        await relaysReadDb!.select().from(RelaysSchema.lavaReportError).limit(1)
     } catch (e) {
         logger.info('QueryCheckReadDbInstance exception, resetting connection', e)
         relaysReadDb = await GetRelaysReadDb()
@@ -79,7 +80,7 @@ export function QueryGetRelaysReadDbInstance(): PostgresJsDatabase {
 
 export async function GetLatestBlock() {
     //
-    const latestDbBlocks = await QueryGetDbInstance().select().from(schema.blocks).orderBy(desc(schema.blocks.height)).limit(1)
+    const latestDbBlocks = await QueryGetDbInstance().select().from(JsinfoSchema.blocks).orderBy(desc(JsinfoSchema.blocks.height)).limit(1)
     let latestHeight = 0
     let latestDatetime = 0
     if (latestDbBlocks.length != 0) {

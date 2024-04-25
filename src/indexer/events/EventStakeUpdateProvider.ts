@@ -1,6 +1,6 @@
 import { Event } from "@cosmjs/stargate"
 import { LavaBlock } from "../types";
-import * as schema from '../../schema';
+import * as JsinfoSchema from '../../schemas/jsinfo_schema';
 import { GetOrSetProvider, SetTx } from "../setlatest";
 import { EventParseUlava, EventProcessAttributes, EventParseProviderAddress, EventParseInt } from "../eventUtils";
 
@@ -50,15 +50,15 @@ export const ParseEventStakeUpdateProvider = (
   height: number,
   txHash: string | null,
   lavaBlock: LavaBlock,
-  static_dbProviders: Map<string, schema.Provider>,
-  static_dbSpecs: Map<string, schema.Spec>,
-  static_dbPlans: Map<string, schema.Plan>,
-  static_dbStakes: Map<string, schema.ProviderStake[]>,
+  static_dbProviders: Map<string, JsinfoSchema.Provider>,
+  static_dbSpecs: Map<string, JsinfoSchema.Spec>,
+  static_dbPlans: Map<string, JsinfoSchema.Plan>,
+  static_dbStakes: Map<string, JsinfoSchema.ProviderStake[]>,
 ) => {
-  const evtEvent: schema.InsertEvent = {
+  const evtEvent: JsinfoSchema.InsertEvent = {
     tx: txHash,
     blockId: height,
-    eventType: schema.LavaProviderEventType.StakeUpdateProvider,
+    eventType: JsinfoSchema.LavaProviderEventType.StakeUpdateProvider,
     consumer: null,
   }
 

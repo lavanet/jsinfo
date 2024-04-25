@@ -3,7 +3,7 @@
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryCheckReadDbInstance, QueryGetReadDbInstance } from '../queryDb';
-import * as schema from '../../schema';
+import * as JsinfoSchema from '../../schemas/jsinfo_schema';
 import { desc, eq } from "drizzle-orm";
 import { Pagination, ParsePaginationFromRequest, ParsePaginationFromString } from '../utils/queryPagination';
 import { JSINFO_QUERY_CACHEDIR, JSINFO_QUERY_CACHE_ENABLED, JSINFO_QUERY_HANDLER_CACHE_TIME_SECONDS, JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE } from '../queryConsts';
@@ -76,8 +76,8 @@ class ProviderStakesData {
         let thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-        let stakesRes = await QueryGetReadDbInstance().select().from(schema.providerStakes).
-            where(eq(schema.providerStakes.provider, this.addr)).orderBy(desc(schema.providerStakes.stake))
+        let stakesRes = await QueryGetReadDbInstance().select().from(JsinfoSchema.providerStakes).
+            where(eq(JsinfoSchema.providerStakes.provider, this.addr)).orderBy(desc(JsinfoSchema.providerStakes.stake))
 
         return stakesRes;
     }
@@ -167,7 +167,7 @@ export async function ProviderStakesHandler(request: FastifyRequest, reply: Fast
         return;
     }
 
-    const res = await QueryGetReadDbInstance().select().from(schema.providers).where(eq(schema.providers.address, addr)).limit(1)
+    const res = await QueryGetReadDbInstance().select().from(JsinfoSchema.providers).where(eq(JsinfoSchema.providers.address, addr)).limit(1)
     if (res.length != 1) {
         reply.code(400).send({ error: 'Provider does not exist' });
         return;
@@ -192,7 +192,7 @@ export async function ProviderStakesItemCountHandler(request: FastifyRequest, re
         return;
     }
 
-    const res = await QueryGetReadDbInstance().select().from(schema.providers).where(eq(schema.providers.address, addr)).limit(1)
+    const res = await QueryGetReadDbInstance().select().from(JsinfoSchema.providers).where(eq(JsinfoSchema.providers.address, addr)).limit(1)
     if (res.length != 1) {
         reply.code(400).send({ error: 'Provider does not exist' });
         return;

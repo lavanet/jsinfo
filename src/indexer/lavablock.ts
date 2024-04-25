@@ -1,5 +1,5 @@
 
-import * as schema from '../schema';
+import * as JsinfoSchema from '../schemas/jsinfo_schema';
 
 import { StargateClient, IndexedTx, Block, Event } from "@cosmjs/stargate"
 import { Tendermint37Client } from "@cosmjs/tendermint-rpc";
@@ -112,10 +112,10 @@ export const GetOneLavaBlock = async (
     height: number,
     client: StargateClient,
     clientTm: Tendermint37Client,
-    static_dbProviders: Map<string, schema.Provider>,
-    static_dbSpecs: Map<string, schema.Spec>,
-    static_dbPlans: Map<string, schema.Plan>,
-    static_dbStakes: Map<string, schema.ProviderStake[]>,
+    static_dbProviders: Map<string, JsinfoSchema.Provider>,
+    static_dbSpecs: Map<string, JsinfoSchema.Spec>,
+    static_dbPlans: Map<string, JsinfoSchema.Plan>,
+    static_dbStakes: Map<string, JsinfoSchema.ProviderStake[]>,
 ): Promise<LavaBlock> => {
 
     const startTimeBlock = Date.now();

@@ -1,5 +1,7 @@
+// src/schemas/jsinfo_schema.ts
+
 import { sql } from 'drizzle-orm'
-import { pgTable, index, text, integer, serial, bigint, real, uniqueIndex, primaryKey, timestamp, doublePrecision, date, varchar } from 'drizzle-orm/pg-core';
+import { pgTable, index, text, integer, serial, bigint, real, uniqueIndex, primaryKey, timestamp, doublePrecision, varchar } from 'drizzle-orm/pg-core';
 
 export const blocks = pgTable('blocks', {
   height: integer('height').unique(),
@@ -244,19 +246,9 @@ export const dualStackingDelegatorRewards = pgTable('dual_stacking_delegator_rew
   timestamp: timestamp('timestamp').notNull(),
   provider: text('provider').notNull(),
   chain_id: text('chain_id').notNull(),
-  amount: integer('amount').notNull(),
+  amount: bigint('amount', { mode: 'number' }).notNull(),
   denom: text('denom').notNull(),
 });
 
 export type DualStackingDelegatorRewards = typeof dualStackingDelegatorRewards.$inferSelect;
 export type InsertDualStackingDelegatorRewards = typeof dualStackingDelegatorRewards.$inferInsert;
-
-export const lavaReportError = pgTable('lava_report_error', {
-  id: serial('id').primaryKey(),
-  created_at: timestamp('created_at'),
-  provider: varchar('provider', { length: 255 }),
-  spec_id: varchar('spec_id', { length: 255 }),
-  errors: text('errors'),
-});
-export type LavaReportError = typeof lavaReportError.$inferSelect
-export type InsertLavaReportError = typeof lavaReportError.$inferInsert

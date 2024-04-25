@@ -13,8 +13,8 @@ ulimit -c unlimited
 run_script() {
     command=$1
     while true; do
-        # Generate a random number of minutes between 120 and 180
-        BUN_TIMEOUT=$((RANDOM % 61 + 120))
+        # Generate a random number of minutes between 1 to 4 hours
+        BUN_TIMEOUT=$((RANDOM % 181 + 60))
         
         # Run the command with the random timeout
         echo "QueryPod $(date) :: Starting '$command' with ${BUN_TIMEOUT} minute timeout ..."

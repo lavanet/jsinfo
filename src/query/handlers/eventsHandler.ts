@@ -2,7 +2,7 @@
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryCheckReadDbInstance, GetLatestBlock, QueryGetReadDbInstance } from '../queryDb';
-import * as schema from '../../schema';
+import * as JsinfoSchema from '../../schemas/jsinfo_schema';
 import { desc, eq } from "drizzle-orm";
 
 export const EventsHandlerOpts: RouteShorthandOptions = {
@@ -38,18 +38,18 @@ export async function EventsHandler(request: FastifyRequest, reply: FastifyReply
     const { latestHeight, latestDatetime } = await GetLatestBlock()
 
     //
-    const res3 = await QueryGetReadDbInstance().select().from(schema.events).
-        leftJoin(schema.blocks, eq(schema.events.blockId, schema.blocks.height)).
-        leftJoin(schema.providers, eq(schema.events.provider, schema.providers.address)).
-        orderBy(desc(schema.events.id)).offset(0).limit(250)
-    const res6 = await QueryGetReadDbInstance().select().from(schema.relayPayments).
-        leftJoin(schema.blocks, eq(schema.relayPayments.blockId, schema.blocks.height)).
-        leftJoin(schema.providers, eq(schema.relayPayments.provider, schema.providers.address)).
-        orderBy(desc(schema.relayPayments.id)).offset(0).limit(250)
-    let res7 = await QueryGetReadDbInstance().select().from(schema.providerReported).
-        leftJoin(schema.blocks, eq(schema.providerReported.blockId, schema.blocks.height)).
-        leftJoin(schema.providers, eq(schema.providerReported.provider, schema.providers.address)).
-        orderBy(desc(schema.providerReported.blockId)).limit(250)
+    const res3 = await QueryGetReadDbInstance().select().from(JsinfoSchema.events).
+        leftJoin(JsinfoSchema.blocks, eq(JsinfoSchema.events.blockId, JsinfoSchema.blocks.height)).
+        leftJoin(JsinfoSchema.providers, eq(JsinfoSchema.events.provider, JsinfoSchema.providers.address)).
+        orderBy(desc(JsinfoSchema.events.id)).offset(0).limit(250)
+    const res6 = await QueryGetReadDbInstance().select().from(JsinfoSchema.relayPayments).
+        leftJoin(JsinfoSchema.blocks, eq(JsinfoSchema.relayPayments.blockId, JsinfoSchema.blocks.height)).
+        leftJoin(JsinfoSchema.providers, eq(JsinfoSchema.relayPayments.provider, JsinfoSchema.providers.address)).
+        orderBy(desc(JsinfoSchema.relayPayments.id)).offset(0).limit(250)
+    let res7 = await QueryGetReadDbInstance().select().from(JsinfoSchema.providerReported).
+        leftJoin(JsinfoSchema.blocks, eq(JsinfoSchema.providerReported.blockId, JsinfoSchema.blocks.height)).
+        leftJoin(JsinfoSchema.providers, eq(JsinfoSchema.providerReported.provider, JsinfoSchema.providers.address)).
+        orderBy(desc(JsinfoSchema.providerReported.blockId)).limit(250)
 
     // TODO: return & display dbConflictResponses
     return {

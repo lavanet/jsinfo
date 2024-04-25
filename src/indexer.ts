@@ -1,7 +1,7 @@
 // jsinfo/src/indexer.ts
 
-import * as schema from "./schema";
 import * as consts from './indexer/indexerConsts';
+import * as JsinfoSchema from "./schemas/jsinfo_schema";
 
 import { StargateClient } from "@cosmjs/stargate"
 import { Tendermint37Client } from "@cosmjs/tendermint-rpc";
@@ -16,10 +16,10 @@ import { DoInChunks, logger, BackoffRetry, ConnectToRpc, RpcConnection } from ".
 import { MigrateDb, GetDb } from "./dbUtils";
 import { updateAggHourlyPayments } from "./indexer/aggregate";
 
-let static_dbProviders: Map<string, schema.Provider> = new Map()
-let static_dbSpecs: Map<string, schema.Spec> = new Map()
-let static_dbPlans: Map<string, schema.Plan> = new Map()
-let static_dbStakes: Map<string, schema.ProviderStake[]> = new Map()
+let static_dbProviders: Map<string, JsinfoSchema.Provider> = new Map()
+let static_dbSpecs: Map<string, JsinfoSchema.Spec> = new Map()
+let static_dbPlans: Map<string, JsinfoSchema.Plan> = new Map()
+let static_dbStakes: Map<string, JsinfoSchema.ProviderStake[]> = new Map()
 const globakWorkList: number[] = []
 
 async function isBlockInDb(
@@ -27,7 +27,7 @@ async function isBlockInDb(
     height: number,
 ): Promise<boolean> {
     // Is in DB already?
-    const dbBlock = await db.select().from(schema.blocks).where(eq(schema.blocks.height, height));
+    const dbBlock = await db.select().from(JsinfoSchema.blocks).where(eq(JsinfoSchema.blocks.height, height));
     if (dbBlock.length != 0) {
         return true
     }
@@ -42,13 +42,13 @@ async function InsertBlock(
     logger.info(`Starting InsertBlock for block height: ${block.height}`);
     await db.transaction(async (tx) => {
         logger.debug(`Starting transaction for block height: ${block.height}`);
-        await tx.insert(schema.blocks).values({ height: block.height, datetime: new Date(block.datetime) })
+        await tx.insert(JsinfoSchema.blocks).values({ height: block.height, datetime: new Date(block.datetime) })
         logger.debug(`Inserted block height: ${block.height} into blocks`);
 
         const arrSpecs = Array.from(block.dbSpecs.values())
         logger.debug(`Inserting ${arrSpecs.length} specs for block height: ${block.height}`);
         await DoInChunks(consts.JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, arrSpecs, async (arr: any) => {
-            await tx.insert(schema.specs)
+            await tx.insert(JsinfoSchema.specs)
                 .values(arr)
                 .onConflictDoNothing();
         })
@@ -57,7 +57,7 @@ async function InsertBlock(
         const arrTxs = Array.from(block.dbTxs.values())
         logger.debug(`Inserting ${arrTxs.length} txs for block height: ${block.height}`);
         await DoInChunks(consts.JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, arrTxs, async (arr: any) => {
-            await tx.insert(schema.txs)
+            await tx.insert(JsinfoSchema.txs)
                 .values(arr)
                 .onConflictDoNothing();
         })
@@ -66,7 +66,7 @@ async function InsertBlock(
         const arrProviders = Array.from(block.dbProviders.values())
         logger.debug(`Inserting ${arrProviders.length} providers for block height: ${block.height}`);
         await DoInChunks(consts.JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, arrProviders, async (arr: any) => {
-            await tx.insert(schema.providers)
+            await tx.insert(JsinfoSchema.providers)
                 .values(arr)
                 .onConflictDoNothing();
         })
@@ -75,7 +75,7 @@ async function InsertBlock(
         const arrPlans = Array.from(block.dbPlans.values())
         // logger.debug(`Inserting ${arrPlans.length} plans for block height: ${block.height}`);
         await DoInChunks(consts.JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, arrPlans, async (arr: any) => {
-            await tx.insert(schema.plans)
+            await tx.insert(JsinfoSchema.plans)
                 .values(arr)
                 .onConflictDoNothing();
         })
@@ -84,7 +84,7 @@ async function InsertBlock(
         const arrConsumers = Array.from(block.dbConsumers.values())
         // logger.debug(`Inserting ${arrConsumers.length} consumers for block height: ${block.height}`);
         await DoInChunks(consts.JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, arrConsumers, async (arr: any) => {
-            await tx.insert(schema.consumers)
+            await tx.insert(JsinfoSchema.consumers)
                 .values(arr)
                 .onConflictDoNothing();
         })
@@ -92,27 +92,27 @@ async function InsertBlock(
 
         // Create
         await DoInChunks(consts.JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, block.dbEvents, async (arr: any) => {
-            await tx.insert(schema.events).values(arr)
+            await tx.insert(JsinfoSchema.events).values(arr)
         })
 
         await DoInChunks(consts.JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, block.dbPayments, async (arr: any) => {
-            await tx.insert(schema.relayPayments).values(arr)
+            await tx.insert(JsinfoSchema.relayPayments).values(arr)
         })
 
         await DoInChunks(consts.JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, block.dbConflictResponses, async (arr: any) => {
-            await tx.insert(schema.conflictResponses).values(arr)
+            await tx.insert(JsinfoSchema.conflictResponses).values(arr)
         })
 
         await DoInChunks(consts.JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, block.dbSubscriptionBuys, async (arr: any) => {
-            await tx.insert(schema.subscriptionBuys).values(arr)
+            await tx.insert(JsinfoSchema.subscriptionBuys).values(arr)
         })
 
         await DoInChunks(consts.JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, block.dbConflictVote, async (arr: any) => {
-            await tx.insert(schema.conflictVotes).values(arr)
+            await tx.insert(JsinfoSchema.conflictVotes).values(arr)
         })
 
         await DoInChunks(consts.JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, block.dbProviderReports, async (arr: any) => {
-            await tx.insert(schema.providerReported).values(arr)
+            await tx.insert(JsinfoSchema.providerReported).values(arr)
         })
     })
 }
@@ -298,7 +298,7 @@ const fillUp = async (db: PostgresJsDatabase, rpcConnection: RpcConnection) => {
     let dbHeight = consts.JSINFO_INDEXER_START_BLOCK
     let latestDbBlock
     try {
-        latestDbBlock = await db.select().from(schema.blocks).orderBy(desc(schema.blocks.height)).limit(1)
+        latestDbBlock = await db.select().from(JsinfoSchema.blocks).orderBy(desc(JsinfoSchema.blocks.height)).limit(1)
     } catch (e) {
         logger.info(`failed getting latestDbBlock ${e}`);
         logger.info('restarting db connection')

@@ -2,7 +2,7 @@
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryCheckReadDbInstance, GetLatestBlock, QueryGetReadDbInstance } from '../queryDb';
-import * as schema from '../../schema';
+import * as JsinfoSchema from '../../schemas/jsinfo_schema';
 import { sql, desc, gt, and, inArray } from "drizzle-orm";
 import { FormatDates } from '../utils/queryDateUtils';
 
@@ -57,10 +57,10 @@ export async function IndexHandler(request: FastifyRequest, reply: FastifyReply)
     let relaySum = 0
     let rewardSum = 0
     let res = await QueryGetReadDbInstance().select({
-        cuSum: sql<number>`sum(${schema.aggHourlyrelayPayments.cuSum})`,
-        relaySum: sql<number>`sum(${schema.aggHourlyrelayPayments.relaySum})`,
-        rewardSum: sql<number>`sum(${schema.aggHourlyrelayPayments.rewardSum})`
-    }).from(schema.aggHourlyrelayPayments)
+        cuSum: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.cuSum})`,
+        relaySum: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.relaySum})`,
+        rewardSum: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.rewardSum})`
+    }).from(JsinfoSchema.aggHourlyrelayPayments)
     if (res.length != 0) {
         cuSum = res[0].cuSum
         relaySum = res[0].relaySum
@@ -72,8 +72,8 @@ export async function IndexHandler(request: FastifyRequest, reply: FastifyReply)
     // Get total provider stake
     let stakeSum = 0
     let res2 = await QueryGetReadDbInstance().select({
-        stakeSum: sql<number>`sum(${schema.providerStakes.stake})`,
-    }).from(schema.providerStakes)
+        stakeSum: sql<number>`sum(${JsinfoSchema.providerStakes.stake})`,
+    }).from(JsinfoSchema.providerStakes)
     if (res2.length != 0) {
         stakeSum = res2[0].stakeSum
     }
@@ -81,11 +81,11 @@ export async function IndexHandler(request: FastifyRequest, reply: FastifyReply)
     //
     // Get "top" providers
     let res4 = await QueryGetReadDbInstance().select({
-        address: schema.aggHourlyrelayPayments.provider,
-        rewardSum: sql<number>`sum(${schema.aggHourlyrelayPayments.rewardSum})`,
-    }).from(schema.aggHourlyrelayPayments).
-        groupBy(schema.aggHourlyrelayPayments.provider).
-        orderBy(desc(sql<number>`sum(${schema.aggHourlyrelayPayments.rewardSum})`))
+        address: JsinfoSchema.aggHourlyrelayPayments.provider,
+        rewardSum: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.rewardSum})`,
+    }).from(JsinfoSchema.aggHourlyrelayPayments).
+        groupBy(JsinfoSchema.aggHourlyrelayPayments.provider).
+        orderBy(desc(sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.rewardSum})`))
     let providersAddrs: string[] = []
     res4.map((provider) => {
         providersAddrs.push(provider.address!)
@@ -99,12 +99,12 @@ export async function IndexHandler(request: FastifyRequest, reply: FastifyReply)
     //
     // Get top chains
     let topSpecs = await QueryGetReadDbInstance().select({
-        chainId: schema.aggHourlyrelayPayments.specId,
-        relaySum: sql<number>`sum(${schema.aggHourlyrelayPayments.relaySum})`,
-    }).from(schema.aggHourlyrelayPayments).
-        groupBy(sql`${schema.aggHourlyrelayPayments.specId}`).
-        where(gt(sql<Date>`DATE(${schema.aggHourlyrelayPayments.datehour})`, sql<Date>`now() - interval '30 day'`)).
-        orderBy(desc(sql<number>`sum(${schema.aggHourlyrelayPayments.relaySum})`))
+        chainId: JsinfoSchema.aggHourlyrelayPayments.specId,
+        relaySum: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.relaySum})`,
+    }).from(JsinfoSchema.aggHourlyrelayPayments).
+        groupBy(sql`${JsinfoSchema.aggHourlyrelayPayments.specId}`).
+        where(gt(sql<Date>`DATE(${JsinfoSchema.aggHourlyrelayPayments.datehour})`, sql<Date>`now() - interval '30 day'`)).
+        orderBy(desc(sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.relaySum})`))
     let getChains: string[] = []
     topSpecs.map((chain) => {
         if (getChains.length < 8) {
@@ -121,34 +121,34 @@ export async function IndexHandler(request: FastifyRequest, reply: FastifyReply)
     let mainChartData = {}
     if (getChains.length != 0) {
         mainChartData = await QueryGetReadDbInstance().select({
-            date: sql<string>`DATE_TRUNC('day', ${schema.aggHourlyrelayPayments.datehour}) as mydate`,
-            chainId: schema.aggHourlyrelayPayments.specId,
-            cuSum: sql<number>`sum(${schema.aggHourlyrelayPayments.cuSum})`,
-            relaySum: sql<number>`sum(${schema.aggHourlyrelayPayments.relaySum})`,
-            rewardSum: sql<number>`sum(${schema.aggHourlyrelayPayments.rewardSum})`,
-        }).from(schema.aggHourlyrelayPayments).
+            date: sql<string>`DATE_TRUNC('day', ${JsinfoSchema.aggHourlyrelayPayments.datehour}) as mydate`,
+            chainId: JsinfoSchema.aggHourlyrelayPayments.specId,
+            cuSum: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.cuSum})`,
+            relaySum: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.relaySum})`,
+            rewardSum: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.rewardSum})`,
+        }).from(JsinfoSchema.aggHourlyrelayPayments).
             where(
                 and(
-                    gt(sql<string>`DATE_TRUNC('day', ${schema.aggHourlyrelayPayments.datehour})`, sql<Date>`now() - interval '90 day'`),
-                    inArray(schema.aggHourlyrelayPayments.specId, getChains)
+                    gt(sql<string>`DATE_TRUNC('day', ${JsinfoSchema.aggHourlyrelayPayments.datehour})`, sql<Date>`now() - interval '90 day'`),
+                    inArray(JsinfoSchema.aggHourlyrelayPayments.specId, getChains)
                 )
             ).
-            groupBy(sql`${schema.aggHourlyrelayPayments.specId}`, sql`mydate`).
+            groupBy(sql`${JsinfoSchema.aggHourlyrelayPayments.specId}`, sql`mydate`).
             orderBy(sql`mydate`)
     }
 
     //
     // QoS graph
     let qosDataRaw = await QueryGetReadDbInstance().select({
-        date: sql`DATE_TRUNC('day', ${schema.aggHourlyrelayPayments.datehour}) as mydate`,
-        qosSyncAvg: sql<number>`sum(${schema.aggHourlyrelayPayments.qosSyncAvg}*${schema.aggHourlyrelayPayments.relaySum})/sum(${schema.aggHourlyrelayPayments.relaySum})`,
-        qosAvailabilityAvg: sql<number>`sum(${schema.aggHourlyrelayPayments.qosAvailabilityAvg}*${schema.aggHourlyrelayPayments.relaySum})/sum(${schema.aggHourlyrelayPayments.relaySum})`,
-        qosLatencyAvg: sql<number>`sum(${schema.aggHourlyrelayPayments.qosLatencyAvg}*${schema.aggHourlyrelayPayments.relaySum})/sum(${schema.aggHourlyrelayPayments.relaySum})`,
-        qosSyncExcAvg: sql<number>`sum(${schema.aggHourlyrelayPayments.qosSyncExcAvg}*${schema.aggHourlyrelayPayments.relaySum})/sum(${schema.aggHourlyrelayPayments.relaySum})`,
-        qosAvailabilityExcAvg: sql<number>`sum(${schema.aggHourlyrelayPayments.qosAvailabilityAvg}*${schema.aggHourlyrelayPayments.relaySum})/sum(${schema.aggHourlyrelayPayments.relaySum})`,
-        qosLatencyExcAv: sql<number>`sum(${schema.aggHourlyrelayPayments.qosLatencyExcAvg}*${schema.aggHourlyrelayPayments.relaySum})/sum(${schema.aggHourlyrelayPayments.relaySum})`,
-    }).from(schema.aggHourlyrelayPayments).
-        where(gt(sql<string>`DATE_TRUNC('day', ${schema.aggHourlyrelayPayments.datehour})`, sql<Date>`now() - interval '90 day'`)).
+        date: sql`DATE_TRUNC('day', ${JsinfoSchema.aggHourlyrelayPayments.datehour}) as mydate`,
+        qosSyncAvg: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.qosSyncAvg}*${JsinfoSchema.aggHourlyrelayPayments.relaySum})/sum(${JsinfoSchema.aggHourlyrelayPayments.relaySum})`,
+        qosAvailabilityAvg: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.qosAvailabilityAvg}*${JsinfoSchema.aggHourlyrelayPayments.relaySum})/sum(${JsinfoSchema.aggHourlyrelayPayments.relaySum})`,
+        qosLatencyAvg: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.qosLatencyAvg}*${JsinfoSchema.aggHourlyrelayPayments.relaySum})/sum(${JsinfoSchema.aggHourlyrelayPayments.relaySum})`,
+        qosSyncExcAvg: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.qosSyncExcAvg}*${JsinfoSchema.aggHourlyrelayPayments.relaySum})/sum(${JsinfoSchema.aggHourlyrelayPayments.relaySum})`,
+        qosAvailabilityExcAvg: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.qosAvailabilityAvg}*${JsinfoSchema.aggHourlyrelayPayments.relaySum})/sum(${JsinfoSchema.aggHourlyrelayPayments.relaySum})`,
+        qosLatencyExcAv: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.qosLatencyExcAvg}*${JsinfoSchema.aggHourlyrelayPayments.relaySum})/sum(${JsinfoSchema.aggHourlyrelayPayments.relaySum})`,
+    }).from(JsinfoSchema.aggHourlyrelayPayments).
+        where(gt(sql<string>`DATE_TRUNC('day', ${JsinfoSchema.aggHourlyrelayPayments.datehour})`, sql<Date>`now() - interval '90 day'`)).
         groupBy(sql`mydate`).
         orderBy(sql`mydate`)
 

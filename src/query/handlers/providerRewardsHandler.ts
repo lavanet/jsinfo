@@ -3,7 +3,7 @@
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryCheckReadDbInstance, QueryGetReadDbInstance } from '../queryDb';
-import * as schema from '../../schema';
+import * as JsinfoSchema from '../../schemas/jsinfo_schema';
 import { and, desc, eq, gte } from "drizzle-orm";
 import { Pagination, ParsePaginationFromRequest, ParsePaginationFromString } from '../utils/queryPagination';
 import { JSINFO_QUERY_CACHEDIR, JSINFO_QUERY_CACHE_ENABLED, JSINFO_QUERY_HANDLER_CACHE_TIME_SECONDS, JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE } from '../queryConsts';
@@ -115,14 +115,14 @@ class ProviderRewardsData {
         let thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-        const paymentsRes = await QueryGetReadDbInstance().select().from(schema.relayPayments).
-            leftJoin(schema.blocks, eq(schema.relayPayments.blockId, schema.blocks.height)).
+        const paymentsRes = await QueryGetReadDbInstance().select().from(JsinfoSchema.relayPayments).
+            leftJoin(JsinfoSchema.blocks, eq(JsinfoSchema.relayPayments.blockId, JsinfoSchema.blocks.height)).
             where(
                 and(
-                    eq(schema.relayPayments.provider, this.addr),
-                    gte(schema.relayPayments.datetime, thirtyDaysAgo)
+                    eq(JsinfoSchema.relayPayments.provider, this.addr),
+                    gte(JsinfoSchema.relayPayments.datetime, thirtyDaysAgo)
                 )).
-            orderBy(desc(schema.relayPayments.id)).offset(0).limit(5000)
+            orderBy(desc(JsinfoSchema.relayPayments.id)).offset(0).limit(5000)
 
         return paymentsRes;
     }
@@ -214,7 +214,7 @@ export async function ProviderRewardsHandler(request: FastifyRequest, reply: Fas
         return;
     }
 
-    const res = await QueryGetReadDbInstance().select().from(schema.providers).where(eq(schema.providers.address, addr)).limit(1)
+    const res = await QueryGetReadDbInstance().select().from(JsinfoSchema.providers).where(eq(JsinfoSchema.providers.address, addr)).limit(1)
     if (res.length != 1) {
         reply.code(400).send({ error: 'Provider does not exist' });
         return;
@@ -239,7 +239,7 @@ export async function ProviderRewardsItemCountHandler(request: FastifyRequest, r
         return;
     }
 
-    const res = await QueryGetReadDbInstance().select().from(schema.providers).where(eq(schema.providers.address, addr)).limit(1)
+    const res = await QueryGetReadDbInstance().select().from(JsinfoSchema.providers).where(eq(JsinfoSchema.providers.address, addr)).limit(1)
     if (res.length != 1) {
         reply.code(400).send({ error: 'Provider does not exist' });
         return;

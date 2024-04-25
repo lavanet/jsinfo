@@ -1,5 +1,5 @@
 import * as lavajs from '@lavanet/lavajs';
-import * as schema from '../schema';
+import * as JsinfoSchema from '../schemas/jsinfo_schema';
 
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { ne } from "drizzle-orm";
@@ -10,11 +10,11 @@ import { JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE } from './indexerConsts';
 export type LavaClient = Awaited<ReturnType<typeof lavajs.lavanet.ClientFactory.createRPCQueryClient>>
 
 export function GetOrSetProvider(
-    dbProviders: Map<string, schema.Provider>,
-    static_dbProviders: Map<string, schema.Provider> | null,
+    dbProviders: Map<string, JsinfoSchema.Provider>,
+    static_dbProviders: Map<string, JsinfoSchema.Provider> | null,
     address: string,
     moniker: string
-): schema.Provider {
+): JsinfoSchema.Provider {
     if (static_dbProviders != null) {
         let staticProvider = static_dbProviders.get(address);
         if (staticProvider != undefined) {
@@ -30,16 +30,16 @@ export function GetOrSetProvider(
     provider = {
         address: address,
         moniker: moniker,
-    } as schema.Provider
+    } as JsinfoSchema.Provider
     dbProviders.set(address, provider)
     return provider
 }
 
 export function GetOrSetSpec(
-    dbSpecs: Map<string, schema.Spec>,
-    static_dbSpecs: Map<string, schema.Spec> | null,
+    dbSpecs: Map<string, JsinfoSchema.Spec>,
+    static_dbSpecs: Map<string, JsinfoSchema.Spec> | null,
     specS: string
-): schema.Spec {
+): JsinfoSchema.Spec {
     if (static_dbSpecs != null) {
         let staticSpec = static_dbSpecs.get(specS);
         if (staticSpec != undefined) {
@@ -54,13 +54,13 @@ export function GetOrSetSpec(
 
     spec = {
         id: specS
-    } as schema.Spec
+    } as JsinfoSchema.Spec
     dbSpecs.set(specS, spec)
     return spec
 }
 
 export function SetTx(
-    dbTxs: Map<string, schema.Tx>,
+    dbTxs: Map<string, JsinfoSchema.Tx>,
     txHash: string | null,
     height: number,
 ) {
@@ -75,16 +75,16 @@ export function SetTx(
     dbTx = {
         hash: txHash,
         blockId: height,
-    } as schema.Tx
+    } as JsinfoSchema.Tx
     dbTxs.set(txHash, dbTx)
 
     return
 }
 
 export function GetOrSetConsumer(
-    dbConsumers: Map<string, schema.Consumer>,
+    dbConsumers: Map<string, JsinfoSchema.Consumer>,
     address: string
-): schema.Consumer {
+): JsinfoSchema.Consumer {
     let dbConsumer = dbConsumers.get(address);
     if (dbConsumer != undefined) {
         return dbConsumer
@@ -92,16 +92,16 @@ export function GetOrSetConsumer(
 
     dbConsumer = {
         address: address
-    } as schema.Consumer
+    } as JsinfoSchema.Consumer
     dbConsumers.set(address, dbConsumer)
     return dbConsumer
 }
 
 export function GetOrSetPlan(
-    dbPlans: Map<string, schema.Plan>,
-    static_dbPlans: Map<string, schema.Plan> | null,
+    dbPlans: Map<string, JsinfoSchema.Plan>,
+    static_dbPlans: Map<string, JsinfoSchema.Plan> | null,
     planId: string
-): schema.Plan {
+): JsinfoSchema.Plan {
     if (static_dbPlans != null) {
         let staticPlan = static_dbPlans.get(planId);
         if (staticPlan != undefined) {
@@ -116,15 +116,15 @@ export function GetOrSetPlan(
 
     dbPlan = {
         id: planId
-    } as schema.Plan
+    } as JsinfoSchema.Plan
     dbPlans.set(planId, dbPlan)
     return dbPlan
 }
 
 function processStakeEntry(
     height: number,
-    dbProviders: Map<string, schema.Provider>,
-    dbStakes: Map<string, schema.ProviderStake[]>,
+    dbProviders: Map<string, JsinfoSchema.Provider>,
+    dbStakes: Map<string, JsinfoSchema.ProviderStake[]>,
     providerStake: StakeEntry,
     isUnstaking: boolean,
 ) {
@@ -142,15 +142,15 @@ function processStakeEntry(
         addons += endPoint.addons.join(',')
         extensions += endPoint.extensions.join(',')
     })
-    let stakeArr: schema.ProviderStake[] = dbStakes.get(providerStake.address)!
+    let stakeArr: JsinfoSchema.ProviderStake[] = dbStakes.get(providerStake.address)!
 
     // status
     const appliedHeight = providerStake.stakeAppliedBlock.toSigned().toInt()
-    let status = schema.LavaProviderStakeStatus.Active
+    let status = JsinfoSchema.LavaProviderStakeStatus.Active
     if (isUnstaking) {
-        status = schema.LavaProviderStakeStatus.Unstaking
+        status = JsinfoSchema.LavaProviderStakeStatus.Unstaking
     } else if (appliedHeight == -1) {
-        status = schema.LavaProviderStakeStatus.Frozen
+        status = JsinfoSchema.LavaProviderStakeStatus.Frozen
     }
     stakeArr.push({
         provider: providerStake.address,
@@ -163,15 +163,15 @@ function processStakeEntry(
 
         stake: parseInt(providerStake.stake.amount),
         appliedHeight: appliedHeight,
-    } as schema.ProviderStake)
+    } as JsinfoSchema.ProviderStake)
 }
 
 async function getLatestProvidersAndSpecsAndStakes(
     client: LavaClient,
     height: number,
-    dbProviders: Map<string, schema.Provider>,
-    dbSpecs: Map<string, schema.Spec>,
-    dbStakes: Map<string, schema.ProviderStake[]>,
+    dbProviders: Map<string, JsinfoSchema.Provider>,
+    dbSpecs: Map<string, JsinfoSchema.Spec>,
+    dbStakes: Map<string, JsinfoSchema.ProviderStake[]>,
 ) {
     const lavaClient = client.lavanet.lava;
     dbStakes.clear()
@@ -207,7 +207,7 @@ async function getLatestProvidersAndSpecsAndStakes(
     })
 }
 
-async function getLatestPlans(client: LavaClient, dbPlans: Map<string, schema.Plan>) {
+async function getLatestPlans(client: LavaClient, dbPlans: Map<string, JsinfoSchema.Plan>) {
     const lavaClient = client.lavanet.lava;
 
     let plans = await lavaClient.plans.list()
@@ -216,7 +216,7 @@ async function getLatestPlans(client: LavaClient, dbPlans: Map<string, schema.Pl
             desc: plan.description,
             id: plan.index,
             price: parseInt(plan.price.amount),
-        } as schema.Plan)
+        } as JsinfoSchema.Plan)
     })
 }
 
@@ -225,10 +225,10 @@ export async function UpdateLatestBlockMeta(
     client: LavaClient,
     height: number,
     withStakes: boolean,
-    static_dbProviders: Map<string, schema.Provider>,
-    static_dbSpecs: Map<string, schema.Spec>,
-    static_dbPlans: Map<string, schema.Plan>,
-    static_dbStakes: Map<string, schema.ProviderStake[]>
+    static_dbProviders: Map<string, JsinfoSchema.Provider>,
+    static_dbSpecs: Map<string, JsinfoSchema.Spec>,
+    static_dbPlans: Map<string, JsinfoSchema.Plan>,
+    static_dbStakes: Map<string, JsinfoSchema.ProviderStake[]>
 ) {
     await getLatestProvidersAndSpecsAndStakes(client, height, static_dbProviders, static_dbSpecs, static_dbStakes)
     await getLatestPlans(client, static_dbPlans)
@@ -238,7 +238,7 @@ export async function UpdateLatestBlockMeta(
         // Insert all specs
         const arrSpecs = Array.from(static_dbSpecs.values())
         await DoInChunks(JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, arrSpecs, async (arr: any) => {
-            await tx.insert(schema.specs)
+            await tx.insert(JsinfoSchema.specs)
                 .values(arr)
                 .onConflictDoNothing();
         })
@@ -247,11 +247,11 @@ export async function UpdateLatestBlockMeta(
         const arrProviders = Array.from(static_dbProviders.values())
         await DoInChunks(JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, arrProviders, async (arr: any) => {
             return arr.map(async (provider: any) => {
-                return await tx.insert(schema.providers)
+                return await tx.insert(JsinfoSchema.providers)
                     .values(provider)
                     .onConflictDoUpdate(
                         {
-                            target: [schema.providers.address],
+                            target: [JsinfoSchema.providers.address],
                             set: {
                                 moniker: provider.moniker
                             },
@@ -265,10 +265,10 @@ export async function UpdateLatestBlockMeta(
         const arrPlans = Array.from(static_dbPlans.values())
         if (arrPlans.length > 0) {
             await Promise.all(arrPlans.map(async (plan: any) => {
-                return await tx.insert(schema.plans)
+                return await tx.insert(JsinfoSchema.plans)
                     .values(arrPlans)
                     .onConflictDoUpdate({
-                        target: [schema.plans.id],
+                        target: [JsinfoSchema.plans.id],
                         set: {
                             desc: plan.desc,
                             price: plan.price,
@@ -282,12 +282,12 @@ export async function UpdateLatestBlockMeta(
             await Promise.all(Array.from(static_dbStakes.values()).map(async (stakes) => {
                 return stakes.map(async (stake) => {
                     if (stake.specId == null || stake.specId == "") return;
-                    // console.log("schema.providerStakes.provider, schema.providerStakes.specId", stake)
-                    return await tx.insert(schema.providerStakes)
+                    // console.log("schema.providerStakes.provider,JsinfoSchema.providerStakes.specId", stake)
+                    return await tx.insert(JsinfoSchema.providerStakes)
                         .values(stake)
                         .onConflictDoUpdate(
                             {
-                                target: [schema.providerStakes.provider, schema.providerStakes.specId],
+                                target: [JsinfoSchema.providerStakes.provider, JsinfoSchema.providerStakes.specId],
                                 set: {
                                     stake: stake.stake,
                                     appliedHeight: stake.appliedHeight,
@@ -303,11 +303,11 @@ export async function UpdateLatestBlockMeta(
             }))
             // 
             // Update old stakes
-            await tx.update(schema.providerStakes)
+            await tx.update(JsinfoSchema.providerStakes)
                 .set({
-                    status: schema.LavaProviderStakeStatus.Inactive
+                    status: JsinfoSchema.LavaProviderStakeStatus.Inactive
                 })
-                .where(ne(schema.providerStakes.blockId, height))
+                .where(ne(JsinfoSchema.providerStakes.blockId, height))
         }
     })
 }

@@ -1,19 +1,51 @@
 // src/query/handlers/lavapDualStackingDelegatorRewardsHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import * as schema from '../../schema';
+import * as JsinfoSchema from '../../schemas/jsinfo_schema';
 import { QueryCheckDbInstance, QueryGetDbInstance } from '../queryDb';
 import { lt } from "drizzle-orm";
 import { JSINFO_QUERY_PROVIDER_DUAL_STACKING_DELEGATOR_REWARDS_CUTOFF_DAYS } from '../queryConsts';
 
-type ProviderData = {
+type RewardInput = {
     provider: string;
-    spec: string;
-    interface: string | null;
-    status: string;
-    message: string | null;
-    block: number | null;
-    latency: number | null;
+    chain_id: string;
+    amount: {
+        denom: string;
+        amount: string;
+    }[];
+};
+
+export const LavapDualStackingDelegatorRewardsOpts: RouteShorthandOptions = {
+    schema: {
+        body: {
+            type: 'object',
+            required: ['rewards'],
+            properties: {
+                rewards: {
+                    type: 'array',
+                    items: {
+                        type: 'object',
+                        required: ['provider', 'chain_id', 'amount'],
+                        properties: {
+                            provider: { type: 'string' },
+                            chain_id: { type: 'string' },
+                            amount: {
+                                type: 'array',
+                                items: {
+                                    type: 'object',
+                                    required: ['denom', 'amount'],
+                                    properties: {
+                                        denom: { type: 'string' },
+                                        amount: { type: 'string' }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 };
 
 function validateProvider(provider: string): string {
@@ -23,141 +55,65 @@ function validateProvider(provider: string): string {
     return provider;
 }
 
-function validateSpec(spec: string): string {
-    if (!/^[A-Z0-9]+$/.test(spec)) {
-        throw new Error(`Invalid spec: ${spec}`);
-    }
-    return spec;
-}
-
-function parseProviderKey(key: string): [string, string, string | null] {
-    const parts = key.replace(/"/g, '').split('|').map(part => part.trim());
-    return [validateProvider(parts[0]), validateSpec(parts[1]), parts[2] || null];
-}
-
-function parseProvider(data: any, key: string, status: string): ProviderData {
-    const [provider, spec, interfaceName] = parseProviderKey(key);
-    return {
-        provider,
-        spec,
-        interface: interfaceName,
-        status,
-        message: status === 'unhealthy' ? data[key] : null,
-        block: data[key]?.block || null,
-        latency: data[key]?.latency || null
-    };
-}
-
-function parseData(data: any): ProviderData[] {
-    const result: ProviderData[] = [];
-
-    for (const key in data.providerData) {
-        result.push(parseProvider(data.providerData, key, 'healthy'));
-    }
-
-    for (const key in data.frozenProviders) {
-        result.push(parseProvider(data.frozenProviders, key, 'frozen'));
-    }
-
-    for (const key in data.unhealthyProviders) {
-        result.push(parseProvider(data.unhealthyProviders, key, 'unhealthy'));
-    }
-
-    return result;
-}
-
-export const LavapProviderHealthHandlerOpts: RouteShorthandOptions = {
-    schema: {
-        response: {
-            200: {
-                type: 'object',
-                properties: {
-                    status: {
-                        type: 'string'
-                    },
-                }
-            }
-        }
-    }
-}
-
-export async function LavapProviderHealthHandler(request: FastifyRequest, reply: FastifyReply) {
+export async function LavapDualStackingDelegatorRewardsHandler(request: FastifyRequest, reply: FastifyReply) {
     await QueryCheckDbInstance();
 
-    const cdate = new Date(); // current date
-    console.log(`LavapProviderHealthHandler:: Lavap Provider Health Timestamp: ${cdate}`);
+    const body: any = request.body
 
-    let latestBlocks = {};
-    let getBlocksAway = (spec: string, currentBlock: number | null): number | null => null;
-
-    const requestBody = request.body as any;
-
-    if (!requestBody.latestBlocks) {
-        console.error('Error: latestBlocks key does not exist in the request body');
-    } else {
-        latestBlocks = requestBody.latestBlocks;
-
-        getBlocksAway = (spec: string, currentBlock: number | null): number | null => {
-            if (currentBlock == null || currentBlock === 0) return null
-            const block = latestBlocks[spec];
-            if (block === undefined) {
-                console.error(`Error: Spec ${spec} does not exist in latestBlocks`);
-                return null;
-            }
-            return block - currentBlock;
-        };
+    // Validate and parse request
+    if (!body || !('rewards' in body)) {
+        reply.status(400).send({ error: 'Invalid request body or missing rewards property' });
+        return;
     }
 
-    const providerData: ProviderData[] = parseData(request.body);
+    const rewards: RewardInput[] = body.rewards as RewardInput[];
 
-    const insertData: schema.InsertProviderHealthHourly[] = providerData.map(data => {
-        let blocksaway: number | null = null
-        if (data.status === 'healthy') blocksaway = getBlocksAway(data.spec, data.block);
-        return {
-            provider: data.provider,
-            timestamp: cdate,
-            spec: data.spec,
-            interface: data.interface,
-            status: data.status,
-            message: data.message,
-            block: data.block,
-            blocksaway: blocksaway,
-            latency: data.latency,
-        };
+    let provider: string | null = null;
+
+    const insertData: JsinfoSchema.InsertDualStackingDelegatorRewards[] = rewards.flatMap(reward => {
+        // Validate provider format
+        provider = validateProvider(reward.provider);
+
+        return reward.amount.map(a => ({
+            timestamp: new Date(),
+            provider: reward.provider,
+            chain_id: reward.chain_id,
+            amount: parseInt(a.amount),
+            denom: a.denom
+        }));
     });
 
-    await QueryGetDbInstance().transaction(async (tx) => {
-        console.log(`Starting transaction. Inserting ${insertData.length} records.`);
+    // If insertData is empty, print raw data to console and return
+    if (insertData.length === 0) {
+        console.log(`[${new Date().toISOString()}] LavapDualStackingDelegatorRewardsHandler: Provider: ${provider}. Raw data:`, request.body);
+        reply.code(200).send({ status: 'success', message: 'No data to process.' });
+        return;
+    }
 
-        // Get the current hour
-        const currentHour = new Date().getHours();
+    try {
+        const db = await QueryGetDbInstance();
+        await db.transaction(async (tx) => {
 
-        // Check if the current hour is between 3 and 4 AM
-        if (currentHour === 3) {
-            // Delete entries older than JSINFO_QUERY_PROVIDER_HEALTH_HOURLY_CUTOFF_DAYS (30 days)
-            const cutoffDate = new Date();
-            cutoffDate.setDate(cutoffDate.getDate() - JSINFO_QUERY_PROVIDER_DUAL_STACKING_DELEGATOR_REWARDS_CUTOFF_DAYS);
-            await tx.delete(schema.providerHealthHourly).where(lt(schema.providerHealthHourly.timestamp, cutoffDate));
-        }
+            // Get the current hour
+            const currentHour = new Date().getHours();
 
-        // insert in bulk
-        const result = await tx.insert(schema.providerHealthHourly).values(insertData);
-        console.log(`Transaction completed. Inserted: ${result} `);
-    });
+            // Check if the current hour is between 3 and 4 AM
+            if (currentHour === 3) {
+                // Delete entries older than JSINFO_QUERY_PROVIDER_DUAL_STACKING_DELEGATOR_REWARDS_CUTOFF_DAYS (30 days)
+                const cutoffDate = new Date();
+                cutoffDate.setDate(cutoffDate.getDate() - JSINFO_QUERY_PROVIDER_DUAL_STACKING_DELEGATOR_REWARDS_CUTOFF_DAYS);
+                await tx.delete(JsinfoSchema.dualStackingDelegatorRewards).where(lt(JsinfoSchema.dualStackingDelegatorRewards.timestamp, cutoffDate));
+            }
 
-    // Print stats
-    const healthyProviders = insertData.filter(data => data.status === 'healthy');
-    const frozenProviders = insertData.filter(data => data.status === 'frozen');
-    const unhealthyProviders = insertData.filter(data => data.status === 'unhealthy');
+            const result = await tx.insert(JsinfoSchema.dualStackingDelegatorRewards).values(insertData)
+                .returning({ chain: JsinfoSchema.dualStackingDelegatorRewards.chain_id });
 
-    const uniqueHealthyProviders = [...new Set(healthyProviders.map(data => data.provider))];
-    console.log(`Healthy (count: ${uniqueHealthyProviders.length}): ${uniqueHealthyProviders.slice(0, 4).join(', ')}`);
+            console.log(`[${new Date().toISOString()}] LavapDualStackingDelegatorRewardsHandler: Provider: ${provider}. Inserted ${result.length} reward entries. chains: ${JSON.stringify(result)}`);
+        });
 
-    const uniqueFrozenProviders = [...new Set(frozenProviders.map(data => data.provider))];
-    console.log(`Frozen (count: ${uniqueFrozenProviders.length}): ${uniqueFrozenProviders.slice(0, 4).join(', ')}`);
-
-    const uniqueUnhealthyProviders = [...new Set(unhealthyProviders.map(data => data.provider))];
-    console.log(`Unhealthy (count: ${uniqueUnhealthyProviders.length}): ${uniqueUnhealthyProviders.slice(0, 4).join(', ')}`);
-
-    return { "status": "ok" }
+        reply.code(200).send({ status: 'success', message: 'Rewards processed successfully.' });
+    } catch (error) {
+        console.error(`[${new Date().toISOString()}] LavapDualStackingDelegatorRewardsHandler: Provider: ${provider}. Failed to process rewards:`, error);
+        reply.code(500).send({ status: 'error', message: 'Failed to process rewards.' });
+    }
 }

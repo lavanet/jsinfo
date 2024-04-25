@@ -36,8 +36,8 @@ sleep 60
 
 # Run the second script in an endless loop
 while true; do
-    # Generate a random number of minutes between 120 and 180
-    BUN_TIMEOUT=$((RANDOM % 61 + 120))
+    # Generate a random number of minutes between 1 to 4 hours
+    BUN_TIMEOUT=$((RANDOM % 181 + 60))
 
     echo "QueryPod $(date) :: Starting 'env JSINFO_QUERY_CACHE_POPULTAE_MODE=true JSINFO_QUERY_PORT=8081 bun run src/query.js'... with ${BUN_TIMEOUT} minute timeout"
     env JSINFO_QUERY_CACHE_POPULTAE_MODE=true JSINFO_QUERY_PORT=8081 timeout ${BUN_TIMEOUT}m bun run src/query.js || true
@@ -46,4 +46,4 @@ while true; do
 done &
 
 # Wait for all child processes to finish
-sleep
+wait

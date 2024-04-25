@@ -2,7 +2,7 @@
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryCheckReadDbInstance, QueryGetReadDbInstance } from '../queryDb';
-import * as schema from '../../schema';
+import * as JsinfoSchema from '../../schemas/jsinfo_schema';
 import { isNotNull } from 'drizzle-orm';
 
 export const CacheLinksHandlerOpts: RouteShorthandOptions = {
@@ -48,9 +48,9 @@ export async function CacheLinksHandler(request: FastifyRequest, reply: FastifyR
     };
 
     // Fetch all providers, consumers, and specs
-    const providers = await QueryGetReadDbInstance().select().from(schema.providers).where(isNotNull(schema.providers.address));
-    const consumers = await QueryGetReadDbInstance().select().from(schema.consumers);
-    const specs = await QueryGetReadDbInstance().select().from(schema.specs);
+    const providers = await QueryGetReadDbInstance().select().from(JsinfoSchema.providers).where(isNotNull(JsinfoSchema.providers.address));
+    const consumers = await QueryGetReadDbInstance().select().from(JsinfoSchema.consumers);
+    const specs = await QueryGetReadDbInstance().select().from(JsinfoSchema.specs);
 
     // Generate URLs for each provider, consumer, and spec
     const providerUrls = providers.flatMap(provider =>

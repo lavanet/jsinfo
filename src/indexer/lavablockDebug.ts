@@ -2,7 +2,7 @@
 import { GetRpcBlock, GetRpcTxs, GetRpcBlockResultEvents } from "./lavablock";
 import { RpcConnection } from "../utils";
 import { ProcessOneEvent } from "./eventProcessor";
-import * as schema from '../schema';
+import * as JsinfoSchema from '../schemas/jsinfo_schema';
 import { LavaBlock } from "./types";
 
 export const LavaBlockDebugDumpEventsProcessBlock = async (instanceIdx: number, startHeight: number, rpcConnection: RpcConnection,
@@ -73,10 +73,10 @@ export const LavaBlockDebugDumpEventsProcessBlock = async (instanceIdx: number, 
 
 
 
-        let static_dbProviders: Map<string, schema.Provider> = new Map();
-        let static_dbSpecs: Map<string, schema.Spec> = new Map();
-        let static_dbPlans: Map<string, schema.Plan> = new Map();
-        let static_dbStakes: Map<string, schema.ProviderStake[]> = new Map();
+        let static_dbProviders: Map<string, JsinfoSchema.Provider> = new Map();
+        let static_dbSpecs: Map<string, JsinfoSchema.Spec> = new Map();
+        let static_dbPlans: Map<string, JsinfoSchema.Plan> = new Map();
+        let static_dbStakes: Map<string, JsinfoSchema.ProviderStake[]> = new Map();
 
         const lavaBlock: LavaBlock = {
             height: height,
@@ -101,10 +101,10 @@ export const LavaBlockDebugDumpEventsProcessBlock = async (instanceIdx: number, 
             lavaBlock: LavaBlock,
             height: number,
             txHash: string | null,
-            static_dbProviders: Map<string, schema.Provider>,
-            static_dbSpecs: Map<string, schema.Spec>,
-            static_dbPlans: Map<string, schema.Plan>,
-            static_dbStakes: Map<string, schema.ProviderStake[]>,
+            static_dbProviders: Map<string,JsinfoSchema.Provider>,
+            static_dbSpecs: Map<string,JsinfoSchema.Spec>,
+            static_dbPlans: Map<string,JsinfoSchema.Plan>,
+            static_dbStakes: Map<string,JsinfoSchema.ProviderStake[]>,
         ) => {
         */
 

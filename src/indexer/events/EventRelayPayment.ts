@@ -1,6 +1,6 @@
 import { Event } from "@cosmjs/stargate"
 import { LavaBlock } from "../types";
-import * as schema from '../../schema';
+import * as JsinfoSchema from '../../schemas/jsinfo_schema';
 import { GetOrSetConsumer, GetOrSetProvider, GetOrSetSpec, SetTx } from "../setlatest";
 import { EventParseUlava, EventProcessAttributes, EventParseProviderAddress, EventParseInt, EventParseFloat } from "../eventUtils";
 
@@ -185,12 +185,12 @@ export const ParseEventRelayPayment = (
   height: number,
   txHash: string | null,
   lavaBlock: LavaBlock,
-  static_dbProviders: Map<string, schema.Provider>,
-  static_dbSpecs: Map<string, schema.Spec>,
-  static_dbPlans: Map<string, schema.Plan>,
-  static_dbStakes: Map<string, schema.ProviderStake[]>,
+  static_dbProviders: Map<string, JsinfoSchema.Provider>,
+  static_dbSpecs: Map<string, JsinfoSchema.Spec>,
+  static_dbPlans: Map<string, JsinfoSchema.Plan>,
+  static_dbStakes: Map<string, JsinfoSchema.ProviderStake[]>,
 ) => {
-  const evtEvent: schema.InsertRelayPayment = {
+  const evtEvent: JsinfoSchema.InsertRelayPayment = {
     tx: txHash,
     blockId: height,
     datetime: new Date(lavaBlock.datetime),

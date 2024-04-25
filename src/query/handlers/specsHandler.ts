@@ -2,7 +2,7 @@
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryCheckReadDbInstance, QueryGetReadDbInstance } from '../queryDb';
-import * as schema from '../../schema';
+import * as JsinfoSchema from '../../schemas/jsinfo_schema';
 
 export const SpecsHandlerOpts: RouteShorthandOptions = {
     schema: {
@@ -22,7 +22,7 @@ export const SpecsHandlerOpts: RouteShorthandOptions = {
 export async function SpecsHandler(request: FastifyRequest, reply: FastifyReply) {
     await QueryCheckReadDbInstance()
 
-    const res = await QueryGetReadDbInstance().select().from(schema.specs)
+    const res = await QueryGetReadDbInstance().select().from(JsinfoSchema.specs)
 
     return {
         specs: res,

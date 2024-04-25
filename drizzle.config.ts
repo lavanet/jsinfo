@@ -1,6 +1,6 @@
 import type { Config } from "drizzle-kit";
- 
+
 export default {
-  schema: "./src/schema.ts",
+  schema: "./src/schemas/jsinfo_schema.ts",
   out: "./drizzle",
 } satisfies Config;

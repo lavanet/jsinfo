@@ -6,7 +6,7 @@ echo "Starting query - populate container at $(date)"
 
 # Set traps and unlimited core dump size
 trap 'echo "Warning: Script received SIGSEGV, ignoring"' 11;
-trap 'echo "Error: Script terminated by signal"; exit' 2 15;
+trap 'echo "Error: Script terminated by signal, ignoring"' 2 15;
 ulimit -c unlimited
 
 # Start the scripts in an endless loop

@@ -8,7 +8,7 @@ RUN apk add --update python3 py3-pip git bash jq curl make gcc go linux-headers
 # version  1.2.1
 RUN git clone https://github.com/lavanet/lava.git . && git checkout 201f062ffc6296f383e4e25eb4acd872423fe4c2
 RUN chmod +x ./scripts/init_install.sh && bash ./scripts/init_install.sh
-RUN LAVA_BINARY=lavap make build
+RUN LAVA_BINARY=all make build
 ENV PATH="/lava/build:${PATH}"
 WORKDIR /usr/src/app
 

@@ -2,7 +2,7 @@
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import * as JsinfoSchema from '../../schemas/jsinfo_schema';
-import { QueryCheckDbInstance, QueryGetDbInstance } from '../queryDb';
+import { QueryCheckJsinfoDbInstance, QueryGetJsinfoDbInstance } from '../queryDb';
 import { lt } from "drizzle-orm";
 import { JSINFO_QUERY_PROVIDER_DUAL_STACKING_DELEGATOR_REWARDS_CUTOFF_DAYS } from '../queryConsts';
 
@@ -56,7 +56,7 @@ function validateProvider(provider: string): string {
 }
 
 export async function LavapDualStackingDelegatorRewardsHandler(request: FastifyRequest, reply: FastifyReply) {
-    await QueryCheckDbInstance();
+    await QueryCheckJsinfoDbInstance();
 
     const body: any = request.body
 
@@ -91,7 +91,7 @@ export async function LavapDualStackingDelegatorRewardsHandler(request: FastifyR
     }
 
     try {
-        const db = await QueryGetDbInstance();
+        const db = await QueryGetJsinfoDbInstance();
         await db.transaction(async (tx) => {
 
             // Get the current hour

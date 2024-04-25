@@ -2,7 +2,7 @@
 // src/query/handlers/specHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryCheckReadDbInstance, GetLatestBlock, QueryGetReadDbInstance } from '../queryDb';
+import { QueryCheckJsinfoReadDbInstance, GetLatestBlock, QueryGetJsinfoReadDbInstance } from '../queryDb';
 import * as JsinfoSchema from '../../schemas/jsinfo_schema';
 import { sql, desc, gt, and, eq } from "drizzle-orm";
 import { FormatDates } from '../utils/queryDateUtils';
@@ -47,7 +47,7 @@ export const SpecHandlerOpts: RouteShorthandOptions = {
 }
 
 export async function SpecHandler(request: FastifyRequest, reply: FastifyReply) {
-    await QueryCheckReadDbInstance()
+    await QueryCheckJsinfoReadDbInstance()
 
     const { specId } = request.params as { specId: string }
     if (specId.length <= 0) {
@@ -57,7 +57,7 @@ export async function SpecHandler(request: FastifyRequest, reply: FastifyReply) 
     const upSpecId = specId.toUpperCase()
 
     //
-    const res = await QueryGetReadDbInstance().select().from(JsinfoSchema.specs).where(eq(JsinfoSchema.specs.id, upSpecId)).limit(1)
+    const res = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.specs).where(eq(JsinfoSchema.specs.id, upSpecId)).limit(1)
     if (res.length != 1) {
         reply.code(400).send({ error: 'specId does not exist' });
         return;
@@ -68,7 +68,7 @@ export async function SpecHandler(request: FastifyRequest, reply: FastifyReply) 
     let cuSum = 0
     let relaySum = 0
     let rewardSum = 0
-    const res2 = await QueryGetReadDbInstance().select({
+    const res2 = await QueryGetJsinfoReadDbInstance().select({
         cuSum: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.cuSum})`,
         relaySum: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.relaySum})`,
         rewardSum: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.rewardSum})`
@@ -81,14 +81,14 @@ export async function SpecHandler(request: FastifyRequest, reply: FastifyReply) 
 
     //
     // Get stakes
-    let res5 = await QueryGetReadDbInstance().select().from(JsinfoSchema.providerStakes).
+    let res5 = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.providerStakes).
         leftJoin(JsinfoSchema.providers, eq(JsinfoSchema.providerStakes.provider, JsinfoSchema.providers.address)).
         where(eq(JsinfoSchema.providerStakes.specId, upSpecId)).
         orderBy(desc(JsinfoSchema.providerStakes.stake))
 
     //
     // Get graph with 1 day resolution
-    let res3 = await QueryGetReadDbInstance().select({
+    let res3 = await QueryGetJsinfoReadDbInstance().select({
         date: sql`DATE_TRUNC('day', ${JsinfoSchema.aggHourlyrelayPayments.datehour}) as mydate`,
         cuSum: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.cuSum})`,
         relaySum: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.relaySum})`,
@@ -105,7 +105,7 @@ export async function SpecHandler(request: FastifyRequest, reply: FastifyReply) 
 
     //
     // QoS graph
-    let res6 = await QueryGetReadDbInstance().select({
+    let res6 = await QueryGetJsinfoReadDbInstance().select({
         date: sql`DATE_TRUNC('day', ${JsinfoSchema.aggHourlyrelayPayments.datehour}) as mydate`,
         qosSyncAvg: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.qosSyncAvg}*${JsinfoSchema.aggHourlyrelayPayments.relaySum})/sum(${JsinfoSchema.aggHourlyrelayPayments.relaySum})`,
         qosAvailabilityAvg: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.qosAvailabilityAvg}*${JsinfoSchema.aggHourlyrelayPayments.relaySum})/sum(${JsinfoSchema.aggHourlyrelayPayments.relaySum})`,

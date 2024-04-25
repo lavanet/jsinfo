@@ -13,7 +13,7 @@ import { LavaBlockDebugDumpEvents } from './indexer/lavablockDebug'
 import { LavaBlock } from './indexer/types'
 import { UpdateLatestBlockMeta } from './indexer/setlatest'
 import { DoInChunks, logger, BackoffRetry, ConnectToRpc, RpcConnection } from "./utils";
-import { MigrateDb, GetDb } from "./dbUtils";
+import { MigrateDb, GetJsinfoDb } from "./dbUtils";
 import { updateAggHourlyPayments } from "./indexer/aggregate";
 
 let static_dbProviders: Map<string, JsinfoSchema.Provider> = new Map()
@@ -217,7 +217,7 @@ const migrateAndFetchDb = async (): Promise<PostgresJsDatabase> => {
     logger.info('Migrating DB...');
     await MigrateDb();
     logger.info('DB migrated.');
-    const db = GetDb();
+    const db = GetJsinfoDb();
     logger.info('DB fetched.');
     return db;
 }
@@ -302,7 +302,7 @@ const fillUp = async (db: PostgresJsDatabase, rpcConnection: RpcConnection) => {
     } catch (e) {
         logger.info(`failed getting latestDbBlock ${e}`);
         logger.info('restarting db connection')
-        db = await GetDb()
+        db = await GetJsinfoDb()
         fillUpBackoffRetryWTimeout(db, rpcConnection)
         return
     }

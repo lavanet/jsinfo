@@ -1,14 +1,14 @@
 // src/query/handlers/indexProvidersHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryCheckReadDbInstance, QueryGetReadDbInstance } from '../queryDb';
+import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../queryDb';
 import * as JsinfoSchema from '../../schemas/jsinfo_schema';
 import { sql, desc, inArray, not, eq } from "drizzle-orm";
 import { Pagination, ParsePaginationFromRequest, ParsePaginationFromString } from '../utils/queryPagination';
 import { JSINFO_QUERY_CACHEDIR, JSINFO_QUERY_CACHE_ENABLED, JSINFO_QUERY_HANDLER_CACHE_TIME_SECONDS, JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE } from '../queryConsts';
 import fs from 'fs';
 import path from 'path';
-import { CompareValues } from '../utils/queryUtils';
+import { CSVEscape, CompareValues } from '../utils/queryUtils';
 
 
 export const IndexProvidersHandlerOpts: RouteShorthandOptions = {
@@ -57,7 +57,7 @@ class IndexProvidersData {
     }
 
     private async fetchDataFromDb(): Promise<any[]> {
-        let res4 = await QueryGetReadDbInstance().select({
+        let res4 = await QueryGetJsinfoReadDbInstance().select({
             address: JsinfoSchema.aggHourlyrelayPayments.provider,
             rewardSum: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.rewardSum})`,
         }).from(JsinfoSchema.aggHourlyrelayPayments).
@@ -73,8 +73,8 @@ class IndexProvidersData {
         }
 
         // provider details
-        let res44 = await QueryGetReadDbInstance().select().from(JsinfoSchema.providers).where(inArray(JsinfoSchema.providers.address, providersAddrs))
-        let providerStakesRes = await QueryGetReadDbInstance().select({
+        let res44 = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.providers).where(inArray(JsinfoSchema.providers.address, providersAddrs))
+        let providerStakesRes = await QueryGetJsinfoReadDbInstance().select({
             provider: JsinfoSchema.providerStakes.provider,
             totalActiveServices: sql<number>`sum(case when ${JsinfoSchema.providerStakes.status} = ${JsinfoSchema.LavaProviderStakeStatus.Active} then 1 else 0 end)`,
             totalServices: sql<number>`count(${JsinfoSchema.providerStakes.specId})`,
@@ -172,27 +172,22 @@ class IndexProvidersData {
             { key: "totalStake", name: "Total Stake" },
         ];
 
-        let csv = columns.map(column => this.escape(column.name)).join(',') + '\n';
+        let csv = columns.map(column => CSVEscape(column.name)).join(',') + '\n';
 
         data.forEach((item: any) => {
             csv += columns.map(column => {
                 const keys = column.key.split('.');
                 const value = keys.reduce((obj, key) => (obj && obj[key] !== undefined) ? obj[key] : '', item);
-                return this.escape(String(value));
+                return CSVEscape(String(value));
             }).join(',') + '\n';
         });
 
         return csv;
     }
-
-    private escape(str: string): string {
-        return `"${str.replace(/"/g, '""')}"`;
-    }
-
 }
 
 export async function IndexProvidersHandler(request: FastifyRequest, reply: FastifyReply) {
-    await QueryCheckReadDbInstance()
+    await QueryCheckJsinfoReadDbInstance()
 
     const providerRewardsData = new IndexProvidersData();
     try {
@@ -205,7 +200,7 @@ export async function IndexProvidersHandler(request: FastifyRequest, reply: Fast
 }
 
 export async function IndexProvidersItemCountHandler(request: FastifyRequest, reply: FastifyReply) {
-    await QueryCheckReadDbInstance()
+    await QueryCheckJsinfoReadDbInstance()
 
     const providerRewardsData = new IndexProvidersData();
     const itemCount = await providerRewardsData.getTotalItemCount();
@@ -213,7 +208,7 @@ export async function IndexProvidersItemCountHandler(request: FastifyRequest, re
 }
 
 export async function IndexProvidersCSVHandler(request: FastifyRequest, reply: FastifyReply) {
-    await QueryCheckReadDbInstance()
+    await QueryCheckJsinfoReadDbInstance()
 
     const providerHealthData = new IndexProvidersData();
     const csv = await providerHealthData.getCSV();

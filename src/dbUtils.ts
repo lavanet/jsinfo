@@ -62,7 +62,7 @@ export async function GetRelaysReadPostgresUrl(): Promise<string> {
 
 // https://github.com/porsager/postgres?tab=readme-ov-file#connection-timeout
 
-export async function GetDb(): Promise<PostgresJsDatabase> {
+export async function GetJsinfoDb(): Promise<PostgresJsDatabase> {
     const queryClient = postgres(await GetPostgresUrl(), {
         idle_timeout: 20,
         connect_timeout: 20,
@@ -73,7 +73,7 @@ export async function GetDb(): Promise<PostgresJsDatabase> {
     return db;
 }
 
-export async function GetReadDb(): Promise<PostgresJsDatabase> {
+export async function GetJsinfoReadDb(): Promise<PostgresJsDatabase> {
     // use one db
     const queryClient = postgres(await GetReadPostgresUrl(), {
         idle_timeout: 20,

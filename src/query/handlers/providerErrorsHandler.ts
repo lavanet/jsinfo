@@ -4,10 +4,10 @@
 import fs from 'fs';
 import path from 'path';
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryCheckReadDbInstance, QueryGetRelaysReadDbInstance } from '../queryDb';
+import { QueryCheckRelaysReadDbInstance, QueryGetRelaysReadDbInstance } from '../queryDb';
 import { eq, desc } from "drizzle-orm";
 import { Pagination, ParsePaginationFromRequest } from '../utils/queryPagination';
-import { CompareValues } from '../utils/queryUtils';
+import { CSVEscape, CompareValues } from '../utils/queryUtils';
 import { JSINFO_QUERY_CACHEDIR, JSINFO_QUERY_CACHE_ENABLED, JSINFO_QUERY_HANDLER_CACHE_TIME_SECONDS } from '../queryConsts';
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE } from '../queryConsts';
 import { ParseLavapProviderError } from '../utils/lavapProvidersErrorParser';
@@ -139,18 +139,14 @@ class ProviderErrorsData {
         const data = await this.fetchDataFromCache();
         let csv = 'date,spec,error\n';
         data.forEach((item: ErrorsReportReponse) => {
-            csv += `${item.date},${this.escape(item.spec)},${this.escape(item.error)}\n`;
+            csv += `${item.date},${CSVEscape(item.spec)},${CSVEscape(item.error)}\n`;
         });
         return csv;
-    }
-
-    private escape(str: string): string {
-        return `"${str.replace(/"/g, '""')}"`;
     }
 }
 
 export async function ProviderErrorsItemCountHandler(request: FastifyRequest, reply: FastifyReply) {
-    await QueryCheckReadDbInstance()
+    await QueryCheckRelaysReadDbInstance()
 
     const { addr } = request.params as { addr: string }
     if (addr.length != 44 || !addr.startsWith('lava@')) {
@@ -165,7 +161,7 @@ export async function ProviderErrorsItemCountHandler(request: FastifyRequest, re
 }
 
 export async function ProviderErrorsHandler(request: FastifyRequest, reply: FastifyReply) {
-    await QueryCheckReadDbInstance()
+    await QueryCheckRelaysReadDbInstance()
 
     const { addr } = request.params as { addr: string }
     if (addr.length != 44 || !addr.startsWith('lava@')) {
@@ -185,7 +181,7 @@ export async function ProviderErrorsHandler(request: FastifyRequest, reply: Fast
 }
 
 export async function ProviderErrorsCSVHandler(request: FastifyRequest, reply: FastifyReply) {
-    await QueryCheckReadDbInstance()
+    await QueryCheckRelaysReadDbInstance()
 
     const { addr } = request.params as { addr: string }
     if (addr.length != 44 || !addr.startsWith('lava@')) {

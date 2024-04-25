@@ -36,7 +36,7 @@ sleep 60
 
 # Run the second script in an endless loop
 while true; do
-    # Generate a random number of minutes between 1 to 4 hours
+    # Generate a random number between 1 to 4 hours
     BUN_TIMEOUT=$((RANDOM % 181 + 60))
 
     echo "QueryPod $(date) :: Starting 'env JSINFO_QUERY_CACHE_POPULTAE_MODE=true JSINFO_QUERY_PORT=8081 bun run src/query.js'... with ${BUN_TIMEOUT} minute timeout"

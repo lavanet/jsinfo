@@ -2,14 +2,14 @@
 // src/query/handlers/providerStakesHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryCheckReadDbInstance, QueryGetReadDbInstance } from '../queryDb';
+import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../queryDb';
 import * as JsinfoSchema from '../../schemas/jsinfo_schema';
 import { desc, eq } from "drizzle-orm";
 import { Pagination, ParsePaginationFromRequest, ParsePaginationFromString } from '../utils/queryPagination';
 import { JSINFO_QUERY_CACHEDIR, JSINFO_QUERY_CACHE_ENABLED, JSINFO_QUERY_HANDLER_CACHE_TIME_SECONDS, JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE } from '../queryConsts';
 import fs from 'fs';
 import path from 'path';
-import { CompareValues } from '../utils/queryUtils';
+import { CSVEscape, CompareValues } from '../utils/queryUtils';
 
 export const ProviderStakesHandlerOpts: RouteShorthandOptions = {
     schema: {
@@ -76,7 +76,7 @@ class ProviderStakesData {
         let thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-        let stakesRes = await QueryGetReadDbInstance().select().from(JsinfoSchema.providerStakes).
+        let stakesRes = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.providerStakes).
             where(eq(JsinfoSchema.providerStakes.provider, this.addr)).orderBy(desc(JsinfoSchema.providerStakes.stake))
 
         return stakesRes;
@@ -139,27 +139,22 @@ class ProviderStakesData {
             { key: "stake", name: "Stake" },
         ];
 
-        let csv = columns.map(column => this.escape(column.name)).join(',') + '\n';
+        let csv = columns.map(column => CSVEscape(column.name)).join(',') + '\n';
 
         data.forEach((item: any) => {
             csv += columns.map(column => {
                 const keys = column.key.split('.');
                 const value = keys.reduce((obj, key) => (obj && obj[key] !== undefined) ? obj[key] : '', item);
-                return this.escape(String(value));
+                return CSVEscape(String(value));
             }).join(',') + '\n';
         });
 
         return csv;
     }
-
-    private escape(str: string): string {
-        return `"${str.replace(/"/g, '""')}"`;
-    }
-
 }
 
 export async function ProviderStakesHandler(request: FastifyRequest, reply: FastifyReply) {
-    await QueryCheckReadDbInstance()
+    await QueryCheckJsinfoReadDbInstance()
 
     const { addr } = request.params as { addr: string }
     if (addr.length != 44 || !addr.startsWith('lava@')) {
@@ -167,7 +162,7 @@ export async function ProviderStakesHandler(request: FastifyRequest, reply: Fast
         return;
     }
 
-    const res = await QueryGetReadDbInstance().select().from(JsinfoSchema.providers).where(eq(JsinfoSchema.providers.address, addr)).limit(1)
+    const res = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.providers).where(eq(JsinfoSchema.providers.address, addr)).limit(1)
     if (res.length != 1) {
         reply.code(400).send({ error: 'Provider does not exist' });
         return;
@@ -184,7 +179,7 @@ export async function ProviderStakesHandler(request: FastifyRequest, reply: Fast
 }
 
 export async function ProviderStakesItemCountHandler(request: FastifyRequest, reply: FastifyReply) {
-    await QueryCheckReadDbInstance()
+    await QueryCheckJsinfoReadDbInstance()
 
     const { addr } = request.params as { addr: string }
     if (addr.length != 44 || !addr.startsWith('lava@')) {
@@ -192,7 +187,7 @@ export async function ProviderStakesItemCountHandler(request: FastifyRequest, re
         return;
     }
 
-    const res = await QueryGetReadDbInstance().select().from(JsinfoSchema.providers).where(eq(JsinfoSchema.providers.address, addr)).limit(1)
+    const res = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.providers).where(eq(JsinfoSchema.providers.address, addr)).limit(1)
     if (res.length != 1) {
         reply.code(400).send({ error: 'Provider does not exist' });
         return;
@@ -204,7 +199,7 @@ export async function ProviderStakesItemCountHandler(request: FastifyRequest, re
 }
 
 export async function ProviderStakesCSVHandler(request: FastifyRequest, reply: FastifyReply) {
-    await QueryCheckReadDbInstance()
+    await QueryCheckJsinfoReadDbInstance()
 
     const { addr } = request.params as { addr: string }
     if (addr.length != 44 || !addr.startsWith('lava@')) {

@@ -2,7 +2,7 @@
 // src/query/handlers/providerHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryCheckReadDbInstance, GetLatestBlock, QueryGetReadDbInstance } from '../queryDb';
+import { QueryCheckJsinfoReadDbInstance, GetLatestBlock, QueryGetJsinfoReadDbInstance } from '../queryDb';
 import * as JsinfoSchema from '../../schemas/jsinfo_schema';
 import { sql, desc, gt, and, eq } from "drizzle-orm";
 import { FormatDates } from '../utils/queryDateUtils';
@@ -62,7 +62,7 @@ export const ProviderHandlerOpts: RouteShorthandOptions = {
 }
 
 export async function ProviderHandler(request: FastifyRequest, reply: FastifyReply) {
-    await QueryCheckReadDbInstance()
+    await QueryCheckJsinfoReadDbInstance()
 
     const { addr } = request.params as { addr: string }
     if (addr.length != 44 || !addr.startsWith('lava@')) {
@@ -71,7 +71,7 @@ export async function ProviderHandler(request: FastifyRequest, reply: FastifyRep
     }
 
     //
-    const res = await QueryGetReadDbInstance().select().from(JsinfoSchema.providers).where(eq(JsinfoSchema.providers.address, addr)).limit(1)
+    const res = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.providers).where(eq(JsinfoSchema.providers.address, addr)).limit(1)
     if (res.length != 1) {
         reply.code(400).send({ error: 'Provider does not exist' });
         return;
@@ -85,7 +85,7 @@ export async function ProviderHandler(request: FastifyRequest, reply: FastifyRep
     let cuSum = 0
     let relaySum = 0
     let rewardSum = 0
-    const res2 = await QueryGetReadDbInstance().select({
+    const res2 = await QueryGetJsinfoReadDbInstance().select({
         cuSum: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.cuSum})`,
         relaySum: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.relaySum})`,
         rewardSum: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.rewardSum})`,
@@ -100,7 +100,7 @@ export async function ProviderHandler(request: FastifyRequest, reply: FastifyRep
 
     //
     // Get stakes
-    let stakesRes = await QueryGetReadDbInstance().select().from(JsinfoSchema.providerStakes).
+    let stakesRes = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.providerStakes).
         where(eq(JsinfoSchema.providerStakes.provider, addr)).orderBy(desc(JsinfoSchema.providerStakes.stake))
     let stakeSum = 0
     stakesRes.forEach((stake) => {
@@ -109,7 +109,7 @@ export async function ProviderHandler(request: FastifyRequest, reply: FastifyRep
 
     //
     // Get graph with 1 day resolution
-    let data1 = await QueryGetReadDbInstance().select({
+    let data1 = await QueryGetJsinfoReadDbInstance().select({
         date: sql`DATE_TRUNC('day', ${JsinfoSchema.aggHourlyrelayPayments.datehour}) as mydate`,
         chainId: JsinfoSchema.aggHourlyrelayPayments.specId,
         cuSum: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.cuSum})`,
@@ -127,7 +127,7 @@ export async function ProviderHandler(request: FastifyRequest, reply: FastifyRep
 
     //
     // QoS graph
-    let qosDataRaw = await QueryGetReadDbInstance().select({
+    let qosDataRaw = await QueryGetJsinfoReadDbInstance().select({
         date: sql`DATE_TRUNC('day', ${JsinfoSchema.aggHourlyrelayPayments.datehour}) as mydate`,
         qosSyncAvg: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.qosSyncAvg}*${JsinfoSchema.aggHourlyrelayPayments.relaySum})/sum(${JsinfoSchema.aggHourlyrelayPayments.relaySum})`,
         qosAvailabilityAvg: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.qosAvailabilityAvg}*${JsinfoSchema.aggHourlyrelayPayments.relaySum})/sum(${JsinfoSchema.aggHourlyrelayPayments.relaySum})`,

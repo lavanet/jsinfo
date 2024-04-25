@@ -20,3 +20,7 @@ export function CompareValues(aValue: string | number, bValue: string | number, 
 }
 
 export const IsNotNullAndNotZero = (value: number | null) => value !== null && value !== 0;
+
+export function CSVEscape(str: string): string {
+    return `"${str.replace(/"/g, '""')}"`;
+}

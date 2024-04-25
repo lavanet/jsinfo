@@ -28,7 +28,7 @@ fi
 
 # Run the second script in an endless loop
 while true; do
-    # Generate a random number of minutes between 1 to 4 hours
+    # Generate a random number between 1 to 4 hours
     BUN_TIMEOUT=$((RANDOM % 181 + 60))
 
     echo "QueryProviderDualStackingDelegatorRewardsPod $(date) :: Starting 'env JSINFO_QUERY_CACHE_POPULTAE_MODE=true JSINFO_QUERY_PORT=$JSINFO_QUERY_PORT JSINFO_QUERY_IS_DEBUG_MODE=$DEBUG_MODE $CMD'... with ${BUN_TIMEOUT} minute timeout"

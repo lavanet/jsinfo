@@ -2,11 +2,11 @@
 // src/query/handlers/providerHealth.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryCheckReadDbInstance, QueryGetReadDbInstance } from '../queryDb';
+import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../queryDb';
 import * as JsinfoSchema from '../../schemas/jsinfo_schema';
 import { eq, desc } from "drizzle-orm";
 import { Pagination, ParsePaginationFromRequest } from '../utils/queryPagination';
-import { IsNotNullAndNotZero } from '../utils/queryUtils';
+import { CSVEscape, IsNotNullAndNotZero } from '../utils/queryUtils';
 import { CompareValues } from '../utils/queryUtils';
 import { JSINFO_QUERY_CACHEDIR, JSINFO_QUERY_CACHE_ENABLED, JSINFO_QUERY_HANDLER_CACHE_TIME_SECONDS } from '../queryConsts';
 import fs from 'fs';
@@ -129,18 +129,14 @@ class ProviderHealthData {
         const data = await this.fetchDataFromCache();
         let csv = 'timestamp,spec,interface,status,message\n';
         data.forEach((item: HealthReport) => {
-            csv += `${item.timestamp},${this.escape(item.spec)},${this.escape(item.interface || "")},${this.escape(item.status)},${this.escape(item.message || "")}\n`;
+            csv += `${item.timestamp},${CSVEscape(item.spec)},${CSVEscape(item.interface || "")},${CSVEscape(item.status)},${CSVEscape(item.message || "")}\n`;
         });
         return csv;
-    }
-
-    private escape(str: string): string {
-        return `"${str.replace(/"/g, '""')}"`;
     }
 }
 
 const createHealthReportQuery = (addr: string) => {
-    return QueryGetReadDbInstance().select().from(JsinfoSchema.providerHealthHourly)
+    return QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.providerHealthHourly)
         .where(eq(JsinfoSchema.providerHealthHourly.provider, addr))
         .orderBy(desc(JsinfoSchema.providerHealthHourly.timestamp));
 }
@@ -269,7 +265,7 @@ export const ApplyHealthResponseGroupingAndTextFormatting = (res: HealthReport[]
 }
 
 export async function ProviderHealthItemCountHandler(request: FastifyRequest, reply: FastifyReply) {
-    await QueryCheckReadDbInstance()
+    await QueryCheckJsinfoReadDbInstance()
 
     const { addr } = request.params as { addr: string }
     if (addr.length != 44 || !addr.startsWith('lava@')) {
@@ -284,7 +280,7 @@ export async function ProviderHealthItemCountHandler(request: FastifyRequest, re
 }
 
 export async function ProviderHealthHandler(request: FastifyRequest, reply: FastifyReply) {
-    await QueryCheckReadDbInstance()
+    await QueryCheckJsinfoReadDbInstance()
 
     const { addr } = request.params as { addr: string }
     if (addr.length != 44 || !addr.startsWith('lava@')) {
@@ -304,7 +300,7 @@ export async function ProviderHealthHandler(request: FastifyRequest, reply: Fast
 }
 
 export async function ProviderHealthCSVHandler(request: FastifyRequest, reply: FastifyReply) {
-    await QueryCheckReadDbInstance()
+    await QueryCheckJsinfoReadDbInstance()
 
     const { addr } = request.params as { addr: string }
     if (addr.length != 44 || !addr.startsWith('lava@')) {

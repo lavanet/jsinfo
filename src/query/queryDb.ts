@@ -1,7 +1,7 @@
 // ./src/query/dbUtils.ts
 
 import { logger } from '../utils';
-import { GetDb, GetReadDb, GetRelaysReadDb } from '../dbUtils';
+import { GetJsinfoDb, GetJsinfoReadDb, GetRelaysReadDb } from '../dbUtils';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { desc } from "drizzle-orm";
 import { JSINFO_NO_READ_DB } from './queryConsts';
@@ -12,45 +12,45 @@ let db: PostgresJsDatabase | null = null;
 let readDb: PostgresJsDatabase | null = null;
 let relaysReadDb: PostgresJsDatabase | null = null;
 
-export async function QueryCheckDbInstance() {
+export async function QueryCheckJsinfoDbInstance() {
     try {
         await db!.select().from(JsinfoSchema.blocks).limit(1)
     } catch (e) {
-        logger.info('QueryCheckDbInstance exception, resetting connection', e)
-        db = await GetDb()
+        logger.info('QueryCheckJsinfoDbInstance exception, resetting connection', e)
+        db = await GetJsinfoDb()
     }
 }
 
-export async function QueryInitDbInstance() {
-    console.log('Starting queryserver - connecting to db')
-    db = db || await GetDb();
+export async function QueryInitJsinfoDbInstance() {
+    console.log('Starting queryserver - connecting to jsinfo db')
+    db = db || await GetJsinfoDb();
 }
 
-export function QueryGetDbInstance(): PostgresJsDatabase {
+export function QueryGetJsinfoDbInstance(): PostgresJsDatabase {
     if (!db) {
         throw new Error('Database instance is not initialized');
     }
     return db;
 }
 
-export async function QueryCheckReadDbInstance() {
-    if (JSINFO_NO_READ_DB) return QueryCheckDbInstance();
+export async function QueryCheckJsinfoReadDbInstance() {
+    if (JSINFO_NO_READ_DB) return QueryCheckJsinfoDbInstance();
     try {
         await readDb!.select().from(JsinfoSchema.blocks).limit(1)
     } catch (e) {
-        logger.info('QueryCheckReadDbInstance exception, resetting connection', e)
-        readDb = await GetReadDb()
+        logger.info('QueryCheckJsinfoReadDbInstance exception, resetting connection', e)
+        readDb = await GetJsinfoReadDb()
     }
 }
 
-export async function QueryInitReadDbInstance() {
-    if (JSINFO_NO_READ_DB) return QueryInitDbInstance();
+export async function QueryInitJsinfoReadDbInstance() {
+    if (JSINFO_NO_READ_DB) return QueryInitJsinfoDbInstance();
     console.log('Starting queryserver - connecting to readDb')
-    readDb = readDb || await GetReadDb();
+    readDb = readDb || await GetJsinfoReadDb();
 }
 
-export function QueryGetReadDbInstance(): PostgresJsDatabase {
-    if (JSINFO_NO_READ_DB) return QueryGetDbInstance();
+export function QueryGetJsinfoReadDbInstance(): PostgresJsDatabase {
+    if (JSINFO_NO_READ_DB) return QueryGetJsinfoDbInstance();
     if (!readDb) {
         throw new Error('Read database instance is not initialized');
     }
@@ -61,7 +61,7 @@ export async function QueryCheckRelaysReadDbInstance() {
     try {
         await relaysReadDb!.select().from(RelaysSchema.lavaReportError).limit(1)
     } catch (e) {
-        logger.info('QueryCheckReadDbInstance exception, resetting connection', e)
+        logger.info('QueryCheckJsinfoReadDbInstance exception, resetting connection', e)
         relaysReadDb = await GetRelaysReadDb()
     }
 }
@@ -80,7 +80,7 @@ export function QueryGetRelaysReadDbInstance(): PostgresJsDatabase {
 
 export async function GetLatestBlock() {
     //
-    const latestDbBlocks = await QueryGetDbInstance().select().from(JsinfoSchema.blocks).orderBy(desc(JsinfoSchema.blocks.height)).limit(1)
+    const latestDbBlocks = await QueryGetJsinfoDbInstance().select().from(JsinfoSchema.blocks).orderBy(desc(JsinfoSchema.blocks.height)).limit(1)
     let latestHeight = 0
     let latestDatetime = 0
     if (latestDbBlocks.length != 0) {

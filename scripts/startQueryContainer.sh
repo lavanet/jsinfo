@@ -13,7 +13,7 @@ ulimit -c unlimited
 run_script() {
     command=$1
     while true; do
-        # Generate a random number of minutes between 1 to 4 hours
+        # Generate a random number between 1 to 4 hours
         BUN_TIMEOUT=$((RANDOM % 181 + 60))
         
         # Run the command with the random timeout

@@ -1,7 +1,7 @@
 // src/query/handlers/indexHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryCheckReadDbInstance, GetLatestBlock, QueryGetReadDbInstance } from '../queryDb';
+import { QueryCheckJsinfoReadDbInstance, GetLatestBlock, QueryGetJsinfoReadDbInstance } from '../queryDb';
 import * as JsinfoSchema from '../../schemas/jsinfo_schema';
 import { sql, desc, gt, and, inArray } from "drizzle-orm";
 import { FormatDates } from '../utils/queryDateUtils';
@@ -46,7 +46,7 @@ export const IndexHandlerOpts: RouteShorthandOptions = {
 }
 
 export async function IndexHandler(request: FastifyRequest, reply: FastifyReply) {
-    await QueryCheckReadDbInstance()
+    await QueryCheckJsinfoReadDbInstance()
     //
     const { latestHeight, latestDatetime } = await GetLatestBlock()
     // logger.info(`Latest block: ${latestHeight}, ${latestDatetime}`)
@@ -56,7 +56,7 @@ export async function IndexHandler(request: FastifyRequest, reply: FastifyReply)
     let cuSum = 0
     let relaySum = 0
     let rewardSum = 0
-    let res = await QueryGetReadDbInstance().select({
+    let res = await QueryGetJsinfoReadDbInstance().select({
         cuSum: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.cuSum})`,
         relaySum: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.relaySum})`,
         rewardSum: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.rewardSum})`
@@ -71,7 +71,7 @@ export async function IndexHandler(request: FastifyRequest, reply: FastifyReply)
     //
     // Get total provider stake
     let stakeSum = 0
-    let res2 = await QueryGetReadDbInstance().select({
+    let res2 = await QueryGetJsinfoReadDbInstance().select({
         stakeSum: sql<number>`sum(${JsinfoSchema.providerStakes.stake})`,
     }).from(JsinfoSchema.providerStakes)
     if (res2.length != 0) {
@@ -80,7 +80,7 @@ export async function IndexHandler(request: FastifyRequest, reply: FastifyReply)
 
     //
     // Get "top" providers
-    let res4 = await QueryGetReadDbInstance().select({
+    let res4 = await QueryGetJsinfoReadDbInstance().select({
         address: JsinfoSchema.aggHourlyrelayPayments.provider,
         rewardSum: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.rewardSum})`,
     }).from(JsinfoSchema.aggHourlyrelayPayments).
@@ -98,7 +98,7 @@ export async function IndexHandler(request: FastifyRequest, reply: FastifyReply)
 
     //
     // Get top chains
-    let topSpecs = await QueryGetReadDbInstance().select({
+    let topSpecs = await QueryGetJsinfoReadDbInstance().select({
         chainId: JsinfoSchema.aggHourlyrelayPayments.specId,
         relaySum: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.relaySum})`,
     }).from(JsinfoSchema.aggHourlyrelayPayments).
@@ -120,7 +120,7 @@ export async function IndexHandler(request: FastifyRequest, reply: FastifyReply)
     // Get graph with 1 day resolution
     let mainChartData = {}
     if (getChains.length != 0) {
-        mainChartData = await QueryGetReadDbInstance().select({
+        mainChartData = await QueryGetJsinfoReadDbInstance().select({
             date: sql<string>`DATE_TRUNC('day', ${JsinfoSchema.aggHourlyrelayPayments.datehour}) as mydate`,
             chainId: JsinfoSchema.aggHourlyrelayPayments.specId,
             cuSum: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.cuSum})`,
@@ -139,7 +139,7 @@ export async function IndexHandler(request: FastifyRequest, reply: FastifyReply)
 
     //
     // QoS graph
-    let qosDataRaw = await QueryGetReadDbInstance().select({
+    let qosDataRaw = await QueryGetJsinfoReadDbInstance().select({
         date: sql`DATE_TRUNC('day', ${JsinfoSchema.aggHourlyrelayPayments.datehour}) as mydate`,
         qosSyncAvg: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.qosSyncAvg}*${JsinfoSchema.aggHourlyrelayPayments.relaySum})/sum(${JsinfoSchema.aggHourlyrelayPayments.relaySum})`,
         qosAvailabilityAvg: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.qosAvailabilityAvg}*${JsinfoSchema.aggHourlyrelayPayments.relaySum})/sum(${JsinfoSchema.aggHourlyrelayPayments.relaySum})`,

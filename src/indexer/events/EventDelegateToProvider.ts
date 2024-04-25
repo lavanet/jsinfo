@@ -130,8 +130,11 @@ export const ParseEventDelegateToProvider = (
           evtEvent.t2 = value;
           break
         case 'amount':
-          evtEvent.b1 = EventParseUlava(value);
+          evtEvent.t3 = value;
           break
+        // case 'amount':
+        //   evtEvent.b1 = EventParseUlava(value);
+        //   break
       }
     },
     verifyFunction: () => !!delegator || !!provider

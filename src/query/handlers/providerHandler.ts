@@ -56,6 +56,9 @@ export const ProviderHandlerOpts: RouteShorthandOptions = {
                     data: {
                         type: 'array',
                     },
+                    claimedRewards: {
+                        type: 'string'
+                    },
                     claimableRewards: {
                         type: 'string'
                     }
@@ -149,7 +152,30 @@ export async function ProviderHandler(request: FastifyRequest, reply: FastifyRep
         groupBy(sql`mydate`).
         orderBy(sql`mydate`)
 
-    const rewards = await QueryGetJsinfoReadDbInstance().select()
+    const claimedRewards = await QueryGetJsinfoReadDbInstance().select()
+        .from(JsinfoSchema.events)
+        .where(
+            and(
+                eq(JsinfoSchema.events.provider, addr),
+                eq(JsinfoSchema.events.eventType, JsinfoSchema.LavaProviderEventType.DelegateToProvider)
+            )
+        )
+
+    let claimedRewardsSum = 0;
+
+    for (let i = 0; i < claimedRewards.length; i++) {
+        const reward = claimedRewards[i];
+
+        if (reward.b1 !== null && reward.b1 !== 0) {
+            claimedRewardsSum += reward.b1;
+        } else if (reward.t3 !== null && reward.t3.toLowerCase().endsWith('ulava')) {
+            claimedRewardsSum += Number(reward.t3.slice(0, -5));
+        }
+    }
+
+    let claimedRewardsSumULava = claimedRewardsSum ? claimedRewardsSum + ' ulava' : 0;
+
+    const claimableRewards = await QueryGetJsinfoReadDbInstance().select()
         .from(JsinfoSchema.dualStackingDelegatorRewards)
         .where(
             and(
@@ -163,11 +189,11 @@ export async function ProviderHandler(request: FastifyRequest, reply: FastifyRep
     let maxRewardsByChainId = {};
 
     // Iterate over the fetched rewards to find the latest entry per chain_id
-    for (const reward of rewards) {
-        const chainId = reward.chain_id;
+    for (const claimableReward of claimableRewards) {
+        const chainId = claimableReward.chain_id;
         // Check if the current chain_id is already in maxRewardsByChainId with a newer timestamp
-        if (!maxRewardsByChainId[chainId] || maxRewardsByChainId[chainId].timestamp < reward.timestamp) {
-            maxRewardsByChainId[chainId] = reward;
+        if (!maxRewardsByChainId[chainId] || maxRewardsByChainId[chainId].timestamp < claimableReward.timestamp) {
+            maxRewardsByChainId[chainId] = claimableReward;
         }
     }
 
@@ -192,6 +218,7 @@ export async function ProviderHandler(request: FastifyRequest, reply: FastifyRep
         stakeSum: stakeSum,
         qosData: FormatDates(qosDataRaw),
         data: FormatDates(data1),
+        claimedRewards: claimedRewardsSumULava,
         claimableRewards: claimableRewardsULava,
     }
 }

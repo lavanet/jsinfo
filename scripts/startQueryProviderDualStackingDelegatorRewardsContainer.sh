@@ -31,9 +31,9 @@ while true; do
     # Generate a random number of minutes between 1 to 4 hours
     BUN_TIMEOUT=$((RANDOM % 181 + 60))
 
-    echo "QueryProviderDualStackingDelegatorRewardsPod $(date) :: Starting 'env JSINFO_QUERY_CACHE_POPULTAE_MODE=true JSINFO_QUERY_PORT=8081 JSINFO_QUERY_IS_DEBUG_MODE=$DEBUG_MODE $CMD'... with ${BUN_TIMEOUT} minute timeout"
+    echo "QueryProviderDualStackingDelegatorRewardsPod $(date) :: Starting 'env JSINFO_QUERY_CACHE_POPULTAE_MODE=true JSINFO_QUERY_PORT=$JSINFO_QUERY_PORT JSINFO_QUERY_IS_DEBUG_MODE=$DEBUG_MODE $CMD'... with ${BUN_TIMEOUT} minute timeout"
     env JSINFO_QUERY_CACHE_POPULTAE_MODE=true JSINFO_QUERY_PORT=$JSINFO_QUERY_PORT JSINFO_QUERY_IS_DEBUG_MODE=$DEBUG_MODE timeout ${BUN_TIMEOUT}m $CMD || true
-    echo "QueryProviderDualStackingDelegatorRewardsPod $(date) :: 'env JSINFO_QUERY_CACHE_POPULTAE_MODE=true JSINFO_QUERY_PORT=8081 JSINFO_QUERY_IS_DEBUG_MODE=$DEBUG_MODE $CMD' stopped, restarting..."
+    echo "QueryProviderDualStackingDelegatorRewardsPod $(date) :: 'env JSINFO_QUERY_CACHE_POPULTAE_MODE=true JSINFO_QUERY_PORT=$JSINFO_QUERY_PORT JSINFO_QUERY_IS_DEBUG_MODE=$DEBUG_MODE $CMD' stopped, restarting..."
     sleep 1
 done &
 
@@ -77,7 +77,7 @@ while true; do
 
     # Longer sleep at the end of each complete cycle to mitigate server load and API call frequency
     echo "QueryProviderDualStackingDelegatorRewardsPod $(date) :: Completed one cycle of fetching and posting, sleeping before the next cycle..."
-    sleep 300
+    sleep 1h
 done &
 
 # Wait for all child processes to finish

@@ -70,12 +70,14 @@ export async function LavapDualStackingDelegatorRewardsHandler(request: FastifyR
 
     let provider: string | null = null;
 
+    let add_timestamp = new Date();
+
     const insertData: JsinfoSchema.InsertDualStackingDelegatorRewards[] = rewards.flatMap(reward => {
         // Validate provider format
         provider = validateProvider(reward.provider);
 
         return reward.amount.map(a => ({
-            timestamp: new Date(),
+            timestamp: add_timestamp,
             provider: reward.provider,
             chain_id: reward.chain_id,
             amount: parseInt(a.amount),

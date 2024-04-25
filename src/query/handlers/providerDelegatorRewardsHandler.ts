@@ -1,10 +1,12 @@
 
 // src/query/handlers/providerDelegatorRewardsHandler.ts
 
+// curl http://localhost:8081/providerDelegatorRewards/lava@14shwrej05nrraem8mwsnlw50vrtefkajar75ge
+
 import fs from 'fs';
 import path from 'path';
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoDbInstance } from '../queryDb';
+import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../queryDb';
 import { eq, desc } from "drizzle-orm";
 import { Pagination, ParsePaginationFromRequest } from '../utils/queryPagination';
 import { CompareValues } from '../utils/queryUtils';
@@ -57,7 +59,7 @@ class ProviderDelegatorRewardsData {
     }
 
     private async fetchDataFromDb(): Promise<DelegatorRewardReponse[]> {
-        const result = await QueryGetJsinfoDbInstance().select().from(JsinfoSchema.dualStackingDelegatorRewards)
+        const result = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.dualStackingDelegatorRewards)
             .where(eq(JsinfoSchema.dualStackingDelegatorRewards.provider, this.addr))
             .orderBy(desc(JsinfoSchema.dualStackingDelegatorRewards.timestamp)).offset(0).limit(5000)
 

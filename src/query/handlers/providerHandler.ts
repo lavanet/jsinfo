@@ -1,6 +1,7 @@
 
 // src/query/handlers/providerHandler.ts
 
+// curl http://localhost:8081/provider/lava@14shwrej05nrraem8mwsnlw50vrtefkajar75ge
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryCheckJsinfoReadDbInstance, GetLatestBlock, QueryGetJsinfoReadDbInstance } from '../queryDb';
 import * as JsinfoSchema from '../../schemas/jsinfo_schema';
@@ -55,6 +56,9 @@ export const ProviderHandlerOpts: RouteShorthandOptions = {
                     data: {
                         type: 'array',
                     },
+                    claimableRewards: {
+                        type: 'string'
+                    }
                 }
             }
         }
@@ -145,6 +149,37 @@ export async function ProviderHandler(request: FastifyRequest, reply: FastifyRep
         groupBy(sql`mydate`).
         orderBy(sql`mydate`)
 
+    const rewards = await QueryGetJsinfoReadDbInstance().select()
+        .from(JsinfoSchema.dualStackingDelegatorRewards)
+        .where(
+            and(
+                eq(JsinfoSchema.dualStackingDelegatorRewards.provider, addr),
+                eq(JsinfoSchema.dualStackingDelegatorRewards.denom, 'ulava')
+            )
+        )
+        .orderBy(desc(JsinfoSchema.dualStackingDelegatorRewards.timestamp))
+        .limit(200);
+
+    let maxRewardsByChainId = {};
+
+    // Iterate over the fetched rewards to find the latest entry per chain_id
+    for (const reward of rewards) {
+        const chainId = reward.chain_id;
+        // Check if the current chain_id is already in maxRewardsByChainId with a newer timestamp
+        if (!maxRewardsByChainId[chainId] || maxRewardsByChainId[chainId].timestamp < reward.timestamp) {
+            maxRewardsByChainId[chainId] = reward;
+        }
+    }
+
+    // Filter to keep only entries with denom "ulava" and sum amounts
+    let totalSum = 0;
+    for (const key in maxRewardsByChainId) {
+        if (maxRewardsByChainId[key].denom === 'ulava') {
+            totalSum += maxRewardsByChainId[key].amount;
+        }
+    }
+
+    const claimableRewardsULava = totalSum ? totalSum + ' ulava' : 0;
 
     return {
         height: latestHeight,
@@ -157,5 +192,6 @@ export async function ProviderHandler(request: FastifyRequest, reply: FastifyRep
         stakeSum: stakeSum,
         qosData: FormatDates(qosDataRaw),
         data: FormatDates(data1),
+        claimableRewards: claimableRewardsULava,
     }
 }

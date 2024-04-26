@@ -68,27 +68,27 @@ export async function SpecHandler(request: FastifyRequest, reply: FastifyReply) 
     let cuSum = 0
     let relaySum = 0
     let rewardSum = 0
-    const res2 = await QueryGetJsinfoReadDbInstance().select({
+    const cuRelayAndRewardsTotalRes = await QueryGetJsinfoReadDbInstance().select({
         cuSum: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.cuSum})`,
         relaySum: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.relaySum})`,
         rewardSum: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.rewardSum})`
     }).from(JsinfoSchema.aggHourlyrelayPayments).where(eq(JsinfoSchema.aggHourlyrelayPayments.specId, upSpecId))
-    if (res2.length == 1) {
-        cuSum = res2[0].cuSum
-        relaySum = res2[0].relaySum
-        rewardSum = res2[0].rewardSum
+    if (cuRelayAndRewardsTotalRes.length == 1) {
+        cuSum = cuRelayAndRewardsTotalRes[0].cuSum
+        relaySum = cuRelayAndRewardsTotalRes[0].relaySum
+        rewardSum = cuRelayAndRewardsTotalRes[0].rewardSum
     }
 
     //
     // Get stakes
-    let res5 = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.providerStakes).
+    let stakesRes = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.providerStakes).
         leftJoin(JsinfoSchema.providers, eq(JsinfoSchema.providerStakes.provider, JsinfoSchema.providers.address)).
         where(eq(JsinfoSchema.providerStakes.specId, upSpecId)).
         orderBy(desc(JsinfoSchema.providerStakes.stake))
 
     //
     // Get graph with 1 day resolution
-    let res3 = await QueryGetJsinfoReadDbInstance().select({
+    let cuRelayAndRewardsGraphData = await QueryGetJsinfoReadDbInstance().select({
         date: sql`DATE_TRUNC('day', ${JsinfoSchema.aggHourlyrelayPayments.datehour}) as mydate`,
         cuSum: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.cuSum})`,
         relaySum: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.relaySum})`,
@@ -105,7 +105,7 @@ export async function SpecHandler(request: FastifyRequest, reply: FastifyReply) 
 
     //
     // QoS graph
-    let res6 = await QueryGetJsinfoReadDbInstance().select({
+    let qosGraphData = await QueryGetJsinfoReadDbInstance().select({
         date: sql`DATE_TRUNC('day', ${JsinfoSchema.aggHourlyrelayPayments.datehour}) as mydate`,
         qosSyncAvg: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.qosSyncAvg}*${JsinfoSchema.aggHourlyrelayPayments.relaySum})/sum(${JsinfoSchema.aggHourlyrelayPayments.relaySum})`,
         qosAvailabilityAvg: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.qosAvailabilityAvg}*${JsinfoSchema.aggHourlyrelayPayments.relaySum})/sum(${JsinfoSchema.aggHourlyrelayPayments.relaySum})`,
@@ -129,8 +129,8 @@ export async function SpecHandler(request: FastifyRequest, reply: FastifyReply) 
         cuSum: cuSum,
         relaySum: relaySum,
         rewardSum: rewardSum,
-        qosData: FormatDates(res6),
-        stakes: res5,
-        data: FormatDates(res3),
+        qosData: FormatDates(qosGraphData),
+        stakes: stakesRes,
+        data: FormatDates(cuRelayAndRewardsGraphData),
     }
 }

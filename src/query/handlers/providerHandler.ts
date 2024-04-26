@@ -92,17 +92,17 @@ export async function ProviderHandler(request: FastifyRequest, reply: FastifyRep
     let cuSum = 0
     let relaySum = 0
     let rewardSum = 0
-    const res2 = await QueryGetJsinfoReadDbInstance().select({
+    const cuRelayAndRewardsTotalRes = await QueryGetJsinfoReadDbInstance().select({
         cuSum: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.cuSum})`,
         relaySum: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.relaySum})`,
         rewardSum: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.rewardSum})`,
     }).from(JsinfoSchema.aggHourlyrelayPayments).
         where(eq(JsinfoSchema.aggHourlyrelayPayments.provider, addr)).
         groupBy(JsinfoSchema.aggHourlyrelayPayments.provider)
-    if (res2.length == 1) {
-        cuSum = res2[0].cuSum
-        relaySum = res2[0].relaySum
-        rewardSum = res2[0].rewardSum
+    if (cuRelayAndRewardsTotalRes.length == 1) {
+        cuSum = cuRelayAndRewardsTotalRes[0].cuSum
+        relaySum = cuRelayAndRewardsTotalRes[0].relaySum
+        rewardSum = cuRelayAndRewardsTotalRes[0].rewardSum
     }
 
     //

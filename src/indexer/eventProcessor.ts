@@ -38,6 +38,9 @@ import { ParseEventRedelegateBetweenProviders } from "./events/EventRedelegateBe
 import { ParseEventLavaFreezeFromUnbound } from "./events/EventFreezeFromUnbond";
 import { ParseEventUnstakeFromUnbound } from "./events/EventUnstakeFromUnbound";
 
+// Unidentified Event
+import { ParseEventUnidentified } from "./events/EventUnidentified";
+
 export const ProcessOneEvent = (
     evt: Event,
     lavaBlock: LavaBlock,
@@ -202,9 +205,9 @@ export const ProcessOneEvent = (
         // case 'lava_contributor_rewards':
         //     break
 
-        // validator slashed happened, providers slashed accordingly
-        case 'lava_validator_slash':
-            break
+        // // validator slashed happened, providers slashed accordingly
+        // case 'lava_validator_slash':
+        //     break
 
         case 'lava_freeze_from_unbond':
             ParseEventLavaFreezeFromUnbound(evt, height, txHash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
@@ -219,9 +222,9 @@ export const ProcessOneEvent = (
         // https://github.com/lavanet/lava/blob/main/x/projects/types/types.go#L20
         //
 
-        case 'lava_set_subscription_policy_event':
-            // TODO - maybe?
-            break
+        // case 'lava_set_subscription_policy_event':
+        //     // TODO - maybe?
+        //     break
 
         //
         // Epoc storage
@@ -289,6 +292,7 @@ export const ProcessOneEvent = (
             break
 
         default:
+            ParseEventUnidentified(evt, height, txHash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
             console.log('ProcessOneEvent:: Uknown event', height, evt.type, evt)
             break
     }

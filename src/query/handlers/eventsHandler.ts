@@ -38,26 +38,25 @@ export async function EventsHandler(request: FastifyRequest, reply: FastifyReply
     const { latestHeight, latestDatetime } = await GetLatestBlock()
 
     //
-    const res3 = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.events).
+    const eventsRes = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.events).
         leftJoin(JsinfoSchema.blocks, eq(JsinfoSchema.events.blockId, JsinfoSchema.blocks.height)).
         leftJoin(JsinfoSchema.providers, eq(JsinfoSchema.events.provider, JsinfoSchema.providers.address)).
         orderBy(desc(JsinfoSchema.events.id)).offset(0).limit(250)
-    const res6 = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.relayPayments).
+    const payemntsRes = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.relayPayments).
         leftJoin(JsinfoSchema.blocks, eq(JsinfoSchema.relayPayments.blockId, JsinfoSchema.blocks.height)).
         leftJoin(JsinfoSchema.providers, eq(JsinfoSchema.relayPayments.provider, JsinfoSchema.providers.address)).
         orderBy(desc(JsinfoSchema.relayPayments.id)).offset(0).limit(250)
-    let res7 = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.providerReported).
+    let reportsRes = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.providerReported).
         leftJoin(JsinfoSchema.blocks, eq(JsinfoSchema.providerReported.blockId, JsinfoSchema.blocks.height)).
         leftJoin(JsinfoSchema.providers, eq(JsinfoSchema.providerReported.provider, JsinfoSchema.providers.address)).
         orderBy(desc(JsinfoSchema.providerReported.blockId)).limit(250)
 
-    // TODO: return & display dbConflictResponses
     return {
         height: latestHeight,
         datetime: latestDatetime,
-        events: res3,
-        payments: res6,
-        reports: res7,
+        events: eventsRes,
+        payments: payemntsRes,
+        reports: reportsRes,
     }
 
 }

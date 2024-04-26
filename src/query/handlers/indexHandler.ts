@@ -5,6 +5,7 @@ import { QueryCheckJsinfoReadDbInstance, GetLatestBlock, QueryGetJsinfoReadDbIns
 import * as JsinfoSchema from '../../schemas/jsinfo_schema';
 import { sql, desc, gt, and, inArray } from "drizzle-orm";
 import { FormatDates } from '../utils/queryDateUtils';
+import { logger } from '../../utils';
 
 export const IndexHandlerOpts: RouteShorthandOptions = {
     schema: {
@@ -49,7 +50,7 @@ export async function IndexHandler(request: FastifyRequest, reply: FastifyReply)
     await QueryCheckJsinfoReadDbInstance()
     //
     const { latestHeight, latestDatetime } = await GetLatestBlock()
-    // logger.info(`Latest block: ${latestHeight}, ${latestDatetime}`)
+    logger.info(`IndexHandler:: Latest block: ${latestHeight}, ${latestDatetime}`)
 
     //
     // Get total payments and more
@@ -71,11 +72,11 @@ export async function IndexHandler(request: FastifyRequest, reply: FastifyReply)
     //
     // Get total provider stake
     let stakeSum = 0
-    let res2 = await QueryGetJsinfoReadDbInstance().select({
+    let stakeSumQueryRes = await QueryGetJsinfoReadDbInstance().select({
         stakeSum: sql<number>`sum(${JsinfoSchema.providerStakes.stake})`,
     }).from(JsinfoSchema.providerStakes)
-    if (res2.length != 0) {
-        stakeSum = res2[0].stakeSum
+    if (stakeSumQueryRes.length != 0) {
+        stakeSum = stakeSumQueryRes[0].stakeSum
     }
 
     //

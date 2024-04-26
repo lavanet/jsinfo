@@ -66,7 +66,7 @@ export const ParseEventUbondFromProvider = (
     provider: null,
   }
 
-  if (!EventProcessAttributes("ParseEventUbondFromProvider", {
+  if (!EventProcessAttributes(lavaBlock, "ParseEventUbondFromProvider", {
     evt: evt,
     height: height,
     txHash: txHash,

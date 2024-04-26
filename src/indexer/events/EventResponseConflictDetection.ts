@@ -92,7 +92,7 @@ export const ParseEventResponseConflictDetection = (
     blockId: height,
   }
 
-  if (!EventProcessAttributes("ParseEventResponseConflictDetection", {
+  if (!EventProcessAttributes(lavaBlock, "ParseEventResponseConflictDetection", {
     evt: evt,
     height: height,
     txHash: txHash,

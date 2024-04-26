@@ -33,7 +33,7 @@ export const ParseEventConflictDetectionReceived = (
     provider: null,
   }
 
-  if (!EventProcessAttributes("ParseEventConflictDetectionReceived", {
+  if (!EventProcessAttributes(lavaBlock, "ParseEventConflictDetectionReceived", {
     evt: evt,
     height: height,
     txHash: txHash,

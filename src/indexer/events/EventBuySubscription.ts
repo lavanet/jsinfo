@@ -33,7 +33,7 @@ export const ParseEventBuySubscription = (
         tx: txHash,
     }
 
-    if (!EventProcessAttributes("ParseEventBuySubscription", {
+    if (!EventProcessAttributes(lavaBlock, "ParseEventBuySubscription", {
         evt: evt,
         height: height,
         txHash: txHash,

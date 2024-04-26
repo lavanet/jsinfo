@@ -80,7 +80,7 @@ export const ParseEventUnstakeFromUnbound = (
 
   let moniker: string = '';
 
-  if (!EventProcessAttributes("ParseEventUnstakeFromUnbound", {
+  if (!EventProcessAttributes(lavaBlock, "ParseEventUnstakeFromUnbound", {
     evt: evt,
     height: height,
     txHash: txHash,

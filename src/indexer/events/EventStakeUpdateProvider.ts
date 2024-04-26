@@ -62,7 +62,7 @@ export const ParseEventStakeUpdateProvider = (
     consumer: null,
   }
 
-  if (!EventProcessAttributes("ParseEventStakeUpdateProvider", {
+  if (!EventProcessAttributes(lavaBlock, "ParseEventStakeUpdateProvider", {
     evt: evt,
     height: height,
     txHash: txHash,

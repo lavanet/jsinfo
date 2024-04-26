@@ -37,7 +37,7 @@ export const ParseEventUnfreezeProvider = (
     consumer: null,
   }
 
-  if (!EventProcessAttributes("ParseEventUnfreezeProvider", {
+  if (!EventProcessAttributes(lavaBlock, "ParseEventUnfreezeProvider", {
     evt: evt,
     height: height,
     txHash: txHash,

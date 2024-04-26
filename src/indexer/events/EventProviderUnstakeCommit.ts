@@ -83,7 +83,7 @@ export const ParseEventProviderUnstakeCommit = (
     consumer: null,
   }
 
-  if (!EventProcessAttributes("ParseEventProviderUnstakeCommit", {
+  if (!EventProcessAttributes(lavaBlock, "ParseEventProviderUnstakeCommit", {
     evt: evt,
     height: height,
     txHash: txHash,

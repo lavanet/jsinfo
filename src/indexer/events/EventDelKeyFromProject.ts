@@ -39,7 +39,7 @@ export const ParseEventDelKeyFromProject = (
         provider: null,
     }
 
-    if (!EventProcessAttributes("ParseEventDelKeyFromProject", {
+    if (!EventProcessAttributes(lavaBlock, "ParseEventDelKeyFromProject", {
         evt: evt,
         height: height,
         txHash: txHash,

@@ -65,7 +65,7 @@ export const ParseEventStakeNewProvider = (
     consumer: null,
   }
 
-  if (!EventProcessAttributes("ParseEventStakeNewProvider", {
+  if (!EventProcessAttributes(lavaBlock, "ParseEventStakeNewProvider", {
     evt: evt,
     height: height,
     txHash: txHash,

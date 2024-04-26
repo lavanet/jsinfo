@@ -56,7 +56,7 @@ export const ParseEventRedelegateBetweenProviders = (
     provider: null,
   }
 
-  if (!EventProcessAttributes("EventRedelegateBetweenProviders", {
+  if (!EventProcessAttributes(lavaBlock, "EventRedelegateBetweenProviders", {
     evt: evt,
     height: height,
     txHash: txHash,

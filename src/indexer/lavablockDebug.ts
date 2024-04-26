@@ -31,16 +31,13 @@ export const LavaBlockDebugDumpEventsProcessBlock = async (instanceIdx: number, 
         //     });
         // });
 
-        // const evts = await GetRpcBlockResultEvents(height, rpcConnection.clientTm);
-        // evts.forEach((evt) => {
-        //     // if (!LavaBlockDebugDumpEventsProcessBlockAllEvents.filter(event => !eventNames.includes(event))) {
-        //     if (printAllEvents || eventNames.some(name => evt.type.includes(name))) {
-        //         console.log('LavaBlockDebugDumpEvents event', height, evt.type, evt);
-        //     }
-        // });
-
-
-
+        const evts = await GetRpcBlockResultEvents(height, rpcConnection.clientTm);
+        evts.forEach((evt) => {
+            // if (!LavaBlockDebugDumpEventsProcessBlockAllEvents.filter(event => !eventNames.includes(event))) {
+            if (printAllEvents || eventNames.some(name => evt.type.includes(name))) {
+                console.log('LavaBlockDebugDumpEvents event', height, evt.type, evt);
+            }
+        });
 
         // searching for events that have 'ulava' in them
         // txs.forEach((tx) => {
@@ -70,59 +67,59 @@ export const LavaBlockDebugDumpEventsProcessBlock = async (instanceIdx: number, 
         //     }
         // });
 
+        // ------------------
 
 
+        // let static_dbProviders: Map<string, JsinfoSchema.Provider> = new Map();
+        // let static_dbSpecs: Map<string, JsinfoSchema.Spec> = new Map();
+        // let static_dbPlans: Map<string, JsinfoSchema.Plan> = new Map();
+        // let static_dbStakes: Map<string, JsinfoSchema.ProviderStake[]> = new Map();
 
-        let static_dbProviders: Map<string, JsinfoSchema.Provider> = new Map();
-        let static_dbSpecs: Map<string, JsinfoSchema.Spec> = new Map();
-        let static_dbPlans: Map<string, JsinfoSchema.Plan> = new Map();
-        let static_dbStakes: Map<string, JsinfoSchema.ProviderStake[]> = new Map();
+        // const lavaBlock: LavaBlock = {
+        //     height: height,
+        //     datetime: Date.parse(block!.header.time),
 
-        const lavaBlock: LavaBlock = {
-            height: height,
-            datetime: Date.parse(block!.header.time),
+        //     dbProviders: new Map(),
+        //     dbSpecs: new Map(),
+        //     dbConsumers: new Map(),
+        //     dbPlans: new Map(),
+        //     dbTxs: new Map(),
+        //     dbEvents: [],
+        //     dbPayments: [],
+        //     dbConflictResponses: [],
+        //     dbSubscriptionBuys: [],
+        //     dbConflictVote: [],
+        //     dbProviderReports: [],
+        // }
 
-            dbProviders: new Map(),
-            dbSpecs: new Map(),
-            dbConsumers: new Map(),
-            dbPlans: new Map(),
-            dbTxs: new Map(),
-            dbEvents: [],
-            dbPayments: [],
-            dbConflictResponses: [],
-            dbSubscriptionBuys: [],
-            dbConflictVote: [],
-            dbProviderReports: [],
-        }
+        // /*
+        // export const ProcessOneEvent = (
+        //     evt: Event,
+        //     lavaBlock: LavaBlock,
+        //     height: number,
+        //     txHash: string | null,
+        //     static_dbProviders: Map<string,JsinfoSchema.Provider>,
+        //     static_dbSpecs: Map<string,JsinfoSchema.Spec>,
+        //     static_dbPlans: Map<string,JsinfoSchema.Plan>,
+        //     static_dbStakes: Map<string,JsinfoSchema.ProviderStake[]>,
+        // ) => {
+        // */
 
-        /*
-        export const ProcessOneEvent = (
-            evt: Event,
-            lavaBlock: LavaBlock,
-            height: number,
-            txHash: string | null,
-            static_dbProviders: Map<string,JsinfoSchema.Provider>,
-            static_dbSpecs: Map<string,JsinfoSchema.Spec>,
-            static_dbPlans: Map<string,JsinfoSchema.Plan>,
-            static_dbStakes: Map<string,JsinfoSchema.ProviderStake[]>,
-        ) => {
-        */
+        // // test parsing for events
+        // txs.forEach((tx) => {
+        //     if (tx.code != 0) {
+        //         return;
+        //     }
 
-        // test parsing for events
-        txs.forEach((tx) => {
-            if (tx.code != 0) {
-                return;
-            }
+        //     tx.events.forEach((evt) => {
+        //         ProcessOneEvent(evt, lavaBlock, height, "777", static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes);
+        //     });
+        // });
 
-            tx.events.forEach((evt) => {
-                ProcessOneEvent(evt, lavaBlock, height, "777", static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes);
-            });
-        });
-
-        const evts = await GetRpcBlockResultEvents(height, rpcConnection.clientTm);
-        evts.forEach((evt) => {
-            ProcessOneEvent(evt, lavaBlock, height, "777", static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes);
-        });
+        // const evts = await GetRpcBlockResultEvents(height, rpcConnection.clientTm);
+        // evts.forEach((evt) => {
+        //     ProcessOneEvent(evt, lavaBlock, height, "777", static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes);
+        // });
     }
 }
 
@@ -139,21 +136,23 @@ export const LavaBlockDebugDumpEvents = async (rpcConnection: RpcConnection, pri
     //     "unstake_from_unbond",
     // ];
 
-    const eventNames = [
-        // 'advanced_buy_subscription_event',
-        // 'advanced_buy_upgrade_subscription_event',
-        // 'subscription_auto_renew_change_event',
-        // 'upgrade_subscription_event',
-        // 'expire_subscription_event',
-        // 'add_tracked_cu_event',
-        // 'monthly_cu_tracker_provider_reward',
-        // 'subscription_remaining_credit',
-        // 'lava_fixated_params_change',
-        // 'lava_fixated_params_clean',
-        // 'unstake_commit', - no good example
-        'add_key_to_project_event',
-        'lava_del_project_to_subscription_event'
-    ];
+    // const eventNames = [
+    //     // 'advanced_buy_subscription_event',
+    //     // 'advanced_buy_upgrade_subscription_event',
+    //     // 'subscription_auto_renew_change_event',
+    //     // 'upgrade_subscription_event',
+    //     // 'expire_subscription_event',
+    //     // 'add_tracked_cu_event',
+    //     // 'monthly_cu_tracker_provider_reward',
+    //     // 'subscription_remaining_credit',
+    //     // 'lava_fixated_params_change',
+    //     // 'lava_fixated_params_clean',
+    //     // 'unstake_commit', - no good example
+    //     'add_key_to_project_event',
+    //     'lava_del_project_to_subscription_event'
+    // ];
+
+    const eventNames = ["lava_provider_reported"]
 
     let currentHeight = await rpcConnection.client.getHeight();
     const numInstances = 10;

@@ -48,7 +48,7 @@ export const ParseEventConflictVoteGotCommit = (
     tx: txHash,
   }
 
-  if (!EventProcessAttributes("ParseEventConflictVoteGotCommit", {
+  if (!EventProcessAttributes(lavaBlock, "ParseEventConflictVoteGotCommit", {
     evt: evt,
     height: height,
     txHash: txHash,

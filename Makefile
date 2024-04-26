@@ -48,7 +48,7 @@ run_lavapProviderHealth:
 query_test_health_handeler:
 	bun test providerHealthHandler.test.ts 
 
-query_teset_lavap_prodiver_error_parsing:
+query_test_lavap_prodiver_error_parsing:
 	bun run ./src/query/utils/lavapProvidersErrorParser.test.ts 
 
 scripts_local_startQueryProviderDualStackingDelegatorRewardsContainer:

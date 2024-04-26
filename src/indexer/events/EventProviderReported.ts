@@ -42,7 +42,7 @@ export const ParseEventProviderReported = (
     tx: txHash,
   }
 
-  if (!EventProcessAttributes("ParseEventProviderReported", {
+  if (!EventProcessAttributes(lavaBlock, "ParseEventProviderReported", {
     evt: evt,
     height: height,
     txHash: txHash,

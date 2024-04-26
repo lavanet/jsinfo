@@ -36,7 +36,7 @@ export const ParseEventProviderJailed = (
     consumer: null,
   }
 
-  if (!EventProcessAttributes("ParseEventProviderJailed", {
+  if (!EventProcessAttributes(lavaBlock, "ParseEventProviderJailed", {
     evt: evt,
     height: height,
     txHash: txHash,

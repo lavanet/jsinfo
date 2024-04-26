@@ -76,7 +76,7 @@ export const ParseEventConflictDetectionVoteUnresolved = (
     provider: null,
   }
 
-  if (!EventProcessAttributes("ParseEventConflictDetectionVoteUnresolved", {
+  if (!EventProcessAttributes(lavaBlock, "ParseEventConflictDetectionVoteUnresolved", {
     evt: evt,
     height: height,
     txHash: txHash,

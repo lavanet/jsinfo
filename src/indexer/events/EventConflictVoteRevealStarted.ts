@@ -55,7 +55,7 @@ export const ParseEventConflictVoteRevealStarted = (
     provider: null,
   }
 
-  if (!EventProcessAttributes("ParseEventConflictVoteRevealStarted", {
+  if (!EventProcessAttributes(lavaBlock, "ParseEventConflictVoteRevealStarted", {
     evt: evt,
     height: height,
     txHash: txHash,

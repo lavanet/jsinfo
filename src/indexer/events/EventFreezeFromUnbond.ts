@@ -88,7 +88,7 @@ export const ParseEventLavaFreezeFromUnbound = (
 
   let moniker: string = '';
 
-  if (!EventProcessAttributes("ParseEventLavaFreezeFromUnbound", {
+  if (!EventProcessAttributes(lavaBlock, "ParseEventLavaFreezeFromUnbound", {
     evt: evt,
     height: height,
     txHash: txHash,

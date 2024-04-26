@@ -114,7 +114,7 @@ export const ParseEventDelegateToProvider = (
     provider: null,
   }
 
-  if (!EventProcessAttributes("ParseEventDelegateToProvider", {
+  if (!EventProcessAttributes(lavaBlock, "ParseEventDelegateToProvider", {
     evt: evt,
     height: height,
     txHash: txHash,

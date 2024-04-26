@@ -196,7 +196,7 @@ export const ParseEventRelayPayment = (
     datetime: new Date(lavaBlock.datetime),
   }
 
-  if (!EventProcessAttributes("ParseEventRelayPayment", {
+  if (!EventProcessAttributes(lavaBlock, "ParseEventRelayPayment", {
     evt: evt,
     height: height,
     txHash: txHash,

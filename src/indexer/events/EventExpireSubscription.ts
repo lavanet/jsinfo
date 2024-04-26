@@ -42,7 +42,7 @@ export const ParseEventExpireSubscrption = (
     provider: null,
   }
 
-  if (!EventProcessAttributes("ParseEventExpireSubscrption", {
+  if (!EventProcessAttributes(lavaBlock, "ParseEventExpireSubscrption", {
     evt: evt,
     height: height,
     txHash: txHash,

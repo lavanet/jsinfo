@@ -22,7 +22,7 @@ export const ParseEventUnidentified = (
 
     let parsedAttributes = { type: evt.type };
 
-    if (!EventProcessAttributes("ParseEventUnidentified", {
+    EventProcessAttributes(lavaBlock, "ParseEventUnidentified", {
         evt: evt,
         height: height,
         txHash: txHash,
@@ -30,7 +30,7 @@ export const ParseEventUnidentified = (
             parsedAttributes[key] = value
         },
         verifyFunction: null,
-    })) return;
+    });
 
     evtEvent.t1 = JSON.stringify(parsedAttributes);
 

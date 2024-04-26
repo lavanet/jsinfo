@@ -141,7 +141,8 @@ export enum LavaProviderEventType {
   UbnondFromProvider,
   UnstakeFromUnbound,
   RedelegateBetweenProviders,
-  UnidentifiedEvent = 1000
+  UnidentifiedEvent = 1000,
+  ErrorEvent = 1001
 }
 
 export const events = pgTable('events', {

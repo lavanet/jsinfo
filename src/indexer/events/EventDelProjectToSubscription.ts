@@ -34,7 +34,7 @@ export const ParseEventDelProjectToSubscription = (
     provider: null,
   }
 
-  if (!EventProcessAttributes("ParseEventDelProjectToSubscription", {
+  if (!EventProcessAttributes(lavaBlock, "ParseEventDelProjectToSubscription", {
     evt: evt,
     height: height,
     txHash: txHash,

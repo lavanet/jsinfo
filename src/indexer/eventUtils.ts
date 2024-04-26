@@ -2,6 +2,8 @@
 
 import { Event, Attribute } from "@cosmjs/stargate"
 import { JSINFO_INDEXER_EVENT_ATTRIBUTE_VALUE_MAX_LENGTH } from './indexerConsts';
+import { ParseEventError } from "./events/EventError";
+import { LavaBlock } from "./types";
 
 export function EventExtractKeyFromAttribute(attr: Attribute): string {
     if (attr.key.length < 2) {
@@ -108,6 +110,7 @@ export interface EventProcessAttributesProps {
 }
 
 export function EventProcessAttributes(
+    lavaBlock: LavaBlock,
     caller: string,
     {
         evt,
@@ -142,6 +145,8 @@ export function EventProcessAttributes(
             TxHash: ${txHash?.substring(0, 0x1000)}
             Event: ${JSON.stringify(evt).substring(0, 0x1000)}
         `);
+
+        ParseEventError(evt, height, txHash, lavaBlock, error, caller);
         return false;
     }
 
@@ -155,6 +160,7 @@ export function EventProcessAttributes(
                 TxHash: ${txHash?.substring(0, 0x1000)}
                 Event: ${JSON.stringify(evt).substring(0, 0x1000)}
             `);
+            ParseEventError(evt, height, txHash, lavaBlock, "verifyFunctionFailed", caller);
             return false;
         }
     } catch (error) {
@@ -167,6 +173,7 @@ export function EventProcessAttributes(
             TxHash: ${txHash?.substring(0, 0x1000)}
             Event: ${JSON.stringify(evt).substring(0, 0x1000)}
         `);
+        ParseEventError(evt, height, txHash, lavaBlock, error, caller);
         return false;
     }
 

@@ -41,7 +41,7 @@ export const ParseEventAddKeyToProject = (
         provider: null,
     }
 
-    if (!EventProcessAttributes("ParseEventAddKeyToProject", {
+    if (!EventProcessAttributes(lavaBlock, "ParseEventAddKeyToProject", {
         evt: evt,
         height: height,
         txHash: txHash,

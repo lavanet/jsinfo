@@ -127,7 +127,7 @@ class ProviderHealthData {
 
     public async getCSV(): Promise<string> {
         const data = await this.fetchDataFromCache();
-        let csv = 'timestamp,spec,interface,status,message\n';
+        let csv = 'time,spec,interface,status,message\n';
         data.forEach((item: HealthReport) => {
             csv += `${item.timestamp},${CSVEscape(item.spec)},${CSVEscape(item.interface || "")},${CSVEscape(item.status)},${CSVEscape(item.message || "")}\n`;
         });

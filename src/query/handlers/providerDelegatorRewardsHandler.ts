@@ -17,7 +17,7 @@ import * as JsinfoSchema from '../../schemas/jsinfo_schema';
 export interface DelegatorRewardReponse {
     id: number;
     timestamp: string;
-    chain_id: string;
+    chainId: string;
     amount: string;
 }
 
@@ -34,7 +34,7 @@ export const ProviderDelegatorRewardsHandlerOpts: RouteShorthandOptions = {
                             properties: {
                                 id: { type: ['string', 'number'] },
                                 timestamp: { type: 'string' },
-                                chain_id: { type: 'string' },
+                                chainId: { type: 'string' },
                                 amount: { type: 'string' },
                             }
                         }
@@ -66,7 +66,7 @@ class ProviderDelegatorRewardsData {
         return result.map((row: JsinfoSchema.DualStackingDelegatorRewards) => ({
             id: row.id,
             timestamp: row.timestamp?.toISOString(),
-            chain_id: row.chainId,
+            chainId: row.chainId,
             amount: row.amount + " " + row.denom
         }));
     }
@@ -131,9 +131,9 @@ class ProviderDelegatorRewardsData {
 
     public async getCSV(): Promise<string> {
         const data = await this.fetchDataFromCache();
-        let csv = 'timestamp,chain_id,amount\n';
+        let csv = 'time,chainId,amount\n';
         data.forEach((item: DelegatorRewardReponse) => {
-            csv += `${item.timestamp},${item.chain_id},${item.amount}\n`;
+            csv += `${item.timestamp},${item.chainId},${item.amount}\n`;
         });
         return csv;
     }

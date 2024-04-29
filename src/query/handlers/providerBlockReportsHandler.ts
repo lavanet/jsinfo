@@ -157,12 +157,12 @@ class ProviderBlockReportsData {
 
     public async getCSV(): Promise<string> {
         const data = await this.fetchDataFromCache();
-        let csv = 'timestamp,blockId,tx,chainId,chainBlockHeight\n';
+        let csv = 'time,blockId,tx,chainId,chainBlockHeight\n';
         data.forEach((item: BlockReportsReponse) => {
             csv += `${item.timestamp},${item.blockId},${item.chainId},${item.chainBlockHeight}\n`;
         });
         return csv;
-    } v
+    }
 }
 
 export async function ProviderBlockReportsItemCountHandler(request: FastifyRequest, reply: FastifyReply) {

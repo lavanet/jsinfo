@@ -20,6 +20,7 @@ import { ProviderEventsHandlerOpts, ProviderEventsHandler, ProviderEventsItemCou
 import { ProviderRewardsHandlerOpts, ProviderRewardsHandler, ProviderRewardsItemCountHandler, ProviderRewardsCSVHandler } from './handlers/providerRewardsHandler';
 import { ProviderReportsHandlerOpts, ProviderReportsHandler, ProviderReportsItemCountHandler, ProviderReportsCSVHandler } from './handlers/providerReportsHandler';
 import { ProviderDelegatorRewardsHandlerOpts, ProviderDelegatorRewardsHandler, ProviderDelegatorRewardsItemCountHandler, ProviderDelegatorRewardsCSVHandler } from './handlers/providerDelegatorRewardsHandler';
+import { ProviderBlockReportsHandlerOpts, ProviderBlockReportsHandler, ProviderBlockReportsItemCountHandler, ProviderBlockReportsCSVHandler } from './handlers/providerBlockReportsHandler';
 
 
 import { ProvidersHandler, ProvidersHandlerOpts } from './handlers/providersHandler';
@@ -51,6 +52,7 @@ RegisterServerHandlerWithCache('/providerEvents/:addr', ProviderEventsHandlerOpt
 RegisterServerHandlerWithCache('/providerRewards/:addr', ProviderRewardsHandlerOpts, ProviderRewardsHandler, ProviderRewardsItemCountHandler);
 RegisterServerHandlerWithCache('/providerReports/:addr', ProviderReportsHandlerOpts, ProviderReportsHandler, ProviderReportsItemCountHandler);
 RegisterServerHandlerWithCache('/providerDelegatorRewards/:addr', ProviderDelegatorRewardsHandlerOpts, ProviderDelegatorRewardsHandler, ProviderDelegatorRewardsItemCountHandler);
+RegisterServerHandlerWithCache('/providerBlockReports/:addr', ProviderBlockReportsHandlerOpts, ProviderBlockReportsHandler, ProviderBlockReportsItemCountHandler);
 
 GetServerInstance().get('/providerHealthCsv/:addr', ProviderHealthCSVHandler);
 GetServerInstance().get('/providerErrorsCsv/:addr', ProviderErrorsCSVHandler);
@@ -59,6 +61,7 @@ GetServerInstance().get('/providerEventsCsv/:addr', ProviderEventsCSVHandler);
 GetServerInstance().get('/providerRewardsCsv/:addr', ProviderRewardsCSVHandler);
 GetServerInstance().get('/providerReportsCsv/:addr', ProviderReportsCSVHandler);
 GetServerInstance().get('/providerDelegatorRewardsCsv/:addr', ProviderDelegatorRewardsCSVHandler);
+GetServerInstance().get('/providerBlockReportsCsv/:addr', ProviderBlockReportsCSVHandler);
 
 RegisterServerHandlerWithCache('/providers', ProvidersHandlerOpts, ProvidersHandler);
 RegisterServerHandlerWithCache('/specs', SpecsHandlerOpts, SpecsHandler);

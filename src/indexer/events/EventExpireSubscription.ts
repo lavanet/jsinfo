@@ -12,7 +12,7 @@ https://github.com/lavanet/lava/blob/976bbd1063c66742b2f49465d39fe57ef6edff8a/x/
 */
 
 /*
-LavaBlockDebugDumpEvents event 1062747 lava_expire_subscription_event {
+EventDebug event 1062747 lava_expire_subscription_event {
   type: "lava_expire_subscription_event",
   attributes: [
     {

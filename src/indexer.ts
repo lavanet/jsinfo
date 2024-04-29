@@ -9,7 +9,7 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { eq, desc } from "drizzle-orm";
 import { PromisePool } from '@supercharge/promise-pool'
 import { GetOneLavaBlock } from './indexer/lavablock'
-import { LavaBlockDebugDumpEvents } from './indexer/lavablockDebug'
+import { EventDebug } from './indexer/eventDebug'
 import { LavaBlock } from './indexer/types'
 import { UpdateLatestBlockMeta } from './indexer/setlatest'
 import { DoInChunks, logger, BackoffRetry, ConnectToRpc, RpcConnection } from "./utils";
@@ -114,6 +114,10 @@ async function InsertBlock(
         await DoInChunks(consts.JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, block.dbProviderReports, async (arr: any) => {
             await tx.insert(JsinfoSchema.providerReported).values(arr)
         })
+
+        await DoInChunks(consts.JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, block.dbProviderLatestBlockReports, async (arr: any) => {
+            await tx.insert(JsinfoSchema.providerLatestBlockReports).values(arr)
+        })
     })
 }
 
@@ -196,7 +200,7 @@ const indexer = async (): Promise<void> => {
     const rpcConnection = await establishRpcConnection();
 
     if (consts.JSINFO_INDEXER_DEBUG_DUMP_EVENTS) {
-        await LavaBlockDebugDumpEvents(rpcConnection);
+        await EventDebug(rpcConnection);
         return
     }
 

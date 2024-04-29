@@ -5,7 +5,7 @@ import { GetOrSetProvider, SetTx } from "../setlatest";
 import { EventParseUlava, EventProcessAttributes, EventParseProviderAddress, EventParseInt } from "../eventUtils";
 
 /*
-LavaBlockDebugDumpEvents txs event 1074270 lava_stake_new_provider {
+EventDebug txs event 1074270 lava_stake_new_provider {
   type: "lava_stake_new_provider",
   attributes: [
     {

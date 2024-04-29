@@ -5,7 +5,7 @@ import { GetOrSetProvider, SetTx } from "../setlatest";
 import { EventProcessAttributes, EventParseProviderAddress } from "../eventUtils";
 
 /*
-LavaBlockDebugDumpEvents txs event 1082976 lava_conflict_vote_got_commit {
+EventDebug txs event 1082976 lava_conflict_vote_got_commit {
   type: "lava_conflict_vote_got_commit",
   attributes: [
     {

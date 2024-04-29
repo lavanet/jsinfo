@@ -19,7 +19,7 @@ https://github.com/lavanet/lava/blob/976bbd1063c66742b2f49465d39fe57ef6edff8a/x/
 */
 
 /*
-LavaBlockDebugDumpEvents event 1068947 lava_freeze_from_unbond {
+EventDebug event 1068947 lava_freeze_from_unbond {
     type: "lava_freeze_from_unbond",
         attributes: [
             {
@@ -43,7 +43,7 @@ LavaBlockDebugDumpEvents event 1068947 lava_freeze_from_unbond {
             }
         ],
   }
-  LavaBlockDebugDumpEvents event 1068947 lava_freeze_from_unbond {
+  EventDebug event 1068947 lava_freeze_from_unbond {
     type: "lava_freeze_from_unbond",
         attributes: [
             {

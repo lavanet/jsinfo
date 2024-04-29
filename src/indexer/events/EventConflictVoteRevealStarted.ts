@@ -5,7 +5,7 @@ import { SetTx } from "../setlatest";
 import { EventParseInt, EventProcessAttributes } from "../eventUtils";
 
 /*
-LavaBlockDebugDumpEvents event 1083120 lava_conflict_vote_reveal_started {
+EventDebug event 1083120 lava_conflict_vote_reveal_started {
   type: "lava_conflict_vote_reveal_started",
   attributes: [
     {

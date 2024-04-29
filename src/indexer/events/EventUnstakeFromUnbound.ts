@@ -5,10 +5,10 @@ import { GetOrSetProvider, SetTx } from "../setlatest";
 import { EventParseUlava, EventProcessAttributes, EventParseProviderAddress } from "../eventUtils";
 
 /*
-LavaBlockDebugDumpEvents txs event 1084948 lava_unbond_from_provider {
+EventDebug txs event 1084948 lava_unbond_from_provider {
 // effective_stake and stake are always 0 - tokens where taken out  
 
-LavaBlockDebugDumpEvents txs event 1084948 lava_unstake_from_unbond {
+EventDebug txs event 1084948 lava_unstake_from_unbond {
   type: "lava_unstake_from_unbond",
   attributes: [
     {
@@ -33,7 +33,7 @@ LavaBlockDebugDumpEvents txs event 1084948 lava_unstake_from_unbond {
   ],
 }
 
-LavaBlockDebugDumpEvents txs event 1058939 lava_unstake_from_unbond {
+EventDebug txs event 1058939 lava_unstake_from_unbond {
     type: "lava_unstake_from_unbond",
     attributes: [
       {

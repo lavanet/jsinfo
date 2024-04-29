@@ -28,13 +28,13 @@ indexer_debug_events:
 	JSINFO_INDEXER_DEBUG_DUMP_EVENTS=true NODE_TLS_REJECT_UNAUTHORIZED=0 bun run src/indexer.ts
 
 query:
+	npx nodemon --watch src --ext ts --exec "JSINFO_QUERY_CLEAR_DISKCACHE_ON_START=true JSINFO_QUERY_IS_DEBUG_MODE=true bun run src/query.ts"
+
+query_no_nodemon:
 	JSINFO_QUERY_CLEAR_DISKCACHE_ON_START=true JSINFO_QUERY_IS_DEBUG_MODE=true bun run src/query.ts
 
 query_port8090:
 	JSINFO_QUERY_PORT=8090 make query
-
-query_nodemon:
-	npx nodemon --watch src --ext ts --exec "JSINFO_QUERY_CLEAR_DISKCACHE_ON_START=true JSINFO_QUERY_IS_DEBUG_MODE=true bun run src/query.ts"
 
 query_populate_mode:
 	JSINFO_QUERY_CLEAR_DISKCACHE_ON_START=true JSINFO_QUERY_IS_DEBUG_MODE=true JSINFO_QUERY_CACHE_POPULTAE_MODE=true bun run src/query.ts

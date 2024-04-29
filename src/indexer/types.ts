@@ -15,4 +15,5 @@ export type LavaBlock = {
     dbSubscriptionBuys: JsinfoSchema.InsertSubscriptionBuy[]
     dbConflictVote: JsinfoSchema.InsertConflictVote[]
     dbProviderReports: JsinfoSchema.InsertProviderReported[]
+    dbProviderLatestBlockReports: JsinfoSchema.InsertProviderLatestBlockReports[]
 }

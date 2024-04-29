@@ -1,7 +1,7 @@
 /* 
 Validators already have info on the nativ explorers, this info is not shown on jsinfo
 
-LavaBlockDebugDumpEvents event 1068947 lava_validator_slash {
+EventDebug event 1068947 lava_validator_slash {
     type: "lava_validator_slash",
     attributes: [
       {

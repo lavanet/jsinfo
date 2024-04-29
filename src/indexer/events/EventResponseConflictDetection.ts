@@ -5,7 +5,7 @@ import { GetOrSetConsumer, SetTx, GetOrSetSpec } from "../setlatest";
 import { EventProcessAttributes, EventParseProviderAddress, EventParseInt } from "../eventUtils";
 
 /*
-LavaBlockDebugDumpEvents txs event 1082970 lava_response_conflict_detection {
+EventDebug txs event 1082970 lava_response_conflict_detection {
   type: "lava_response_conflict_detection",
   attributes: [
     {

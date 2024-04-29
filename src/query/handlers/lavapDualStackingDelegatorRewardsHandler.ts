@@ -70,16 +70,16 @@ export async function LavapDualStackingDelegatorRewardsHandler(request: FastifyR
 
     let provider: string | null = null;
 
-    let add_timestamp = new Date();
+    let addTimestamp = new Date();
 
     const insertData: JsinfoSchema.InsertDualStackingDelegatorRewards[] = rewards.flatMap(reward => {
         // Validate provider format
         provider = validateProvider(reward.provider);
 
         return reward.amount.map(a => ({
-            timestamp: add_timestamp,
+            timestamp: addTimestamp,
             provider: reward.provider,
-            chain_id: reward.chain_id,
+            chainId: reward.chain_id,
             amount: parseInt(a.amount),
             denom: a.denom
         }));
@@ -108,7 +108,7 @@ export async function LavapDualStackingDelegatorRewardsHandler(request: FastifyR
             }
 
             const result = await tx.insert(JsinfoSchema.dualStackingDelegatorRewards).values(insertData)
-                .returning({ chain: JsinfoSchema.dualStackingDelegatorRewards.chain_id });
+                .returning({ chain: JsinfoSchema.dualStackingDelegatorRewards.chainId });
 
             console.log(`[${new Date().toISOString()}] LavapDualStackingDelegatorRewardsHandler: Provider: ${provider}. Inserted ${result.length} reward entries. chains: ${JSON.stringify(result)}`);
         });

@@ -294,6 +294,7 @@ export async function ProviderHealthHandler(request: FastifyRequest, reply: Fast
 
     if (!res || res.length === 0 || Object.keys(res).length === 0) {
         console.log(`ProviderHealthHandler:: No health info for provider ${addr} in database.`);
+        return { data: [] };
     }
 
     return { data: res };

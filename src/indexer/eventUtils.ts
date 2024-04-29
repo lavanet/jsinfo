@@ -78,6 +78,16 @@ export function EventParseFloat(value: string): number {
     return parseFloat(value);
 }
 
+export function EventParseAlphaNumericString(key: string): string {
+    const pattern = /^[a-zA-Z0-9_-]{2,100}$/;
+
+    if (!pattern.test(key)) {
+        throw new Error(`EventParseAlphaNumericString: Key is not a valid alphanumeric string: ${key}`);
+    }
+
+    return key;
+}
+
 export function EventParseUlava(value: string): number {
     const ulavaIndex = value.indexOf('ulava');
     if (ulavaIndex === -1) {

@@ -6,7 +6,7 @@ import { GetOrSetProvider, SetTx } from "../setlatest";
 import { EventParseUlava, EventProcessAttributes, EventParseProviderAddress } from "../eventUtils";
 
 /*
-LavaBlockDebugDumpEvents txs event 1084948 lava_unbond_from_provider {
+EventDebug txs event 1084948 lava_unbond_from_provider {
   type: "lava_unbond_from_provider",
   attributes: [
     {
@@ -25,7 +25,7 @@ LavaBlockDebugDumpEvents txs event 1084948 lava_unbond_from_provider {
   ],
 }
 
-LavaBlockDebugDumpEvents txs event 1058939 lava_unbond_from_provider {
+EventDebug txs event 1058939 lava_unbond_from_provider {
     type: "lava_unbond_from_provider",
     attributes: [
       {

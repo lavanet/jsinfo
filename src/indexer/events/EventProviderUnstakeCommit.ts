@@ -7,7 +7,7 @@ import { EventProcessAttributes, EventParseProviderAddress, EventParseInt } from
 /*
 
 no good examples recently
-LavaBlockDebugDumpEvents txs event 1050816 lava_provider_unstake_commit {
+EventDebug txs event 1050816 lava_provider_unstake_commit {
   type: "lava_provider_unstake_commit",
   attributes: [
     {
@@ -29,7 +29,7 @@ LavaBlockDebugDumpEvents txs event 1050816 lava_provider_unstake_commit {
   ],
 }
 
-LavaBlockDebugDumpEvents txs event 1009118 lava_provider_unstake_commit {
+EventDebug txs event 1009118 lava_provider_unstake_commit {
   type: "lava_provider_unstake_commit",
   attributes: [
     {

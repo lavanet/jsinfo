@@ -156,6 +156,7 @@ export const GetOneLavaBlock = async (
         dbSubscriptionBuys: [],
         dbConflictVote: [],
         dbProviderReports: [],
+        dbProviderLatestBlockReports: [],
     }
 
     //

@@ -40,6 +40,7 @@ import { ParseEventUnstakeFromUnbound } from "./events/EventUnstakeFromUnbound";
 
 // Unidentified Event
 import { ParseEventUnidentified } from "./events/EventUnidentified";
+import { ParseEventProviderLatestBlockReport } from "./events/EventProviderLatestBlockReport";
 
 export const ProcessOneEvent = (
     evt: Event,
@@ -91,9 +92,9 @@ export const ProcessOneEvent = (
         case 'lava_provider_jailed':
             ParseEventProviderJailed(evt, height, txHash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
             break
-        // a successful report of latest block of a provider 
+        // a successful report of latest block of a provider per chain
         case 'lava_provider_latest_block_report':
-            // don't store - this happens every block
+            ParseEventProviderLatestBlockReport(evt, height, txHash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
             break
 
         //

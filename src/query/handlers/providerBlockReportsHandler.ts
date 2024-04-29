@@ -1,27 +1,28 @@
 
-// src/query/handlers/providerDelegatorRewardsHandler.ts
+// src/query/handlers/providerBlockReportsHandler.ts
 
-// curl http://localhost:8081/providerDelegatorRewards/lava@14shwrej05nrraem8mwsnlw50vrtefkajar75ge
+// curl http://localhost:8081/providerBlockReports/lava@1tlkpa7t48fjl7qan4ete6xh0lsy679flnqdw57
 
-import fs from 'fs';
-import path from 'path';
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../queryDb';
-import { eq, desc } from "drizzle-orm";
-import { Pagination, ParsePaginationFromRequest } from '../utils/queryPagination';
-import { CompareValues } from '../utils/queryUtils';
-import { JSINFO_QUERY_CACHEDIR, JSINFO_QUERY_CACHE_ENABLED, JSINFO_QUERY_HANDLER_CACHE_TIME_SECONDS } from '../queryConsts';
-import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE } from '../queryConsts';
 import * as JsinfoSchema from '../../schemas/jsinfo_schema';
+import { and, desc, eq, gte } from "drizzle-orm";
+import { Pagination, ParsePaginationFromRequest } from '../utils/queryPagination';
+import { JSINFO_QUERY_CACHEDIR, JSINFO_QUERY_CACHE_ENABLED, JSINFO_QUERY_HANDLER_CACHE_TIME_SECONDS, JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE } from '../queryConsts';
+import fs from 'fs';
+import path from 'path';
+import { CompareValues } from '../utils/queryUtils';
 
-export interface DelegatorRewardReponse {
+export interface BlockReportsReponse {
     id: number;
+    blockId: number;
+    tx: string;
     timestamp: string;
-    chain_id: string;
-    amount: string;
+    chainId: string;
+    chainBlockHeight: number;
 }
 
-export const ProviderDelegatorRewardsHandlerOpts: RouteShorthandOptions = {
+export const ProviderBlockReportsHandlerOpts: RouteShorthandOptions = {
     schema: {
         response: {
             200: {
@@ -32,10 +33,25 @@ export const ProviderDelegatorRewardsHandlerOpts: RouteShorthandOptions = {
                         items: {
                             type: 'object',
                             properties: {
-                                id: { type: ['string', 'number'] },
-                                timestamp: { type: 'string' },
-                                chain_id: { type: 'string' },
-                                amount: { type: 'string' },
+                                id: {
+                                    type: 'number'
+                                },
+                                blockId: {
+                                    type: 'number'
+                                },
+                                tx: {
+                                    type: 'string'
+                                },
+                                timestamp: {
+                                    type: 'string',
+                                    format: 'date-time'
+                                },
+                                chainId: {
+                                    type: 'string'
+                                },
+                                chainBlockHeight: {
+                                    type: 'number'
+                                }
                             }
                         }
                     }
@@ -43,35 +59,45 @@ export const ProviderDelegatorRewardsHandlerOpts: RouteShorthandOptions = {
             }
         }
     }
-}
+};
 
-class ProviderDelegatorRewardsData {
+class ProviderBlockReportsData {
     private addr: string;
     private cacheDir: string = JSINFO_QUERY_CACHEDIR;
-    private cacheAgeLimit: number = JSINFO_QUERY_HANDLER_CACHE_TIME_SECONDS;
+    private cacheAgeLimit: number = JSINFO_QUERY_HANDLER_CACHE_TIME_SECONDS; // 15 minutes in seconds
 
     constructor(addr: string) {
         this.addr = addr;
     }
 
     private getCacheFilePath(): string {
-        return path.join(this.cacheDir, `ProviderDelegatorRewardsHandlerData_${this.addr}`);
+        return path.join(this.cacheDir, `ProviderBlockReportsData_${this.addr}`);
     }
 
-    private async fetchDataFromDb(): Promise<DelegatorRewardReponse[]> {
-        const result = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.dualStackingDelegatorRewards)
-            .where(eq(JsinfoSchema.dualStackingDelegatorRewards.provider, this.addr))
-            .orderBy(desc(JsinfoSchema.dualStackingDelegatorRewards.timestamp)).offset(0).limit(5000)
+    private async fetchDataFromDb(): Promise<BlockReportsReponse[]> {
+        let thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-        return result.map((row: JsinfoSchema.DualStackingDelegatorRewards) => ({
+        let result = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.providerLatestBlockReports).
+            where(
+                and(
+                    eq(JsinfoSchema.providerLatestBlockReports.provider, this.addr),
+                    gte(JsinfoSchema.providerLatestBlockReports.timestamp, thirtyDaysAgo)
+                )
+            ).
+            orderBy(desc(JsinfoSchema.providerLatestBlockReports.timestamp)).limit(5000);
+
+        return result.map((row: JsinfoSchema.ProviderLatestBlockReports) => ({
             id: row.id,
-            timestamp: row.timestamp?.toISOString(),
-            chain_id: row.chainId,
-            amount: row.amount + " " + row.denom
+            blockId: row.blockId ?? 0,
+            tx: row.tx ?? '',
+            timestamp: row.timestamp?.toISOString() ?? '',
+            chainId: row.chainId,
+            chainBlockHeight: row.chainBlockHeight ?? 0,
         }));
     }
 
-    private async fetchDataFromCache(): Promise<DelegatorRewardReponse[]> {
+    private async fetchDataFromCache(): Promise<BlockReportsReponse[]> {
         const cacheFilePath = this.getCacheFilePath();
         if (JSINFO_QUERY_CACHE_ENABLED && fs.existsSync(cacheFilePath)) {
             const stats = fs.statSync(cacheFilePath);
@@ -91,7 +117,7 @@ class ProviderDelegatorRewardsData {
         return data.length;
     }
 
-    public async getPaginatedItems(pagination: Pagination | null): Promise<DelegatorRewardReponse[]> {
+    public async getPaginatedItems(pagination: Pagination | null): Promise<BlockReportsReponse[]> {
         let data = await this.fetchDataFromCache();
 
         if (pagination == null) {
@@ -111,7 +137,7 @@ class ProviderDelegatorRewardsData {
         return data.slice(start, end);
     }
 
-    private sortData(data: DelegatorRewardReponse[], sortKey: string, direction: 'ascending' | 'descending'): DelegatorRewardReponse[] {
+    private sortData(data: BlockReportsReponse[], sortKey: string, direction: 'ascending' | 'descending'): BlockReportsReponse[] {
         if (sortKey === "-" || sortKey === "") sortKey = "timestamp";
 
         if (sortKey && ["timestamp", "chain_id", "amount"].includes(sortKey)) {
@@ -131,15 +157,15 @@ class ProviderDelegatorRewardsData {
 
     public async getCSV(): Promise<string> {
         const data = await this.fetchDataFromCache();
-        let csv = 'timestamp,chain_id,amount\n';
-        data.forEach((item: DelegatorRewardReponse) => {
-            csv += `${item.timestamp},${item.chain_id},${item.amount}\n`;
+        let csv = 'timestamp,blockId,tx,chainId,chainBlockHeight\n';
+        data.forEach((item: BlockReportsReponse) => {
+            csv += `${item.timestamp},${item.blockId},${item.chainId},${item.chainBlockHeight}\n`;
         });
         return csv;
-    }
+    } v
 }
 
-export async function ProviderDelegatorRewardsItemCountHandler(request: FastifyRequest, reply: FastifyReply) {
+export async function ProviderBlockReportsItemCountHandler(request: FastifyRequest, reply: FastifyReply) {
     await QueryCheckJsinfoReadDbInstance()
 
     const { addr } = request.params as { addr: string }
@@ -148,13 +174,13 @@ export async function ProviderDelegatorRewardsItemCountHandler(request: FastifyR
         return;
     }
 
-    const providerDelegatorRewardsData = new ProviderDelegatorRewardsData(addr);
+    const providerDelegatorRewardsData = new ProviderBlockReportsData(addr);
     const count = await providerDelegatorRewardsData.getTotalItemCount();
 
     return { itemCount: count };
 }
 
-export async function ProviderDelegatorRewardsHandler(request: FastifyRequest, reply: FastifyReply) {
+export async function ProviderBlockReportsHandler(request: FastifyRequest, reply: FastifyReply) {
     await QueryCheckJsinfoReadDbInstance()
 
     const { addr } = request.params as { addr: string }
@@ -164,18 +190,18 @@ export async function ProviderDelegatorRewardsHandler(request: FastifyRequest, r
     }
 
     let pagination: Pagination | null = ParsePaginationFromRequest(request)
-    const providerDelegatorRewardsData = new ProviderDelegatorRewardsData(addr);
-    const res: DelegatorRewardReponse[] = await providerDelegatorRewardsData.getPaginatedItems(pagination);
+    const providerBlockReportsData = new ProviderBlockReportsData(addr);
+    const res: BlockReportsReponse[] = await providerBlockReportsData.getPaginatedItems(pagination);
 
     if (!res || res.length === 0 || Object.keys(res).length === 0) {
-        console.log(`ProviderDelegatorRewardsHandler:: No health info for provider ${addr} in database.`);
+        console.log(`ProviderBlockReportsHandler:: No health info for provider ${addr} in database.`);
         return { data: [] };
     }
 
     return { data: res };
 }
 
-export async function ProviderDelegatorRewardsCSVHandler(request: FastifyRequest, reply: FastifyReply) {
+export async function ProviderBlockReportsCSVHandler(request: FastifyRequest, reply: FastifyReply) {
     await QueryCheckJsinfoReadDbInstance()
 
     const { addr } = request.params as { addr: string }
@@ -184,10 +210,10 @@ export async function ProviderDelegatorRewardsCSVHandler(request: FastifyRequest
         return;
     }
 
-    const providerDelegatorRewardsData = new ProviderDelegatorRewardsData(addr);
-    const csv = await providerDelegatorRewardsData.getCSV();
+    const providerBlockReportsData = new ProviderBlockReportsData(addr);
+    const csv = await providerBlockReportsData.getCSV();
 
     reply.header('Content-Type', 'text/csv');
-    reply.header('Content-Disposition', `attachment; filename=ProviderDelegatorRewards_${addr}.csv`);
+    reply.header('Content-Disposition', `attachment; filename=ProviderBlockReports_${addr}.csv`);
     reply.send(csv);
 }

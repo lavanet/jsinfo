@@ -1,5 +1,7 @@
 // src/schemas/jsinfo_schema.ts
 
+// Do not use 'drizzle-orm' date, it will cause bugs
+
 import { sql } from 'drizzle-orm'
 import { pgTable, index, text, integer, serial, bigint, real, uniqueIndex, primaryKey, timestamp, doublePrecision, varchar } from 'drizzle-orm/pg-core';
 
@@ -100,7 +102,7 @@ export type InsertRelayPayment = typeof relayPayments.$inferInsert
 
 export const aggHourlyrelayPayments = pgTable('agg_hourly_relay_payments', {
   provider: text('provider').references(() => providers.address),
-  datehour: timestamp('datehour', { mode: "string" }), // Note: do not change this to 'date', it will cause bugs
+  datehour: timestamp('datehour', { mode: "string" }),
   specId: text('spec_id').references(() => specs.id),
   cuSum: bigint('cusum', { mode: 'number' }),
   relaySum: bigint('relaysum', { mode: 'number' }),
@@ -226,6 +228,18 @@ export const providerReported = pgTable('provider_reported', {
 export type ProviderReported = typeof providerReported.$inferSelect
 export type InsertProviderReported = typeof providerReported.$inferInsert
 
+export const providerLatestBlockReports = pgTable('provider_latest_block_reports', {
+  id: serial('id').primaryKey(),
+  provider: text('provider').references(() => providers.address),
+  blockId: integer('block_id').references(() => blocks.height),
+  tx: text('tx').references(() => txs.hash),
+  timestamp: timestamp('timestamp').notNull(),
+  chainId: text('chain_id').notNull(),
+  chainBlockHeight: bigint('chain_block_height', { mode: 'number' }),
+});
+
+export type ProviderLatestBlockReports = typeof providerLatestBlockReports.$inferSelect;
+export type InsertProviderLatestBlockReports = typeof providerLatestBlockReports.$inferInsert;
 
 export const providerHealthHourly = pgTable('provider_health_hourly', {
   id: serial('id').primaryKey(),
@@ -245,12 +259,13 @@ export type InsertProviderHealthHourly = typeof providerHealthHourly.$inferInser
 
 export const dualStackingDelegatorRewards = pgTable('dual_stacking_delegator_rewards', {
   id: serial('id').primaryKey(),
+  provider: text('provider').notNull().references(() => providers.address),
   timestamp: timestamp('timestamp').notNull(),
-  provider: text('provider').notNull(),
-  chain_id: text('chain_id').notNull(),
+  chainId: text('chain_id').notNull(),
   amount: bigint('amount', { mode: 'number' }).notNull(),
   denom: text('denom').notNull(),
 });
 
 export type DualStackingDelegatorRewards = typeof dualStackingDelegatorRewards.$inferSelect;
 export type InsertDualStackingDelegatorRewards = typeof dualStackingDelegatorRewards.$inferInsert;
+

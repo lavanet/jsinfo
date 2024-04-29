@@ -7,7 +7,7 @@ import { EventParseUlava, EventProcessAttributes, EventParseProviderAddress, Eve
 // Mint is not used
 
 /*
-LavaBlockDebugDumpEvents txs event 1085946 lava_relay_payment {
+EventDebug txs event 1085946 lava_relay_payment {
   type: "lava_relay_payment",
   attributes: [
     {
@@ -59,7 +59,7 @@ LavaBlockDebugDumpEvents txs event 1085946 lava_relay_payment {
   ],
 }
 
-LavaBlockDebugDumpEvents txs event 1085946 lava_relay_payment {
+EventDebug txs event 1085946 lava_relay_payment {
   type: "lava_relay_payment",
   attributes: [
     {

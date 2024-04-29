@@ -190,7 +190,7 @@ export async function ProviderHandler(request: FastifyRequest, reply: FastifyRep
 
     // Iterate over the fetched rewards to find the latest entry per chain_id
     for (const claimableReward of claimableRewards) {
-        const chainId = claimableReward.chain_id;
+        const chainId = claimableReward.chainId;
         // Check if the current chain_id is already in maxRewardsByChainId with a newer timestamp
         if (!maxRewardsByChainId[chainId] || maxRewardsByChainId[chainId].timestamp < claimableReward.timestamp) {
             maxRewardsByChainId[chainId] = claimableReward;

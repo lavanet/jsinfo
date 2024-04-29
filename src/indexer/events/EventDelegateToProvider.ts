@@ -28,7 +28,7 @@ https://github.com/lavanet/lava/blob/0c0e4429d9ba5acf6c95d12e3cd130d0a05e6cfc/x/
 */
 
 /*
-LavaBlockDebugDumpEvents txs event 1079873 lava_delegate_to_provider {
+EventDebug txs event 1079873 lava_delegate_to_provider {
   type: "lava_delegate_to_provider",
   attributes: [
     {
@@ -43,7 +43,7 @@ LavaBlockDebugDumpEvents txs event 1079873 lava_delegate_to_provider {
     }
   ],
 }
-LavaBlockDebugDumpEvents txs event 1080786 lava_delegate_to_provider {
+EventDebug txs event 1080786 lava_delegate_to_provider {
   type: "lava_delegate_to_provider",
   attributes: [
     {
@@ -61,7 +61,7 @@ LavaBlockDebugDumpEvents txs event 1080786 lava_delegate_to_provider {
     }
   ],
 }
-LavaBlockDebugDumpEvents txs event 1079916 lava_delegate_to_provider {
+EventDebug txs event 1079916 lava_delegate_to_provider {
   type: "lava_delegate_to_provider",
   attributes: [
     {
@@ -76,7 +76,7 @@ LavaBlockDebugDumpEvents txs event 1079916 lava_delegate_to_provider {
     }
   ],
 }
-LavaBlockDebugDumpEvents txs event 1079872 lava_delegate_to_provider {
+EventDebug txs event 1079872 lava_delegate_to_provider {
   type: "lava_delegate_to_provider",
   attributes: [
     {

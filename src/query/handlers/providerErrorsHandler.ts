@@ -175,6 +175,7 @@ export async function ProviderErrorsHandler(request: FastifyRequest, reply: Fast
 
     if (!res || res.length === 0 || Object.keys(res).length === 0) {
         console.log(`ProviderErrorsHandler:: No health info for provider ${addr} in database.`);
+        return { data: [] };
     }
 
     return { data: res };

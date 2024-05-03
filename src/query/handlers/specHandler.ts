@@ -87,7 +87,12 @@ export async function SpecHandler(request: FastifyRequest, reply: FastifyReply) 
         geolocation: JsinfoSchema.providerStakes.geolocation,
         // addons: JsinfoSchema.providerStakes.addons,
         // extensions: JsinfoSchema.providerStakes.extensions,
-        addonsAndExtensions: sql<string>`CASE WHEN COALESCE(${JsinfoSchema.providerStakes.addons}, '') = '' AND COALESCE(${JsinfoSchema.providerStakes.extensions}, '') = '' THEN '-' ELSE COALESCE(${JsinfoSchema.providerStakes.addons}, '') || ', ' || COALESCE(${JsinfoSchema.providerStakes.extensions}, '') END`,
+        addonsAndExtensions: sql<string>`TRIM(TRAILING ', ' FROM CASE 
+            WHEN COALESCE(${JsinfoSchema.providerStakes.addons}, '') = '' AND COALESCE(${JsinfoSchema.providerStakes.extensions}, '') = '' THEN '-' 
+            WHEN COALESCE(${JsinfoSchema.providerStakes.addons}, '') = '' THEN 'extensions: ' || ${JsinfoSchema.providerStakes.extensions}
+            WHEN COALESCE(${JsinfoSchema.providerStakes.extensions}, '') = '' THEN 'addons: ' || ${JsinfoSchema.providerStakes.addons}
+            ELSE 'addons: ' || ${JsinfoSchema.providerStakes.addons} || ', extensions: ' || ${JsinfoSchema.providerStakes.extensions} 
+        END)`,
         status: JsinfoSchema.providerStakes.status,
         provider: JsinfoSchema.providerStakes.provider,
         moniker: JsinfoSchema.providers.moniker,

@@ -6,14 +6,14 @@ REST_URL="${REST_URL:-http://0.0.0.0:8080}"
 LOG_PREFIX="${LOG_PREFIX:-}"
 
 log() {
-    echo "$(date) $LOG_PREFIX: $1" >&2
+    echo "$(date) $LOG_PREFIX: $1 $REST_URL$url" >&2
 }
 
 get() {
     url="$1"
     retries=5
     response=""
-    log "revalidate_cache: calling get on $REST_URL$url"
+    log "revalidate_cache: calling get on"
     i=0
     while [ $i -lt $retries ]; do
         log "Attempt number: $((i+1))"
@@ -49,7 +49,7 @@ revalidate_cache() {
     urls=$(echo "$response" | jq -r '.urls[]')
 
     for url in $urls; do
-        log "revalidate_cache: Browsing to $url"
+        log "revalidate_cache: Browsing to"
         get "$url" > /dev/null
         sleep 0.1
     done

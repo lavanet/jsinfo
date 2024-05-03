@@ -85,25 +85,27 @@ export async function SpecHandler(request: FastifyRequest, reply: FastifyReply) 
         stake: JsinfoSchema.providerStakes.stake,
         appliedHeight: JsinfoSchema.providerStakes.appliedHeight,
         geolocation: JsinfoSchema.providerStakes.geolocation,
-        addons: JsinfoSchema.providerStakes.addons,
-        extensions: JsinfoSchema.providerStakes.extensions,
+        // addons: JsinfoSchema.providerStakes.addons,
+        // extensions: JsinfoSchema.providerStakes.extensions,
+        addonsAndExtensions: sql<string>`CASE WHEN COALESCE(${JsinfoSchema.providerStakes.addons}, '') = '' AND COALESCE(${JsinfoSchema.providerStakes.extensions}, '') = '' THEN '-' ELSE COALESCE(${JsinfoSchema.providerStakes.addons}, '') || ', ' || COALESCE(${JsinfoSchema.providerStakes.extensions}, '') END`,
         status: JsinfoSchema.providerStakes.status,
         provider: JsinfoSchema.providerStakes.provider,
+        moniker: JsinfoSchema.providers.moniker,
         specId: JsinfoSchema.providerStakes.specId,
         blockId: JsinfoSchema.providerStakes.blockId,
-        cuSum: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.cuSum})`,
-        relaySum: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.relaySum})`,
+        cuSum: sql<number>`sum(COALESCE(NULLIF(${JsinfoSchema.aggHourlyrelayPayments.cuSum}, 0), 0))`,
+        relaySum: sql<number>`sum(COALESCE(NULLIF(${JsinfoSchema.aggHourlyrelayPayments.relaySum}, 0), 0))`,
     }).from(JsinfoSchema.providerStakes)
         .leftJoin(JsinfoSchema.providers, eq(JsinfoSchema.providerStakes.provider, JsinfoSchema.providers.address))
         .leftJoin(JsinfoSchema.aggHourlyrelayPayments, and(
             eq(JsinfoSchema.providerStakes.provider, JsinfoSchema.aggHourlyrelayPayments.provider),
             and(
                 eq(JsinfoSchema.providerStakes.specId, JsinfoSchema.aggHourlyrelayPayments.specId),
-                gt(sql<string>`DATE_TRUNC('day', ${JsinfoSchema.aggHourlyrelayPayments.datehour})`, sql<Date>`now() - interval '30 day'`)
+                gt(sql<string>`DATE_TRUNC('day', ${JsinfoSchema.aggHourlyrelayPayments.datehour})`, sql<Date>`now() - interval '90 day'`)
             )
         ))
         .where(eq(JsinfoSchema.providerStakes.specId, upSpecId))
-        .groupBy(JsinfoSchema.providerStakes.provider, JsinfoSchema.providerStakes.specId)
+        .groupBy(JsinfoSchema.providerStakes.provider, JsinfoSchema.providerStakes.specId, JsinfoSchema.providers.moniker)
         .orderBy(desc(JsinfoSchema.providerStakes.stake))
 
     //

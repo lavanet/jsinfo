@@ -81,10 +81,30 @@ export async function SpecHandler(request: FastifyRequest, reply: FastifyReply) 
 
     //
     // Get stakes
-    let stakesRes = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.providerStakes).
-        leftJoin(JsinfoSchema.providers, eq(JsinfoSchema.providerStakes.provider, JsinfoSchema.providers.address)).
-        where(eq(JsinfoSchema.providerStakes.specId, upSpecId)).
-        orderBy(desc(JsinfoSchema.providerStakes.stake))
+    let stakesRes = await QueryGetJsinfoReadDbInstance().select({
+        stake: JsinfoSchema.providerStakes.stake,
+        appliedHeight: JsinfoSchema.providerStakes.appliedHeight,
+        geolocation: JsinfoSchema.providerStakes.geolocation,
+        addons: JsinfoSchema.providerStakes.addons,
+        extensions: JsinfoSchema.providerStakes.extensions,
+        status: JsinfoSchema.providerStakes.status,
+        provider: JsinfoSchema.providerStakes.provider,
+        specId: JsinfoSchema.providerStakes.specId,
+        blockId: JsinfoSchema.providerStakes.blockId,
+        cuSum: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.cuSum})`,
+        relaySum: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.relaySum})`,
+    }).from(JsinfoSchema.providerStakes)
+        .leftJoin(JsinfoSchema.providers, eq(JsinfoSchema.providerStakes.provider, JsinfoSchema.providers.address))
+        .leftJoin(JsinfoSchema.aggHourlyrelayPayments, and(
+            eq(JsinfoSchema.providerStakes.provider, JsinfoSchema.aggHourlyrelayPayments.provider),
+            and(
+                eq(JsinfoSchema.providerStakes.specId, JsinfoSchema.aggHourlyrelayPayments.specId),
+                gt(sql<string>`DATE_TRUNC('day', ${JsinfoSchema.aggHourlyrelayPayments.datehour})`, sql<Date>`now() - interval '30 day'`)
+            )
+        ))
+        .where(eq(JsinfoSchema.providerStakes.specId, upSpecId))
+        .groupBy(JsinfoSchema.providerStakes.provider, JsinfoSchema.providerStakes.specId)
+        .orderBy(desc(JsinfoSchema.providerStakes.stake))
 
     //
     // Get graph with 1 day resolution

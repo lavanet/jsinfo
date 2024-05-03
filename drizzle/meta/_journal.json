@@ -99,6 +99,13 @@
       "when": 1714397017256,
       "tag": "0013_parallel_nekra",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "5",
+      "when": 1714740846064,
+      "tag": "0014_lethal_stingray",
+      "breakpoints": true
     }
   ]
 }

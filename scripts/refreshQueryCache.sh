@@ -51,6 +51,7 @@ revalidate_cache() {
     for url in $urls; do
         log "revalidate_cache: Browsing to $url"
         get "$url" > /dev/null
+        sleep 0.1
     done
 
     log "revalidate_cache: Finished revalidation of cache."

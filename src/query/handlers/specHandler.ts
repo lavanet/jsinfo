@@ -41,6 +41,10 @@ export const SpecHandlerOpts: RouteShorthandOptions = {
                     data: {
                         type: 'array',
                     },
+                    cuChartData: {
+                        type: 'object',
+                        additionalProperties: true,
+                    }
                 }
             }
         }
@@ -114,10 +118,20 @@ export async function SpecHandler(request: FastifyRequest, reply: FastifyReply) 
         .groupBy(JsinfoSchema.providerStakes.provider, JsinfoSchema.providerStakes.specId, JsinfoSchema.providers.moniker)
         .orderBy(desc(JsinfoSchema.providerStakes.stake))
 
-    stakesRes = stakesRes.map(item => {
-        item.addonsAndExtensions = ReplaceArchive(item.addonsAndExtensions);
-        return item;
-    });
+    stakesRes = stakesRes
+        .map(item => ({
+            ...item,
+            addonsAndExtensions: ReplaceArchive(item.addonsAndExtensions),
+        }))
+        .sort((a, b) => b.cuSum - a.cuSum);
+
+    let top10Providers: { [key: string]: string } = stakesRes
+        .slice(0, 10)
+        .filter(item => item.provider)
+        .reduce((acc, item) => ({
+            ...acc,
+            [item.provider || '']: item.moniker,
+        }), {});
 
     //
     // Get graph with 1 day resolution
@@ -155,6 +169,32 @@ export async function SpecHandler(request: FastifyRequest, reply: FastifyReply) 
         ).groupBy(sql`mydate`).
         orderBy(sql`mydate`)
 
+    let cuChartResForTopProviders: { [key: string]: any } = {};
+
+    for (let provider in top10Providers) {
+        let data = await QueryGetJsinfoReadDbInstance().select({
+            date: sql`DATE_TRUNC('day', ${JsinfoSchema.aggHourlyrelayPayments.datehour}) as mydate`,
+            cuSum: sql<number>`sum(COALESCE(NULLIF(${JsinfoSchema.aggHourlyrelayPayments.cuSum}, 0), 0))`,
+        }).from(JsinfoSchema.aggHourlyrelayPayments).
+            groupBy(sql`mydate`).
+            where(
+                and(
+                    gt(sql<string>`DATE_TRUNC('day', ${JsinfoSchema.aggHourlyrelayPayments.datehour})`, sql<Date>`now() - interval '90 day'`),
+                    and(
+                        eq(JsinfoSchema.aggHourlyrelayPayments.specId, upSpecId),
+                        eq(JsinfoSchema.aggHourlyrelayPayments.provider, provider),
+                    )
+                )
+            ).
+            orderBy(sql`mydate`);
+
+        let formattedData = FormatDates(data);
+
+        // Use the moniker as the key if it is not null or empty
+        let key = top10Providers[provider] ? top10Providers[provider] : provider;
+        cuChartResForTopProviders[key] = formattedData;
+    }
+
     return {
         height: latestHeight,
         datetime: latestDatetime,
@@ -165,5 +205,6 @@ export async function SpecHandler(request: FastifyRequest, reply: FastifyReply) 
         qosData: FormatDates(qosGraphData),
         stakes: stakesRes,
         data: FormatDates(cuRelayAndRewardsGraphData),
+        cuChartData: cuChartResForTopProviders,
     }
 }

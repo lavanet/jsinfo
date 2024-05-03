@@ -6,7 +6,7 @@ REST_URL="${REST_URL:-http://0.0.0.0:8080}"
 LOG_PREFIX="${LOG_PREFIX:-}"
 
 log() {
-    echo "$(date) $LOG_PREFIX: $1 $REST_URL$url" >&2
+    echo "$(date +"%Y:%m:%d %H:%M:%S") - $LOG_PREFIX - $REST_URL$url :: $1" >&2
 }
 
 get() {

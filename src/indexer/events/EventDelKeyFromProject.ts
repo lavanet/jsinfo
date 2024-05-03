@@ -1,7 +1,7 @@
 import { Event } from "@cosmjs/stargate"
 import { LavaBlock } from "../types";
 import * as JsinfoSchema from '../../schemas/jsinfo_schema';
-import { GetOrSetConsumer, SetTx } from "../setlatest";
+import { GetOrSetConsumer, SetTx } from "../setLatest";
 import { EventProcessAttributes, EventParseProviderAddress, EventParseInt } from "../eventUtils";
 
 /*
@@ -32,37 +32,40 @@ export const ParseEventDelKeyFromProject = (
     static_dbPlans: Map<string, JsinfoSchema.Plan>,
     static_dbStakes: Map<string, JsinfoSchema.ProviderStake[]>,
 ) => {
-    const evtEvent: JsinfoSchema.InsertEvent = {
+    const dbEvent: JsinfoSchema.InsertEvent = {
         tx: txHash,
         blockId: height,
         eventType: JsinfoSchema.LavaProviderEventType.DelKeyFromProject,
         provider: null,
     }
 
-    if (!EventProcessAttributes(lavaBlock, "ParseEventDelKeyFromProject", {
+    if (!EventProcessAttributes({
+        caller: "ParseEventDelKeyFromProject",
+        lavaBlock: lavaBlock,
         evt: evt,
         height: height,
         txHash: txHash,
+        dbEvent: dbEvent,
         processAttribute: (key: string, value: string) => {
             switch (key) {
                 case 'project':
-                    evtEvent.consumer = value.split('-')[0];
+                    dbEvent.consumer = value.split('-')[0];
                     break
                 case 'key':
-                    evtEvent.t2 = EventParseProviderAddress(value);
+                    dbEvent.t2 = EventParseProviderAddress(value);
                     break
                 case 'keytype':
-                    evtEvent.i1 = EventParseInt(value)
+                    dbEvent.i1 = EventParseInt(value)
                     break
                 case 'block':
-                    evtEvent.i2 = EventParseInt(value)
+                    dbEvent.i2 = EventParseInt(value)
                     break
             }
         },
-        verifyFunction: () => !!evtEvent.consumer
+        verifyFunction: () => !!dbEvent.consumer
     })) return;
 
     SetTx(lavaBlock.dbTxs, txHash, height)
-    GetOrSetConsumer(lavaBlock.dbConsumers, evtEvent.consumer!)
-    lavaBlock.dbEvents.push(evtEvent)
+    GetOrSetConsumer(lavaBlock.dbConsumers, dbEvent.consumer!)
+    lavaBlock.dbEvents.push(dbEvent)
 }

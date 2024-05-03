@@ -1,6 +1,6 @@
 // src/indexer/eventDebug.ts
 
-import { GetRpcBlock, GetRpcTxs, GetRpcBlockResultEvents } from "./lavablock";
+import { GetRpcBlock, GetRpcTxs, GetRpcBlockResultEvents } from "./lavaBlock";
 import { RpcConnection } from "../utils";
 import { ProcessOneEvent } from "./eventProcessor";
 import * as JsinfoSchema from '../schemas/jsinfo_schema';

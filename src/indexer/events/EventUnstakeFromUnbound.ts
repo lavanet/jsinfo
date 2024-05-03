@@ -1,7 +1,7 @@
 import { Event } from "@cosmjs/stargate"
 import { LavaBlock } from "../types";
 import * as JsinfoSchema from '../../schemas/jsinfo_schema';
-import { GetOrSetProvider, SetTx } from "../setlatest";
+import { GetOrSetProvider, SetTx } from "../setLatest";
 import { EventParseUlava, EventProcessAttributes, EventParseProviderAddress } from "../eventUtils";
 
 /*
@@ -70,7 +70,7 @@ export const ParseEventUnstakeFromUnbound = (
   static_dbStakes: Map<string, JsinfoSchema.ProviderStake[]>,
 ) => {
 
-  const evtEvent: JsinfoSchema.InsertEvent = {
+  const dbEvent: JsinfoSchema.InsertEvent = {
     tx: txHash,
     blockId: height,
     eventType: JsinfoSchema.LavaProviderEventType.UnstakeFromUnbound,
@@ -80,30 +80,33 @@ export const ParseEventUnstakeFromUnbound = (
 
   let moniker: string = '';
 
-  if (!EventProcessAttributes(lavaBlock, "ParseEventUnstakeFromUnbound", {
+  if (!EventProcessAttributes({
+    caller: "ParseEventUnstakeFromUnbound",
+    lavaBlock: lavaBlock,
     evt: evt,
     height: height,
     txHash: txHash,
+    dbEvent: dbEvent,
     processAttribute: (key: string, value: string) => {
       switch (key) {
         case 'provider':
-          evtEvent.provider = EventParseProviderAddress(value);
+          dbEvent.provider = EventParseProviderAddress(value);
           break;
         case 'chainID':
-          evtEvent.t2 = value;
+          dbEvent.t2 = value;
           break
         case 'min_self_delegation':
-          evtEvent.b1 = EventParseUlava(value);
+          dbEvent.b1 = EventParseUlava(value);
           break
         case 'moniker':
           moniker = value;
           break
       }
     },
-    verifyFunction: () => !!evtEvent.provider
+    verifyFunction: () => !!dbEvent.provider
   })) return;
 
   SetTx(lavaBlock.dbTxs, txHash, height)
-  GetOrSetProvider(lavaBlock.dbProviders, static_dbProviders, evtEvent.provider!, moniker)
-  lavaBlock.dbEvents.push(evtEvent)
+  GetOrSetProvider(lavaBlock.dbProviders, static_dbProviders, dbEvent.provider!, moniker)
+  lavaBlock.dbEvents.push(dbEvent)
 }

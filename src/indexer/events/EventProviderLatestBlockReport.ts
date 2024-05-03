@@ -1,7 +1,7 @@
 import { Event } from "@cosmjs/stargate"
 import { LavaBlock } from "../types";
 import * as JsinfoSchema from '../../schemas/jsinfo_schema';
-import { GetOrSetProvider, SetTx } from "../setlatest";
+import { GetOrSetProvider, SetTx } from "../setLatest";
 import { EventProcessAttributes, EventParseProviderAddress, EventParseInt, EventParseAlphaNumericString } from "../eventUtils";
 
 /*
@@ -52,7 +52,7 @@ export const ParseEventProviderLatestBlockReport = (
   static_dbStakes: Map<string, JsinfoSchema.ProviderStake[]>,
 ) => {
 
-  const evtEvent: JsinfoSchema.InsertProviderLatestBlockReports = {
+  const dbEvent: JsinfoSchema.InsertProviderLatestBlockReports = {
     blockId: height,
     tx: txHash,
     provider: null,
@@ -63,26 +63,28 @@ export const ParseEventProviderLatestBlockReport = (
 
   const chainToBlockDict: { [key: string]: number } = {};
 
-  if (!EventProcessAttributes(lavaBlock, "ParseEventProviderLatestBlockReport", {
+  if (!EventProcessAttributes({
+    caller: "ParseEventProviderLatestBlockReport",
+    lavaBlock: lavaBlock,
     evt: evt,
     height: height,
     txHash: txHash,
     processAttribute: (key: string, value: string) => {
       if (key === 'provider') {
-        evtEvent.provider = EventParseProviderAddress(value);
+        dbEvent.provider = EventParseProviderAddress(value);
       } else {
         chainToBlockDict[EventParseAlphaNumericString(key)] = EventParseInt(value);
       }
     },
-    verifyFunction: () => !!evtEvent.provider
+    verifyFunction: () => !!dbEvent.provider
   })) return;
 
   SetTx(lavaBlock.dbTxs, txHash, height)
-  GetOrSetProvider(lavaBlock.dbProviders, static_dbProviders, evtEvent.provider!, '')
+  GetOrSetProvider(lavaBlock.dbProviders, static_dbProviders, dbEvent.provider!, '')
 
   for (const [chainId, chainBlockHeight] of Object.entries(chainToBlockDict)) {
     const newEvent: JsinfoSchema.InsertProviderLatestBlockReports = {
-      ...evtEvent,
+      ...dbEvent,
       chainId,
       chainBlockHeight,
     };

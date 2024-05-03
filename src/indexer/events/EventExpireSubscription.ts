@@ -1,7 +1,7 @@
 import { Event } from "@cosmjs/stargate"
 import { LavaBlock } from "../types";
 import * as JsinfoSchema from '../../schemas/jsinfo_schema';
-import { GetOrSetConsumer, SetTx } from "../setlatest";
+import { GetOrSetConsumer, SetTx } from "../setLatest";
 import { EventProcessAttributes, EventParseProviderAddress } from "../eventUtils";
 
 /*
@@ -34,7 +34,7 @@ export const ParseEventExpireSubscrption = (
   static_dbStakes: Map<string, JsinfoSchema.ProviderStake[]>,
 ) => {
 
-  const evtEvent: JsinfoSchema.InsertEvent = {
+  const dbEvent: JsinfoSchema.InsertEvent = {
     tx: txHash,
     blockId: height,
     eventType: JsinfoSchema.LavaProviderEventType.ExpireSubscription,
@@ -42,21 +42,24 @@ export const ParseEventExpireSubscrption = (
     provider: null,
   }
 
-  if (!EventProcessAttributes(lavaBlock, "ParseEventExpireSubscrption", {
+  if (!EventProcessAttributes({
+    caller: "ParseEventExpireSubscrption",
+    lavaBlock: lavaBlock,
     evt: evt,
     height: height,
     txHash: txHash,
+    dbEvent: dbEvent,
     processAttribute: (key: string, value: string) => {
       switch (key) {
         case 'consumer':
-          evtEvent.consumer = EventParseProviderAddress(value);
+          dbEvent.consumer = EventParseProviderAddress(value);
           break;
       }
     },
-    verifyFunction: () => !!evtEvent.consumer
+    verifyFunction: () => !!dbEvent.consumer
   })) return;
 
   SetTx(lavaBlock.dbTxs, txHash, height)
-  GetOrSetConsumer(lavaBlock.dbConsumers, evtEvent.consumer!)
-  lavaBlock.dbEvents.push(evtEvent)
+  GetOrSetConsumer(lavaBlock.dbConsumers, dbEvent.consumer!)
+  lavaBlock.dbEvents.push(dbEvent)
 }

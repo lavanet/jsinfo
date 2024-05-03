@@ -1,7 +1,7 @@
 import { Event } from "@cosmjs/stargate"
 import { LavaBlock } from "../types";
 import * as JsinfoSchema from '../../schemas/jsinfo_schema';
-import { GetOrSetProvider, SetTx } from "../setlatest";
+import { GetOrSetProvider, SetTx } from "../setLatest";
 import { EventProcessAttributes, EventParseProviderAddress, EventParseInt } from "../eventUtils";
 
 /*
@@ -37,47 +37,50 @@ export const ParseEventProviderReported = (
   static_dbPlans: Map<string, JsinfoSchema.Plan>,
   static_dbStakes: Map<string, JsinfoSchema.ProviderStake[]>,
 ) => {
-  const evtEvent: JsinfoSchema.InsertProviderReported = {
+  const dbEvent: JsinfoSchema.InsertProviderReported = {
     blockId: height,
     tx: txHash,
   }
 
-  if (!EventProcessAttributes(lavaBlock, "ParseEventProviderReported", {
+  if (!EventProcessAttributes({
+    caller: "ParseEventProviderReported",
+    lavaBlock: lavaBlock,
     evt: evt,
     height: height,
     txHash: txHash,
+    dbEvent: dbEvent,
     processAttribute: (key: string, value: string) => {
       switch (key) {
         case 'cu':
-          evtEvent.cu = EventParseInt(value)
+          dbEvent.cu = EventParseInt(value)
           break
         case 'disconnections':
-          evtEvent.disconnections = EventParseInt(value)
+          dbEvent.disconnections = EventParseInt(value)
           break
         case 'epoch':
-          evtEvent.epoch = EventParseInt(value)
+          dbEvent.epoch = EventParseInt(value)
           break
         case 'errors':
-          evtEvent.errors = EventParseInt(value)
+          dbEvent.errors = EventParseInt(value)
           break
         case 'project':
-          evtEvent.project = value;
+          dbEvent.project = value;
           break
         case 'provider':
-          evtEvent.provider = EventParseProviderAddress(value);
+          dbEvent.provider = EventParseProviderAddress(value);
           break
         case 'timestamp':
-          evtEvent.datetime = new Date(Date.parse(value));
+          dbEvent.datetime = new Date(Date.parse(value));
           break
         case 'total_complaint_this_epoch':
-          evtEvent.totalComplaintEpoch = EventParseInt(value)
+          dbEvent.totalComplaintEpoch = EventParseInt(value)
           break
       }
     },
-    verifyFunction: () => !!evtEvent.provider
+    verifyFunction: () => !!dbEvent.provider
   })) return;
 
   SetTx(lavaBlock.dbTxs, txHash, height)
-  GetOrSetProvider(lavaBlock.dbProviders, static_dbProviders, evtEvent.provider!, '')
-  lavaBlock.dbProviderReports.push(evtEvent)
+  GetOrSetProvider(lavaBlock.dbProviders, static_dbProviders, dbEvent.provider!, '')
+  lavaBlock.dbProviderReports.push(dbEvent)
 }

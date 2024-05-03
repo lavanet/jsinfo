@@ -2,6 +2,7 @@ import { Event } from "@cosmjs/stargate"
 import { LavaBlock } from "../types";
 import * as JsinfoSchema from '../../schemas/jsinfo_schema';
 import { EventProcessAttributes } from "../eventUtils";
+import { SetTx } from "../setLatest";
 
 export const ParseEventUnidentified = (
     evt: Event,
@@ -13,7 +14,7 @@ export const ParseEventUnidentified = (
     static_dbPlans: Map<string, JsinfoSchema.Plan>,
     static_dbStakes: Map<string, JsinfoSchema.ProviderStake[]>,
 ) => {
-    const evtEvent: JsinfoSchema.InsertEvent = {
+    const dbEvent: JsinfoSchema.InsertEvent = {
         tx: txHash,
         blockId: height,
         eventType: JsinfoSchema.LavaProviderEventType.UnidentifiedEvent,
@@ -22,17 +23,17 @@ export const ParseEventUnidentified = (
 
     let parsedAttributes = { type: evt.type };
 
-    EventProcessAttributes(lavaBlock, "ParseEventUnidentified", {
+    EventProcessAttributes({
+        caller: "ParseEventUnidentified",
+        lavaBlock: lavaBlock,
         evt: evt,
         height: height,
         txHash: txHash,
-        processAttribute: (key: string, value: string) => {
-            parsedAttributes[key] = value
-        },
-        verifyFunction: null,
+        dbEvent: dbEvent,
     });
 
-    evtEvent.t1 = JSON.stringify(parsedAttributes);
+    dbEvent.t1 = JSON.stringify(parsedAttributes);
 
-    lavaBlock.dbEvents.push(evtEvent)
+    SetTx(lavaBlock.dbTxs, txHash, height)
+    lavaBlock.dbEvents.push(dbEvent)
 }

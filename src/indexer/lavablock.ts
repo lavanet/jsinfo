@@ -1,44 +1,28 @@
+// src/indexer/lavaBlock.ts
 
 import * as JsinfoSchema from '../schemas/jsinfo_schema';
 
 import { StargateClient, IndexedTx, Block, Event } from "@cosmjs/stargate"
 import { Tendermint37Client } from "@cosmjs/tendermint-rpc";
-import { writeFileSync, readFileSync } from 'fs';
 
-import { JSINFO_INDEXER_CACHE_PATH, JSINFO_INDEXER_IS_READ_CACHE, JSINFO_INDEXER_IS_SAVE_CACHE } from './indexerConsts';
 import { ProcessOneEvent } from './eventProcessor';
 import { LavaBlock } from './types';
 
-//
-// Get block (mostly for date)
+import LavaBlockCache from './lavaBlockCache';
+
+const cache = new LavaBlockCache();
+
 export const GetRpcBlock = async (
     height: number,
     client: StargateClient,
 ): Promise<Block> => {
-    const pathBlocks = `${JSINFO_INDEXER_CACHE_PATH}${height.toString()}.json`
-    let block: Block;
-    let excp = true
-
-    if (JSINFO_INDEXER_IS_READ_CACHE) {
-        try {
-            excp = false
-            block = JSON.parse(readFileSync(pathBlocks, 'utf-8')) as Block
+    return cache.getOrGenerate<Block>(height, "block", async () => {
+        const block = await client.getBlock(height);
+        if (block.header === undefined) {
+            throw new Error('block.header is undefined');
         }
-        catch {
-            excp = true
-        }
-    }
-    if (excp || block!.header == undefined) {
-        block = await client.getBlock(height)
-        if (block!.header == undefined) {
-            throw ('block!.header == undefined')
-        }
-        if (JSINFO_INDEXER_IS_SAVE_CACHE) {
-            writeFileSync(pathBlocks, JSON.stringify(block, null, 0), 'utf-8')
-        }
-    }
-
-    return block!
+        return block;
+    });
 }
 
 export const GetRpcTxs = async (
@@ -46,66 +30,27 @@ export const GetRpcTxs = async (
     client: StargateClient,
     block: Block,
 ): Promise<IndexedTx[]> => {
-    //
-    // Get Txs for block
-    const pathTxs = `${JSINFO_INDEXER_CACHE_PATH}${height.toString()}_txs.json`
-    let txs: IndexedTx[] = []
-    let excp = true
-
-    if (JSINFO_INDEXER_IS_READ_CACHE) {
-        try {
-            excp = false
-            txs = JSON.parse(readFileSync(pathTxs, 'utf-8')) as IndexedTx[]
+    return cache.getOrGenerate<IndexedTx[]>(height, "txs", async () => {
+        const txs = await client.searchTx(`tx.height=${height}`);
+        if (txs.length === 0 && block.txs.length !== 0) {
+            throw new Error('txs.length == 0 && block.txs.length != 0');
         }
-        catch {
-            excp = true
-        }
-    }
-    if (excp) {
-        txs = await client.searchTx('tx.height=' + height)
-        if (txs.length == 0 && block!.txs.length != 0) {
-            throw ('txs.length == 0 && block!.txs.length != 0')
-        }
-        if (JSINFO_INDEXER_IS_SAVE_CACHE) {
-            writeFileSync(pathTxs, JSON.stringify(txs, null, 0), 'utf-8')
-        }
-    }
-
-    return txs
+        return txs;
+    });
 }
 
 export const GetRpcBlockResultEvents = async (
     height: number,
     client: Tendermint37Client
 ): Promise<Event[]> => {
-    //
-    // Get Begin/End block events
-    const pathTxs = `${JSINFO_INDEXER_CACHE_PATH}${height.toString()}_block_evts.json`
-    let evts: Event[] = []
-    let excp = true
-
-    if (JSINFO_INDEXER_IS_READ_CACHE) {
-        try {
-            excp = false
-            evts = JSON.parse(readFileSync(pathTxs, 'utf-8')) as Event[]
-        }
-        catch {
-            excp = true
-        }
-    }
-    if (excp) {
-        const res = await client.blockResults(height)
-        evts.push(...res.beginBlockEvents)
-        evts.push(...res.endBlockEvents)
+    return cache.getOrGenerate<Event[]>(height, "events", async () => {
+        const res = await client.blockResults(height);
+        const evts = [...res.beginBlockEvents, ...res.endBlockEvents];
         if (res.height != height) {
-            throw ('res.height != height')
+            throw new Error('res.height != height');
         }
-        if (JSINFO_INDEXER_IS_SAVE_CACHE) {
-            writeFileSync(pathTxs, JSON.stringify(evts, null, 0), 'utf-8')
-        }
-    }
-
-    return evts
+        return evts;
+    });
 }
 
 export const GetOneLavaBlock = async (

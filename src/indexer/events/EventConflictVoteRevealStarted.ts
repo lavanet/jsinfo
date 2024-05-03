@@ -1,7 +1,7 @@
 import { Event } from "@cosmjs/stargate"
 import { LavaBlock } from "../types";
 import * as JsinfoSchema from '../../schemas/jsinfo_schema';
-import { SetTx } from "../setlatest";
+import { SetTx } from "../setLatest";
 import { EventParseInt, EventProcessAttributes } from "../eventUtils";
 
 /*
@@ -47,7 +47,7 @@ export const ParseEventConflictVoteRevealStarted = (
   static_dbPlans: Map<string, JsinfoSchema.Plan>,
   static_dbStakes: Map<string, JsinfoSchema.ProviderStake[]>,
 ) => {
-  const evtEvent: JsinfoSchema.InsertEvent = {
+  const dbEvent: JsinfoSchema.InsertEvent = {
     tx: txHash,
     blockId: height,
     eventType: JsinfoSchema.LavaProviderEventType.VoteRevealStarted,
@@ -55,17 +55,20 @@ export const ParseEventConflictVoteRevealStarted = (
     provider: null,
   }
 
-  if (!EventProcessAttributes(lavaBlock, "ParseEventConflictVoteRevealStarted", {
+  if (!EventProcessAttributes({
+    caller: "ParseEventConflictVoteRevealStarted",
+    lavaBlock: lavaBlock,
     evt: evt,
     height: height,
     txHash: txHash,
+    dbEvent: dbEvent,
     processAttribute: (key: string, value: string) => {
       switch (key) {
         case 'voteDeadline':
-          evtEvent.i1 = EventParseInt(value)
+          dbEvent.i1 = EventParseInt(value)
           break
         case 'voteID':
-          evtEvent.t1 = value;
+          dbEvent.t1 = value;
           break
       }
     },
@@ -74,5 +77,5 @@ export const ParseEventConflictVoteRevealStarted = (
 
 
   SetTx(lavaBlock.dbTxs, txHash, height)
-  lavaBlock.dbEvents.push(evtEvent)
+  lavaBlock.dbEvents.push(dbEvent)
 }

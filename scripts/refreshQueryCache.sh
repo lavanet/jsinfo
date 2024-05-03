@@ -3,52 +3,57 @@
 # jsinfo/scripts/refreshQueryCache.sh
 
 REST_URL="${REST_URL:-http://0.0.0.0:8080}"
+LOG_PREFIX="${LOG_PREFIX:-}"
+
+log() {
+    echo "$(date) $LOG_PREFIX: $1" >&2
+}
 
 get() {
     url="$1"
     retries=5
     response=""
-    echo "revalidate_cache: calling get on $REST_URL$url" >&2
+    log "revalidate_cache: calling get on $REST_URL$url"
     i=0
     while [ $i -lt $retries ]; do
-        echo "Attempt number: $((i+1))" >&2
+        log "Attempt number: $((i+1))"
         response=$(curl -s -m 120 "$REST_URL$url")
         if echo "$url" | grep -q "Csv"; then
-            echo "Received a CSV response." >&2
+            log "Received a CSV response."
             echo "$response"
             return
         elif echo "$response" | jq . > /dev/null 2>&1; then
-            echo "Received a valid JSON response." >&2
+            log "Received a valid JSON response."
             if [ "$response" != "{}" ]; then
-                echo "Response is not empty, returning the response." >&2
+                log "Response is not empty, returning the response."
                 echo "$response"
                 return
             else
-                echo "Response is an empty JSON object." >&2
+                log "Response is an empty JSON object."
             fi
         else
-            echo "Received an invalid response." >&2
+            log "Received an invalid response."
         fi
         i=$((i+1))
-        echo "Sleeping for 0.5 seconds before the next attempt..." >&2
+        log "Sleeping for 0.5 seconds before the next attempt..."
         sleep 0.5
     done
-    echo "Exceeded maximum number of retries ($retries), exiting the function." >&2
+    log "Exceeded maximum number of retries ($retries), exiting the function."
 }
 
 revalidate_cache() {
-    echo "revalidate_cache: Starting revalidation of cache..."
+    log "revalidate_cache: Starting revalidation of cache..."
 
-    echo "revalidate_cache: Browsing to /cacheLinks"
+    log "revalidate_cache: Browsing to /cacheLinks"
     response=$(get "/cacheLinks")
     urls=$(echo "$response" | jq -r '.urls[]')
 
     for url in $urls; do
-        echo "revalidate_cache: Browsing to $url"
+        log "revalidate_cache: Browsing to $url"
         get "$url" > /dev/null
     done
 
-    echo "revalidate_cache: Finished revalidation of cache."
+    log "revalidate_cache: Finished revalidation of cache."
 }
 
 while true; do

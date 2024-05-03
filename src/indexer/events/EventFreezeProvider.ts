@@ -1,7 +1,7 @@
 import { Event } from "@cosmjs/stargate"
 import { LavaBlock } from "../types";
 import * as JsinfoSchema from '../../schemas/jsinfo_schema';
-import { GetOrSetProvider, SetTx } from "../setlatest";
+import { GetOrSetProvider, SetTx } from "../setLatest";
 import { EventProcessAttributes, EventParseProviderAddress, EventParseInt } from "../eventUtils";
 
 /*
@@ -29,37 +29,40 @@ export const ParseEventFreezeProvider = (
     static_dbPlans: Map<string, JsinfoSchema.Plan>,
     static_dbStakes: Map<string, JsinfoSchema.ProviderStake[]>,
 ) => {
-    const evtEvent: JsinfoSchema.InsertEvent = {
+    const dbEvent: JsinfoSchema.InsertEvent = {
         tx: txHash,
         blockId: height,
         eventType: JsinfoSchema.LavaProviderEventType.FreezeProvider,
         consumer: null,
     }
 
-    if (!EventProcessAttributes(lavaBlock, "ParseEventFreezeProvider", {
+    if (!EventProcessAttributes({
+        caller: "ParseEventFreezeProvider",
+        lavaBlock: lavaBlock,
         evt: evt,
         height: height,
         txHash: txHash,
+        dbEvent: dbEvent,
         processAttribute: (key: string, value: string) => {
             switch (key) {
                 case 'providerAddress':
-                    evtEvent.provider = EventParseProviderAddress(value);
+                    dbEvent.provider = EventParseProviderAddress(value);
                     break
                 case 'freezeReason':
-                    evtEvent.t1 = value;
+                    dbEvent.t1 = value;
                     break
                 case 'chainIDs':
-                    evtEvent.t2 = value;
+                    dbEvent.t2 = value;
                     break
                 case 'freezeRequestBlock':
-                    evtEvent.i1 = EventParseInt(value)
+                    dbEvent.i1 = EventParseInt(value)
                     break
             }
         },
-        verifyFunction: () => !!evtEvent.provider
+        verifyFunction: () => !!dbEvent.provider
     })) return;
 
     SetTx(lavaBlock.dbTxs, txHash, height)
-    GetOrSetProvider(lavaBlock.dbProviders, static_dbProviders, evtEvent.provider!, '')
-    lavaBlock.dbEvents.push(evtEvent)
+    GetOrSetProvider(lavaBlock.dbProviders, static_dbProviders, dbEvent.provider!, '')
+    lavaBlock.dbEvents.push(dbEvent)
 }

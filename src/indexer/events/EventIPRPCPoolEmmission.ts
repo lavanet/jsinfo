@@ -1,22 +1,14 @@
 import { Event } from "@cosmjs/stargate"
 import { LavaBlock } from "../types";
 import * as JsinfoSchema from '../../schemas/jsinfo_schema';
-import { GetOrSetConsumer, SetTx } from "../setLatest";
-import { EventProcessAttributes, EventParseProviderAddress } from "../eventUtils";
+import { SetTx } from "../setLatest";
+import { EventProcessAttributes } from "../eventUtils";
 
-/*
-461834 {
-  type: 'lava_conflict_detection_received',
-  attributes: [
-    {
-      key: 'client',
-      value: 'lava@1qu0jm3ev9hl3l285wn8ppw8n7jtn9d2a2d5uch'
-    }
-  ]
-}
+/* 
+1500436	1000	 	1138596	{"type":"lava_iprpc-pool-emmission","iprpc_rewards_leftovers":"9ulava"}
 */
 
-export const ParseEventConflictDetectionReceived = (
+export const ParseIPRPCPoolEmission = (
   evt: Event,
   height: number,
   txHash: string | null,
@@ -26,15 +18,17 @@ export const ParseEventConflictDetectionReceived = (
   static_dbPlans: Map<string, JsinfoSchema.Plan>,
   static_dbStakes: Map<string, JsinfoSchema.ProviderStake[]>,
 ) => {
+
   const dbEvent: JsinfoSchema.InsertEvent = {
     tx: txHash,
     blockId: height,
-    eventType: JsinfoSchema.LavaProviderEventType.ConflictDetectionReceived,
+    eventType: JsinfoSchema.LavaProviderEventType.IPRPCPoolEmission,
+    consumer: null,
     provider: null,
   }
 
   if (!EventProcessAttributes({
-    caller: "ParseEventConflictDetectionReceived",
+    caller: "ParseIPRPCPoolEmission",
     lavaBlock: lavaBlock,
     evt: evt,
     height: height,
@@ -42,15 +36,14 @@ export const ParseEventConflictDetectionReceived = (
     dbEvent: dbEvent,
     processAttribute: (key: string, value: string) => {
       switch (key) {
-        case 'client':
-          dbEvent.consumer = EventParseProviderAddress(value);
-          break
+        case 'iprpc_rewards_leftovers':
+          dbEvent.t1 = value;
+          break;
       }
     },
-    verifyFunction: () => !!dbEvent.consumer
+    verifyFunction: () => !!dbEvent.provider
   })) return;
 
   SetTx(lavaBlock.dbTxs, txHash, height)
-  GetOrSetConsumer(lavaBlock.dbConsumers, dbEvent.consumer!)
   lavaBlock.dbEvents.push(dbEvent)
 }

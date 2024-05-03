@@ -21,6 +21,7 @@ import { ParseEventFreezeProvider } from "./events/EventFreezeProvider";
 import { ParseEventUnfreezeProvider } from "./events/EventUnfreezeProvider";
 import { ParseEventProviderReported } from "./events/EventProviderReported";
 import { ParseEventProviderJailed } from "./events/EventProviderJailed";
+import { ParseEventProviderLatestBlockReport } from "./events/EventProviderLatestBlockReport";
 
 // Conflict Events
 import { ParseEventConflictVoteGotCommit } from "./events/EventConflictVoteGotCommit";
@@ -31,16 +32,21 @@ import { ParseEventConflictVoteRevealStarted } from "./events/EventConflictVoteR
 import { ParseEventConflictDetectionVoteResolved } from "./events/EventConflictDetectionVoteResolved";
 import { ParseEventConflictDetectionVoteUnresolved } from "./events/EventConflictDetectionVoteUnresolved";
 
+// Rewards Events
+import { ParseEventProviderBonusRewards } from "./events/EventProviderBonusRewards";
+import { ParseIPRPCPoolEmission } from "./events/EventIPRPCPoolEmmission";
+
 // Dual Staking Events
 import { ParseEventDelegateToProvider } from "./events/EventDelegateToProvider";
 import { ParseEventUbondFromProvider } from "./events/EventUnbondFromProvider";
 import { ParseEventRedelegateBetweenProviders } from "./events/EventRedelegateBetweenProviders";
 import { ParseEventLavaFreezeFromUnbound } from "./events/EventFreezeFromUnbond";
 import { ParseEventUnstakeFromUnbound } from "./events/EventUnstakeFromUnbound";
+import { ParseValidatorSlash } from "./events/EventValidatorSlash";
 
 // Unidentified Event
 import { ParseEventUnidentified } from "./events/EventUnidentified";
-import { ParseEventProviderLatestBlockReport } from "./events/EventProviderLatestBlockReport";
+import { ParseDistributionPoolsRefill } from "./events/EventDistributionPoolsRefill";
 
 export const ProcessOneEvent = (
     evt: Event,
@@ -120,15 +126,37 @@ export const ProcessOneEvent = (
         case 'lava_del_project_to_subscription_event':
             ParseEventDelProjectToSubscription(evt, height, txHash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
             break
-        case 'lava_del_key_from_project_event':
-            ParseEventDelKeyFromProject(evt, height, txHash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
-            break
-        case 'lava_add_key_to_project_event':
-            ParseEventAddKeyToProject(evt, height, txHash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
-            break
         case 'lava_expire_subscription_event':
             ParseEventExpireSubscrption(evt, height, txHash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
             break
+
+
+
+        // 
+        // Project events
+        // https://github.com/lavanet/lava/blob/main/x/projects/types/types.go#L19
+        /*
+            AddProjectKeyEventName         = "add_key_to_project_event"
+            DelProjectKeyEventName         = "del_key_from_project_event"
+            SetAdminPolicyEventName        = "set_admin_policy_event"
+            SetSubscriptionPolicyEventName = "set_subscription_policy_event"
+            ProjectResetFailEventName      = "project_reset_failed"
+        */
+
+        // a successful addition of a project key
+        case 'lava_add_key_to_project_event':
+            ParseEventAddKeyToProject(evt, height, txHash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
+            break
+
+        // a successful deletion of a project key 
+        case 'lava_del_key_from_project_event':
+            ParseEventDelKeyFromProject(evt, height, txHash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
+            break
+
+        // case 'lava_set_subscription_policy_event':
+        //     // TODO - maybe?
+        //     break
+
 
         //
         // Conflict
@@ -206,9 +234,10 @@ export const ProcessOneEvent = (
         // case 'lava_contributor_rewards':
         //     break
 
-        // // validator slashed happened, providers slashed accordingly
-        // case 'lava_validator_slash':
-        //     break
+        // validator slashed happened, providers slashed accordingly
+        case 'lava_validator_slash':
+            ParseValidatorSlash(evt, height, txHash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
+            break
 
         case 'lava_freeze_from_unbond':
             ParseEventLavaFreezeFromUnbound(evt, height, txHash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
@@ -219,13 +248,24 @@ export const ProcessOneEvent = (
             break
 
         //
-        // Dual stacking
-        // https://github.com/lavanet/lava/blob/main/x/projects/types/types.go#L20
+        // Rewards
+        // https://github.com/lavanet/lava/blob/main/x/rewards/types/types.go#L29
         //
 
-        // case 'lava_set_subscription_policy_event':
-        //     // TODO - maybe?
-        //     break
+        case "lava_provider_bonus_rewards":
+            ParseEventProviderBonusRewards(evt, height, txHash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
+            break
+
+        // a successful distribution of IPRPC bonus rewards
+        case "lava_iprpc-pool-emmission":
+        case "lava_iprpc_pool_emmission":
+            ParseIPRPCPoolEmission(evt, height, txHash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
+            break
+
+        // a successful distribution rewards pools refill     
+        case "lava_distribution_pools_refill":
+            ParseDistributionPoolsRefill(evt, height, txHash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
+            break
 
         //
         // Epoc storage

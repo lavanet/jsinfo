@@ -1,7 +1,7 @@
 import { Event } from "@cosmjs/stargate"
 import { LavaBlock } from "../types";
 import * as JsinfoSchema from '../../schemas/jsinfo_schema';
-import { GetOrSetConsumer, SetTx, GetOrSetSpec } from "../setlatest";
+import { GetOrSetConsumer, SetTx, GetOrSetSpec } from "../setLatest";
 import { EventProcessAttributes, EventParseProviderAddress, EventParseInt } from "../eventUtils";
 
 /*
@@ -87,15 +87,18 @@ export const ParseEventResponseConflictDetection = (
   static_dbPlans: Map<string, JsinfoSchema.Plan>,
   static_dbStakes: Map<string, JsinfoSchema.ProviderStake[]>,
 ) => {
-  const evtEvent: JsinfoSchema.InsertConflictResponse = {
+  const dbEvent: JsinfoSchema.InsertConflictResponse = {
     tx: txHash,
     blockId: height,
   }
 
-  if (!EventProcessAttributes(lavaBlock, "ParseEventResponseConflictDetection", {
+  if (!EventProcessAttributes({
+    caller: "ParseEventResponseConflictDetection",
+    lavaBlock: lavaBlock,
     evt: evt,
     height: height,
     txHash: txHash,
+    dbEvent: dbEvent,
     processAttribute: (key: string, value: string) => {
       switch (key) {
         /*
@@ -107,37 +110,37 @@ export const ParseEventResponseConflictDetection = (
              break
            */
         case 'requestBlock':
-          evtEvent.requestBlock = EventParseInt(value)
+          dbEvent.requestBlock = EventParseInt(value)
           break
         case 'voteDeadline':
-          evtEvent.voteDeadline = EventParseInt(value)
+          dbEvent.voteDeadline = EventParseInt(value)
           break
         case 'apiInterface':
-          evtEvent.apiInterface = value;
+          dbEvent.apiInterface = value;
           break
         case 'client':
-          evtEvent.consumer = EventParseProviderAddress(value);
+          dbEvent.consumer = EventParseProviderAddress(value);
           break
         case 'voteID':
-          evtEvent.voteId = value;
+          dbEvent.voteId = value;
           break
         case 'chainID':
-          evtEvent.specId = value;
+          dbEvent.specId = value;
           break
         case 'apiURL':
-          evtEvent.apiURL = value;
+          dbEvent.apiURL = value;
           break
         case 'connectionType':
-          evtEvent.connectionType = value;
+          dbEvent.connectionType = value;
           break
       }
     },
-    verifyFunction: () => !!evtEvent.consumer,
+    verifyFunction: () => !!dbEvent.consumer,
     skipKeys: ['requestData']
   })) return;
 
   SetTx(lavaBlock.dbTxs, txHash, height)
-  GetOrSetSpec(lavaBlock.dbSpecs, static_dbSpecs, evtEvent.specId!)
-  GetOrSetConsumer(lavaBlock.dbConsumers, evtEvent.consumer!)
-  lavaBlock.dbConflictResponses.push(evtEvent)
+  GetOrSetSpec(lavaBlock.dbSpecs, static_dbSpecs, dbEvent.specId!)
+  GetOrSetConsumer(lavaBlock.dbConsumers, dbEvent.consumer!)
+  lavaBlock.dbConflictResponses.push(dbEvent)
 }

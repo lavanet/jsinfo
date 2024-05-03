@@ -1,7 +1,7 @@
 import { Event } from "@cosmjs/stargate"
 import { LavaBlock } from "../types";
 import * as JsinfoSchema from '../../schemas/jsinfo_schema';
-import { GetOrSetProvider, SetTx } from "../setlatest";
+import { GetOrSetProvider, SetTx } from "../setLatest";
 import { EventParseUlava, EventProcessAttributes, EventParseProviderAddress } from "../eventUtils";
 
 /*
@@ -106,7 +106,7 @@ export const ParseEventDelegateToProvider = (
   let delegator: string | null = null;
   let provider: string | null = null;
 
-  const evtEvent: JsinfoSchema.InsertEvent = {
+  const dbEvent: JsinfoSchema.InsertEvent = {
     tx: txHash,
     blockId: height,
     eventType: JsinfoSchema.LavaProviderEventType.DelegateToProvider,
@@ -114,10 +114,13 @@ export const ParseEventDelegateToProvider = (
     provider: null,
   }
 
-  if (!EventProcessAttributes(lavaBlock, "ParseEventDelegateToProvider", {
+  if (!EventProcessAttributes({
+    caller: "ParseEventDelegateToProvider",
+    lavaBlock: lavaBlock,
     evt: evt,
     height: height,
     txHash: txHash,
+    dbEvent: dbEvent,
     processAttribute: (key: string, value: string) => {
       switch (key) {
         case 'delegator':
@@ -127,13 +130,13 @@ export const ParseEventDelegateToProvider = (
           if (value.startsWith('lava@')) provider = EventParseProviderAddress(value);
           break;
         case 'chainID':
-          evtEvent.t2 = value;
+          dbEvent.t2 = value;
           break
         case 'amount':
-          evtEvent.t3 = value;
+          dbEvent.t3 = value;
           break
         // case 'amount':
-        //   evtEvent.b1 = EventParseUlava(value);
+        //   dbEvent.b1 = EventParseUlava(value);
         //   break
       }
     },
@@ -142,7 +145,7 @@ export const ParseEventDelegateToProvider = (
 
   if (delegator !== provider) {
     const delegatorEvent = {
-      ...evtEvent, provider:
+      ...dbEvent, provider:
         delegator,
       t1: provider ? `provider: ${provider}` : null,
     };
@@ -150,10 +153,10 @@ export const ParseEventDelegateToProvider = (
     lavaBlock.dbEvents.push(delegatorEvent);
   }
 
-  evtEvent.provider = provider;
-  evtEvent.t1 = delegator ? `delegator: ${delegator}` : null
+  dbEvent.provider = provider;
+  dbEvent.t1 = delegator ? `delegator: ${delegator}` : null
 
   SetTx(lavaBlock.dbTxs, txHash, height)
-  GetOrSetProvider(lavaBlock.dbProviders, static_dbProviders, evtEvent.provider!, '')
-  lavaBlock.dbEvents.push(evtEvent)
+  GetOrSetProvider(lavaBlock.dbProviders, static_dbProviders, dbEvent.provider!, '')
+  lavaBlock.dbEvents.push(dbEvent)
 }

@@ -1,7 +1,7 @@
 import { Event } from "@cosmjs/stargate"
 import { LavaBlock } from "../types";
 import * as JsinfoSchema from '../../schemas/jsinfo_schema';
-import { GetOrSetConsumer, SetTx } from "../setlatest";
+import { GetOrSetConsumer, SetTx } from "../setLatest";
 import { EventProcessAttributes, EventParseProviderAddress, EventParseInt } from "../eventUtils";
 
 /*
@@ -28,32 +28,35 @@ export const ParseEventBuySubscription = (
     static_dbPlans: Map<string, JsinfoSchema.Plan>,
     static_dbStakes: Map<string, JsinfoSchema.ProviderStake[]>,
 ) => {
-    const evtEvent: JsinfoSchema.InsertSubscriptionBuy = {
+    const dbEvent: JsinfoSchema.InsertSubscriptionBuy = {
         blockId: height,
         tx: txHash,
     }
 
-    if (!EventProcessAttributes(lavaBlock, "ParseEventBuySubscription", {
+    if (!EventProcessAttributes({
+        caller: "ParseEventBuySubscription",
+        lavaBlock: lavaBlock,
         evt: evt,
         height: height,
         txHash: txHash,
+        dbEvent: dbEvent,
         processAttribute: (key: string, value: string) => {
             switch (key) {
                 case 'consumer':
-                    evtEvent.consumer = EventParseProviderAddress(value);
+                    dbEvent.consumer = EventParseProviderAddress(value);
                     break
                 case 'duration':
-                    evtEvent.duration = EventParseInt(value)
+                    dbEvent.duration = EventParseInt(value)
                     break
                 case 'plan':
-                    evtEvent.plan = value;
+                    dbEvent.plan = value;
                     break
             }
         },
-        verifyFunction: () => !!evtEvent.consumer
+        verifyFunction: () => !!dbEvent.consumer
     })) return;
 
     SetTx(lavaBlock.dbTxs, txHash, height)
-    GetOrSetConsumer(lavaBlock.dbConsumers, evtEvent.consumer!)
-    lavaBlock.dbSubscriptionBuys.push(evtEvent)
+    GetOrSetConsumer(lavaBlock.dbConsumers, dbEvent.consumer!)
+    lavaBlock.dbSubscriptionBuys.push(dbEvent)
 }

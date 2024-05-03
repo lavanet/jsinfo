@@ -1,9 +1,10 @@
 // jsinfo/src/indexer/eventUtils.ts
 
 import { Event, Attribute } from "@cosmjs/stargate"
-import { JSINFO_INDEXER_EVENT_ATTRIBUTE_VALUE_MAX_LENGTH } from './indexerConsts';
+import { JSINFO_INDEXER_EVENT_ATTRIBUTE_KEY_COUNT_MAX, JSINFO_INDEXER_EVENT_ATTRIBUTE_VALUE_MAX_LENGTH } from './indexerConsts';
 import { ParseEventError } from "./events/EventError";
 import { LavaBlock } from "./types";
+import * as JsinfoSchema from '../schemas/jsinfo_schema';
 
 export function EventExtractKeyFromAttribute(attr: Attribute): string {
     if (attr.key.length < 2) {
@@ -111,81 +112,104 @@ export function EventParseUlava(value: string): number {
 }
 
 export interface EventProcessAttributesProps {
+    caller: string;
+    lavaBlock: LavaBlock,
     evt: Event;
     height: number;
     txHash: string | null;
-    processAttribute: (key: string, value: string) => void;
+    dbEvent?: JsinfoSchema.InsertEvent | null,
+    processAttribute?: (key: string, value: string) => void;
     verifyFunction?: (() => boolean) | null;
     skipKeys?: string[] | null;
 }
 
 export function EventProcessAttributes(
-    lavaBlock: LavaBlock,
-    caller: string,
     {
+        caller,
+        lavaBlock,
         evt,
         height,
         txHash,
+        dbEvent,
         processAttribute,
         verifyFunction = null,
         skipKeys = null,
     }: EventProcessAttributesProps
 ): boolean {
 
+    let attributesDict: { [key: string]: string } = {};
+    let keysCounter = 0;
+    let error: unknown | null | string = null;
+
     try {
         evt.attributes.forEach((attr: Attribute) => {
+            keysCounter++;
+            if (keysCounter > JSINFO_INDEXER_EVENT_ATTRIBUTE_KEY_COUNT_MAX) {
+                error = `EventProcessAttributes: Too many keys: ${evt.attributes.length}`;
+                return;
+            }
+
             if (attr.key == "" || attr.value == "") return;
             if (attr.key.toLocaleLowerCase() == "<nil>" || attr.value == "<nil>") return;
             if (skipKeys && skipKeys.includes(attr.key)) return;
 
-            if (attr.key.length > JSINFO_INDEXER_EVENT_ATTRIBUTE_VALUE_MAX_LENGTH || attr.value.length > JSINFO_INDEXER_EVENT_ATTRIBUTE_VALUE_MAX_LENGTH) {
-                const trimmedKey = attr.key.substring(0, JSINFO_INDEXER_EVENT_ATTRIBUTE_VALUE_MAX_LENGTH);
-                const trimmedValue = attr.value.substring(0, JSINFO_INDEXER_EVENT_ATTRIBUTE_VALUE_MAX_LENGTH);
-                throw new Error(`Key or value is too long. Trimmed key: ${trimmedKey}, Trimmed value: ${trimmedValue}`);
+            let key = EventExtractKeyFromAttribute(attr);
+            let value = attr.value;
+
+            if (key.length > JSINFO_INDEXER_EVENT_ATTRIBUTE_VALUE_MAX_LENGTH) {
+                key = key.substring(0, JSINFO_INDEXER_EVENT_ATTRIBUTE_VALUE_MAX_LENGTH) + " ...";
             }
 
-            processAttribute(EventExtractKeyFromAttribute(attr), attr.value);
-        })
-    } catch (error) {
-        console.warn(`
-            EventProcessAttributes processAttribute error.
-            Caller: ${caller}
-            ${(error + "").substring(0, 0x1000)}
-            Height: ${height.toString().substring(0, 0x1000)}
-            TxHash: ${txHash?.substring(0, 0x1000)}
-            Event: ${JSON.stringify(evt).substring(0, 0x1000)}
-        `);
+            if (value.length > JSINFO_INDEXER_EVENT_ATTRIBUTE_VALUE_MAX_LENGTH) {
+                value = value.substring(0, JSINFO_INDEXER_EVENT_ATTRIBUTE_VALUE_MAX_LENGTH) + " ...";
+            }
 
-        ParseEventError(evt, height, txHash, lavaBlock, error, caller);
-        return false;
+            if (processAttribute) processAttribute(key, value);
+
+            attributesDict[key] = value;
+        })
+
+    } catch (error) {
+        error = error;
+    }
+
+    if (!error) {
+        try {
+            if (verifyFunction && !verifyFunction()) {
+                error = "verifyFunctionCalledAndFailed";
+            }
+        } catch (error) {
+            error = error;
+        }
     }
 
     try {
-        if (verifyFunction && !verifyFunction()) {
-            console.warn(`
-                EventProcessAttributes verifyFunction failed.
-                Caller: ${caller}
-                VerifyFunction: ${verifyFunction.toString()}
-                Height: ${height.toString().substring(0, 0x1000)}
-                TxHash: ${txHash?.substring(0, 0x1000)}
-                Event: ${JSON.stringify(evt).substring(0, 0x1000)}
-            `);
-            ParseEventError(evt, height, txHash, lavaBlock, "verifyFunctionFailed", caller);
-            return false;
+        if (dbEvent) {
+            dbEvent.fulltext = JSON.stringify(attributesDict).substring(0, 10000);;
         }
     } catch (error) {
-        console.warn(`
-            EventProcessAttributes verifyFunction error.
-            Caller: ${caller}
-            ${(error + "").substring(0, 0x1000)}
-            VerifyFunction: ${verifyFunction?.toString()}
-            Height: ${height.toString().substring(0, 0x1000)}
-            TxHash: ${txHash?.substring(0, 0x1000)}
-            Event: ${JSON.stringify(evt).substring(0, 0x1000)}
-        `);
-        ParseEventError(evt, height, txHash, lavaBlock, error, caller);
-        return false;
+        error = "dbEventFulltextStringifyError"
     }
 
-    return true;
+    if (!error) return true;
+
+    if (dbEvent && !dbEvent.fulltext) {
+        try {
+            dbEvent.fulltext = JSON.stringify(evt).substring(0, 10000);
+        } catch (error) {
+            dbEvent.fulltext = (evt + "").substring(0, 10000);
+        }
+    }
+
+    console.warn(`
+    EventProcessAttributes processAttribute error.
+    Caller: ${caller}
+    ${(error + "").substring(0, 0x1000)}
+    Height: ${height.toString().substring(0, 0x1000)}
+    TxHash: ${txHash?.substring(0, 0x1000)}
+    Event: ${JSON.stringify(evt).substring(0, 0x1000)}
+    `);
+
+    ParseEventError(evt, height, txHash, lavaBlock, error, caller);
+    return false;
 }

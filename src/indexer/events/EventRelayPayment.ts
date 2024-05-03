@@ -1,7 +1,7 @@
 import { Event } from "@cosmjs/stargate"
 import { LavaBlock } from "../types";
 import * as JsinfoSchema from '../../schemas/jsinfo_schema';
-import { GetOrSetConsumer, GetOrSetProvider, GetOrSetSpec, SetTx } from "../setlatest";
+import { GetOrSetConsumer, GetOrSetProvider, GetOrSetSpec, SetTx } from "../setLatest";
 import { EventParseUlava, EventProcessAttributes, EventParseProviderAddress, EventParseInt, EventParseFloat } from "../eventUtils";
 
 // Mint is not used
@@ -190,16 +190,19 @@ export const ParseEventRelayPayment = (
   static_dbPlans: Map<string, JsinfoSchema.Plan>,
   static_dbStakes: Map<string, JsinfoSchema.ProviderStake[]>,
 ) => {
-  const evtEvent: JsinfoSchema.InsertRelayPayment = {
+  const dbEvent: JsinfoSchema.InsertRelayPayment = {
     tx: txHash,
     blockId: height,
     datetime: new Date(lavaBlock.datetime),
   }
 
-  if (!EventProcessAttributes(lavaBlock, "ParseEventRelayPayment", {
+  if (!EventProcessAttributes({
+    caller: "ParseEventRelayPayment",
+    lavaBlock: lavaBlock,
     evt: evt,
     height: height,
     txHash: txHash,
+    dbEvent: dbEvent,
     processAttribute: (key: string, value: string) => {
       switch (key) {
         /*
@@ -232,54 +235,54 @@ export const ParseEventRelayPayment = (
                   let h = EventParseInt(sT[i]).toString(16);
                   res += h.length % 2 ? '0' + h : h;
                 }
-                evtEvent.badge = res;
+                dbEvent.badge = res;
                 break
               */
 
         case 'relayNumber':
-          evtEvent.relays = EventParseInt(value)
+          dbEvent.relays = EventParseInt(value)
           break
         case 'ExcellenceQoSAvailability':
-          evtEvent.qosAvailabilityExc = EventParseFloat(value);
+          dbEvent.qosAvailabilityExc = EventParseFloat(value);
           break
         case 'ExcellenceQoSLatency':
-          evtEvent.qosLatencyExc = EventParseFloat(value);
+          dbEvent.qosLatencyExc = EventParseFloat(value);
           break
         case 'ExcellenceQoSSync':
-          evtEvent.qosSyncExc = EventParseFloat(value);
+          dbEvent.qosSyncExc = EventParseFloat(value);
           break
         case 'QoSSync':
-          evtEvent.qosSync = EventParseFloat(value);
+          dbEvent.qosSync = EventParseFloat(value);
           break
         case 'QoSLatency':
-          evtEvent.qosLatency = EventParseFloat(value);
+          dbEvent.qosLatency = EventParseFloat(value);
           break
         case 'QoSAvailability':
-          evtEvent.qosAvailability = EventParseFloat(value);
+          dbEvent.qosAvailability = EventParseFloat(value);
           break
         case 'provider':
-          evtEvent.provider = EventParseProviderAddress(value);
+          dbEvent.provider = EventParseProviderAddress(value);
           break
         case 'chainID':
-          evtEvent.specId = value;
+          dbEvent.specId = value;
           break
         case 'CU':
-          evtEvent.cu = EventParseInt(value)
+          dbEvent.cu = EventParseInt(value)
           break
         case 'client':
-          evtEvent.consumer = value;
+          dbEvent.consumer = value;
           break
         case 'BasePay':
-          evtEvent.pay = EventParseUlava(value)
+          dbEvent.pay = EventParseUlava(value)
           break
       }
     },
-    verifyFunction: () => !!evtEvent.provider
+    verifyFunction: () => !!dbEvent.provider
   })) return;
 
   SetTx(lavaBlock.dbTxs, txHash, height)
-  GetOrSetProvider(lavaBlock.dbProviders, static_dbProviders, evtEvent.provider!, '')
-  GetOrSetSpec(lavaBlock.dbSpecs, static_dbSpecs, evtEvent.specId!)
-  GetOrSetConsumer(lavaBlock.dbConsumers, evtEvent.consumer!)
-  lavaBlock.dbPayments.push(evtEvent)
+  GetOrSetProvider(lavaBlock.dbProviders, static_dbProviders, dbEvent.provider!, '')
+  GetOrSetSpec(lavaBlock.dbSpecs, static_dbSpecs, dbEvent.specId!)
+  GetOrSetConsumer(lavaBlock.dbConsumers, dbEvent.consumer!)
+  lavaBlock.dbPayments.push(dbEvent)
 }

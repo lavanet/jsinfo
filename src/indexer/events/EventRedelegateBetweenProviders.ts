@@ -2,7 +2,7 @@
 import { Event } from "@cosmjs/stargate"
 import { LavaBlock } from "../types";
 import * as JsinfoSchema from '../../schemas/jsinfo_schema';
-import { GetOrSetProvider, SetTx } from "../setlatest";
+import { GetOrSetProvider, SetTx } from "../setLatest";
 import { EventParseUlava, EventProcessAttributes, EventParseProviderAddress } from "../eventUtils";
 
 /*
@@ -48,7 +48,7 @@ export const ParseEventRedelegateBetweenProviders = (
   let from_chainID: string | null = null;
   let to_chainID: string | null = null;
 
-  const evtEvent: JsinfoSchema.InsertEvent = {
+  const dbEvent: JsinfoSchema.InsertEvent = {
     tx: txHash,
     blockId: height,
     eventType: JsinfoSchema.LavaProviderEventType.RedelegateBetweenProviders,
@@ -56,10 +56,13 @@ export const ParseEventRedelegateBetweenProviders = (
     provider: null,
   }
 
-  if (!EventProcessAttributes(lavaBlock, "EventRedelegateBetweenProviders", {
+  if (!EventProcessAttributes({
+    caller: "EventRedelegateBetweenProviders",
+    lavaBlock: lavaBlock,
     evt: evt,
     height: height,
     txHash: txHash,
+    dbEvent: dbEvent,
     processAttribute: (key: string, value: string) => {
       switch (key) {
         case 'delegator':
@@ -78,7 +81,7 @@ export const ParseEventRedelegateBetweenProviders = (
           to_chainID = value;
           break
         case 'amount':
-          evtEvent.b1 = EventParseUlava(value);
+          dbEvent.b1 = EventParseUlava(value);
           break
       }
     },
@@ -89,12 +92,12 @@ export const ParseEventRedelegateBetweenProviders = (
   let providerInfo = `delegator: ${delegator}, from_provider: ${from_provider}, to_provider: ${to_provider}`;
   let chainInfo = `from_chain: ${from_chainID}, to_chain: ${to_chainID}`;
 
-  evtEvent.t1 = providerInfo;
-  evtEvent.t2 = chainInfo;
+  dbEvent.t1 = providerInfo;
+  dbEvent.t2 = chainInfo;
 
   if (delegator !== from_provider) {
     const fromProviderEvent = {
-      ...evtEvent,
+      ...dbEvent,
       provider: from_provider,
     };
     GetOrSetProvider(lavaBlock.dbProviders, static_dbProviders, fromProviderEvent.provider!, '')
@@ -103,7 +106,7 @@ export const ParseEventRedelegateBetweenProviders = (
 
   if (delegator !== to_provider) {
     const toProviderEvent = {
-      ...evtEvent,
+      ...dbEvent,
       provider: to_provider,
     };
     GetOrSetProvider(lavaBlock.dbProviders, static_dbProviders, toProviderEvent.provider!, '')
@@ -111,7 +114,7 @@ export const ParseEventRedelegateBetweenProviders = (
   }
 
   SetTx(lavaBlock.dbTxs, txHash, height);
-  GetOrSetProvider(lavaBlock.dbProviders, static_dbProviders, evtEvent.provider!, '');
-  lavaBlock.dbEvents.push(evtEvent);
+  GetOrSetProvider(lavaBlock.dbProviders, static_dbProviders, dbEvent.provider!, '');
+  lavaBlock.dbEvents.push(dbEvent);
 
 }

@@ -8,10 +8,10 @@ import { Tendermint37Client } from "@cosmjs/tendermint-rpc";
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { eq, desc } from "drizzle-orm";
 import { PromisePool } from '@supercharge/promise-pool'
-import { GetOneLavaBlock } from './indexer/lavablock'
+import { GetOneLavaBlock } from './indexer/lavaBlock'
 import { EventDebug } from './indexer/eventDebug'
 import { LavaBlock } from './indexer/types'
-import { UpdateLatestBlockMeta } from './indexer/setlatest'
+import { UpdateLatestBlockMeta } from './indexer/setLatest'
 import { DoInChunks, logger, BackoffRetry, ConnectToRpc, RpcConnection } from "./utils";
 import { MigrateDb, GetJsinfoDb } from "./dbUtils";
 import { updateAggHourlyPayments } from "./indexer/aggregate";

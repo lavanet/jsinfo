@@ -143,6 +143,10 @@ export enum LavaProviderEventType {
   UbnondFromProvider,
   UnstakeFromUnbound,
   RedelegateBetweenProviders,
+  ProviderBonusRewards,
+  ValidtorSlash,
+  IPRPCPoolEmission,
+  DistributionPoolsRefill,
   UnidentifiedEvent = 1000,
   ErrorEvent = 1001
 }
@@ -168,6 +172,8 @@ export const events = pgTable('events', {
   consumer: text('consumer').references(() => consumers.address),
   blockId: integer('block_id').references(() => blocks.height),
   tx: text('tx').references(() => txs.hash),
+
+  fulltext: text('fulltext'),
 });
 export type Event = typeof events.$inferSelect
 export type InsertEvent = typeof events.$inferInsert

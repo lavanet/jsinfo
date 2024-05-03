@@ -104,11 +104,12 @@ class ProviderStakesData {
         return data;
     }
 
-    public async getPaginatedItems(request: FastifyRequest): Promise<{ data: any[] }> {
+    public async getPaginatedItems(request: FastifyRequest): Promise<{ data: JsinfoSchema.ProviderStake[] }> {
         let data = await this.fetchDataFromCache();
 
+        const defaultSortKey = "specId"
         let pagination: Pagination = ParsePaginationFromRequest(request) || ParsePaginationFromString("specId,descending,1," + JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE)
-        if (pagination.sortKey === null) pagination.sortKey = "specId";
+        if (pagination.sortKey === null) pagination.sortKey = defaultSortKey;
 
 
         // Validate sortKey
@@ -118,10 +119,9 @@ class ProviderStakesData {
         }
 
         // Apply sorting
-        const sortKeyParts = pagination.sortKey.split('.');
         data.sort((a, b) => {
-            const aValue = sortKeyParts.reduce((obj, key) => (obj && obj[key] !== undefined) ? obj[key] : null, a);
-            const bValue = sortKeyParts.reduce((obj, key) => (obj && obj[key] !== undefined) ? obj[key] : null, b);
+            const aValue = a[pagination.sortKey || defaultSortKey];
+            const bValue = b[pagination.sortKey || defaultSortKey];
             return CompareValues(aValue, bValue, pagination.direction);
         });
 

@@ -134,8 +134,10 @@ class IndexProvidersData {
     public async getPaginatedItems(request: FastifyRequest): Promise<{ data: any[] }> {
         let data = await this.fetchDataFromCache();
 
+        const defaultSortKey = "totalStake";
+
         let pagination: Pagination = ParsePaginationFromRequest(request) || ParsePaginationFromString("totalStake,descending,1," + JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE)
-        if (pagination.sortKey === null) pagination.sortKey = "totalStake";
+        if (pagination.sortKey === null) pagination.sortKey = defaultSortKey;
 
 
         // Validate sortKey
@@ -145,10 +147,9 @@ class IndexProvidersData {
         }
 
         // Apply sorting
-        const sortKeyParts = pagination.sortKey.split('.');
         data.sort((a, b) => {
-            const aValue = sortKeyParts.reduce((obj, key) => (obj && obj[key] !== undefined) ? obj[key] : null, a);
-            const bValue = sortKeyParts.reduce((obj, key) => (obj && obj[key] !== undefined) ? obj[key] : null, b);
+            const aValue = a[pagination.sortKey || defaultSortKey];
+            const bValue = b[pagination.sortKey || defaultSortKey];
             return CompareValues(aValue, bValue, pagination.direction);
         });
 

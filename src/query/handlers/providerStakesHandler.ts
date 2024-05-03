@@ -10,6 +10,7 @@ import { JSINFO_QUERY_CACHEDIR, JSINFO_QUERY_CACHE_ENABLED, JSINFO_QUERY_HANDLER
 import fs from 'fs';
 import path from 'path';
 import { CSVEscape, CompareValues } from '../utils/queryUtils';
+import { ReplaceArchive } from '../../indexer/indexerUtils';
 
 export const ProviderStakesHandlerOpts: RouteShorthandOptions = {
     schema: {
@@ -72,17 +73,23 @@ class ProviderStakesData {
         return path.join(this.cacheDir, `ProviderStakesData_${this.addr}`);
     }
 
-    private async fetchDataFromDb(): Promise<any[]> {
+    private async fetchDataFromDb(): Promise<JsinfoSchema.ProviderStake[]> {
         let thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
         let stakesRes = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.providerStakes).
             where(eq(JsinfoSchema.providerStakes.provider, this.addr)).orderBy(desc(JsinfoSchema.providerStakes.stake))
 
+        stakesRes = stakesRes.map(item => {
+            item.extensions = item.extensions ? ReplaceArchive(item.extensions || '') : "-";
+            item.addons = item.addons ? item.addons : "-";
+            return item;
+        });
+
         return stakesRes;
     }
 
-    private async fetchDataFromCache(): Promise<any[]> {
+    private async fetchDataFromCache(): Promise<JsinfoSchema.ProviderStake[]> {
         const cacheFilePath = this.getCacheFilePath();
         if (JSINFO_QUERY_CACHE_ENABLED && fs.existsSync(cacheFilePath)) {
             const stats = fs.statSync(cacheFilePath);

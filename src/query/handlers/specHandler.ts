@@ -6,6 +6,7 @@ import { QueryCheckJsinfoReadDbInstance, GetLatestBlock, QueryGetJsinfoReadDbIns
 import * as JsinfoSchema from '../../schemas/jsinfo_schema';
 import { sql, desc, gt, and, eq } from "drizzle-orm";
 import { FormatDates } from '../utils/queryDateUtils';
+import { ReplaceArchive } from '../../indexer/indexerUtils';
 
 export const SpecHandlerOpts: RouteShorthandOptions = {
     schema: {
@@ -112,6 +113,11 @@ export async function SpecHandler(request: FastifyRequest, reply: FastifyReply) 
         .where(eq(JsinfoSchema.providerStakes.specId, upSpecId))
         .groupBy(JsinfoSchema.providerStakes.provider, JsinfoSchema.providerStakes.specId, JsinfoSchema.providers.moniker)
         .orderBy(desc(JsinfoSchema.providerStakes.stake))
+
+    stakesRes = stakesRes.map(item => {
+        item.addonsAndExtensions = ReplaceArchive(item.addonsAndExtensions);
+        return item;
+    });
 
     //
     // Get graph with 1 day resolution

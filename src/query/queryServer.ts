@@ -83,6 +83,7 @@ const itemCountOpts: RouteShorthandOptions = {
                 properties: {
                     itemCount: { type: 'number' },
                 },
+                required: [],
             },
         },
     },

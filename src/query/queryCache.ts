@@ -4,7 +4,6 @@ import { FastifyRequest, FastifyReply } from 'fastify';
 import url from 'url';
 import { logger } from '../utils';
 import * as consts from './queryConsts';
-
 import fs from 'fs';
 import path from 'path';
 import { validatePaginationString } from './utils/queryPagination';

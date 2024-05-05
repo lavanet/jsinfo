@@ -52,7 +52,7 @@ export async function ConsumerHandler(request: FastifyRequest, reply: FastifyRep
     const res = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.consumers).where(eq(JsinfoSchema.consumers.address, addr)).limit(1)
     if (res.length != 1) {
         reply.code(400).send({ error: 'Provider does not exist' });
-        return;
+        return reply;
     }
 
     //

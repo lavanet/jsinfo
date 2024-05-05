@@ -3,10 +3,11 @@
 
 // curl http://localhost:8081/provider/lava@14shwrej05nrraem8mwsnlw50vrtefkajar75ge
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryCheckJsinfoReadDbInstance, GetLatestBlock, QueryGetJsinfoReadDbInstance } from '../queryDb';
+import { GetLatestBlock, QueryGetJsinfoReadDbInstance } from '../queryDb';
 import * as JsinfoSchema from '../../schemas/jsinfo_schema';
 import { sql, desc, gt, and, eq } from "drizzle-orm";
 import { FormatDates } from '../utils/queryDateUtils';
+import { GetAndValidateProviderAddressFromRequest } from '../utils/queryUtils';
 
 export const ProviderHandlerOpts: RouteShorthandOptions = {
     schema: {
@@ -69,11 +70,8 @@ export const ProviderHandlerOpts: RouteShorthandOptions = {
 }
 
 export async function ProviderHandler(request: FastifyRequest, reply: FastifyReply) {
-    await QueryCheckJsinfoReadDbInstance()
-
-    const { addr } = request.params as { addr: string }
-    if (addr.length != 44 || !addr.startsWith('lava@')) {
-        reply.code(400).send({ error: 'Bad provider address' });
+    let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
+    if (addr === '') {
         return;
     }
 
@@ -81,7 +79,7 @@ export async function ProviderHandler(request: FastifyRequest, reply: FastifyRep
     const res = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.providers).where(eq(JsinfoSchema.providers.address, addr)).limit(1)
     if (res.length != 1) {
         reply.code(400).send({ error: 'Provider does not exist' });
-        return;
+        return reply;
     }
 
     const provider = res[0]

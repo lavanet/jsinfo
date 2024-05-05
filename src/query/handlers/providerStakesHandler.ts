@@ -2,15 +2,15 @@
 // src/query/handlers/providerStakesHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../queryDb';
+import { QueryGetJsinfoReadDbInstance } from '../queryDb';
 import * as JsinfoSchema from '../../schemas/jsinfo_schema';
 import { desc, eq } from "drizzle-orm";
-import { Pagination, ParsePaginationFromRequest, ParsePaginationFromString } from '../utils/queryPagination';
-import { JSINFO_QUERY_CACHEDIR, JSINFO_QUERY_CACHE_ENABLED, JSINFO_QUERY_HANDLER_CACHE_TIME_SECONDS, JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE } from '../queryConsts';
-import fs from 'fs';
+import { Pagination, ParsePaginationFromString } from '../utils/queryPagination';
+import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE } from '../queryConsts';
 import path from 'path';
-import { CSVEscape, CompareValues } from '../utils/queryUtils';
+import { CSVEscape, CompareValues, GetAndValidateProviderAddressFromRequest } from '../utils/queryUtils';
 import { ReplaceArchive } from '../../indexer/indexerUtils';
+import { CachedDiskPsqlQuery } from '../classes/CachedDiskPsqlQuery';
 
 export const ProviderStakesHandlerOpts: RouteShorthandOptions = {
     schema: {
@@ -60,20 +60,19 @@ export const ProviderStakesHandlerOpts: RouteShorthandOptions = {
 };
 
 
-class ProviderStakesData {
+class ProviderStakesData extends CachedDiskPsqlQuery<JsinfoSchema.ProviderStake> {
     private addr: string;
-    private cacheDir: string = JSINFO_QUERY_CACHEDIR;
-    private cacheAgeLimit: number = JSINFO_QUERY_HANDLER_CACHE_TIME_SECONDS; // 15 minutes in seconds
 
     constructor(addr: string) {
+        super();
         this.addr = addr;
     }
 
-    private getCacheFilePath(): string {
+    protected getCacheFilePath(): string {
         return path.join(this.cacheDir, `ProviderStakesData_${this.addr}`);
     }
 
-    private async fetchDataFromDb(): Promise<JsinfoSchema.ProviderStake[]> {
+    protected async fetchDataFromDb(): Promise<JsinfoSchema.ProviderStake[]> {
         let thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
@@ -89,33 +88,18 @@ class ProviderStakesData {
         return stakesRes;
     }
 
-    private async fetchDataFromCache(): Promise<JsinfoSchema.ProviderStake[]> {
-        const cacheFilePath = this.getCacheFilePath();
-        if (JSINFO_QUERY_CACHE_ENABLED && fs.existsSync(cacheFilePath)) {
-            const stats = fs.statSync(cacheFilePath);
-            const ageInSeconds = (Date.now() - stats.mtime.getTime()) / 1000;
-            if (ageInSeconds <= this.cacheAgeLimit) {
-                return JSON.parse(fs.readFileSync(cacheFilePath, 'utf-8'));
-            }
-        }
-
-        const data = await this.fetchDataFromDb();
-        fs.writeFileSync(cacheFilePath, JSON.stringify(data));
-        return data;
-    }
-
-    public async getPaginatedItems(request: FastifyRequest): Promise<{ data: JsinfoSchema.ProviderStake[] }> {
-        let data = await this.fetchDataFromCache();
+    public async getPaginatedItemsImpl(data: JsinfoSchema.ProviderStake[], pagination: Pagination | null): Promise<JsinfoSchema.ProviderStake[] | null> {
 
         const defaultSortKey = "specId"
-        let pagination: Pagination = ParsePaginationFromRequest(request) || ParsePaginationFromString("specId,descending,1," + JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE)
-        if (pagination.sortKey === null) pagination.sortKey = defaultSortKey;
 
+        pagination = pagination || ParsePaginationFromString(defaultSortKey + ",descending,1," + JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE)
+        if (pagination.sortKey === null) pagination.sortKey = defaultSortKey;
 
         // Validate sortKey
         const validKeys = ["specId", "status", "geolocation", "addons", "extensions", "stake"];
         if (!validKeys.includes(pagination.sortKey)) {
-            throw new Error('Invalid sort key');
+            const trimmedSortKey = pagination.sortKey.substring(0, 500);
+            throw new Error(`Invalid sort key: ${trimmedSortKey}`);
         }
 
         // Apply sorting
@@ -127,16 +111,10 @@ class ProviderStakesData {
 
         data = data.slice((pagination.page - 1) * pagination.count, pagination.page * pagination.count);
 
-        return { data: data };
+        return data;
     }
 
-    public async getTotalItemCount(): Promise<number> {
-        const data = await this.fetchDataFromCache();
-        return data.length;
-    }
-
-    public async getCSV(): Promise<string> {
-        const data = await this.fetchDataFromCache();
+    public async getCSVImpl(data: JsinfoSchema.ProviderStake[]): Promise<string> {
         const columns = [
             { key: "specId", name: "Spec" },
             { key: "status", name: "Status" },
@@ -161,20 +139,10 @@ class ProviderStakesData {
 }
 
 export async function ProviderStakesHandler(request: FastifyRequest, reply: FastifyReply) {
-    await QueryCheckJsinfoReadDbInstance()
-
-    const { addr } = request.params as { addr: string }
-    if (addr.length != 44 || !addr.startsWith('lava@')) {
-        reply.code(400).send({ error: 'Bad provider address' });
+    let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
+    if (addr === '') {
         return;
     }
-
-    const res = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.providers).where(eq(JsinfoSchema.providers.address, addr)).limit(1)
-    if (res.length != 1) {
-        reply.code(400).send({ error: 'Provider does not exist' });
-        return;
-    }
-
     const providerStakesData = new ProviderStakesData(addr);
     try {
         const data = await providerStakesData.getPaginatedItems(request);
@@ -186,36 +154,26 @@ export async function ProviderStakesHandler(request: FastifyRequest, reply: Fast
 }
 
 export async function ProviderStakesItemCountHandler(request: FastifyRequest, reply: FastifyReply) {
-    await QueryCheckJsinfoReadDbInstance()
-
-    const { addr } = request.params as { addr: string }
-    if (addr.length != 44 || !addr.startsWith('lava@')) {
-        reply.code(400).send({ error: 'Bad provider address' });
+    let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
+    if (addr === '') {
         return;
     }
-
-    const res = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.providers).where(eq(JsinfoSchema.providers.address, addr)).limit(1)
-    if (res.length != 1) {
-        reply.code(400).send({ error: 'Provider does not exist' });
-        return;
-    }
-
     const providerStakesData = new ProviderStakesData(addr);
-    const itemCount = await providerStakesData.getTotalItemCount();
-    return { itemCount: itemCount }
+    return providerStakesData.getTotalItemCount();
 }
 
 export async function ProviderStakesCSVHandler(request: FastifyRequest, reply: FastifyReply) {
-    await QueryCheckJsinfoReadDbInstance()
-
-    const { addr } = request.params as { addr: string }
-    if (addr.length != 44 || !addr.startsWith('lava@')) {
-        reply.code(400).send({ error: 'Bad provider address' });
+    let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
+    if (addr === '') {
         return;
     }
 
     const providerHealthData = new ProviderStakesData(addr);
     const csv = await providerHealthData.getCSV();
+
+    if (csv === null) {
+        return;
+    }
 
     reply.header('Content-Type', 'text/csv');
     reply.header('Content-Disposition', `attachment; filename=ProviderStakes_${addr}.csv`);

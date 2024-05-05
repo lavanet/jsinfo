@@ -2,17 +2,17 @@
 // src/query/handlers/providerHealth.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../queryDb';
+import { QueryGetJsinfoReadDbInstance } from '../queryDb';
 import * as JsinfoSchema from '../../schemas/jsinfo_schema';
 import { eq, desc } from "drizzle-orm";
-import { Pagination, ParsePaginationFromRequest } from '../utils/queryPagination';
-import { CSVEscape, IsNotNullAndNotZero } from '../utils/queryUtils';
+import { Pagination } from '../utils/queryPagination';
+import { CSVEscape, GetAndValidateProviderAddressFromRequest, IsNotNullAndNotZero } from '../utils/queryUtils';
 import { CompareValues } from '../utils/queryUtils';
-import { JSINFO_QUERY_CACHEDIR, JSINFO_QUERY_CACHE_ENABLED, JSINFO_QUERY_HANDLER_CACHE_TIME_SECONDS } from '../queryConsts';
-import fs from 'fs';
 import path from 'path';
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE } from '../queryConsts';
-export interface HealthReport {
+import { CachedDiskPsqlQuery } from '../classes/CachedDiskPsqlQuery';
+
+export interface HealthReportResponse {
     message: string | null;
     block: number | null;
     latency: number | null;
@@ -51,47 +51,26 @@ export const ProviderHealthHandlerOpts: RouteShorthandOptions = {
     }
 }
 
-class ProviderHealthData {
+class ProviderHealthData extends CachedDiskPsqlQuery<HealthReportResponse> {
     private addr: string;
-    private cacheDir: string = JSINFO_QUERY_CACHEDIR;
-    private cacheAgeLimit: number = JSINFO_QUERY_HANDLER_CACHE_TIME_SECONDS;
+
 
     constructor(addr: string) {
+        super();
         this.addr = addr;
     }
 
-    private getCacheFilePath(): string {
+    protected getCacheFilePath(): string {
         return path.join(this.cacheDir, `ProviderHealthHandlerData_${this.addr}`);
     }
 
-    private async fetchDataFromDb(): Promise<HealthReport[]> {
+    protected async fetchDataFromDb(): Promise<HealthReportResponse[]> {
         let query = createHealthReportQuery(this.addr);
-        let res: HealthReport[] = await query;
+        let res: HealthReportResponse[] = await query;
         return ApplyHealthResponseGroupingAndTextFormatting(res);
     }
 
-    private async fetchDataFromCache(): Promise<HealthReport[]> {
-        const cacheFilePath = this.getCacheFilePath();
-        if (JSINFO_QUERY_CACHE_ENABLED && fs.existsSync(cacheFilePath)) {
-            const stats = fs.statSync(cacheFilePath);
-            const ageInSeconds = (Date.now() - stats.mtime.getTime()) / 1000;
-            if (ageInSeconds <= this.cacheAgeLimit) {
-                return JSON.parse(fs.readFileSync(cacheFilePath, 'utf-8'));
-            }
-        }
-
-        const data = await this.fetchDataFromDb();
-        fs.writeFileSync(cacheFilePath, JSON.stringify(data));
-        return data;
-    }
-
-    public async getTotalItemCount(): Promise<number> {
-        const data = await this.fetchDataFromCache();
-        return data.length;
-    }
-
-    public async getPaginatedItems(pagination: Pagination | null): Promise<HealthReport[]> {
-        let data = await this.fetchDataFromCache();
+    public async getPaginatedItemsImpl(data: HealthReportResponse[], pagination: Pagination | null): Promise<HealthReportResponse[] | null> {
 
         if (pagination == null) {
             return data.slice(0, JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE);
@@ -110,7 +89,7 @@ class ProviderHealthData {
         return data.slice(start, end);
     }
 
-    private sortData(data: HealthReport[], sortKey: string, direction: 'ascending' | 'descending'): HealthReport[] {
+    private sortData(data: HealthReportResponse[], sortKey: string, direction: 'ascending' | 'descending'): HealthReportResponse[] {
         if (sortKey === "-" || sortKey === "") sortKey = "timestamp";
 
         if (!["timestamp", "spec", "interface", "status", "message"].includes(sortKey)) {
@@ -125,10 +104,9 @@ class ProviderHealthData {
         });
     }
 
-    public async getCSV(): Promise<string> {
-        const data = await this.fetchDataFromCache();
+    public async getCSVImpl(data: HealthReportResponse[]): Promise<string> {
         let csv = 'time,spec,interface,status,message\n';
-        data.forEach((item: HealthReport) => {
+        data.forEach((item: HealthReportResponse) => {
             csv += `${item.timestamp},${CSVEscape(item.spec)},${CSVEscape(item.interface || "")},${CSVEscape(item.status)},${CSVEscape(item.message || "")}\n`;
         });
         return csv;
@@ -141,7 +119,7 @@ const createHealthReportQuery = (addr: string) => {
         .orderBy(desc(JsinfoSchema.providerHealthHourly.timestamp));
 }
 
-const getHealthReportBlocksMessage = (item: HealthReport) => {
+const getHealthReportBlocksMessage = (item: HealthReportResponse) => {
     let blockMessage = `Block: 0x${(item.block || 0).toString(16)}`;
 
     if (item.blocksaway !== null) {
@@ -152,7 +130,7 @@ const getHealthReportBlocksMessage = (item: HealthReport) => {
     return blockMessage;
 }
 
-const createHealthReportFormatedMessage = (item: HealthReport): string => {
+const createHealthReportFormatedMessage = (item: HealthReportResponse): string => {
     let message = item.message || '';
 
     if (IsNotNullAndNotZero(item.block) || IsNotNullAndNotZero(item.latency)) {
@@ -165,7 +143,7 @@ const createHealthReportFormatedMessage = (item: HealthReport): string => {
     return message;
 }
 
-const applyTextFormattingToHealthReportRow = (item: HealthReport): HealthReport => {
+const applyTextFormattingToHealthReportRow = (item: HealthReportResponse): HealthReportResponse => {
     const message = createHealthReportFormatedMessage(item);
     item.message = message;
     return item;
@@ -179,7 +157,7 @@ export const RoundDateToNearest15Minutes = (date: Date) => {
 
 const healthReportsStatusCompareOrder = ['healthy', 'unhealthy', 'frozen'];
 
-export const CompareHealthReportByStatusLatency = (a: HealthReport, b: HealthReport) => {
+export const CompareHealthReportByStatusLatency = (a: HealthReportResponse, b: HealthReportResponse) => {
     const aStatusIndex = healthReportsStatusCompareOrder.indexOf(a.status);
     const bStatusIndex = healthReportsStatusCompareOrder.indexOf(b.status);
 
@@ -220,7 +198,7 @@ export const CompareHealthReportByStatusLatency = (a: HealthReport, b: HealthRep
     return 0;
 }
 
-export const validateOneProvider = (res: HealthReport[]) => {
+export const validateOneProvider = (res: HealthReportResponse[]) => {
     if (res.length === 0) {
         return;
     }
@@ -238,10 +216,10 @@ export const validateOneProvider = (res: HealthReport[]) => {
     }
 }
 
-export const GroupHealthReportBy15MinutesWithSort = (res: HealthReport[]) => {
+export const GroupHealthReportBy15MinutesWithSort = (res: HealthReportResponse[]) => {
     validateOneProvider(res);
 
-    const groups = res.reduce((groups: { [key: string]: HealthReport[] }, item: HealthReport) => {
+    const groups = res.reduce((groups: { [key: string]: HealthReportResponse[] }, item: HealthReportResponse) => {
         const timestamp = RoundDateToNearest15Minutes(new Date(item.timestamp)).toISOString();
         const key = `${item.spec}-${item.interface}-${timestamp}`;
 
@@ -254,63 +232,54 @@ export const GroupHealthReportBy15MinutesWithSort = (res: HealthReport[]) => {
         return groups;
     }, {});
 
-    return (Object.values(groups)).map((group: HealthReport[]) => {
+    return (Object.values(groups)).map((group: HealthReportResponse[]) => {
         return group.sort(CompareHealthReportByStatusLatency)[0];
     });
 }
 
-export const ApplyHealthResponseGroupingAndTextFormatting = (res: HealthReport[]): HealthReport[] => {
+export const ApplyHealthResponseGroupingAndTextFormatting = (res: HealthReportResponse[]): HealthReportResponse[] => {
     const groupedAndSortedItems = GroupHealthReportBy15MinutesWithSort(res);
     return groupedAndSortedItems.map(applyTextFormattingToHealthReportRow);
 }
 
 export async function ProviderHealthItemCountHandler(request: FastifyRequest, reply: FastifyReply) {
-    await QueryCheckJsinfoReadDbInstance()
-
-    const { addr } = request.params as { addr: string }
-    if (addr.length != 44 || !addr.startsWith('lava@')) {
-        reply.code(400).send({ error: 'Bad provider address' });
+    let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
+    if (addr === '') {
         return;
     }
 
     const providerHealthData = new ProviderHealthData(addr);
-    const count = await providerHealthData.getTotalItemCount();
-
-    return { itemCount: count };
+    return providerHealthData.getTotalItemCount();;
 }
 
 export async function ProviderHealthHandler(request: FastifyRequest, reply: FastifyReply) {
-    await QueryCheckJsinfoReadDbInstance()
-
-    const { addr } = request.params as { addr: string }
-    if (addr.length != 44 || !addr.startsWith('lava@')) {
-        reply.code(400).send({ error: 'Bad provider address' });
+    let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
+    if (addr === '') {
         return;
     }
 
-    let pagination: Pagination | null = ParsePaginationFromRequest(request)
     const providerHealthData = new ProviderHealthData(addr);
-    const res: HealthReport[] = await providerHealthData.getPaginatedItems(pagination);
-
-    if (!res || res.length === 0 || Object.keys(res).length === 0) {
-        console.log(`ProviderHealthHandler:: No health info for provider ${addr} in database.`);
-        return { data: [] };
+    try {
+        const data = await providerHealthData.getPaginatedItems(request);
+        return data;
+    } catch (error) {
+        const err = error as Error;
+        reply.code(400).send({ error: String(err.message) });
     }
-
-    return { data: res };
 }
 
 export async function ProviderHealthCSVHandler(request: FastifyRequest, reply: FastifyReply) {
-    await QueryCheckJsinfoReadDbInstance()
-
-    const { addr } = request.params as { addr: string }
-    if (addr.length != 44 || !addr.startsWith('lava@')) {
-        reply.code(400).send({ error: 'Bad provider address' });
+    let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
+    if (addr === '') {
         return;
     }
 
     const providerHealthData = new ProviderHealthData(addr);
     const csv = await providerHealthData.getCSV();
+
+    if (csv === null) {
+        return;
+    }
 
     reply.header('Content-Type', 'text/csv');
     reply.header('Content-Disposition', `attachment; filename=ProviderHealth_${addr}.csv`);

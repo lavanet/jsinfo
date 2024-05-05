@@ -4,12 +4,19 @@ import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../queryDb';
 import * as JsinfoSchema from '../../schemas/jsinfo_schema';
 import { sql, desc, inArray, not, eq } from "drizzle-orm";
-import { Pagination, ParsePaginationFromRequest, ParsePaginationFromString } from '../utils/queryPagination';
-import { JSINFO_QUERY_CACHEDIR, JSINFO_QUERY_CACHE_ENABLED, JSINFO_QUERY_HANDLER_CACHE_TIME_SECONDS, JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE } from '../queryConsts';
-import fs from 'fs';
+import { Pagination, ParsePaginationFromString } from '../utils/queryPagination';
+import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE } from '../queryConsts';
 import path from 'path';
 import { CSVEscape, CompareValues } from '../utils/queryUtils';
+import { CachedDiskPsqlQuery } from '../classes/CachedDiskPsqlQuery';
 
+type IndexProvidersResponse = {
+    addr: string,
+    moniker: string,
+    rewardSum: number,
+    totalServices: string,
+    totalStake: number,
+};
 
 export const IndexProvidersHandlerOpts: RouteShorthandOptions = {
     schema: {
@@ -46,17 +53,17 @@ export const IndexProvidersHandlerOpts: RouteShorthandOptions = {
     }
 }
 
-class IndexProvidersData {
-    private cacheDir: string = JSINFO_QUERY_CACHEDIR;
-    private cacheAgeLimit: number = JSINFO_QUERY_HANDLER_CACHE_TIME_SECONDS; // 15 minutes in seconds
+class IndexProvidersData extends CachedDiskPsqlQuery<IndexProvidersResponse> {
 
-    constructor() { }
+    constructor() {
+        super();
+    }
 
-    private getCacheFilePath(): string {
+    protected getCacheFilePath(): string {
         return path.join(this.cacheDir, `IndexProvidersData`);
     }
 
-    private async fetchDataFromDb(): Promise<any[]> {
+    protected async fetchDataFromDb(): Promise<IndexProvidersResponse[]> {
         let res4 = await QueryGetJsinfoReadDbInstance().select({
             address: JsinfoSchema.aggHourlyrelayPayments.provider,
             rewardSum: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.rewardSum})`,
@@ -83,14 +90,7 @@ class IndexProvidersData {
             .where(not(eq(JsinfoSchema.providerStakes.status, JsinfoSchema.LavaProviderStakeStatus.Frozen)))
             .groupBy(JsinfoSchema.providerStakes.provider);
 
-        type ProviderDetails = {
-            addr: string,
-            moniker: string,
-            rewardSum: number,
-            totalServices: string,
-            totalStake: number,
-        };
-        let providersDetails: ProviderDetails[] = []
+        let providersDetails: IndexProvidersResponse[] = []
         res4.forEach((provider) => {
             let moniker = ''
             let totalServices = '0'
@@ -116,34 +116,18 @@ class IndexProvidersData {
         return providersDetails;
     }
 
-    private async fetchDataFromCache(): Promise<any[]> {
-        const cacheFilePath = this.getCacheFilePath();
-        if (JSINFO_QUERY_CACHE_ENABLED && fs.existsSync(cacheFilePath)) {
-            const stats = fs.statSync(cacheFilePath);
-            const ageInSeconds = (Date.now() - stats.mtime.getTime()) / 1000;
-            if (ageInSeconds <= this.cacheAgeLimit) {
-                return JSON.parse(fs.readFileSync(cacheFilePath, 'utf-8'));
-            }
-        }
-
-        const data = await this.fetchDataFromDb();
-        fs.writeFileSync(cacheFilePath, JSON.stringify(data));
-        return data;
-    }
-
-    public async getPaginatedItems(request: FastifyRequest): Promise<{ data: any[] }> {
-        let data = await this.fetchDataFromCache();
-
+    public async getPaginatedItemsImpl(data: IndexProvidersResponse[], pagination: Pagination | null): Promise<IndexProvidersResponse[] | null> {
         const defaultSortKey = "totalStake";
 
-        let pagination: Pagination = ParsePaginationFromRequest(request) || ParsePaginationFromString("totalStake,descending,1," + JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE)
+        pagination = pagination || ParsePaginationFromString(defaultSortKey + ",descending,1," + JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE)
         if (pagination.sortKey === null) pagination.sortKey = defaultSortKey;
 
 
         // Validate sortKey
         const validKeys = ["moniker", "addr", "rewardSum", "totalServices", "totalStake"];
         if (!validKeys.includes(pagination.sortKey)) {
-            throw new Error('Invalid sort key');
+            const trimmedSortKey = pagination.sortKey.substring(0, 500);
+            throw new Error(`Invalid sort key: ${trimmedSortKey}`);
         }
 
         // Apply sorting
@@ -155,16 +139,10 @@ class IndexProvidersData {
 
         data = data.slice((pagination.page - 1) * pagination.count, pagination.page * pagination.count);
 
-        return { data: data };
+        return data;
     }
 
-    public async getTotalItemCount(): Promise<number> {
-        const data = await this.fetchDataFromCache();
-        return data.length;
-    }
-
-    public async getCSV(): Promise<string> {
-        const data = await this.fetchDataFromCache();
+    public async getCSVImpl(data: IndexProvidersResponse[]): Promise<string> {
         const columns = [
             { key: "moniker", name: "Moniker" },
             { key: "addr", name: "Provider Address" },
@@ -204,8 +182,7 @@ export async function IndexProvidersItemCountHandler(request: FastifyRequest, re
     await QueryCheckJsinfoReadDbInstance()
 
     const providerRewardsData = new IndexProvidersData();
-    const itemCount = await providerRewardsData.getTotalItemCount();
-    return { itemCount: itemCount }
+    return providerRewardsData.getTotalItemCount();
 }
 
 export async function IndexProvidersCSVHandler(request: FastifyRequest, reply: FastifyReply) {
@@ -213,6 +190,10 @@ export async function IndexProvidersCSVHandler(request: FastifyRequest, reply: F
 
     const providerHealthData = new IndexProvidersData();
     const csv = await providerHealthData.getCSV();
+
+    if (csv === null) {
+        return;
+    }
 
     reply.header('Content-Type', 'text/csv');
     reply.header('Content-Disposition', `attachment; filename=LavaTopProviders.csv`);

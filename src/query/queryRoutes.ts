@@ -22,6 +22,9 @@ import { ProviderReportsHandlerOpts, ProviderReportsHandler, ProviderReportsItem
 import { ProviderDelegatorRewardsHandlerOpts, ProviderDelegatorRewardsHandler, ProviderDelegatorRewardsItemCountHandler, ProviderDelegatorRewardsCSVHandler } from './handlers/providerDelegatorRewardsHandler';
 import { ProviderBlockReportsHandlerOpts, ProviderBlockReportsHandler, ProviderBlockReportsItemCountHandler, ProviderBlockReportsCSVHandler } from './handlers/providerBlockReportsHandler';
 
+import { EventsEventsHandlerOpts, EventsEventsHandler, EventsEventsItemCountHandler, EventsEventsCSVHandler } from './handlers/eventsEventsHandler';
+import { EventsRewardsHandlerOpts, EventsRewardsHandler, EventsRewardsItemCountHandler, EventsRewardsCSVHandler } from './handlers/eventsRewardsHandler';
+import { EventsReportsHandlerOpts, EventsReportsHandler, EventsReportsItemCountHandler, EventsReportsCSVHandler } from './handlers/eventsReportsHandler';
 
 import { ProvidersHandler, ProvidersHandlerOpts } from './handlers/providersHandler';
 import { SpecsHandler, SpecsHandlerOpts } from './handlers/specsHandler';
@@ -63,12 +66,20 @@ GetServerInstance().get('/providerReportsCsv/:addr', ProviderReportsCSVHandler);
 GetServerInstance().get('/providerDelegatorRewardsCsv/:addr', ProviderDelegatorRewardsCSVHandler);
 GetServerInstance().get('/providerBlockReportsCsv/:addr', ProviderBlockReportsCSVHandler);
 
+GetServerInstance().get('/eventsEventsCsv', EventsEventsCSVHandler);
+GetServerInstance().get('/eventsRewardsCsv', EventsRewardsCSVHandler);
+GetServerInstance().get('/eventsReportsCsv', EventsReportsCSVHandler);
+
 RegisterServerHandlerWithCache('/providers', ProvidersHandlerOpts, ProvidersHandler);
 RegisterServerHandlerWithCache('/specs', SpecsHandlerOpts, SpecsHandler);
 RegisterServerHandlerWithCache('/consumers', ConsumersHandlerOpts, ConsumersHandler);
 RegisterServerHandlerWithCache('/consumer/:addr', ConsumerHandlerOpts, ConsumerHandler);
 RegisterServerHandlerWithCache('/spec/:specId', SpecHandlerOpts, SpecHandler);
+
 RegisterServerHandlerWithCache('/events', EventsHandlerOpts, EventsHandler);
+RegisterServerHandlerWithCache('/eventsEvents', EventsEventsHandlerOpts, EventsEventsHandler, EventsEventsItemCountHandler);
+RegisterServerHandlerWithCache('/eventsRewards', EventsRewardsHandlerOpts, EventsRewardsHandler, EventsRewardsItemCountHandler);
+RegisterServerHandlerWithCache('/eventsReports', EventsReportsHandlerOpts, EventsReportsHandler, EventsReportsItemCountHandler);
 
 if (consts.JSINFO_QUERY_LAVAP_PROVIDER_HEALTH_ENDPOINT_ENABLED) {
     GetServerInstance().post('/lavapProviderHealth', LavapProviderHealthHandlerOpts, LavapProviderHealthHandler);

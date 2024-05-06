@@ -8,7 +8,7 @@ import { Pagination, ParsePaginationFromString } from '../utils/queryPagination'
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE } from '../queryConsts';
 import path from 'path';
 import { CSVEscape, CompareValues } from '../utils/queryUtils';
-import { CachedDiskPsqlQuery } from '../classes/CachedDiskPsqlQuery';
+import { CachedDiskDbDataFetcher } from '../classes/CachedDiskDbDataFetcher';
 
 export interface EventsRewardsResponse {
     id: number | null;
@@ -68,14 +68,22 @@ export const EventsRewardsHandlerOpts: RouteShorthandOptions = {
 };
 
 
-class EventsRewardsData extends CachedDiskPsqlQuery<EventsRewardsResponse> {
+class EventsRewardsData extends CachedDiskDbDataFetcher<EventsRewardsResponse> {
 
     constructor() {
-        super();
+        super("EventsRewardsData");
+    }
+
+    public static GetInstance(): EventsRewardsData {
+        return EventsRewardsData.GetInstanceBase();
     }
 
     protected getCacheFilePath(): string {
         return path.join(this.cacheDir, 'EventsRewardsHandlerData');
+    }
+
+    protected getCSVFileName(): string {
+        return `EventsRewards.csv`;
     }
 
     protected async fetchDataFromDb(): Promise<EventsRewardsResponse[]> {
@@ -190,37 +198,15 @@ class EventsRewardsData extends CachedDiskPsqlQuery<EventsRewardsResponse> {
 
 export async function EventsRewardsHandler(request: FastifyRequest, reply: FastifyReply) {
     await QueryCheckJsinfoReadDbInstance()
-
-    const providerRewardsData = new EventsRewardsData();
-    try {
-        const data = await providerRewardsData.getPaginatedItems(request);
-        return data;
-    } catch (error) {
-        const err = error as Error;
-        reply.code(400).send({ error: String(err.message) });
-    }
+    return await EventsRewardsData.GetInstance().getPaginatedItemsCachedHandler(request, reply)
 }
 
 export async function EventsRewardsItemCountHandler(request: FastifyRequest, reply: FastifyReply) {
     await QueryCheckJsinfoReadDbInstance()
-
-    const eventsEventsData = new EventsRewardsData();
-    return eventsEventsData.getTotalItemCount();
+    return await EventsRewardsData.GetInstance().getTotalItemCountRawHandler(request, reply)
 }
 
 export async function EventsRewardsCSVHandler(request: FastifyRequest, reply: FastifyReply) {
     await QueryCheckJsinfoReadDbInstance()
-
-    const eventsEventsData = new EventsRewardsData();
-    const csv = await eventsEventsData.getCSV();
-
-    if (csv === null) {
-        return;
-    }
-
-    reply.header('Content-Type', 'text/csv');
-    reply.header('Content-Disposition', `attachment; filename=EventsRewards.csv`);
-    reply.send(csv);
-
-    return reply;
+    return await EventsRewardsData.GetInstance().getCSVRawHandler(request, reply)
 }

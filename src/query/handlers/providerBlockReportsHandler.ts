@@ -12,7 +12,7 @@ import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE } from '../queryConsts';
 import fs from 'fs';
 import path from 'path';
 import { CompareValues, GetAndValidateProviderAddressFromRequest } from '../utils/queryUtils';
-import { CachedDiskPsqlQuery } from '../classes/CachedDiskPsqlQuery';
+import { CachedDiskDbDataFetcher } from '../classes/CachedDiskDbDataFetcher';
 
 export interface BlockReportsReponse {
     id: number;
@@ -62,12 +62,20 @@ export const ProviderBlockReportsHandlerOpts: RouteShorthandOptions = {
     }
 };
 
-class ProviderBlockReportsData extends CachedDiskPsqlQuery<BlockReportsReponse> {
+class ProviderBlockReportsData extends CachedDiskDbDataFetcher<BlockReportsReponse> {
     private addr: string;
 
     constructor(addr: string) {
-        super();
+        super("ProviderBlockReportsData");
         this.addr = addr;
+    }
+
+    public static GetInstance(addr: string): ProviderBlockReportsData {
+        return ProviderBlockReportsData.GetInstanceBase(addr);
+    }
+
+    protected getCSVFileName(): string {
+        return `ProviderBlockReports_${this.addr}.csv`;
     }
 
     protected getCacheFilePath(): string {
@@ -142,46 +150,28 @@ class ProviderBlockReportsData extends CachedDiskPsqlQuery<BlockReportsReponse> 
     }
 }
 
-export async function ProviderBlockReportsItemCountHandler(request: FastifyRequest, reply: FastifyReply) {
-    let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
-    if (addr === '') {
-        return;
-    }
 
-    const providerDelegatorRewardsData = new ProviderBlockReportsData(addr);
-    return providerDelegatorRewardsData.getTotalItemCount();;
-}
 
 export async function ProviderBlockReportsHandler(request: FastifyRequest, reply: FastifyReply) {
     let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
     if (addr === '') {
-        return;
+        return null;
     }
+    return await ProviderBlockReportsData.GetInstance(addr).getPaginatedItemsCachedHandler(request, reply)
+}
 
-    const providerBlockReportsData = new ProviderBlockReportsData(addr);
-    try {
-        const data = await providerBlockReportsData.getPaginatedItems(request);
-        return data;
-    } catch (error) {
-        const err = error as Error;
-        reply.code(400).send({ error: String(err.message) });
+export async function ProviderBlockReportsItemCountHandler(request: FastifyRequest, reply: FastifyReply) {
+    let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
+    if (addr === '') {
+        return reply;
     }
+    return await ProviderBlockReportsData.GetInstance(addr).getTotalItemCountRawHandler(request, reply)
 }
 
 export async function ProviderBlockReportsCSVHandler(request: FastifyRequest, reply: FastifyReply) {
     let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
     if (addr === '') {
-        return;
+        return reply;
     }
-
-    const providerBlockReportsData = new ProviderBlockReportsData(addr);
-    const csv = await providerBlockReportsData.getCSV();
-
-    if (csv === null) {
-        return;
-    }
-
-    reply.header('Content-Type', 'text/csv');
-    reply.header('Content-Disposition', `attachment; filename=ProviderBlockReports_${addr}.csv`);
-    reply.send(csv);
+    return await ProviderBlockReportsData.GetInstance(addr).getCSVRawHandler(request, reply)
 }

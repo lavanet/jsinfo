@@ -10,7 +10,7 @@ import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE } from '../queryConsts';
 import path from 'path';
 import { CSVEscape, CompareValues, GetAndValidateProviderAddressFromRequest } from '../utils/queryUtils';
 import { ReplaceArchive } from '../../indexer/indexerUtils';
-import { CachedDiskPsqlQuery } from '../classes/CachedDiskPsqlQuery';
+import { CachedDiskDbDataFetcher } from '../classes/CachedDiskDbDataFetcher';
 
 export const ProviderStakesHandlerOpts: RouteShorthandOptions = {
     schema: {
@@ -59,17 +59,24 @@ export const ProviderStakesHandlerOpts: RouteShorthandOptions = {
     }
 };
 
-
-class ProviderStakesData extends CachedDiskPsqlQuery<JsinfoSchema.ProviderStake> {
+class ProviderStakesData extends CachedDiskDbDataFetcher<JsinfoSchema.ProviderStake> {
     private addr: string;
 
     constructor(addr: string) {
-        super();
+        super("ProviderStakesData");
         this.addr = addr;
+    }
+
+    public static GetInstance(addr: string): ProviderStakesData {
+        return ProviderStakesData.GetInstanceBase(addr);
     }
 
     protected getCacheFilePath(): string {
         return path.join(this.cacheDir, `ProviderStakesData_${this.addr}`);
+    }
+
+    protected getCSVFileName(): string {
+        return `ProviderStakes_${this.addr}.csv`;
     }
 
     protected async fetchDataFromDb(): Promise<JsinfoSchema.ProviderStake[]> {
@@ -141,25 +148,17 @@ class ProviderStakesData extends CachedDiskPsqlQuery<JsinfoSchema.ProviderStake>
 export async function ProviderStakesHandler(request: FastifyRequest, reply: FastifyReply) {
     let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
     if (addr === '') {
-        return;
+        return null;
     }
-    const providerStakesData = new ProviderStakesData(addr);
-    try {
-        const data = await providerStakesData.getPaginatedItems(request);
-        return data;
-    } catch (error) {
-        const err = error as Error;
-        reply.code(400).send({ error: String(err.message) });
-    }
+    return await ProviderStakesData.GetInstance(addr).getPaginatedItemsCachedHandler(request, reply)
 }
 
 export async function ProviderStakesItemCountHandler(request: FastifyRequest, reply: FastifyReply) {
     let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
     if (addr === '') {
-        return;
+        return reply;
     }
-    const providerStakesData = new ProviderStakesData(addr);
-    return providerStakesData.getTotalItemCount();
+    return await ProviderStakesData.GetInstance(addr).getTotalItemCountRawHandler(request, reply)
 }
 
 export async function ProviderStakesCSVHandler(request: FastifyRequest, reply: FastifyReply) {
@@ -167,15 +166,5 @@ export async function ProviderStakesCSVHandler(request: FastifyRequest, reply: F
     if (addr === '') {
         return;
     }
-
-    const providerHealthData = new ProviderStakesData(addr);
-    const csv = await providerHealthData.getCSV();
-
-    if (csv === null) {
-        return;
-    }
-
-    reply.header('Content-Type', 'text/csv');
-    reply.header('Content-Disposition', `attachment; filename=ProviderStakes_${addr}.csv`);
-    reply.send(csv);
+    return await ProviderStakesData.GetInstance(addr).getCSVRawHandler(request, reply)
 }

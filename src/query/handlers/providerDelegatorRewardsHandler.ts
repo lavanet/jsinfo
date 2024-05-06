@@ -11,7 +11,7 @@ import { Pagination } from '../utils/queryPagination';
 import { CompareValues, GetAndValidateProviderAddressFromRequest } from '../utils/queryUtils';
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE } from '../queryConsts';
 import * as JsinfoSchema from '../../schemas/jsinfo_schema';
-import { CachedDiskPsqlQuery } from '../classes/CachedDiskPsqlQuery';
+import { CachedDiskDbDataFetcher } from '../classes/CachedDiskDbDataFetcher';
 
 export interface DelegatorRewardReponse {
     id: number;
@@ -44,12 +44,20 @@ export const ProviderDelegatorRewardsHandlerOpts: RouteShorthandOptions = {
     }
 }
 
-class ProviderDelegatorRewardsData extends CachedDiskPsqlQuery<DelegatorRewardReponse> {
+class ProviderDelegatorRewardsData extends CachedDiskDbDataFetcher<DelegatorRewardReponse> {
     private addr: string;
 
     constructor(addr: string) {
-        super();
+        super("ProviderDelegatorRewardsData");
         this.addr = addr;
+    }
+
+    public static GetInstance(addr: string): ProviderDelegatorRewardsData {
+        return ProviderDelegatorRewardsData.GetInstanceBase(addr);
+    }
+
+    protected getCSVFileName(): string {
+        return `ProviderDelegatorRewards_${this.addr}.csv`;
     }
 
     protected getCacheFilePath(): string {
@@ -114,46 +122,26 @@ class ProviderDelegatorRewardsData extends CachedDiskPsqlQuery<DelegatorRewardRe
     }
 }
 
-export async function ProviderDelegatorRewardsItemCountHandler(request: FastifyRequest, reply: FastifyReply) {
-    let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
-    if (addr === '') {
-        return;
-    }
-
-    const providerDelegatorRewardsData = new ProviderDelegatorRewardsData(addr);
-    return providerDelegatorRewardsData.getTotalItemCount();;
-}
-
 export async function ProviderDelegatorRewardsHandler(request: FastifyRequest, reply: FastifyReply) {
     let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
     if (addr === '') {
-        return;
+        return null;
     }
+    return await ProviderDelegatorRewardsData.GetInstance(addr).getPaginatedItemsCachedHandler(request, reply)
+}
 
-    const providerDelegatorRewardsData = new ProviderDelegatorRewardsData(addr);
-    try {
-        const data = await providerDelegatorRewardsData.getPaginatedItems(request);
-        return data;
-    } catch (error) {
-        const err = error as Error;
-        reply.code(400).send({ error: String(err.message) });
+export async function ProviderDelegatorRewardsItemCountHandler(request: FastifyRequest, reply: FastifyReply) {
+    let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
+    if (addr === '') {
+        return reply;
     }
+    return await ProviderDelegatorRewardsData.GetInstance(addr).getTotalItemCountRawHandler(request, reply)
 }
 
 export async function ProviderDelegatorRewardsCSVHandler(request: FastifyRequest, reply: FastifyReply) {
     let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
     if (addr === '') {
-        return;
+        return reply;
     }
-
-    const providerDelegatorRewardsData = new ProviderDelegatorRewardsData(addr);
-    const csv = await providerDelegatorRewardsData.getCSV();
-
-    if (csv === null) {
-        return;
-    }
-
-    reply.header('Content-Type', 'text/csv');
-    reply.header('Content-Disposition', `attachment; filename=ProviderDelegatorRewards_${addr}.csv`);
-    reply.send(csv);
+    return await ProviderDelegatorRewardsData.GetInstance(addr).getCSVRawHandler(request, reply)
 }

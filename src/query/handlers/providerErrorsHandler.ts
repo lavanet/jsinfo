@@ -6,11 +6,11 @@ import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryCheckRelaysReadDbInstance, QueryGetRelaysReadDbInstance } from '../queryDb';
 import { eq, desc } from "drizzle-orm";
 import { Pagination } from '../utils/queryPagination';
-import { CSVEscape, CompareValues } from '../utils/queryUtils';
+import { CSVEscape, CompareValues, GetAndValidateProviderAddressFromRequest } from '../utils/queryUtils';
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE } from '../queryConsts';
 import { ParseLavapProviderError } from '../utils/lavapProvidersErrorParser';
 import * as RelaysSchema from '../../schemas/relays_schema';
-import { CachedDiskPsqlQuery } from '../classes/CachedDiskPsqlQuery';
+import { CachedDiskDbDataFetcher } from '../classes/CachedDiskDbDataFetcher';
 export interface ErrorsReport {
     id: number;
     created_at: Date | null;
@@ -50,17 +50,24 @@ export const ProviderErrorsHandlerOpts: RouteShorthandOptions = {
     }
 }
 
-class ProviderErrorsData extends CachedDiskPsqlQuery<ErrorsReportReponse> {
+class ProviderErrorsData extends CachedDiskDbDataFetcher<ErrorsReportReponse> {
     private addr: string;
 
-
     constructor(addr: string) {
-        super();
+        super("ProviderErrorsData");
         this.addr = addr;
+    }
+
+    public static GetInstance(addr: string): ProviderErrorsData {
+        return ProviderErrorsData.GetInstanceBase(addr);
     }
 
     protected getCacheFilePath(): string {
         return path.join(this.cacheDir, `ProviderErrorsHandlerData_${this.addr}`);
+    }
+
+    protected getCSVFileName(): string {
+        return `ProviderErrors_${this.addr}.csv`;
     }
 
     protected async fetchDataFromDb(): Promise<ErrorsReportReponse[]> {
@@ -121,57 +128,26 @@ class ProviderErrorsData extends CachedDiskPsqlQuery<ErrorsReportReponse> {
     }
 }
 
-export async function ProviderErrorsItemCountHandler(request: FastifyRequest, reply: FastifyReply) {
-    await QueryCheckRelaysReadDbInstance()
-
-    const { addr } = request.params as { addr: string }
-    if (addr.length != 44 || !addr.startsWith('lava@')) {
-        reply.code(400).send({ error: 'Bad provider address' });
-        return reply;
+export async function ProviderErrorsHandler(request: FastifyRequest, reply: FastifyReply) {
+    let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
+    if (addr === '') {
+        return null;
     }
-
-    const providerErrorsData = new ProviderErrorsData(addr);
-    const count = await providerErrorsData.getTotalItemCount();
-
-    return { itemCount: count };
+    return await ProviderErrorsData.GetInstance(addr).getPaginatedItemsCachedHandler(request, reply)
 }
 
-export async function ProviderErrorsHandler(request: FastifyRequest, reply: FastifyReply) {
-    await QueryCheckRelaysReadDbInstance()
-
-    const { addr } = request.params as { addr: string }
-    if (addr.length != 44 || !addr.startsWith('lava@')) {
-        reply.code(400).send({ error: 'Bad provider address' });
-        return reply;
+export async function ProviderErrorsItemCountHandler(request: FastifyRequest, reply: FastifyReply) {
+    let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
+    if (addr === '') {
+        return null;
     }
-
-    const providerErrorsData = new ProviderErrorsData(addr);
-    try {
-        const data = await providerErrorsData.getPaginatedItems(request);
-        return data;
-    } catch (error) {
-        const err = error as Error;
-        reply.code(400).send({ error: String(err.message) });
-    }
+    return await ProviderErrorsData.GetInstance(addr).getTotalItemCountRawHandler(request, reply)
 }
 
 export async function ProviderErrorsCSVHandler(request: FastifyRequest, reply: FastifyReply) {
-    await QueryCheckRelaysReadDbInstance()
-
-    const { addr } = request.params as { addr: string }
-    if (addr.length != 44 || !addr.startsWith('lava@')) {
-        reply.code(400).send({ error: 'Bad provider address' });
-        return reply;
-    }
-
-    const providerErrorsData = new ProviderErrorsData(addr);
-    const csv = await providerErrorsData.getCSV();
-
-    if (csv === null) {
+    let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
+    if (addr === '') {
         return;
     }
-
-    reply.header('Content-Type', 'text/csv');
-    reply.header('Content-Disposition', `attachment; filename=ProviderErrors_${addr}.csv`);
-    reply.send(csv);
+    return await ProviderErrorsData.GetInstance(addr).getCSVRawHandler(request, reply)
 }

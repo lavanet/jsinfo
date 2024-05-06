@@ -226,12 +226,18 @@ class RequestCache {
 
         try {
             console.time(`QueryCache: handler execution time for ${key}.`);
+
             const data = await handler(request, reply);
+            // returns null on error and handler handled the response
+            if (data == null) return null;
+
             console.timeEnd(`QueryCache: handler execution time for ${key}.`);
             this.cache.updateData(key, data);
             this.cache.get(key).isFetching = null;
             logger.info(`QueryCache: Data fetched for ${key}.`);
+
         } catch (error) {
+
             logger.info(`QueryCache: Error fetching data for ${key} on attempt ${retryCount + 1}.`, error);
             this.cache.get(key).isFetching = null;
             if (retryCount < 5) { // If it's not the last attempt
@@ -257,24 +263,32 @@ class RequestCache {
                 if (!validatePaginationString(query.pagination)) {
                     console.log('Failed to parse pagination:', query.pagination);
                     reply.code(400).send({ error: 'Bad pagination argument' });
-                    return;
+                    return reply;
                 }
             }
 
             if (shouldUseCache) {
                 console.log(`RequestCache: Using cache for ${request.url}`);
                 const data = await this.getOrFetchData(request, reply, handler);
+                // returns null on error and handler handled the response
+                if (data == null) return reply;
                 if (this.isValidData(data)) {
-                    return data;
+                    reply.send(data);
+                    return reply;
                 }
+                reply.send({});
+                return reply;
             }
 
             const handlerData = await handler(request, reply);
-            console.log("handlerData", JSON.stringify(handlerData).substring(0, 100));
-
+            // returns null on error and handler handled the response
+            if (handlerData == null) return;
             if (this.isValidData(handlerData)) {
-                return handlerData;
+                reply.send(handlerData);
+                return reply;
             }
+            reply.send({});
+            return reply;
         };
     }
 

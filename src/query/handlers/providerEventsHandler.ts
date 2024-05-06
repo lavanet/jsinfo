@@ -10,7 +10,7 @@ import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE } from '../queryConsts';
 import fs from 'fs';
 import path from 'path';
 import { CSVEscape, CompareValues, GetAndValidateProviderAddressFromRequest, GetNestedValue } from '../utils/queryUtils';
-import { CachedDiskPsqlQuery } from '../classes/CachedDiskPsqlQuery';
+import { CachedDiskDbDataFetcher } from '../classes/CachedDiskDbDataFetcher';
 
 export type ProviderEventsResponse = {
     events: {
@@ -51,7 +51,7 @@ export const ProviderEventsHandlerOpts: RouteShorthandOptions = {
                                     type: 'object',
                                     properties: {
                                         id: { type: 'number' },
-                                        eventType: { type: ['string', 'null'] },
+                                        eventType: { type: ['number', 'null'] },
                                         t1: { type: ['string', 'null'] },
                                         t2: { type: ['string', 'null'] },
                                         t3: { type: ['string', 'null'] },
@@ -90,16 +90,24 @@ export const ProviderEventsHandlerOpts: RouteShorthandOptions = {
 }
 
 
-class ProviderEventsData extends CachedDiskPsqlQuery<ProviderEventsResponse> {
+class ProviderEventsData extends CachedDiskDbDataFetcher<ProviderEventsResponse> {
     private addr: string;
 
     constructor(addr: string) {
-        super();
+        super("ProviderEventsData");
         this.addr = addr;
+    }
+
+    public static GetInstance(addr: string): ProviderEventsData {
+        return ProviderEventsData.GetInstanceBase(addr);
     }
 
     protected getCacheFilePath(): string {
         return path.join(this.cacheDir, `ProviderEventsData_${this.addr}`);
+    }
+
+    protected getCSVFileName(): string {
+        return `ProviderEvents_${this.addr}.csv`;
     }
 
     protected async fetchDataFromDb(): Promise<ProviderEventsResponse[]> {
@@ -177,41 +185,23 @@ class ProviderEventsData extends CachedDiskPsqlQuery<ProviderEventsResponse> {
 export async function ProviderEventsHandler(request: FastifyRequest, reply: FastifyReply) {
     let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
     if (addr === '') {
-        return;
+        return null;
     }
-    const providerEventsData = new ProviderEventsData(addr);
-    try {
-        const data = await providerEventsData.getPaginatedItems(request);
-        return data;
-    } catch (error) {
-        const err = error as Error;
-        reply.code(400).send({ error: String(err.message) });
-    }
+    return await ProviderEventsData.GetInstance(addr).getPaginatedItemsCachedHandler(request, reply)
 }
 
 export async function ProviderEventsItemCountHandler(request: FastifyRequest, reply: FastifyReply) {
     let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
     if (addr === '') {
-        return;
+        return reply;
     }
-    const providerEventsData = new ProviderEventsData(addr);
-    return providerEventsData.getTotalItemCount();
+    return await ProviderEventsData.GetInstance(addr).getTotalItemCountRawHandler(request, reply)
 }
 
 export async function ProviderEventsCSVHandler(request: FastifyRequest, reply: FastifyReply) {
     let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
     if (addr === '') {
-        return;
+        return reply;
     }
-
-    const providerHealthData = new ProviderEventsData(addr);
-    const csv = await providerHealthData.getCSV();
-
-    if (csv === null) {
-        return;
-    }
-
-    reply.header('Content-Type', 'text/csv');
-    reply.header('Content-Disposition', `attachment; filename=ProviderEvents_${addr}.csv`);
-    reply.send(csv);
+    return await ProviderEventsData.GetInstance(addr).getCSVRawHandler(request, reply)
 }

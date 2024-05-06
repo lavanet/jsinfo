@@ -8,7 +8,7 @@ import { Pagination, ParsePaginationFromString } from '../utils/queryPagination'
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE } from '../queryConsts';
 import path from 'path';
 import { CSVEscape, CompareValues } from '../utils/queryUtils';
-import { CachedDiskPsqlQuery } from '../classes/CachedDiskPsqlQuery';
+import { CachedDiskDbDataFetcher } from '../classes/CachedDiskDbDataFetcher';
 
 type IndexProvidersResponse = {
     addr: string,
@@ -53,14 +53,22 @@ export const IndexProvidersHandlerOpts: RouteShorthandOptions = {
     }
 }
 
-class IndexProvidersData extends CachedDiskPsqlQuery<IndexProvidersResponse> {
+class IndexProvidersData extends CachedDiskDbDataFetcher<IndexProvidersResponse> {
 
     constructor() {
-        super();
+        super("IndexProvidersData");
     }
 
     protected getCacheFilePath(): string {
         return path.join(this.cacheDir, `IndexProvidersData`);
+    }
+
+    protected getCSVFileName(): string {
+        return `LavaTopProviders.csv`;
+    }
+
+    public static GetInstance(): IndexProvidersData {
+        return IndexProvidersData.GetInstanceBase();
     }
 
     protected async fetchDataFromDb(): Promise<IndexProvidersResponse[]> {
@@ -70,7 +78,9 @@ class IndexProvidersData extends CachedDiskPsqlQuery<IndexProvidersResponse> {
         }).from(JsinfoSchema.aggHourlyrelayPayments).
             groupBy(JsinfoSchema.aggHourlyrelayPayments.provider).
             orderBy(desc(sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.rewardSum})`))
+
         let providersAddrs: string[] = []
+
         res4.map((provider) => {
             providersAddrs.push(provider.address!)
         })
@@ -167,35 +177,15 @@ class IndexProvidersData extends CachedDiskPsqlQuery<IndexProvidersResponse> {
 
 export async function IndexProvidersHandler(request: FastifyRequest, reply: FastifyReply) {
     await QueryCheckJsinfoReadDbInstance()
-
-    const providerRewardsData = new IndexProvidersData();
-    try {
-        const data = await providerRewardsData.getPaginatedItems(request);
-        return data;
-    } catch (error) {
-        const err = error as Error;
-        reply.code(400).send({ error: String(err.message) });
-    }
+    return await IndexProvidersData.GetInstance().getPaginatedItemsCachedHandler(request, reply)
 }
 
 export async function IndexProvidersItemCountHandler(request: FastifyRequest, reply: FastifyReply) {
     await QueryCheckJsinfoReadDbInstance()
-
-    const providerRewardsData = new IndexProvidersData();
-    return providerRewardsData.getTotalItemCount();
+    return await IndexProvidersData.GetInstance().getTotalItemCountRawHandler(request, reply)
 }
 
 export async function IndexProvidersCSVHandler(request: FastifyRequest, reply: FastifyReply) {
     await QueryCheckJsinfoReadDbInstance()
-
-    const providerHealthData = new IndexProvidersData();
-    const csv = await providerHealthData.getCSV();
-
-    if (csv === null) {
-        return;
-    }
-
-    reply.header('Content-Type', 'text/csv');
-    reply.header('Content-Disposition', `attachment; filename=LavaTopProviders.csv`);
-    reply.send(csv);
+    return await IndexProvidersData.GetInstance().getCSVRawHandler(request, reply)
 }

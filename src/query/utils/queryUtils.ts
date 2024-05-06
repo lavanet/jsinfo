@@ -81,3 +81,13 @@ export function GetNestedValue(obj: any, keyPath: string): string | number | nul
 
     return value;
 }
+
+export function GetDataLengthForPrints(data: any): string {
+    if (data == null) return '<null>';
+    if (Array.isArray(data)) {
+        return String(data.length);
+    } else if (typeof data === 'object' && data !== null) {
+        return String(Object.keys(data).length);
+    }
+    return 'N/A';
+}

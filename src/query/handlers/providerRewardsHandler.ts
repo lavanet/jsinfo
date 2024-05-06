@@ -9,7 +9,7 @@ import { Pagination, ParsePaginationFromRequest, ParsePaginationFromString } fro
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE } from '../queryConsts';
 import path from 'path';
 import { CSVEscape, CompareValues, GetAndValidateProviderAddressFromRequest, GetNestedValue } from '../utils/queryUtils';
-import { CachedDiskPsqlQuery } from '../classes/CachedDiskPsqlQuery';
+import { CachedDiskDbDataFetcher } from '../classes/CachedDiskDbDataFetcher';
 
 export type ProviderRewardsResponse = {
     relay_payments: {
@@ -120,16 +120,24 @@ export const ProviderRewardsHandlerOpts: RouteShorthandOptions = {
 };
 
 
-class ProviderRewardsData extends CachedDiskPsqlQuery<ProviderRewardsResponse> {
+class ProviderRewardsData extends CachedDiskDbDataFetcher<ProviderRewardsResponse> {
     private addr: string;
 
     constructor(addr: string) {
-        super();
+        super("ProviderRewardsData");
         this.addr = addr;
+    }
+
+    public static GetInstance(addr: string): ProviderRewardsData {
+        return ProviderRewardsData.GetInstanceBase(addr);
     }
 
     protected getCacheFilePath(): string {
         return path.join(this.cacheDir, `ProviderRewardsData_${this.addr}`);
+    }
+
+    protected getCSVFileName(): string {
+        return `ProviderRewards_${this.addr}.csv`;
     }
 
     protected async fetchDataFromDb(): Promise<ProviderRewardsResponse[]> {
@@ -201,45 +209,23 @@ class ProviderRewardsData extends CachedDiskPsqlQuery<ProviderRewardsResponse> {
 export async function ProviderRewardsHandler(request: FastifyRequest, reply: FastifyReply) {
     let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
     if (addr === '') {
-        return;
+        return null;
     }
-
-    const providerRewardsData = new ProviderRewardsData(addr);
-    try {
-        const data = await providerRewardsData.getPaginatedItems(request);
-        return data;
-    } catch (error) {
-        const err = error as Error;
-        reply.code(400).send({ error: String(err.message) });
-    }
+    return await ProviderRewardsData.GetInstance(addr).getPaginatedItemsCachedHandler(request, reply)
 }
 
 export async function ProviderRewardsItemCountHandler(request: FastifyRequest, reply: FastifyReply) {
     let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
     if (addr === '') {
-        return;
+        return reply;
     }
-
-
-    const providerRewardsData = new ProviderRewardsData(addr);
-    return providerRewardsData.getTotalItemCount();
+    return await ProviderRewardsData.GetInstance(addr).getTotalItemCountRawHandler(request, reply)
 }
 
 export async function ProviderRewardsCSVHandler(request: FastifyRequest, reply: FastifyReply) {
     let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
     if (addr === '') {
-        return;
+        return reply;
     }
-
-    const providerHealthData = new ProviderRewardsData(addr);
-    const csv = await providerHealthData.getCSV();
-
-    if (csv === null) {
-        return;
-    }
-
-    reply.header('Content-Type', 'text/csv');
-    reply.header('Content-Disposition', `attachment; filename=ProviderRewards_${addr}.csv`);
-    reply.send(csv);
-    return reply;
+    return await ProviderRewardsData.GetInstance(addr).getCSVRawHandler(request, reply)
 }

@@ -50,7 +50,7 @@ export const JSINFO_QUERY_PROVIDER_DUAL_STACKING_DELEGATOR_REWARDS_CUTOFF_DAYS =
 export const JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE = parseInt(GetEnvVar("JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE", "20"));
 export const JSINFO_QUERY_ALLOWED_ITEMS_PER_PAGE = parseInt(GetEnvVar("JSINFO_QUERY_ALLOWED_ITEMS_PER_PAGE", "100"));
 
-export const JSINFO_QUERY_HANDLER_CACHE_TIME_SECONDS = parseInt(GetEnvVar("JSINFO_QUERY_HANDLER_CACHE_TIME_SECONDS", (15 * 60) + "")); // 15 minutes in seconds - same as agregation time - same as block time
+export const JSINFO_QUERY_HANDLER_CACHE_TIME_SECONDS = parseInt(GetEnvVar("JSINFO_QUERY_HANDLER_CACHE_TIME_SECONDS", (5 * 60 * 60) + "")); // 5 minutes
 
 export const JSINFO_NO_READ_DB = GetEnvVar("JSINFO_NO_READ_DB", "true").toLowerCase() === "true";
 

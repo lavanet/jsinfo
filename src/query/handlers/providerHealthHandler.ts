@@ -6,11 +6,11 @@ import { QueryGetJsinfoReadDbInstance } from '../queryDb';
 import * as JsinfoSchema from '../../schemas/jsinfo_schema';
 import { eq, desc } from "drizzle-orm";
 import { Pagination } from '../utils/queryPagination';
-import { CSVEscape, GetAndValidateProviderAddressFromRequest, IsNotNullAndNotZero } from '../utils/queryUtils';
+import { CSVEscape, GetAndValidateProviderAddressFromRequest, GetDataLengthForPrints, IsNotNullAndNotZero } from '../utils/queryUtils';
 import { CompareValues } from '../utils/queryUtils';
 import path from 'path';
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE } from '../queryConsts';
-import { CachedDiskPsqlQuery } from '../classes/CachedDiskPsqlQuery';
+import { CachedDiskDbDataFetcher } from '../classes/CachedDiskDbDataFetcher';
 
 export interface HealthReportResponse {
     message: string | null;
@@ -51,17 +51,29 @@ export const ProviderHealthHandlerOpts: RouteShorthandOptions = {
     }
 }
 
-class ProviderHealthData extends CachedDiskPsqlQuery<HealthReportResponse> {
+class ProviderHealthData extends CachedDiskDbDataFetcher<HealthReportResponse> {
     private addr: string;
 
-
     constructor(addr: string) {
-        super();
+        super("ProviderHealthData");
+
+        if (typeof addr !== 'string') {
+            throw new Error(`Invalid type for addr. Expected string but received ${typeof addr}. addr: ${addr}`);
+        }
+
         this.addr = addr;
+    }
+
+    public static GetInstance(addr: string): ProviderHealthData {
+        return ProviderHealthData.GetInstanceBase(addr);
     }
 
     protected getCacheFilePath(): string {
         return path.join(this.cacheDir, `ProviderHealthHandlerData_${this.addr}`);
+    }
+
+    protected getCSVFileName(): string {
+        return `ProviderHealth_${this.addr}.csv`;
     }
 
     protected async fetchDataFromDb(): Promise<HealthReportResponse[]> {
@@ -242,46 +254,26 @@ export const ApplyHealthResponseGroupingAndTextFormatting = (res: HealthReportRe
     return groupedAndSortedItems.map(applyTextFormattingToHealthReportRow);
 }
 
-export async function ProviderHealthItemCountHandler(request: FastifyRequest, reply: FastifyReply) {
-    let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
-    if (addr === '') {
-        return;
-    }
-
-    const providerHealthData = new ProviderHealthData(addr);
-    return providerHealthData.getTotalItemCount();;
-}
-
 export async function ProviderHealthHandler(request: FastifyRequest, reply: FastifyReply) {
     let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
     if (addr === '') {
-        return;
+        return null;
     }
+    return await ProviderHealthData.GetInstance(addr).getPaginatedItemsCachedHandler(request, reply);
+}
 
-    const providerHealthData = new ProviderHealthData(addr);
-    try {
-        const data = await providerHealthData.getPaginatedItems(request);
-        return data;
-    } catch (error) {
-        const err = error as Error;
-        reply.code(400).send({ error: String(err.message) });
+export async function ProviderHealthItemCountHandler(request: FastifyRequest, reply: FastifyReply) {
+    let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
+    if (addr === '') {
+        return reply;
     }
+    return await ProviderHealthData.GetInstance(addr).getTotalItemCountRawHandler(request, reply)
 }
 
 export async function ProviderHealthCSVHandler(request: FastifyRequest, reply: FastifyReply) {
     let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
     if (addr === '') {
-        return;
+        return reply;
     }
-
-    const providerHealthData = new ProviderHealthData(addr);
-    const csv = await providerHealthData.getCSV();
-
-    if (csv === null) {
-        return;
-    }
-
-    reply.header('Content-Type', 'text/csv');
-    reply.header('Content-Disposition', `attachment; filename=ProviderHealth_${addr}.csv`);
-    reply.send(csv);
+    return await ProviderHealthData.GetInstance(addr).getCSVRawHandler(request, reply);
 }

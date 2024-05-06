@@ -1,9 +1,9 @@
 import {
-    HealthReport, ApplyHealthResponseGroupingAndTextFormatting,
+    HealthReportResponse, ApplyHealthResponseGroupingAndTextFormatting,
     CompareHealthReportByStatusLatency, RoundDateToNearest15Minutes, GroupHealthReportBy15MinutesWithSort
 } from './providerHealthHandler';
 
-export const createHealthReport = (partialReport: Partial<HealthReport>): HealthReport => {
+export const createHealthReport = (partialReport: Partial<HealthReportResponse>): HealthReportResponse => {
     return {
         message: null,
         block: null,

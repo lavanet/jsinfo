@@ -121,11 +121,24 @@ class EventsRewardsData extends CachedDiskDbDataFetcher<EventsRewardsResponse> {
         }
     }
 
-    public async getPaginatedItemsImpl(data: EventsRewardsResponse[], pagination: Pagination | null): Promise<EventsRewardsResponse[] | null> {
-        const defaultSortKey = "id"
-        pagination = pagination || ParsePaginationFromString(defaultSortKey + ",descending,1," + JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE)
-        if (pagination.sortKey === null) pagination.sortKey = defaultSortKey;
+    public async getPaginatedItemsImpl(
+        data: EventsRewardsResponse[],
+        pagination: Pagination | null
+    ): Promise<EventsRewardsResponse[] | null> {
+        const defaultSortKey = "id";
+        const defaultPagination = ParsePaginationFromString(
+            `${defaultSortKey},descending,1,${JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE}`
+        );
 
+        // Use the provided pagination or the default one
+        const finalPagination: Pagination = pagination ?? defaultPagination;
+
+        // If sortKey is null, set it to the defaultSortKey
+        if (finalPagination.sortKey === null) {
+            finalPagination.sortKey = defaultSortKey;
+        }
+
+        // Validate sortKey
         const validKeys = [
             "id",
             "relays",
@@ -145,22 +158,27 @@ class EventsRewardsData extends CachedDiskDbDataFetcher<EventsRewardsResponse> {
             "consumer",
             "tx"
         ];
-
-        if (!validKeys.includes(pagination.sortKey)) {
-            const trimmedSortKey = pagination.sortKey.substring(0, 500);
+        if (!validKeys.includes(finalPagination.sortKey)) {
+            const trimmedSortKey = finalPagination.sortKey.substring(0, 500);
             throw new Error(`Invalid sort key: ${trimmedSortKey}`);
         }
 
         // Apply sorting
         data.sort((a, b) => {
-            const aValue = a[pagination.sortKey || defaultSortKey];
-            const bValue = b[pagination.sortKey || defaultSortKey];
-            return CompareValues(aValue, bValue, pagination.direction);
+            if (finalPagination.sortKey !== null) {
+                const aValue = a[finalPagination.sortKey];
+                const bValue = b[finalPagination.sortKey];
+                return CompareValues(aValue, bValue, finalPagination.direction);
+            }
+            return 0;
         });
 
-        data = data.slice((pagination.page - 1) * pagination.count, pagination.page * pagination.count);
+        // Apply pagination
+        const start = (finalPagination.page - 1) * finalPagination.count;
+        const end = finalPagination.page * finalPagination.count;
+        const paginatedData = data.slice(start, end);
 
-        return data;
+        return paginatedData;
     }
 
     public async getCSVImpl(data: EventsRewardsResponse[]): Promise<string> {

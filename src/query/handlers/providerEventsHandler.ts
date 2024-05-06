@@ -127,28 +127,44 @@ class ProviderEventsData extends CachedDiskDbDataFetcher<ProviderEventsResponse>
         return eventsRes;
     }
 
-    public async getPaginatedItemsImpl(data: ProviderEventsResponse[], pagination: Pagination | null): Promise<ProviderEventsResponse[] | null> {
-        pagination = pagination || ParsePaginationFromString("blocks.datetime,descending,1," + JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE)
-        if (pagination.sortKey === null) pagination.sortKey = "blocks.datetime";
+    public async getPaginatedItemsImpl(
+        data: ProviderEventsResponse[],
+        pagination: Pagination | null
+    ): Promise<ProviderEventsResponse[] | null> {
+        const defaultSortKey = "blocks.datetime";
+        const defaultPagination = ParsePaginationFromString(
+            `${defaultSortKey},descending,1,${JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE}`
+        );
+
+        // Use the provided pagination or the default one
+        const finalPagination: Pagination = pagination ?? defaultPagination;
+
+        // If sortKey is null, set it to the defaultSortKey
+        if (finalPagination.sortKey === null) {
+            finalPagination.sortKey = defaultSortKey;
+        }
 
         // Validate sortKey
         const validKeys = ["events.eventType", "blocks.height", "blocks.datetime", "events.b1", "events.b2", "events.b3", "events.i1", "events.i2", "events.i3", "events.t1", "events.t2", "events.t3"];
-        if (!validKeys.includes(pagination.sortKey)) {
-            const trimmedSortKey = pagination.sortKey.substring(0, 500);
+        if (!validKeys.includes(finalPagination.sortKey)) {
+            const trimmedSortKey = finalPagination.sortKey.substring(0, 500);
             throw new Error(`Invalid sort key: ${trimmedSortKey}`);
         }
 
         // Apply sorting
         data.sort((a, b) => {
-            const aValue = GetNestedValue(a, pagination.sortKey || "blocks.datetime");
-            const bValue = GetNestedValue(b, pagination.sortKey || "blocks.datetime");
-
-            return CompareValues(aValue, bValue, pagination.direction);
+            const sortKey = finalPagination.sortKey as string;
+            const aValue = GetNestedValue(a, sortKey);
+            const bValue = GetNestedValue(b, sortKey);
+            return CompareValues(aValue, bValue, finalPagination.direction);
         });
 
-        data = data.slice((pagination.page - 1) * pagination.count, pagination.page * pagination.count);
+        // Apply pagination
+        const start = (finalPagination.page - 1) * finalPagination.count;
+        const end = finalPagination.page * finalPagination.count;
+        const paginatedData = data.slice(start, end);
 
-        return data;
+        return paginatedData;
     }
 
 

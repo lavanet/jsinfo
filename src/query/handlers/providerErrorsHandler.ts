@@ -7,7 +7,7 @@ import { QueryCheckRelaysReadDbInstance, QueryGetRelaysReadDbInstance } from '..
 import { eq, desc } from "drizzle-orm";
 import { Pagination } from '../utils/queryPagination';
 import { CSVEscape, CompareValues, GetAndValidateProviderAddressFromRequest } from '../utils/queryUtils';
-import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE } from '../queryConsts';
+import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '../queryConsts';
 import { ParseLavapProviderError } from '../utils/lavapProvidersErrorParser';
 import * as RelaysSchema from '../../schemas/relays_schema';
 import { CachedDiskDbDataFetcher } from '../classes/CachedDiskDbDataFetcher';
@@ -73,7 +73,7 @@ class ProviderErrorsData extends CachedDiskDbDataFetcher<ErrorsReportReponse> {
     protected async fetchDataFromDb(): Promise<ErrorsReportReponse[]> {
         const result = await QueryGetRelaysReadDbInstance().select().from(RelaysSchema.lavaReportError)
             .where(eq(RelaysSchema.lavaReportError.provider, this.addr))
-            .orderBy(desc(RelaysSchema.lavaReportError.created_at)).offset(0).limit(5000)
+            .orderBy(desc(RelaysSchema.lavaReportError.created_at)).offset(0).limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION)
 
         return result.map((row: ErrorsReport) => ({
             id: row.id,

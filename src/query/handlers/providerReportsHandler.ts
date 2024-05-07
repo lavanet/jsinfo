@@ -130,7 +130,7 @@ class ProviderReportsData extends CachedDiskDbDataFetcher<ProviderReportsRespons
                     gte(JsinfoSchema.blocks['datetime'], thirtyDaysAgo)
                 )
             ).
-            orderBy(desc(JsinfoSchema.blocks['datetime'])).limit(5000);
+            orderBy(desc(JsinfoSchema.providerReported.id)).offset(0).limit(5000);
         return reportsRes;
     }
 

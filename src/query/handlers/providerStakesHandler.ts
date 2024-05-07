@@ -6,7 +6,7 @@ import { QueryGetJsinfoReadDbInstance } from '../queryDb';
 import * as JsinfoSchema from '../../schemas/jsinfo_schema';
 import { desc, eq } from "drizzle-orm";
 import { Pagination, ParsePaginationFromString } from '../utils/queryPagination';
-import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE } from '../queryConsts';
+import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '../queryConsts';
 import path from 'path';
 import { CSVEscape, CompareValues, GetAndValidateProviderAddressFromRequest } from '../utils/queryUtils';
 import { ReplaceArchive } from '../../indexer/indexerUtils';
@@ -84,7 +84,8 @@ class ProviderStakesData extends CachedDiskDbDataFetcher<JsinfoSchema.ProviderSt
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
         let stakesRes = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.providerStakes).
-            where(eq(JsinfoSchema.providerStakes.provider, this.addr)).orderBy(desc(JsinfoSchema.providerStakes.stake))
+            where(eq(JsinfoSchema.providerStakes.provider, this.addr)).orderBy(desc(JsinfoSchema.providerStakes.stake)).
+            offset(0).limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
 
         stakesRes = stakesRes.map(item => {
             item.extensions = item.extensions ? ReplaceArchive(item.extensions || '') : "-";

@@ -6,7 +6,7 @@ import { QueryGetJsinfoReadDbInstance } from '../queryDb';
 import * as JsinfoSchema from '../../schemas/jsinfo_schema';
 import { and, desc, eq, gte } from "drizzle-orm";
 import { Pagination, ParsePaginationFromString } from '../utils/queryPagination';
-import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE } from '../queryConsts';
+import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '../queryConsts';
 import fs from 'fs';
 import path from 'path';
 import { CSVEscape, CompareValues, GetAndValidateProviderAddressFromRequest, GetNestedValue } from '../utils/queryUtils';
@@ -122,7 +122,7 @@ class ProviderEventsData extends CachedDiskDbDataFetcher<ProviderEventsResponse>
                     gte(JsinfoSchema.blocks.datetime, thirtyDaysAgo)
                 )
             ).
-            orderBy(desc(JsinfoSchema.events.id)).offset(0).limit(5000)
+            orderBy(desc(JsinfoSchema.events.id)).offset(0).limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION)
 
         return eventsRes;
     }

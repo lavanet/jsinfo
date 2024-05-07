@@ -5,7 +5,7 @@ import { QueryGetJsinfoReadDbInstance, QueryCheckJsinfoReadDbInstance } from '..
 import * as JsinfoSchema from '../../schemas/jsinfo_schema';
 import { asc, desc, eq, gte } from "drizzle-orm";
 import { Pagination, ParsePaginationFromString } from '../utils/queryPagination';
-import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE } from '../queryConsts';
+import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '../queryConsts';
 import path from 'path';
 import { CSVEscape, CompareValues } from '../utils/queryUtils';
 import { CachedDiskDbDataFetcher } from '../classes/CachedDiskDbDataFetcher';
@@ -92,8 +92,8 @@ class EventsReportsData extends CachedDiskDbDataFetcher<EventsReportsResponse> {
             .from(JsinfoSchema.providerReported)
             .leftJoin(JsinfoSchema.providers, eq(JsinfoSchema.providerReported.provider, JsinfoSchema.providers.address))
             .where(gte(JsinfoSchema.providerReported.blockId, minBlockHeight))
-            .orderBy(desc(JsinfoSchema.providerReported.blockId))
-            .limit(100);
+            .orderBy(desc(JsinfoSchema.providerReported.id))
+            .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
 
         const reportsRes = await query;
 

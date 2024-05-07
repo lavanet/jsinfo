@@ -5,8 +5,8 @@ import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryGetJsinfoReadDbInstance } from '../queryDb';
 import * as JsinfoSchema from '../../schemas/jsinfo_schema';
 import { and, desc, eq, gte } from "drizzle-orm";
-import { Pagination, ParsePaginationFromRequest, ParsePaginationFromString } from '../utils/queryPagination';
-import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE } from '../queryConsts';
+import { Pagination, ParsePaginationFromString } from '../utils/queryPagination';
+import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '../queryConsts';
 import path from 'path';
 import { CSVEscape, CompareValues, GetAndValidateProviderAddressFromRequest, GetNestedValue } from '../utils/queryUtils';
 import { CachedDiskDbDataFetcher } from '../classes/CachedDiskDbDataFetcher';
@@ -151,7 +151,7 @@ class ProviderRewardsData extends CachedDiskDbDataFetcher<ProviderRewardsRespons
                     eq(JsinfoSchema.relayPayments.provider, this.addr),
                     gte(JsinfoSchema.relayPayments.datetime, thirtyDaysAgo)
                 )).
-            orderBy(desc(JsinfoSchema.relayPayments.id)).offset(0).limit(5000)
+            orderBy(desc(JsinfoSchema.relayPayments.id)).offset(0).limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION)
 
         return paymentsRes;
     }

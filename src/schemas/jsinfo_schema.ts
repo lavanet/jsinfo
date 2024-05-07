@@ -219,6 +219,8 @@ export type SubscriptionBuy = typeof subscriptionBuys.$inferSelect
 export type InsertSubscriptionBuy = typeof subscriptionBuys.$inferInsert
 
 export const providerReported = pgTable('provider_reported', {
+  id: serial('id').primaryKey(),
+
   provider: text('provider').references(() => providers.address),
   blockId: integer('block_id').references(() => blocks.height),
 

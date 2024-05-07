@@ -8,7 +8,7 @@ import { QueryGetJsinfoReadDbInstance } from '../queryDb';
 import * as JsinfoSchema from '../../schemas/jsinfo_schema';
 import { and, desc, eq, gte } from "drizzle-orm";
 import { Pagination, ParsePaginationFromRequest } from '../utils/queryPagination';
-import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE } from '../queryConsts';
+import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '../queryConsts';
 import fs from 'fs';
 import path from 'path';
 import { CompareValues, GetAndValidateProviderAddressFromRequest } from '../utils/queryUtils';
@@ -93,7 +93,7 @@ class ProviderBlockReportsData extends CachedDiskDbDataFetcher<BlockReportsRepon
                     gte(JsinfoSchema.providerLatestBlockReports.timestamp, thirtyDaysAgo)
                 )
             ).
-            orderBy(desc(JsinfoSchema.providerLatestBlockReports.timestamp)).limit(5000);
+            orderBy(desc(JsinfoSchema.providerLatestBlockReports.timestamp)).limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
 
         return result.map((row: JsinfoSchema.ProviderLatestBlockReports) => ({
             id: row.id,

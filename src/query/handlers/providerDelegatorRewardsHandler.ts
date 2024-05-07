@@ -9,7 +9,7 @@ import { QueryGetJsinfoReadDbInstance } from '../queryDb';
 import { eq, desc } from "drizzle-orm";
 import { Pagination } from '../utils/queryPagination';
 import { CompareValues, GetAndValidateProviderAddressFromRequest } from '../utils/queryUtils';
-import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE } from '../queryConsts';
+import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '../queryConsts';
 import * as JsinfoSchema from '../../schemas/jsinfo_schema';
 import { CachedDiskDbDataFetcher } from '../classes/CachedDiskDbDataFetcher';
 
@@ -67,7 +67,7 @@ class ProviderDelegatorRewardsData extends CachedDiskDbDataFetcher<DelegatorRewa
     protected async fetchDataFromDb(): Promise<DelegatorRewardReponse[]> {
         const result = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.dualStackingDelegatorRewards)
             .where(eq(JsinfoSchema.dualStackingDelegatorRewards.provider, this.addr))
-            .orderBy(desc(JsinfoSchema.dualStackingDelegatorRewards.timestamp)).offset(0).limit(5000)
+            .orderBy(desc(JsinfoSchema.dualStackingDelegatorRewards.timestamp)).offset(0).limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION)
 
         return result.map((row: JsinfoSchema.DualStackingDelegatorRewards) => ({
             id: row.id,

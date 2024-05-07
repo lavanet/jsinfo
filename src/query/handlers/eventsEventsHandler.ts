@@ -5,7 +5,7 @@ import { QueryGetJsinfoReadDbInstance, QueryCheckJsinfoReadDbInstance } from '..
 import * as JsinfoSchema from '../../schemas/jsinfo_schema';
 import { asc, desc, eq, gte } from "drizzle-orm";
 import { Pagination, ParsePaginationFromString } from '../utils/queryPagination';
-import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE } from '../queryConsts';
+import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '../queryConsts';
 import path from 'path';
 import { CSVEscape, CompareValues } from '../utils/queryUtils';
 import { CachedDiskDbDataFetcher } from '../classes/CachedDiskDbDataFetcher';
@@ -113,7 +113,7 @@ class EventsEventsData extends CachedDiskDbDataFetcher<EventsEventsResponse> {
             .where(gte(JsinfoSchema.events.blockId, minBlockHeight))
             .orderBy(desc(JsinfoSchema.events.id))
             .offset(0)
-            .limit(5000);
+            .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
 
         const flattenedEvents = eventsRes.map(event => ({
             ...event.events,

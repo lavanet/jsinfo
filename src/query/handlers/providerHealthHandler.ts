@@ -9,7 +9,7 @@ import { Pagination } from '../utils/queryPagination';
 import { CSVEscape, GetAndValidateProviderAddressFromRequest, GetDataLengthForPrints, IsNotNullAndNotZero } from '../utils/queryUtils';
 import { CompareValues } from '../utils/queryUtils';
 import path from 'path';
-import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE } from '../queryConsts';
+import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '../queryConsts';
 import { CachedDiskDbDataFetcher } from '../classes/CachedDiskDbDataFetcher';
 
 export interface HealthReportResponse {
@@ -128,7 +128,9 @@ class ProviderHealthData extends CachedDiskDbDataFetcher<HealthReportResponse> {
 const createHealthReportQuery = (addr: string) => {
     return QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.providerHealthHourly)
         .where(eq(JsinfoSchema.providerHealthHourly.provider, addr))
-        .orderBy(desc(JsinfoSchema.providerHealthHourly.timestamp));
+        .orderBy(desc(JsinfoSchema.providerHealthHourly.timestamp))
+        .offset(0)
+        .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
 }
 
 const getHealthReportBlocksMessage = (item: HealthReportResponse) => {

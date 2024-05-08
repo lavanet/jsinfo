@@ -5,7 +5,7 @@ import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '..
 import * as JsinfoSchema from '../../schemas/jsinfo_schema';
 import { isNotNull } from 'drizzle-orm';
 
-export const AutoCompleteLinksHandlerOpts: RouteShorthandOptions = {
+export const AutoCompleteLinksCachedHandlerOpts: RouteShorthandOptions = {
     schema: {
         response: {
             200: {
@@ -20,7 +20,7 @@ export const AutoCompleteLinksHandlerOpts: RouteShorthandOptions = {
     }
 }
 
-export async function AutoCompleteLinksHandler(request: FastifyRequest, reply: FastifyReply) {
+export async function AutoCompleteLinksCachedHandler(request: FastifyRequest, reply: FastifyReply) {
     await QueryCheckJsinfoReadDbInstance()
 
     const baseUrls = {

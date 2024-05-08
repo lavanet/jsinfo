@@ -25,7 +25,7 @@ export interface HealthReportResponse {
     interface: string | null;
 }
 
-export const ProviderHealthHandlerOpts: RouteShorthandOptions = {
+export const ProviderHealthCachedHandlerOpts: RouteShorthandOptions = {
     schema: {
         response: {
             200: {
@@ -256,7 +256,7 @@ export const ApplyHealthResponseGroupingAndTextFormatting = (res: HealthReportRe
     return groupedAndSortedItems.map(applyTextFormattingToHealthReportRow);
 }
 
-export async function ProviderHealthHandler(request: FastifyRequest, reply: FastifyReply) {
+export async function ProviderHealthCachedHandler(request: FastifyRequest, reply: FastifyReply) {
     let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
     if (addr === '') {
         return null;
@@ -264,7 +264,7 @@ export async function ProviderHealthHandler(request: FastifyRequest, reply: Fast
     return await ProviderHealthData.GetInstance(addr).getPaginatedItemsCachedHandler(request, reply);
 }
 
-export async function ProviderHealthItemCountHandler(request: FastifyRequest, reply: FastifyReply) {
+export async function ProviderHealthItemCountRawHandler(request: FastifyRequest, reply: FastifyReply) {
     let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
     if (addr === '') {
         return reply;
@@ -272,7 +272,7 @@ export async function ProviderHealthItemCountHandler(request: FastifyRequest, re
     return await ProviderHealthData.GetInstance(addr).getTotalItemCountRawHandler(request, reply)
 }
 
-export async function ProviderHealthCSVHandler(request: FastifyRequest, reply: FastifyReply) {
+export async function ProviderHealthCSVRawHandler(request: FastifyRequest, reply: FastifyReply) {
     let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
     if (addr === '') {
         return reply;

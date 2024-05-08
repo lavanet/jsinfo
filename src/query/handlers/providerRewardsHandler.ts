@@ -33,7 +33,7 @@ export type ProviderRewardsResponse = {
     blocks: { datetime: Date | null; height: number | null } | null
 };
 
-export const ProviderRewardsHandlerOpts: RouteShorthandOptions = {
+export const ProviderRewardsCachedHandlerOpts: RouteShorthandOptions = {
     schema: {
         response: {
             200: {
@@ -223,7 +223,7 @@ class ProviderRewardsData extends CachedDiskDbDataFetcher<ProviderRewardsRespons
     }
 }
 
-export async function ProviderRewardsHandler(request: FastifyRequest, reply: FastifyReply) {
+export async function ProviderRewardsCachedHandler(request: FastifyRequest, reply: FastifyReply) {
     let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
     if (addr === '') {
         return null;
@@ -231,7 +231,7 @@ export async function ProviderRewardsHandler(request: FastifyRequest, reply: Fas
     return await ProviderRewardsData.GetInstance(addr).getPaginatedItemsCachedHandler(request, reply)
 }
 
-export async function ProviderRewardsItemCountHandler(request: FastifyRequest, reply: FastifyReply) {
+export async function ProviderRewardsItemCountRawHandler(request: FastifyRequest, reply: FastifyReply) {
     let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
     if (addr === '') {
         return reply;
@@ -239,7 +239,7 @@ export async function ProviderRewardsItemCountHandler(request: FastifyRequest, r
     return await ProviderRewardsData.GetInstance(addr).getTotalItemCountRawHandler(request, reply)
 }
 
-export async function ProviderRewardsCSVHandler(request: FastifyRequest, reply: FastifyReply) {
+export async function ProviderRewardsCSVRawHandler(request: FastifyRequest, reply: FastifyReply) {
     let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
     if (addr === '') {
         return reply;

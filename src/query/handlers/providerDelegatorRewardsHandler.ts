@@ -20,7 +20,7 @@ export interface DelegatorRewardReponse {
     amount: string;
 }
 
-export const ProviderDelegatorRewardsHandlerOpts: RouteShorthandOptions = {
+export const ProviderDelegatorRewardsCachedHandlerOpts: RouteShorthandOptions = {
     schema: {
         response: {
             200: {
@@ -122,7 +122,7 @@ class ProviderDelegatorRewardsData extends CachedDiskDbDataFetcher<DelegatorRewa
     }
 }
 
-export async function ProviderDelegatorRewardsHandler(request: FastifyRequest, reply: FastifyReply) {
+export async function ProviderDelegatorRewardsCachedHandler(request: FastifyRequest, reply: FastifyReply) {
     let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
     if (addr === '') {
         return null;
@@ -130,7 +130,7 @@ export async function ProviderDelegatorRewardsHandler(request: FastifyRequest, r
     return await ProviderDelegatorRewardsData.GetInstance(addr).getPaginatedItemsCachedHandler(request, reply)
 }
 
-export async function ProviderDelegatorRewardsItemCountHandler(request: FastifyRequest, reply: FastifyReply) {
+export async function ProviderDelegatorRewardsItemCountRawHandler(request: FastifyRequest, reply: FastifyReply) {
     let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
     if (addr === '') {
         return reply;
@@ -138,7 +138,7 @@ export async function ProviderDelegatorRewardsItemCountHandler(request: FastifyR
     return await ProviderDelegatorRewardsData.GetInstance(addr).getTotalItemCountRawHandler(request, reply)
 }
 
-export async function ProviderDelegatorRewardsCSVHandler(request: FastifyRequest, reply: FastifyReply) {
+export async function ProviderDelegatorRewardsCSVRawHandler(request: FastifyRequest, reply: FastifyReply) {
     let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
     if (addr === '') {
         return reply;

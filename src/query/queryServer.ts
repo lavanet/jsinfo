@@ -93,7 +93,7 @@ export function RegisterServerHandlerWithCache(
     path: string,
     opts: RouteShorthandOptions,
     handler: (request: FastifyRequest, reply: FastifyReply) => Promise<any>,
-    itemCountHandler?: (request: FastifyRequest, reply: FastifyReply) => Promise<any>
+    ItemCountRawHandler?: (request: FastifyRequest, reply: FastifyReply) => Promise<any>
 ) {
     console.log("Registering last-updated for path: " + "/last-updated" + path);
     server.get("/last-updated" + path, async (request: FastifyRequest, reply: FastifyReply) => {
@@ -104,9 +104,9 @@ export function RegisterServerHandlerWithCache(
     opts = AddErrorResponseToFastifyServerOpts(opts);
     server.get(path, opts, requestCache.handleRequestWithCache(handler));
 
-    if (itemCountHandler) {
-        console.log("Registering itemCountHandler for path: " + "/item-count" + path);
-        server.get("/item-count" + path, itemCountOpts, itemCountHandler);
+    if (ItemCountRawHandler) {
+        console.log("Registering ItemCountRawHandler for path: " + "/item-count" + path);
+        server.get("/item-count" + path, itemCountOpts, ItemCountRawHandler);
     }
 }
 

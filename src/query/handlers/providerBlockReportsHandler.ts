@@ -23,7 +23,7 @@ export interface BlockReportsReponse {
     chainBlockHeight: number;
 }
 
-export const ProviderBlockReportsHandlerOpts: RouteShorthandOptions = {
+export const ProviderBlockReportsCachedHandlerOpts: RouteShorthandOptions = {
     schema: {
         response: {
             200: {
@@ -150,9 +150,7 @@ class ProviderBlockReportsData extends CachedDiskDbDataFetcher<BlockReportsRepon
     }
 }
 
-
-
-export async function ProviderBlockReportsHandler(request: FastifyRequest, reply: FastifyReply) {
+export async function ProviderBlockReportsCachedHandler(request: FastifyRequest, reply: FastifyReply) {
     let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
     if (addr === '') {
         return null;
@@ -160,7 +158,7 @@ export async function ProviderBlockReportsHandler(request: FastifyRequest, reply
     return await ProviderBlockReportsData.GetInstance(addr).getPaginatedItemsCachedHandler(request, reply)
 }
 
-export async function ProviderBlockReportsItemCountHandler(request: FastifyRequest, reply: FastifyReply) {
+export async function ProviderBlockReportsItemCountRawHandler(request: FastifyRequest, reply: FastifyReply) {
     let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
     if (addr === '') {
         return reply;
@@ -168,7 +166,7 @@ export async function ProviderBlockReportsItemCountHandler(request: FastifyReque
     return await ProviderBlockReportsData.GetInstance(addr).getTotalItemCountRawHandler(request, reply)
 }
 
-export async function ProviderBlockReportsCSVHandler(request: FastifyRequest, reply: FastifyReply) {
+export async function ProviderBlockReportsCSVRawHandler(request: FastifyRequest, reply: FastifyReply) {
     let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
     if (addr === '') {
         return reply;

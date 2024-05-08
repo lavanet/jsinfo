@@ -26,7 +26,7 @@ export interface ErrorsReportReponse {
     error: string;
 }
 
-export const ProviderErrorsHandlerOpts: RouteShorthandOptions = {
+export const ProviderErrorsCachedHandlerOpts: RouteShorthandOptions = {
     schema: {
         response: {
             200: {
@@ -128,7 +128,7 @@ class ProviderErrorsData extends CachedDiskDbDataFetcher<ErrorsReportReponse> {
     }
 }
 
-export async function ProviderErrorsHandler(request: FastifyRequest, reply: FastifyReply) {
+export async function ProviderErrorsCachedHandler(request: FastifyRequest, reply: FastifyReply) {
     let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
     if (addr === '') {
         return null;
@@ -136,7 +136,7 @@ export async function ProviderErrorsHandler(request: FastifyRequest, reply: Fast
     return await ProviderErrorsData.GetInstance(addr).getPaginatedItemsCachedHandler(request, reply)
 }
 
-export async function ProviderErrorsItemCountHandler(request: FastifyRequest, reply: FastifyReply) {
+export async function ProviderErrorsItemCountRawHandler(request: FastifyRequest, reply: FastifyReply) {
     let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
     if (addr === '') {
         return null;
@@ -144,7 +144,7 @@ export async function ProviderErrorsItemCountHandler(request: FastifyRequest, re
     return await ProviderErrorsData.GetInstance(addr).getTotalItemCountRawHandler(request, reply)
 }
 
-export async function ProviderErrorsCSVHandler(request: FastifyRequest, reply: FastifyReply) {
+export async function ProviderErrorsCSVRawHandler(request: FastifyRequest, reply: FastifyReply) {
     let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
     if (addr === '') {
         return;

@@ -33,7 +33,7 @@ export interface EventsEventsResponse {
     tx: string | null;
     fulltext: string | null;
 }
-export const EventsEventsHandlerOpts: RouteShorthandOptions = {
+export const EventsEventsCachedHandlerOpts: RouteShorthandOptions = {
     schema: {
         response: {
             200: {
@@ -224,17 +224,17 @@ class EventsEventsData extends CachedDiskDbDataFetcher<EventsEventsResponse> {
     }
 }
 
-export async function EventsEventsHandler(request: FastifyRequest, reply: FastifyReply) {
+export async function EventsEventsCachedHandler(request: FastifyRequest, reply: FastifyReply) {
     await QueryCheckJsinfoReadDbInstance()
     return await EventsEventsData.GetInstance().getPaginatedItemsCachedHandler(request, reply)
 }
 
-export async function EventsEventsItemCountHandler(request: FastifyRequest, reply: FastifyReply) {
+export async function EventsEventsItemCountRawHandler(request: FastifyRequest, reply: FastifyReply) {
     await QueryCheckJsinfoReadDbInstance()
     return await EventsEventsData.GetInstance().getTotalItemCountRawHandler(request, reply)
 }
 
-export async function EventsEventsCSVHandler(request: FastifyRequest, reply: FastifyReply) {
+export async function EventsEventsCSVRawHandler(request: FastifyRequest, reply: FastifyReply) {
     await QueryCheckJsinfoReadDbInstance()
     return await EventsEventsData.GetInstance().getCSVRawHandler(request, reply)
 }

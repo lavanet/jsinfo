@@ -3,83 +3,87 @@
 import { RegisterServerHandlerWithCache, GetServerInstance } from './queryServer';
 import * as consts from './queryConsts';
 
-import { LatestHandler, LatestHandlerOpts } from './handlers/latestHandler';
+import { LatestRawHandler, LatestRawHandlerOpts } from './handlers/latestHandler';
 
-import { CacheLinksHandler, CacheLinksHandlerOpts } from './handlers/cacheLinksHandler';
+import { CacheLinksCachedHandler, CacheLinksCachedHandlerOpts } from './handlers/cacheLinksHandler';
 
-import { AutoCompleteLinksHandler, AutoCompleteLinksHandlerOpts } from './handlers/autoCompleteLinksHandler';
+import { AutoCompleteLinksCachedHandler, AutoCompleteLinksCachedHandlerOpts } from './handlers/autoCompleteLinksHandler';
 
 import { IndexHandler, IndexHandlerOpts } from './handlers/indexHandler';
-import { IndexProvidersHandler, IndexProvidersHandlerOpts, IndexProvidersItemCountHandler, IndexProvidersCSVHandler } from './handlers/indexProvidersHandler';
+import { IndexChartsRawHandler, IndexChartsRawHandlerOpts } from './handlers/indexChartsHandler';
+import { IndexProvidersCachedHandler, IndexProvidersCachedHandlerOpts, IndexProvidersItemCountRawHandler, IndexProvidersCSVRawHandler } from './handlers/indexProvidersHandler';
 
 import { ProviderHandler, ProviderHandlerOpts } from './handlers/providerHandler';
-import { ProviderHealthHandler, ProviderHealthHandlerOpts, ProviderHealthItemCountHandler, ProviderHealthCSVHandler } from './handlers/providerHealthHandler';
-import { ProviderErrorsHandler, ProviderErrorsHandlerOpts, ProviderErrorsItemCountHandler, ProviderErrorsCSVHandler } from './handlers/providerErrorsHandler';
-import { ProviderStakesHandlerOpts, ProviderStakesHandler, ProviderStakesItemCountHandler, ProviderStakesCSVHandler } from './handlers/providerStakesHandler';
-import { ProviderEventsHandlerOpts, ProviderEventsHandler, ProviderEventsItemCountHandler, ProviderEventsCSVHandler } from './handlers/providerEventsHandler';
-import { ProviderRewardsHandlerOpts, ProviderRewardsHandler, ProviderRewardsItemCountHandler, ProviderRewardsCSVHandler } from './handlers/providerRewardsHandler';
-import { ProviderReportsHandlerOpts, ProviderReportsHandler, ProviderReportsItemCountHandler, ProviderReportsCSVHandler } from './handlers/providerReportsHandler';
-import { ProviderDelegatorRewardsHandlerOpts, ProviderDelegatorRewardsHandler, ProviderDelegatorRewardsItemCountHandler, ProviderDelegatorRewardsCSVHandler } from './handlers/providerDelegatorRewardsHandler';
-import { ProviderBlockReportsHandlerOpts, ProviderBlockReportsHandler, ProviderBlockReportsItemCountHandler, ProviderBlockReportsCSVHandler } from './handlers/providerBlockReportsHandler';
+import { ProviderHealthCachedHandler, ProviderHealthCachedHandlerOpts, ProviderHealthItemCountRawHandler, ProviderHealthCSVRawHandler } from './handlers/providerHealthHandler';
+import { ProviderErrorsCachedHandler, ProviderErrorsCachedHandlerOpts, ProviderErrorsItemCountRawHandler, ProviderErrorsCSVRawHandler } from './handlers/providerErrorsHandler';
+import { ProviderStakesCachedHandlerOpts, ProviderStakesHandler, ProviderStakesItemCountRawHandler, ProviderStakesCSVRawHandler } from './handlers/providerStakesHandler';
+import { ProviderEventsCachedHandlerOpts, ProviderEventsCachedHandler, ProviderEventsItemCountRawHandler, ProviderEventsCSVRawHandler } from './handlers/providerEventsHandler';
+import { ProviderRewardsCachedHandlerOpts, ProviderRewardsCachedHandler, ProviderRewardsItemCountRawHandler, ProviderRewardsCSVRawHandler } from './handlers/providerRewardsHandler';
+import { ProviderReportsCachedHandlerOpts, ProviderReportsCachedHandler, ProviderReportsItemCountRawHandler, ProviderReportsCSVRawHandler } from './handlers/providerReportsHandler';
+import { ProviderDelegatorRewardsCachedHandlerOpts, ProviderDelegatorRewardsCachedHandler, ProviderDelegatorRewardsItemCountRawHandler, ProviderDelegatorRewardsCSVRawHandler } from './handlers/providerDelegatorRewardsHandler';
+import { ProviderBlockReportsCachedHandlerOpts, ProviderBlockReportsCachedHandler, ProviderBlockReportsItemCountRawHandler, ProviderBlockReportsCSVRawHandler } from './handlers/providerBlockReportsHandler';
 
-import { EventsEventsHandlerOpts, EventsEventsHandler, EventsEventsItemCountHandler, EventsEventsCSVHandler } from './handlers/eventsEventsHandler';
-import { EventsRewardsHandlerOpts, EventsRewardsHandler, EventsRewardsItemCountHandler, EventsRewardsCSVHandler } from './handlers/eventsRewardsHandler';
-import { EventsReportsHandlerOpts, EventsReportsHandler, EventsReportsItemCountHandler, EventsReportsCSVHandler } from './handlers/eventsReportsHandler';
+import { EventsEventsCachedHandlerOpts, EventsEventsCachedHandler, EventsEventsItemCountRawHandler, EventsEventsCSVRawHandler } from './handlers/eventsEventsHandler';
+import { EventsRewardsCachedHandlerOpts, EventsRewardsCachedHandler, EventsRewardsItemCountRawHandler, EventsRewardsCSVRawHandler } from './handlers/eventsRewardsHandler';
+import { EventsReportsCachedHandlerOpts, EventsReportsCachedHandler, EventsReportsItemCountRawHandler, EventsReportsCSVRawHandler } from './handlers/eventsReportsHandler';
 
-import { ProvidersHandler, ProvidersHandlerOpts } from './handlers/providersHandler';
-import { SpecsHandler, SpecsHandlerOpts } from './handlers/specsHandler';
-import { SpecHandler, SpecHandlerOpts } from './handlers/specHandler';
-import { ConsumersHandler, ConsumersHandlerOpts } from './handlers/consumersHandler';
-import { ConsumerHandler, ConsumerHandlerOpts } from './handlers/consumerHandler';
-import { EventsHandler, EventsHandlerOpts } from './handlers/eventsHandler';
+import { ProvidersCachedHandler, ProvidersCachedHandlerOpts } from './handlers/providersHandler';
+import { SpecsCachedHandler, SpecsCachedHandlerOpts } from './handlers/specsHandler';
+import { SpecCachedHandler, SpecCachedHandlerOpts } from './handlers/specHandler';
+import { ConsumersCachedHandler, ConsumersCachedHandlerOpts } from './handlers/consumersHandler';
+import { ConsumerCahcedHandler, ConsumerCahcedHandlerOpts } from './handlers/consumerHandler';
+import { EventsCachedHandler, EventsCachedHandlerOpts } from './handlers/eventsHandler';
 
 import { LavapProviderHealthHandler, LavapProviderHealthHandlerOpts } from './handlers/lavapProviderHealthHandler';
 import { LavapDualStackingDelegatorRewardsHandler, LavapDualStackingDelegatorRewardsOpts } from './handlers/lavapDualStackingDelegatorRewardsHandler';
 
-GetServerInstance().get('/latest', LatestHandlerOpts, LatestHandler);
+GetServerInstance().get('/latest', LatestRawHandlerOpts, LatestRawHandler);
 
-RegisterServerHandlerWithCache('/cacheLinks', CacheLinksHandlerOpts, CacheLinksHandler);
+RegisterServerHandlerWithCache('/cacheLinks', CacheLinksCachedHandlerOpts, CacheLinksCachedHandler);
 
-RegisterServerHandlerWithCache('/autoCompleteLinksHandler', AutoCompleteLinksHandlerOpts, AutoCompleteLinksHandler);
+RegisterServerHandlerWithCache('/autoCompleteLinksHandler', AutoCompleteLinksCachedHandlerOpts, AutoCompleteLinksCachedHandler);
 
 RegisterServerHandlerWithCache('/index', IndexHandlerOpts, IndexHandler);
-RegisterServerHandlerWithCache('/indexProviders', IndexProvidersHandlerOpts, IndexProvidersHandler, IndexProvidersItemCountHandler);
-GetServerInstance().get('/indexProvidersCsv', IndexProvidersCSVHandler);
+RegisterServerHandlerWithCache('/indexProviders', IndexProvidersCachedHandlerOpts, IndexProvidersCachedHandler, IndexProvidersItemCountRawHandler);
+
+GetServerInstance().get('/indexCharts', IndexChartsRawHandlerOpts, IndexChartsRawHandler);
+
+GetServerInstance().get('/indexProvidersCsv', IndexProvidersCSVRawHandler);
 
 RegisterServerHandlerWithCache('/provider/:addr', ProviderHandlerOpts, ProviderHandler);
 
-RegisterServerHandlerWithCache('/providerHealth/:addr', ProviderHealthHandlerOpts, ProviderHealthHandler, ProviderHealthItemCountHandler);
-RegisterServerHandlerWithCache('/providerErrors/:addr', ProviderErrorsHandlerOpts, ProviderErrorsHandler, ProviderErrorsItemCountHandler);
-RegisterServerHandlerWithCache('/providerStakes/:addr', ProviderStakesHandlerOpts, ProviderStakesHandler, ProviderStakesItemCountHandler);
-RegisterServerHandlerWithCache('/providerEvents/:addr', ProviderEventsHandlerOpts, ProviderEventsHandler, ProviderEventsItemCountHandler);
-RegisterServerHandlerWithCache('/providerRewards/:addr', ProviderRewardsHandlerOpts, ProviderRewardsHandler, ProviderRewardsItemCountHandler);
-RegisterServerHandlerWithCache('/providerReports/:addr', ProviderReportsHandlerOpts, ProviderReportsHandler, ProviderReportsItemCountHandler);
-RegisterServerHandlerWithCache('/providerDelegatorRewards/:addr', ProviderDelegatorRewardsHandlerOpts, ProviderDelegatorRewardsHandler, ProviderDelegatorRewardsItemCountHandler);
-RegisterServerHandlerWithCache('/providerBlockReports/:addr', ProviderBlockReportsHandlerOpts, ProviderBlockReportsHandler, ProviderBlockReportsItemCountHandler);
+RegisterServerHandlerWithCache('/providerHealth/:addr', ProviderHealthCachedHandlerOpts, ProviderHealthCachedHandler, ProviderHealthItemCountRawHandler);
+RegisterServerHandlerWithCache('/providerErrors/:addr', ProviderErrorsCachedHandlerOpts, ProviderErrorsCachedHandler, ProviderErrorsItemCountRawHandler);
+RegisterServerHandlerWithCache('/providerStakes/:addr', ProviderStakesCachedHandlerOpts, ProviderStakesHandler, ProviderStakesItemCountRawHandler);
+RegisterServerHandlerWithCache('/providerEvents/:addr', ProviderEventsCachedHandlerOpts, ProviderEventsCachedHandler, ProviderEventsItemCountRawHandler);
+RegisterServerHandlerWithCache('/providerRewards/:addr', ProviderRewardsCachedHandlerOpts, ProviderRewardsCachedHandler, ProviderRewardsItemCountRawHandler);
+RegisterServerHandlerWithCache('/providerReports/:addr', ProviderReportsCachedHandlerOpts, ProviderReportsCachedHandler, ProviderReportsItemCountRawHandler);
+RegisterServerHandlerWithCache('/providerDelegatorRewards/:addr', ProviderDelegatorRewardsCachedHandlerOpts, ProviderDelegatorRewardsCachedHandler, ProviderDelegatorRewardsItemCountRawHandler);
+RegisterServerHandlerWithCache('/providerBlockReports/:addr', ProviderBlockReportsCachedHandlerOpts, ProviderBlockReportsCachedHandler, ProviderBlockReportsItemCountRawHandler);
 
-GetServerInstance().get('/providerHealthCsv/:addr', ProviderHealthCSVHandler);
-GetServerInstance().get('/providerErrorsCsv/:addr', ProviderErrorsCSVHandler);
-GetServerInstance().get('/providerStakesCsv/:addr', ProviderStakesCSVHandler);
-GetServerInstance().get('/providerEventsCsv/:addr', ProviderEventsCSVHandler);
-GetServerInstance().get('/providerRewardsCsv/:addr', ProviderRewardsCSVHandler);
-GetServerInstance().get('/providerReportsCsv/:addr', ProviderReportsCSVHandler);
-GetServerInstance().get('/providerDelegatorRewardsCsv/:addr', ProviderDelegatorRewardsCSVHandler);
-GetServerInstance().get('/providerBlockReportsCsv/:addr', ProviderBlockReportsCSVHandler);
+GetServerInstance().get('/providerHealthCsv/:addr', ProviderHealthCSVRawHandler);
+GetServerInstance().get('/providerErrorsCsv/:addr', ProviderErrorsCSVRawHandler);
+GetServerInstance().get('/providerStakesCsv/:addr', ProviderStakesCSVRawHandler);
+GetServerInstance().get('/providerEventsCsv/:addr', ProviderEventsCSVRawHandler);
+GetServerInstance().get('/providerRewardsCsv/:addr', ProviderRewardsCSVRawHandler);
+GetServerInstance().get('/providerReportsCsv/:addr', ProviderReportsCSVRawHandler);
+GetServerInstance().get('/providerDelegatorRewardsCsv/:addr', ProviderDelegatorRewardsCSVRawHandler);
+GetServerInstance().get('/providerBlockReportsCsv/:addr', ProviderBlockReportsCSVRawHandler);
 
-GetServerInstance().get('/eventsEventsCsv', EventsEventsCSVHandler);
-GetServerInstance().get('/eventsRewardsCsv', EventsRewardsCSVHandler);
-GetServerInstance().get('/eventsReportsCsv', EventsReportsCSVHandler);
+RegisterServerHandlerWithCache('/providers', ProvidersCachedHandlerOpts, ProvidersCachedHandler);
+RegisterServerHandlerWithCache('/specs', SpecsCachedHandlerOpts, SpecsCachedHandler);
+RegisterServerHandlerWithCache('/consumers', ConsumersCachedHandlerOpts, ConsumersCachedHandler);
+RegisterServerHandlerWithCache('/consumer/:addr', ConsumerCahcedHandlerOpts, ConsumerCahcedHandler);
+RegisterServerHandlerWithCache('/spec/:specId', SpecCachedHandlerOpts, SpecCachedHandler);
 
-RegisterServerHandlerWithCache('/providers', ProvidersHandlerOpts, ProvidersHandler);
-RegisterServerHandlerWithCache('/specs', SpecsHandlerOpts, SpecsHandler);
-RegisterServerHandlerWithCache('/consumers', ConsumersHandlerOpts, ConsumersHandler);
-RegisterServerHandlerWithCache('/consumer/:addr', ConsumerHandlerOpts, ConsumerHandler);
-RegisterServerHandlerWithCache('/spec/:specId', SpecHandlerOpts, SpecHandler);
+RegisterServerHandlerWithCache('/events', EventsCachedHandlerOpts, EventsCachedHandler);
+RegisterServerHandlerWithCache('/eventsEvents', EventsEventsCachedHandlerOpts, EventsEventsCachedHandler, EventsEventsItemCountRawHandler);
+RegisterServerHandlerWithCache('/eventsRewards', EventsRewardsCachedHandlerOpts, EventsRewardsCachedHandler, EventsRewardsItemCountRawHandler);
+RegisterServerHandlerWithCache('/eventsReports', EventsReportsCachedHandlerOpts, EventsReportsCachedHandler, EventsReportsItemCountRawHandler);
 
-RegisterServerHandlerWithCache('/events', EventsHandlerOpts, EventsHandler);
-RegisterServerHandlerWithCache('/eventsEvents', EventsEventsHandlerOpts, EventsEventsHandler, EventsEventsItemCountHandler);
-RegisterServerHandlerWithCache('/eventsRewards', EventsRewardsHandlerOpts, EventsRewardsHandler, EventsRewardsItemCountHandler);
-RegisterServerHandlerWithCache('/eventsReports', EventsReportsHandlerOpts, EventsReportsHandler, EventsReportsItemCountHandler);
+GetServerInstance().get('/eventsEventsCsv', EventsEventsCSVRawHandler);
+GetServerInstance().get('/eventsRewardsCsv', EventsRewardsCSVRawHandler);
+GetServerInstance().get('/eventsReportsCsv', EventsReportsCSVRawHandler);
 
 if (consts.JSINFO_QUERY_LAVAP_PROVIDER_HEALTH_ENDPOINT_ENABLED) {
     GetServerInstance().post('/lavapProviderHealth', LavapProviderHealthHandlerOpts, LavapProviderHealthHandler);

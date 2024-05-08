@@ -91,3 +91,13 @@ export function GetDataLengthForPrints(data: any): string {
     }
     return 'N/A';
 }
+
+export function GetDataLength(data: any): number {
+    if (data == null) return 0;
+    if (Array.isArray(data)) {
+        return data.length;
+    } else if (typeof data === 'object' && data !== null) {
+        return Object.keys(data).length;
+    }
+    return 0;
+}

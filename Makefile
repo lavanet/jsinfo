@@ -3,6 +3,9 @@
 bun_create_migrations:
 	bun run generate
 
+bun_build:
+	bun run build --verbose
+
 docker_build:
 	docker build --progress=plain -t bun-docker .
 

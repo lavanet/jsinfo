@@ -218,6 +218,10 @@ const establishRpcConnection = async (): Promise<RpcConnection> => {
 }
 
 const migrateAndFetchDb = async (): Promise<PostgresJsDatabase> => {
+<<<<<<< HEAD
+=======
+    // migrations die on timeout at 0015_tan_lockjaw.sql on testnet
+>>>>>>> 91ece32 (saving)
     // logger.info('Migrating DB...');
     // await MigrateDb();
     // logger.info('DB migrated.');

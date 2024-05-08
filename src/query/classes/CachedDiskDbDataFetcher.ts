@@ -4,7 +4,8 @@ import { JSINFO_QUERY_CACHEDIR, JSINFO_QUERY_CACHE_ENABLED, JSINFO_QUERY_HANDLER
 import fs from 'fs';
 import { Pagination, ParsePaginationFromRequest } from "../utils/queryPagination";
 import { FastifyReply, FastifyRequest } from "fastify";
-import { GetDataLengthForPrints } from "../utils/queryUtils";
+import { GetDataLength, GetDataLengthForPrints } from "../utils/queryUtils";
+import { subMonths, isAfter, isBefore, parseISO } from 'date-fns';
 
 if (!GetDataLengthForPrints) {
     throw new Error("GetDataLengthForPrints is undefined or null");
@@ -58,7 +59,6 @@ export class CachedDiskDbDataFetcher<T> {
     }
 
     protected getCacheFilePath(): string {
-        this.log('getCacheFilePath called but must be implemented.');
         throw new Error("Method 'getCacheFilePath' must be implemented.");
     }
 
@@ -67,17 +67,18 @@ export class CachedDiskDbDataFetcher<T> {
     }
 
     protected async fetchDataFromDb(): Promise<T[]> {
-        this.log('fetchDataFromDb called but must be implemented.');
         throw new Error("Method 'fetchDataFromDb' must be implemented.");
     }
 
     protected async getPaginatedItemsImpl(data: T[], pagination: Pagination | null): Promise<T[] | null> {
-        this.log('getPaginatedItemsImpl called but must be implemented.');
         throw new Error("Method 'getPaginatedItemsImpl' must be implemented.");
     }
 
+    protected async getItemsByFromToImpl(data: T[], fromDate: Date, toDate: Date): Promise<T[] | null> {
+        throw new Error("Method 'getItemsByFromToImpl' must be implemented.");
+    }
+
     public async getCSVImpl(data: T[]): Promise<string> {
-        this.log('getCSVImpl called but must be implemented.');
         throw new Error("Method 'getCSVImpl' must be implemented.");
     }
 
@@ -107,14 +108,17 @@ export class CachedDiskDbDataFetcher<T> {
 
     protected async runFetchAndCacheThreadIfNeeded() {
         this.log('runFetchAndCacheThreadIfNeeded:: called');
+
         if (this.data_fetching) {
             this.log('runFetchAndCacheThreadIfNeeded:: Data is already fetching, returning early');
             return;
         }
+
         if (this.lockExists() && this.lockIsFresh()) {
             this.log(`runFetchAndCacheThreadIfNeeded:: data_fetched: ${this.data_fetched}, didDataExpire: ${this.didDataExpire()}, Data not fetched yet or data expired, fetching data`);
             return null;
         }
+
         this.log('runFetchAndCacheThreadIfNeeded:: Creating lock');
         this.createLock();
         this.data_fetching = true;
@@ -129,19 +133,45 @@ export class CachedDiskDbDataFetcher<T> {
     }
 
     private async fetchAndCacheData() {
-        try {
-            this.log('fetchAndCacheData:: Fetching data from DB');
-            const data = await this.fetchDataFromDb();
-            const cacheFilePath = this.getCacheFilePath();
-            this.log(`fetchAndCacheData:: Writing data to cache file: ${cacheFilePath}`);
-            fs.writeFileSync(cacheFilePath, JSON.stringify(data));
-            this.data_fetched = true;
-            this.data = data;
-            this.log(`fetchAndCacheData:: data_fetched set to: ${this.data_fetched}, data length: ${this.data.length}, Data fetched and written to cache`);
-        } catch (e) {
-            this.log(`fetchAndCacheData:: Error occurred: ${e}`);
-            console.error("fetchAndCacheData:: CachedDiskDbDataFetcher Error:", this.getCacheFilePath(), e);
+        let retries = 3;
+        while (retries > 0) {
+            try {
+                this.log('fetchAndCacheData:: Fetching data from DB');
+
+                // Start pinging every second
+                const intervalId = setInterval(() => {
+                    this.log('fetchAndCacheData:: fetchDataFromDb Ping');
+                }, 1000);
+
+                const data = await this.fetchDataFromDb();
+
+                // Stop pinging when data is fetched
+                clearInterval(intervalId);
+
+                const cacheFilePath = this.getCacheFilePath();
+
+                if (data == null || GetDataLength(data) === 0) {
+                    this.log('fetchAndCacheData:: Data is null or empty, retrying');
+                    retries--;
+                    continue;
+                }
+
+                this.log(`fetchAndCacheData:: Writing data to cache file: ${cacheFilePath}`);
+                fs.writeFileSync(cacheFilePath, JSON.stringify(data));
+
+                this.data_fetched = true;
+                this.data = data;
+
+                this.log(`fetchAndCacheData:: data_fetched set to: ${this.data_fetched}, data length: ${this.data.length}, Data fetched and written to cache`);
+                break;
+
+            } catch (e) {
+                this.log(`fetchAndCacheData:: Error occurred: ${e}, retrying`);
+                console.error("fetchAndCacheData:: CachedDiskDbDataFetcher Error:", this.getCacheFilePath(), e);
+                retries--;
+            }
         }
+
         this.data_fetching = false;
         this.log('fetchAndCacheData:: Deleting lock');
         this.deleteLock();
@@ -154,7 +184,7 @@ export class CachedDiskDbDataFetcher<T> {
 
         if (!JSINFO_QUERY_CACHE_ENABLED) {
             this.log('didDataExpire:: Cache is disabled');
-            return false;
+            return true;
         }
 
         if (!fs.existsSync(cacheFilePath)) {
@@ -177,11 +207,11 @@ export class CachedDiskDbDataFetcher<T> {
     }
 
     protected async fetchDataFromCache(): Promise<T[] | null> {
-        this.log('fetchDataFromCache:: Running background fetch');
+        this.log('fetchDataFromCache:: calling runFetchAndCacheThreadIfNeeded');
         this.runFetchAndCacheThreadIfNeeded();
 
         if (this.data != null) {
-            this.log(`fetchDataFromCache:: Data fetched from mem, returning data. Type of data: ${typeof this.data}, Length of data: ${GetDataLengthForPrints(this.data)}`);
+            this.log(`fetchDataFromCache:: Data fetched from mem, returning data. Type of data: ${Object.prototype.toString.call(this.data)}, Length of data: ${GetDataLengthForPrints(this.data)}`);
             return this.data;
         }
 
@@ -194,24 +224,99 @@ export class CachedDiskDbDataFetcher<T> {
             this.data = JSON.parse(rawData);
         }
 
-        this.log(`fetchDataFromCache:: Data fetched from disk, returning data. Type of data: ${typeof this.data}, Length of data: ${GetDataLengthForPrints(this.data)}`);
+        if (this.data == null || GetDataLength(this.data) === 0) {
+            this.log('fetchDataFromCache:: Data is null or empty, checking if data is locked');
+            let dataIsLocked = this.lockExists() && this.lockIsFresh();
+            if (dataIsLocked) {
+                this.log('fetchDataFromCache:: Data is locked, not deleting cache file');
+            } else {
+                this.log('fetchDataFromCache:: Data is not locked, checking if cache file exists');
+                if (fs.existsSync(cacheFilePath)) {
+                    this.log('fetchDataFromCache:: Cache file exists, deleting cache file');
+                    fs.unlinkSync(cacheFilePath);
+                } else {
+                    this.log('fetchDataFromCache:: Cache file does not exist, no file to delete');
+                }
+            }
+            this.log('fetchDataFromCache:: Resetting data to null');
+            this.data = null;
+        }
+
+        this.log(`fetchDataFromCache:: Data fetched from disk, returning data. Type of data: ${Object.prototype.toString.call(this.data)}, Length of data: ${GetDataLengthForPrints(this.data)}`);
         return this.data;
     }
 
     public async getPaginatedItemsCachedHandler(request: FastifyRequest, reply: FastifyReply): Promise<{ data: T[] } | {} | null> {
         try {
             const data = await this.fetchDataFromCache();
-            this.log(`getPaginatedItemsCachedHandler:: Fetched data from cache. Type of data: ${typeof data}, Length of data: ${GetDataLengthForPrints(data)}`);
+
+            this.log(`getPaginatedItemsCachedHandler:: Fetched data from cache. Type of data: ${Object.prototype.toString.call(data)}, Length of data: ${GetDataLengthForPrints(data)}`);
+
             if (data == null) return {};
+
             let pagination = ParsePaginationFromRequest(request)
             let paginatedData = await this.getPaginatedItemsImpl(data, pagination);
-            this.log(`getPaginatedItemsCachedHandler:: Got paginated items. Type of paginatedData: ${typeof paginatedData}, Length of paginatedData: ${GetDataLengthForPrints(paginatedData)}`);
+            this.log(`getPaginatedItemsCachedHandler:: Got paginated items. Type of paginatedData: ${Object.prototype.toString.call(paginatedData)}, Length of paginatedData: ${GetDataLengthForPrints(paginatedData)}`);
+
             if (paginatedData == null) return {};
             return { data: paginatedData };
+
         } catch (error) {
             const err = error as Error;
             reply.code(400).send({ error: String(err.message) });
             this.log(`getPaginatedItemsCachedHandler:: Error occurred: ${err.message}`);
+            return null
+        }
+    }
+
+    public async getItemsByFromToChartsHandler(request: FastifyRequest, reply: FastifyReply): Promise<{ data: T[] } | null> {
+        try {
+            const data = await this.fetchDataFromCache();
+
+            this.log(`getItemsByFromToChartsHandler:: Fetched data from cache. Type of data: ${typeof data}, Length of data: ${GetDataLengthForPrints(data)}`);
+
+            if (data == null) {
+                this.log('getItemsByFromToChartsHandler:: Data is null, sending empty response');
+                reply.send({});
+                return null;
+            }
+
+            const query = request.query as { [key: string]: unknown };
+
+            const fromDate = 'f' in query && typeof query.f === 'string'
+                ? parseISO(query.f)
+                : subMonths(new Date(), 3);
+
+            const toDate = 't' in query && typeof query.t === 'string'
+                ? parseISO(query.t)
+                : new Date();
+
+            this.log(`getItemsByFromToChartsHandler:: From date: ${fromDate}, To date: ${toDate}`);
+
+            if (isBefore(fromDate, subMonths(new Date(), 6))) {
+                throw new Error('From date cannot be more than 6 months in the past.');
+            }
+
+            if (isAfter(toDate, new Date())) {
+                throw new Error('To date cannot be in the future.');
+            }
+
+            const filteredData: T[] | null = await this.getItemsByFromToImpl(data, fromDate, toDate);
+
+            if (filteredData == null || filteredData.length === 0) {
+                this.log('getItemsByFromToChartsHandler:: Filtered data is null or empty, sending empty response');
+                reply.send({});
+                return null;
+            }
+
+            this.log(`getItemsByFromToChartsHandler:: Got filtered items. Type of filteredData: ${typeof filteredData}, Length of filteredData: ${GetDataLengthForPrints(filteredData)}`);
+
+            return { data: filteredData };
+
+        } catch (error) {
+            const err = error as Error;
+            reply.code(400).send({ error: String(err.message) });
+            this.log(`getItemsByFromToChartsHandler:: Error occurred: ${err.message}`);
             return null
         }
     }
@@ -225,6 +330,7 @@ export class CachedDiskDbDataFetcher<T> {
             }
             reply.send({ itemCount: data.length });
             return reply;
+
         } catch (error) {
             const err = error as Error;
             reply.code(400).send({ error: String(err.message) });
@@ -239,6 +345,7 @@ export class CachedDiskDbDataFetcher<T> {
                 reply.send({});
                 return reply;
             }
+
             let csv = await this.getCSVImpl(data);
             if (csv == null) {
                 reply.send({});
@@ -249,6 +356,7 @@ export class CachedDiskDbDataFetcher<T> {
             reply.header('Content-Disposition', `attachment; filename=${this.getCSVFileName()}`);
             reply.send(csv);
             return reply;
+
         } catch (error) {
             const err = error as Error;
             reply.code(400).send({ error: String(err.message) });

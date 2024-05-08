@@ -12,7 +12,7 @@ import { CSVEscape, CompareValues, GetAndValidateProviderAddressFromRequest } fr
 import { ReplaceArchive } from '../../indexer/indexerUtils';
 import { CachedDiskDbDataFetcher } from '../classes/CachedDiskDbDataFetcher';
 
-export const ProviderStakesHandlerOpts: RouteShorthandOptions = {
+export const ProviderStakesCachedHandlerOpts: RouteShorthandOptions = {
     schema: {
         response: {
             200: {
@@ -163,7 +163,7 @@ export async function ProviderStakesHandler(request: FastifyRequest, reply: Fast
     return await ProviderStakesData.GetInstance(addr).getPaginatedItemsCachedHandler(request, reply)
 }
 
-export async function ProviderStakesItemCountHandler(request: FastifyRequest, reply: FastifyReply) {
+export async function ProviderStakesItemCountRawHandler(request: FastifyRequest, reply: FastifyReply) {
     let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
     if (addr === '') {
         return reply;
@@ -171,7 +171,7 @@ export async function ProviderStakesItemCountHandler(request: FastifyRequest, re
     return await ProviderStakesData.GetInstance(addr).getTotalItemCountRawHandler(request, reply)
 }
 
-export async function ProviderStakesCSVHandler(request: FastifyRequest, reply: FastifyReply) {
+export async function ProviderStakesCSVRawHandler(request: FastifyRequest, reply: FastifyReply) {
     let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
     if (addr === '') {
         return;

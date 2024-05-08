@@ -1,11 +1,11 @@
-// src/query/handlers/cacheLinksHandler.ts
+// src/query/handlers/CacheLinksCachedHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../queryDb';
 import * as JsinfoSchema from '../../schemas/jsinfo_schema';
 import { isNotNull } from 'drizzle-orm';
 
-export const CacheLinksHandlerOpts: RouteShorthandOptions = {
+export const CacheLinksCachedHandlerOpts: RouteShorthandOptions = {
     schema: {
         response: {
             200: {
@@ -20,7 +20,7 @@ export const CacheLinksHandlerOpts: RouteShorthandOptions = {
     }
 }
 
-export async function CacheLinksHandler(request: FastifyRequest, reply: FastifyReply) {
+export async function CacheLinksCachedHandler(request: FastifyRequest, reply: FastifyReply) {
     await QueryCheckJsinfoReadDbInstance()
 
     const baseUrls = {

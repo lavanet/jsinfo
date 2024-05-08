@@ -30,7 +30,7 @@ export interface EventsRewardsResponse {
     tx: string | null;
 }
 
-export const EventsRewardsHandlerOpts: RouteShorthandOptions = {
+export const EventsRewardsCachedHandlerOpts: RouteShorthandOptions = {
     schema: {
         response: {
             200: {
@@ -79,7 +79,7 @@ class EventsRewardsData extends CachedDiskDbDataFetcher<EventsRewardsResponse> {
     }
 
     protected getCacheFilePath(): string {
-        return path.join(this.cacheDir, 'EventsRewardsHandlerData');
+        return path.join(this.cacheDir, 'EventsRewardsCachedHandlerData');
     }
 
     protected getCSVFileName(): string {
@@ -214,17 +214,17 @@ class EventsRewardsData extends CachedDiskDbDataFetcher<EventsRewardsResponse> {
     }
 }
 
-export async function EventsRewardsHandler(request: FastifyRequest, reply: FastifyReply) {
+export async function EventsRewardsCachedHandler(request: FastifyRequest, reply: FastifyReply) {
     await QueryCheckJsinfoReadDbInstance()
     return await EventsRewardsData.GetInstance().getPaginatedItemsCachedHandler(request, reply)
 }
 
-export async function EventsRewardsItemCountHandler(request: FastifyRequest, reply: FastifyReply) {
+export async function EventsRewardsItemCountRawHandler(request: FastifyRequest, reply: FastifyReply) {
     await QueryCheckJsinfoReadDbInstance()
     return await EventsRewardsData.GetInstance().getTotalItemCountRawHandler(request, reply)
 }
 
-export async function EventsRewardsCSVHandler(request: FastifyRequest, reply: FastifyReply) {
+export async function EventsRewardsCSVRawHandler(request: FastifyRequest, reply: FastifyReply) {
     await QueryCheckJsinfoReadDbInstance()
     return await EventsRewardsData.GetInstance().getCSVRawHandler(request, reply)
 }

@@ -6,7 +6,7 @@ import { QueryGetJsinfoReadDbInstance } from '../queryDb';
 import * as JsinfoSchema from '../../schemas/jsinfo_schema';
 import { and, desc, eq, gte } from "drizzle-orm";
 import { Pagination, ParsePaginationFromString } from '../utils/queryPagination';
-import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE } from '../queryConsts';
+import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '../queryConsts';
 import path from 'path';
 import { CSVEscape, CompareValues, GetAndValidateProviderAddressFromRequest, GetNestedValue } from '../utils/queryUtils';
 import { CachedDiskDbDataFetcher } from '../classes/CachedDiskDbDataFetcher';
@@ -30,7 +30,7 @@ export type ProviderReportsResponse = {
     } | null;
 };
 
-export const ProviderReportsHandlerOpts: RouteShorthandOptions = {
+export const ProviderReportsCachedHandlerOpts: RouteShorthandOptions = {
     schema: {
         response: {
             200: {
@@ -130,7 +130,7 @@ class ProviderReportsData extends CachedDiskDbDataFetcher<ProviderReportsRespons
                     gte(JsinfoSchema.blocks['datetime'], thirtyDaysAgo)
                 )
             ).
-            orderBy(desc(JsinfoSchema.providerReported.id)).offset(0).limit(5000);
+            orderBy(desc(JsinfoSchema.providerReported.id)).offset(0).limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
         return reportsRes;
     }
 
@@ -198,7 +198,7 @@ class ProviderReportsData extends CachedDiskDbDataFetcher<ProviderReportsRespons
     }
 }
 
-export async function ProviderReportsHandler(request: FastifyRequest, reply: FastifyReply) {
+export async function ProviderReportsCachedHandler(request: FastifyRequest, reply: FastifyReply) {
     let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
     if (addr === '') {
         return null;
@@ -206,7 +206,7 @@ export async function ProviderReportsHandler(request: FastifyRequest, reply: Fas
     return await ProviderReportsData.GetInstance(addr).getPaginatedItemsCachedHandler(request, reply)
 }
 
-export async function ProviderReportsItemCountHandler(request: FastifyRequest, reply: FastifyReply) {
+export async function ProviderReportsItemCountRawHandler(request: FastifyRequest, reply: FastifyReply) {
     let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
     if (addr === '') {
         return null;
@@ -214,7 +214,7 @@ export async function ProviderReportsItemCountHandler(request: FastifyRequest, r
     return await ProviderReportsData.GetInstance(addr).getTotalItemCountRawHandler(request, reply)
 }
 
-export async function ProviderReportsCSVHandler(request: FastifyRequest, reply: FastifyReply) {
+export async function ProviderReportsCSVRawHandler(request: FastifyRequest, reply: FastifyReply) {
     let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
     if (addr === '') {
         return;

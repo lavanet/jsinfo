@@ -18,7 +18,7 @@ type IndexProvidersResponse = {
     totalStake: number,
 };
 
-export const IndexProvidersHandlerOpts: RouteShorthandOptions = {
+export const IndexProvidersCachedHandlerOpts: RouteShorthandOptions = {
     schema: {
         response: {
             200: {
@@ -189,17 +189,17 @@ class IndexProvidersData extends CachedDiskDbDataFetcher<IndexProvidersResponse>
     }
 }
 
-export async function IndexProvidersHandler(request: FastifyRequest, reply: FastifyReply) {
+export async function IndexProvidersCachedHandler(request: FastifyRequest, reply: FastifyReply) {
     await QueryCheckJsinfoReadDbInstance()
     return await IndexProvidersData.GetInstance().getPaginatedItemsCachedHandler(request, reply)
 }
 
-export async function IndexProvidersItemCountHandler(request: FastifyRequest, reply: FastifyReply) {
+export async function IndexProvidersItemCountRawHandler(request: FastifyRequest, reply: FastifyReply) {
     await QueryCheckJsinfoReadDbInstance()
     return await IndexProvidersData.GetInstance().getTotalItemCountRawHandler(request, reply)
 }
 
-export async function IndexProvidersCSVHandler(request: FastifyRequest, reply: FastifyReply) {
+export async function IndexProvidersCSVRawHandler(request: FastifyRequest, reply: FastifyReply) {
     await QueryCheckJsinfoReadDbInstance()
     return await IndexProvidersData.GetInstance().getCSVRawHandler(request, reply)
 }

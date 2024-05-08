@@ -1,12 +1,12 @@
 
-// src/query/handlers/consumersHandler.ts
+// src/query/handlers/ConsumersHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../queryDb';
 import * as JsinfoSchema from '../../schemas/jsinfo_schema';
 import { sql, desc, gt, and, eq } from "drizzle-orm";
 
-export const ConsumerHandlerOpts: RouteShorthandOptions = {
+export const ConsumerCahcedHandlerOpts: RouteShorthandOptions = {
     schema: {
         response: {
             200: {
@@ -39,7 +39,7 @@ export const ConsumerHandlerOpts: RouteShorthandOptions = {
     }
 }
 
-export async function ConsumerHandler(request: FastifyRequest, reply: FastifyReply) {
+export async function ConsumerCahcedHandler(request: FastifyRequest, reply: FastifyReply) {
     await QueryCheckJsinfoReadDbInstance()
 
     const { addr } = request.params as { addr: string }

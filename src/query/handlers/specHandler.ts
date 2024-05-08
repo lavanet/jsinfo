@@ -8,7 +8,7 @@ import { sql, desc, gt, and, eq } from "drizzle-orm";
 import { FormatDates } from '../utils/queryDateUtils';
 import { ReplaceArchive } from '../../indexer/indexerUtils';
 
-export const SpecHandlerOpts: RouteShorthandOptions = {
+export const SpecCachedHandlerOpts: RouteShorthandOptions = {
     schema: {
         response: {
             200: {
@@ -51,7 +51,7 @@ export const SpecHandlerOpts: RouteShorthandOptions = {
     }
 }
 
-export async function SpecHandler(request: FastifyRequest, reply: FastifyReply) {
+export async function SpecCachedHandler(request: FastifyRequest, reply: FastifyReply) {
     await QueryCheckJsinfoReadDbInstance()
 
     const { specId } = request.params as { specId: string }

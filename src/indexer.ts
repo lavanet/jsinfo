@@ -218,9 +218,9 @@ const establishRpcConnection = async (): Promise<RpcConnection> => {
 }
 
 const migrateAndFetchDb = async (): Promise<PostgresJsDatabase> => {
-    logger.info('Migrating DB...');
-    await MigrateDb();
-    logger.info('DB migrated.');
+    // logger.info('Migrating DB...');
+    // await MigrateDb();
+    // logger.info('DB migrated.');
     const db = GetJsinfoDb();
     logger.info('DB fetched.');
     return db;

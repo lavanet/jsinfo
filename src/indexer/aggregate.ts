@@ -1,6 +1,6 @@
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { sql } from "drizzle-orm";
-import * as JsinfoSchema from "../schemas/jsinfo_schema";
+import * as JsinfoSchema from "../schemas/jsinfoSchema";
 import { DoInChunks, logger } from "../utils";
 
 export async function getAggHourlyTimeSpan(db: PostgresJsDatabase): Promise<{ startTime: Date | null, endTime: Date | null }> {

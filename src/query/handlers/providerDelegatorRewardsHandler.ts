@@ -10,7 +10,7 @@ import { eq, desc } from "drizzle-orm";
 import { Pagination } from '../utils/queryPagination';
 import { CompareValues, GetAndValidateProviderAddressFromRequest } from '../utils/queryUtils';
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '../queryConsts';
-import * as JsinfoSchema from '../../schemas/jsinfo_schema';
+import * as JsinfoSchema from '../../schemas/jsinfoSchema';
 import { CachedDiskDbDataFetcher } from '../classes/CachedDiskDbDataFetcher';
 
 export interface DelegatorRewardReponse {

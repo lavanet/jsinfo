@@ -5,8 +5,8 @@ import { GetJsinfoDb, GetJsinfoReadDb, GetRelaysReadDb } from '../dbUtils';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { desc } from "drizzle-orm";
 import { JSINFO_NO_READ_DB } from './queryConsts';
-import * as JsinfoSchema from '../schemas/jsinfo_schema';
-import * as RelaysSchema from '../schemas/relays_schema';
+import * as JsinfoSchema from '../schemas/jsinfoSchema';
+import * as RelaysSchema from '../schemas/relaysSchema';
 
 let db: PostgresJsDatabase | null = null;
 let readDb: PostgresJsDatabase | null = null;

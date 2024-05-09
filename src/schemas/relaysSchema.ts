@@ -1,4 +1,4 @@
-// src/schemas/relays_schema.ts
+// src/schemas/relaysSchema.ts
 
 import { pgTable, text, serial, timestamp, varchar } from 'drizzle-orm/pg-core';
 

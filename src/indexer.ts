@@ -1,7 +1,7 @@
 // jsinfo/src/indexer.ts
 
 import * as consts from './indexer/indexerConsts';
-import * as JsinfoSchema from "./schemas/jsinfo_schema";
+import * as JsinfoSchema from "./schemas/jsinfoSchema";
 
 import { StargateClient } from "@cosmjs/stargate"
 import { Tendermint37Client } from "@cosmjs/tendermint-rpc";

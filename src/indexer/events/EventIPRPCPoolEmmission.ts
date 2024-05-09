@@ -1,6 +1,6 @@
 import { Event } from "@cosmjs/stargate"
 import { LavaBlock } from "../types";
-import * as JsinfoSchema from '../../schemas/jsinfo_schema';
+import * as JsinfoSchema from '../../schemas/jsinfoSchema';
 import { SetTx } from "../setLatest";
 import { EventProcessAttributes } from "../eventUtils";
 

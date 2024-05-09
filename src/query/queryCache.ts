@@ -253,7 +253,7 @@ class RequestCache {
     ): (request: FastifyRequest, reply: FastifyReply) => Promise<any> {
         return async (request: FastifyRequest, reply: FastifyReply) => {
             const query = request.query as { [key: string]: unknown };
-            const shouldUseCache = consts.JSINFO_QUERY_CACHE_ENABLED && query.cache !== 'bypass';
+            const shouldUseCache = consts.JSINFO_QUERY_CACHE_ENABLED;
 
             if (query.cache) {
                 console.log(`Request received from ${request.ip} for ${request.url} with query parameters ${JSON.stringify(query)}`);

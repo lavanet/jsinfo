@@ -2,7 +2,7 @@
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../queryDb';
-import * as JsinfoSchema from '../../schemas/jsinfo_schema';
+import * as JsinfoSchema from '../../schemas/jsinfoSchema';
 
 export const ConsumersCachedHandlerOpts: RouteShorthandOptions = {
     schema: {

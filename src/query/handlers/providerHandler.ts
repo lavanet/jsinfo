@@ -4,7 +4,7 @@
 // curl http://localhost:8081/provider/lava@14shwrej05nrraem8mwsnlw50vrtefkajar75ge
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { GetLatestBlock, QueryGetJsinfoReadDbInstance } from '../queryDb';
-import * as JsinfoSchema from '../../schemas/jsinfo_schema';
+import * as JsinfoSchema from '../../schemas/jsinfoSchema';
 import { sql, desc, gt, and, eq } from "drizzle-orm";
 import { FormatDates } from '../utils/queryDateUtils';
 import { GetAndValidateProviderAddressFromRequest } from '../utils/queryUtils';

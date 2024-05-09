@@ -1,5 +1,5 @@
 import * as lavajs from '@lavanet/lavajs';
-import * as JsinfoSchema from '../schemas/jsinfo_schema';
+import * as JsinfoSchema from '../schemas/jsinfoSchema';
 
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { ne } from "drizzle-orm";

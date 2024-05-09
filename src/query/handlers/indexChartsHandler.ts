@@ -2,8 +2,8 @@
 
 import { FastifyReply, FastifyRequest, RouteShorthandOptions } from 'fastify';
 import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../queryDb';
-import * as JsinfoSchema from '../../schemas/jsinfo_schema';
-import { sql, desc, gt, and, inArray } from "drizzle-orm";
+import * as JsinfoSchema from '../../schemas/jsinfoSchema';
+import { sql, desc, gt, and, inArray, between, lt } from "drizzle-orm";
 import { FormatDateItem } from '../utils/queryDateUtils';
 import { CachedDiskDbDataFetcher } from '../classes/CachedDiskDbDataFetcher';
 import path from 'path';
@@ -15,16 +15,26 @@ type CuRelayItem = {
 };
 
 type IndexChartResponse = {
-    date: Date;
-    qos: number;
-    data: CuRelayItem[];
-};
-
-type IndexChartResponseStringDate = {
     date: string;
     qos: number;
     data: CuRelayItem[];
 };
+
+interface CuRelayQueryData {
+    date: string;
+    chainId: string | null;
+    cuSum: number;
+    relaySum: number;
+}
+
+interface QosQueryData {
+    // 2024-04-30T22:00:00.000Z
+    date: string;
+    qosSyncAvg: number;
+    qosAvailabilityAvg: number;
+    qosLatencyAvg: number;
+    relaySum: number;
+}
 
 export const IndexChartsRawHandlerOpts: RouteShorthandOptions = {
     schema: {
@@ -73,113 +83,243 @@ class IndexChartsData extends CachedDiskDbDataFetcher<IndexChartResponse> {
         return path.join(this.cacheDir, `IndexChartsData`);
     }
 
-    protected async fetchDataFromDb(): Promise<IndexChartResponse[]> {
-        await QueryCheckJsinfoReadDbInstance()
+    private async getTopChains(): Promise<string[]> {
+        let sixMonthsAgo = new Date();
+        sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
-        //
-        // Get top chains
-        let topSpecs = await QueryGetJsinfoReadDbInstance().select({
+        let topChainsQueryRes: { chainId: string | null; }[] = await QueryGetJsinfoReadDbInstance().select({
             chainId: JsinfoSchema.aggHourlyrelayPayments.specId,
         }).from(JsinfoSchema.aggHourlyrelayPayments).
             groupBy(sql`${JsinfoSchema.aggHourlyrelayPayments.specId}`).
-            where(gt(sql<Date>`DATE(${JsinfoSchema.aggHourlyrelayPayments.datehour})`, sql<Date>`now() - interval '6 month'`)).
-            orderBy(desc(sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.relaySum})`))
+            where(gt(sql<Date>`DATE(${JsinfoSchema.aggHourlyrelayPayments.datehour})`, sql<Date>`${sixMonthsAgo}`)).
+            orderBy(desc(sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.relaySum})`));
 
-        const getChains = topSpecs.map(chain => chain.chainId!).slice(0, 10);
+        const topChains: string[] = topChainsQueryRes
+            .filter(chain => chain.chainId != null && chain.chainId.trim() !== '')
+            .map(chain => chain.chainId as string)
+            .slice(0, 10);
 
-        if (getChains.length === 0 || topSpecs.length === 0) {
-            console.log('IndexHandler empty data for topSpecs:: getChains:', getChains, 'topSpecs:', topSpecs);
+        if (topChains.length === 0 || topChainsQueryRes.length === 0) {
+            console.warn('getTopChains empty data for topSpecs:: topChains:', topChains, 'topChainsQueryRes:', topChainsQueryRes);
         }
 
-        //
-        // Get graph with 1 day resolution
-        let mainChartData = {}
-        if (getChains.length != 0) {
-            mainChartData = await QueryGetJsinfoReadDbInstance().select({
+        this.log(`getTopChains result: ${JSON.stringify(topChains)}`);
+
+        return topChains;
+    }
+
+    private addAllChains(mainChartData: CuRelayQueryData[]): CuRelayQueryData[] {
+        const dateSums: Record<string, CuRelayQueryData> = {};
+
+        for (const data of mainChartData) {
+            const { date, cuSum, relaySum } = data;
+
+            if (!date) {
+                throw new Error('date is null or undefined');
+            }
+
+            if (!dateSums[date]) {
+                dateSums[date] = { date, chainId: "All Chains", cuSum: 0, relaySum: 0 };
+            }
+
+            dateSums[date].cuSum += cuSum;
+            dateSums[date].relaySum += relaySum;
+        }
+
+        const allChainsData: CuRelayQueryData[] = Object.values(dateSums);
+        return [...mainChartData, ...allChainsData];
+    }
+
+    private async getMainChartData(topChains: any[]): Promise<CuRelayQueryData[]> {
+        let mainChartData: CuRelayQueryData[] = []
+        let currentDate = new Date();
+        let sixMonthsAgo = new Date();
+        sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
+        while (currentDate >= sixMonthsAgo) {
+            let startDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+            let endDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+
+            let monthlyData: CuRelayQueryData[] = await QueryGetJsinfoReadDbInstance().select({
                 date: sql<string>`DATE_TRUNC('day', ${JsinfoSchema.aggHourlyrelayPayments.datehour}) as mydate`,
                 chainId: JsinfoSchema.aggHourlyrelayPayments.specId,
-                cuSum: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.cuSum})`,
-                relaySum: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.relaySum})`,
+                cuSum: sql<number>`sum(COALESCE(${JsinfoSchema.aggHourlyrelayPayments.cuSum}, 0))`,
+                relaySum: sql<number>`sum(COALESCE(${JsinfoSchema.aggHourlyrelayPayments.relaySum}, 0))`,
             }).from(JsinfoSchema.aggHourlyrelayPayments).
                 where(
                     and(
-                        gt(sql<string>`DATE_TRUNC('day', ${JsinfoSchema.aggHourlyrelayPayments.datehour})`, sql<Date>`now() - interval '6 month'`),
-                        inArray(JsinfoSchema.aggHourlyrelayPayments.specId, getChains)
+                        and(
+                            gt(sql<Date>`DATE(${JsinfoSchema.aggHourlyrelayPayments.datehour})`, sql<Date>`${startDate}`),
+                            lt(sql<Date>`DATE(${JsinfoSchema.aggHourlyrelayPayments.datehour})`, sql<Date>`${endDate}`)
+                        ),
+                        inArray(JsinfoSchema.aggHourlyrelayPayments.specId, topChains)
                     )
                 ).
                 groupBy(sql`${JsinfoSchema.aggHourlyrelayPayments.specId}`, sql`mydate`).
-                orderBy(sql`mydate`)
+                orderBy(sql`mydate`);
+
+            // Verify and format the data
+            monthlyData.forEach(item => {
+                item.cuSum = Number(item.cuSum);
+                item.relaySum = Number(item.relaySum);
+
+                if (isNaN(Date.parse(item.date))) {
+                    throw new Error(`Data format does not match the CuRelayQueryData interface. Item: ${JSON.stringify(item)}. Reason: item.date is not a valid date.`);
+                } else if (isNaN(item.cuSum)) {
+                    throw new Error(`Data format does not match the CuRelayQueryData interface. Item: ${JSON.stringify(item)}. Reason: item.cuSum is not a number.`);
+                } else if (isNaN(item.relaySum)) {
+                    throw new Error(`Data format does not match the CuRelayQueryData interface. Item: ${JSON.stringify(item)}. Reason: item.relaySum is not a number.`);
+                }
+            });
+
+            mainChartData = mainChartData.concat(monthlyData);
+
+            this.log(`getMainChartData:: Fetched data for month: ${currentDate.getMonth() + 1}-${currentDate.getFullYear()}`);
+            currentDate.setMonth(currentDate.getMonth() - 1);
         }
 
-        mainChartData = addAllChains(mainChartData);
+        return this.addAllChains(mainChartData);
+    }
 
-        // QoS graph
-        let qosDataRaw = await QueryGetJsinfoReadDbInstance().select({
-            date: sql`DATE_TRUNC('day', ${JsinfoSchema.aggHourlyrelayPayments.datehour}) as mydate`,
-            qos: sql<number>`CBRT(
-                sum(${JsinfoSchema.aggHourlyrelayPayments.qosSyncAvg}*${JsinfoSchema.aggHourlyrelayPayments.relaySum})/sum(${JsinfoSchema.aggHourlyrelayPayments.relaySum})
-                *
-                sum(${JsinfoSchema.aggHourlyrelayPayments.qosAvailabilityAvg}*${JsinfoSchema.aggHourlyrelayPayments.relaySum})/sum(${JsinfoSchema.aggHourlyrelayPayments.relaySum})
-                *
-                sum(${JsinfoSchema.aggHourlyrelayPayments.qosLatencyAvg}*${JsinfoSchema.aggHourlyrelayPayments.relaySum})/sum(${JsinfoSchema.aggHourlyrelayPayments.relaySum})
-            )`
-        }).from(JsinfoSchema.aggHourlyrelayPayments).
-            where(gt(sql<string>`DATE_TRUNC('day', ${JsinfoSchema.aggHourlyrelayPayments.datehour})`, sql<Date>`now() - interval '6 month'`)).
-            groupBy(sql`mydate`).
-            orderBy(sql`mydate`)
-
+    private async getQosData(): Promise<{ [key: string]: number }> {
+        let currentDate = new Date();
+        let sixMonthsAgo = new Date();
+        sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
         const qosDataFormatted: { [key: string]: number } = {};
-        qosDataRaw.forEach(item => {
-            qosDataFormatted[String(item.date)] = item.qos;
-        });
 
-        const combinedData: IndexChartResponse[] = Object.keys(mainChartData).map(date => {
+        while (currentDate >= sixMonthsAgo) {
+            let startDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+            let endDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+
+            let monthlyData: QosQueryData[] = await QueryGetJsinfoReadDbInstance().select({
+                date: sql<string>`DATE_TRUNC('day', ${JsinfoSchema.aggHourlyrelayPayments.datehour}) as mydate`,
+                qosSyncAvg: sql<number>`sum(case when ${JsinfoSchema.aggHourlyrelayPayments.qosSyncAvg} is not null and ${JsinfoSchema.aggHourlyrelayPayments.qosSyncAvg} != 0 then ${JsinfoSchema.aggHourlyrelayPayments.qosSyncAvg} else 0 end)`,
+                qosAvailabilityAvg: sql<number>`sum(case when ${JsinfoSchema.aggHourlyrelayPayments.qosAvailabilityAvg} is not null and ${JsinfoSchema.aggHourlyrelayPayments.qosAvailabilityAvg} != 0 then ${JsinfoSchema.aggHourlyrelayPayments.qosAvailabilityAvg} else 0 end)`,
+                qosLatencyAvg: sql<number>`sum(case when ${JsinfoSchema.aggHourlyrelayPayments.qosLatencyAvg} is not null and ${JsinfoSchema.aggHourlyrelayPayments.qosLatencyAvg} != 0 then ${JsinfoSchema.aggHourlyrelayPayments.qosLatencyAvg} else 0 end)`,
+                relaySum: sql<number>`sum(case when ${JsinfoSchema.aggHourlyrelayPayments.relaySum} is not null and ${JsinfoSchema.aggHourlyrelayPayments.relaySum} != 0 then ${JsinfoSchema.aggHourlyrelayPayments.relaySum} else 0 end)`
+            }).from(JsinfoSchema.aggHourlyrelayPayments).
+                where(and(
+                    gt(sql<Date>`DATE(${JsinfoSchema.aggHourlyrelayPayments.datehour})`, sql<Date>`${startDate}`),
+                    lt(sql<Date>`DATE(${JsinfoSchema.aggHourlyrelayPayments.datehour})`, sql<Date>`${endDate}`)
+                )).
+                groupBy(sql`mydate`).
+                orderBy(sql`mydate`);
+
+            // Verify and format the data
+            monthlyData.forEach(item => {
+                item.qosSyncAvg = Number(item.qosSyncAvg);
+                item.qosAvailabilityAvg = Number(item.qosAvailabilityAvg);
+                item.qosLatencyAvg = Number(item.qosLatencyAvg);
+                item.relaySum = Number(item.relaySum);
+
+                if (isNaN(Date.parse(item.date))) {
+                    throw new Error(`Data format does not match the QosQueryData interface. Item: ${JSON.stringify(item)}. Reason: item.date is not a valid date.`);
+                } else if (isNaN(item.qosSyncAvg)) {
+                    throw new Error(`Data format does not match the QosQueryData interface. Item: ${JSON.stringify(item)}. Reason: item.qosSyncAvg is not a number.`);
+                } else if (isNaN(item.qosAvailabilityAvg)) {
+                    throw new Error(`Data format does not match the QosQueryData interface. Item: ${JSON.stringify(item)}. Reason: item.qosAvailabilityAvg is not a number.`);
+                } else if (isNaN(item.qosLatencyAvg)) {
+                    throw new Error(`Data format does not match the QosQueryData interface. Item: ${JSON.stringify(item)}. Reason: item.qosLatencyAvg is not a number.`);
+                } else if (isNaN(item.relaySum)) {
+                    throw new Error(`Data format does not match the QosQueryData interface. Item: ${JSON.stringify(item)}. Reason: item.relaySum is not a number.`);
+                }
+
+                const qos = Math.cbrt(
+                    (item.qosSyncAvg * item.relaySum) / item.relaySum *
+                    (item.qosAvailabilityAvg * item.relaySum) / item.relaySum *
+                    (item.qosLatencyAvg * item.relaySum) / item.relaySum
+                );
+
+                qosDataFormatted[item.date] = qos;
+            });
+
+            this.log(`getQosData:: Fetched data for month: ${currentDate.getMonth() + 1}-${currentDate.getFullYear()}`);
+            currentDate.setMonth(currentDate.getMonth() - 1);
+        }
+
+        return qosDataFormatted;
+    }
+
+
+    private combineData(mainChartData: CuRelayQueryData[], qosDataFormatted: { [key: string]: number }): IndexChartResponse[] {
+        // Group the mainChartData by date
+        const groupedData: { [key: string]: CuRelayItem[] } = mainChartData.reduce((acc, item) => {
+            if (!acc[item.date]) {
+                acc[item.date] = [];
+            }
+            acc[item.date].push({
+                chainId: item.chainId || '',
+                cuSum: item.cuSum,
+                relaySum: item.relaySum
+            });
+            return acc;
+        }, {});
+
+        // Merge the groupedData with qosDataFormatted
+        return Object.keys(groupedData).map(date => {
             return {
-                date: new Date(date),
+                date: date,
                 qos: qosDataFormatted[date] || 0,
-                data: mainChartData[date]
+                data: groupedData[date]
             };
         });
+    }
+
+    protected async fetchDataFromDb(): Promise<IndexChartResponse[]> {
+        await QueryCheckJsinfoReadDbInstance()
+
+        const topChains = await this.getTopChains();
+        const mainChartData = await this.getMainChartData(topChains);
+        const qosData = await this.getQosData();
+        const combinedData = this.combineData(mainChartData, qosData);
 
         return combinedData;
     }
 
     protected async getItemsByFromToImpl(data: IndexChartResponse[], fromDate: Date, toDate: Date): Promise<IndexChartResponse[] | null> {
-        return data.filter(item => {
-            return item.date >= fromDate && item.date <= toDate;
+        console.log('Data before filtering:', JSON.stringify(data).substring(0, 1000));
+        console.log('Filtering from date:', fromDate);
+        console.log('Filtering to date:', toDate);
+
+        const filteredData = data.filter(item => {
+            const itemDate = new Date(item.date);
+            console.log('Current item:', JSON.stringify(item).substring(0, 1000));
+            return itemDate >= fromDate && itemDate <= toDate;
         });
+
+        console.log('Data after filtering:', JSON.stringify(filteredData).substring(0, 1000));
+        return filteredData;
     }
 }
 
-function addAllChains(mainChartData) {
-    const dateSums = {};
-    mainChartData.forEach(data => {
-        if (!dateSums[data.date]) {
-            dateSums[data.date] = { date: data.date, chainId: "All Chains", cuSum: 0, relaySum: 0 };
-        }
-        dateSums[data.date].cuSum += Number(data.cuSum);
-        dateSums[data.date].relaySum += Number(data.relaySum);
-    });
-    const newChartData = Object.values(dateSums);
-    return mainChartData.concat(newChartData);
-}
+export async function IndexChartsRawHandler(request: FastifyRequest, reply: FastifyReply, debug = false) {
+    if (debug) console.log('IndexChartsRawHandler:: Start');
+    await QueryCheckJsinfoReadDbInstance();
+    if (debug) console.log('IndexChartsRawHandler:: QueryCheckJsinfoReadDbInstance done');
 
-export async function IndexChartsRawHandler(request: FastifyRequest, reply: FastifyReply) {
-    await QueryCheckJsinfoReadDbInstance()
-    let ret = await IndexChartsData.GetInstance().getItemsByFromToChartsHandler(request, reply);
-    if (ret == null) return reply;
+    let ret: { data: IndexChartResponse[] } | null = await IndexChartsData.GetInstance().getItemsByFromToChartsHandler(request, reply);
+    if (debug) console.log('IndexChartsRawHandler:: getItemsByFromToChartsHandler done');
 
-    const uniqueYears = new Set(ret.data.map(item => item.date.getFullYear()));
+    if (ret == null) {
+        if (debug) console.log('IndexChartsRawHandler:: ret is null, returning reply');
+        return reply;
+    }
+
+    const uniqueYears = new Set(ret.data.map(item => new Date(item.date).getFullYear()));
+    if (debug) console.log(`IndexChartsRawHandler:: uniqueYears: ${Array.from(uniqueYears).join(', ')}`);
 
     const addYears = uniqueYears.size > 1;
+    if (debug) console.log(`IndexChartsRawHandler:: addYears: ${addYears}`);
 
-    let formattedData: IndexChartResponseStringDate[] = ret.data.map(item => {
+    let formattedData: IndexChartResponse[] = ret.data.map(item => {
         return {
             ...item,
-            date: FormatDateItem(item.date, addYears)
+            date: FormatDateItem(new Date(item.date), addYears)
         };
     });
+    if (debug) console.log('IndexChartsRawHandler:: formattedData created');
 
+    if (debug) console.log('IndexChartsRawHandler:: End');
     return reply.send({ data: formattedData });
 }

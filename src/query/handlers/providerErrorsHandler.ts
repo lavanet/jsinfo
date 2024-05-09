@@ -9,7 +9,7 @@ import { Pagination } from '../utils/queryPagination';
 import { CSVEscape, CompareValues, GetAndValidateProviderAddressFromRequest } from '../utils/queryUtils';
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '../queryConsts';
 import { ParseLavapProviderError } from '../utils/lavapProvidersErrorParser';
-import * as RelaysSchema from '../../schemas/relays_schema';
+import * as RelaysSchema from '../../schemas/relaysSchema';
 import { CachedDiskDbDataFetcher } from '../classes/CachedDiskDbDataFetcher';
 export interface ErrorsReport {
     id: number;

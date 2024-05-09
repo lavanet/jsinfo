@@ -1,7 +1,7 @@
 // src/query/handlers/lavapProviderHealthHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import * as JsinfoSchema from '../../schemas/jsinfo_schema';
+import * as JsinfoSchema from '../../schemas/jsinfoSchema';
 import { QueryCheckJsinfoDbInstance, QueryGetJsinfoDbInstance } from '../queryDb';
 import { lt } from "drizzle-orm";
 import { JSINFO_QUERY_PROVIDER_HEALTH_HOURLY_CUTOFF_DAYS } from '../queryConsts';

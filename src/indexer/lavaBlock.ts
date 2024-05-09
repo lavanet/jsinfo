@@ -1,6 +1,6 @@
 // src/indexer/lavaBlock.ts
 
-import * as JsinfoSchema from '../schemas/jsinfo_schema';
+import * as JsinfoSchema from '../schemas/jsinfoSchema';
 
 import { StargateClient, IndexedTx, Block, Event } from "@cosmjs/stargate"
 import { Tendermint37Client } from "@cosmjs/tendermint-rpc";

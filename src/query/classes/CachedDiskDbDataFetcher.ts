@@ -134,19 +134,27 @@ export class CachedDiskDbDataFetcher<T> {
 
     private async fetchAndCacheData() {
         let retries = 3;
+        let intervalId: NodeJS.Timeout | null = null;
+
         while (retries > 0) {
             try {
                 this.log('fetchAndCacheData:: Fetching data from DB');
 
                 // Start pinging every second
-                const intervalId = setInterval(() => {
-                    this.log('fetchAndCacheData:: fetchDataFromDb Ping');
+                let pingCount = 0;
+                const startTime = Date.now();
+                intervalId = setInterval(() => {
+                    pingCount++;
+                    this.log(`fetchAndCacheData:: fetchDataFromDb Ping ${pingCount}`);
                 }, 1000);
 
                 const data = await this.fetchDataFromDb();
 
                 // Stop pinging when data is fetched
                 clearInterval(intervalId);
+                const endTime = Date.now();
+                const elapsedTime = (endTime - startTime) / 1000; // Convert to seconds
+                this.log(`fetchAndCacheData:: fetchDataFromDb completed. Total pings: ${pingCount}, Total time: ${elapsedTime} seconds`);
 
                 const cacheFilePath = this.getCacheFilePath();
 
@@ -166,6 +174,10 @@ export class CachedDiskDbDataFetcher<T> {
                 break;
 
             } catch (e) {
+                if (intervalId) {
+                    clearInterval(intervalId);
+                }
+
                 this.log(`fetchAndCacheData:: Error occurred: ${e}, retrying`);
                 console.error("fetchAndCacheData:: CachedDiskDbDataFetcher Error:", this.getCacheFilePath(), e);
                 retries--;
@@ -189,7 +201,7 @@ export class CachedDiskDbDataFetcher<T> {
 
         if (!fs.existsSync(cacheFilePath)) {
             this.log('didDataExpire:: Cache file does not exist');
-            return false;
+            return true;
         }
 
         this.log('didDataExpire:: Cache is enabled and cache file exists');
@@ -199,11 +211,11 @@ export class CachedDiskDbDataFetcher<T> {
 
         if (ageInSeconds > this.cacheAgeLimit) {
             this.log('didDataExpire:: Cache file is old, data expired');
-            return false;
+            return true;
         }
 
         this.log('didDataExpire:: Cache file is fresh, data did not expire');
-        return true;
+        return false;
     }
 
     protected async fetchDataFromCache(): Promise<T[] | null> {

@@ -1,4 +1,4 @@
-// src/schemas/jsinfo_schema.ts
+// src/schemas/jsinfoSchema.ts
 
 // Do not use 'drizzle-orm' date, it will cause bugs
 

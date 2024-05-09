@@ -3,7 +3,7 @@
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryGetJsinfoReadDbInstance } from '../queryDb';
-import * as JsinfoSchema from '../../schemas/jsinfo_schema';
+import * as JsinfoSchema from '../../schemas/jsinfoSchema';
 import { eq, desc } from "drizzle-orm";
 import { Pagination } from '../utils/queryPagination';
 import { CSVEscape, GetAndValidateProviderAddressFromRequest, GetDataLengthForPrints, IsNotNullAndNotZero } from '../utils/queryUtils';

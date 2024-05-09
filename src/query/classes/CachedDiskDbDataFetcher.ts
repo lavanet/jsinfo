@@ -134,7 +134,7 @@ export class CachedDiskDbDataFetcher<T> {
 
     private async fetchAndCacheData() {
         let retries = 3;
-        let intervalId: NodeJS.Timeout | null = null;
+        let intervalId: any = null;
 
         while (retries > 0) {
             try {

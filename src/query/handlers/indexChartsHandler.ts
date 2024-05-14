@@ -270,16 +270,12 @@ class IndexChartsData extends CachedDiskDbDataFetcher<IndexChartResponse> {
     }
 
     protected async getItemsByFromToImpl(data: IndexChartResponse[], fromDate: Date, toDate: Date): Promise<IndexChartResponse[] | null> {
-        console.log('Data before filtering:', JSON.stringify(data).substring(0, 1000));
-        console.log('Filtering from date:', fromDate);
-        console.log('Filtering to date:', toDate);
 
         const filteredData = data.filter(item => {
             const itemDate = new Date(item.date);
             return itemDate >= fromDate && itemDate <= toDate;
         });
 
-        console.log('Data after filtering:', JSON.stringify(filteredData).substring(0, 1000));
         return filteredData;
     }
 }

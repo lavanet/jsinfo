@@ -5,7 +5,7 @@ import fs from 'fs';
 import { Pagination, ParsePaginationFromRequest } from "../utils/queryPagination";
 import { FastifyReply, FastifyRequest } from "fastify";
 import { GetDataLength, GetDataLengthForPrints } from "../utils/queryUtils";
-import { subMonths, isAfter, isBefore, parseISO } from 'date-fns';
+import { subMonths, isAfter, isBefore, parseISO, addDays, startOfDay, subDays } from 'date-fns';
 
 if (!GetDataLengthForPrints) {
     throw new Error("GetDataLengthForPrints is undefined or null");
@@ -280,55 +280,56 @@ export class CachedDiskDbDataFetcher<T> {
             return null
         }
     }
-
     public async getItemsByFromToChartsHandler(request: FastifyRequest, reply: FastifyReply): Promise<{ data: T[] } | null> {
         try {
             const data = await this.fetchDataFromCache();
 
-            this.log(`getItemsByFromToChartsHandler:: Fetched data from cache. Type of data: ${typeof data}, Length of data: ${GetDataLengthForPrints(data)}`);
-
             if (data == null) {
-                this.log('getItemsByFromToChartsHandler:: Data is null, sending empty response');
                 reply.send({});
                 return null;
             }
 
-            const query = request.query as { [key: string]: unknown };
+            const query = request.query as { [key: string]: string };
 
-            const fromDate = 'f' in query && typeof query.f === 'string'
+            let fromDate = 'f' in query && typeof query.f === 'string'
                 ? parseISO(query.f)
                 : subMonths(new Date(), 3);
 
-            const toDate = 't' in query && typeof query.t === 'string'
+            let toDate = 't' in query && typeof query.t === 'string'
                 ? parseISO(query.t)
                 : new Date();
 
-            this.log(`getItemsByFromToChartsHandler:: From date: ${fromDate}, To date: ${toDate}`);
-
-            if (isBefore(fromDate, subMonths(new Date(), 6))) {
-                throw new Error('From date cannot be more than 6 months in the past.');
+            if (isAfter(fromDate, toDate)) {
+                [fromDate, toDate] = [toDate, fromDate];
             }
 
-            if (isAfter(toDate, new Date())) {
-                throw new Error('To date cannot be in the future.');
+            const fromDateStartOfDay = startOfDay(fromDate);
+            const sixMonthsAgoStartOfDay = startOfDay(subMonths(new Date(), 6));
+            const sixMonthsMinusOneDay = subDays(sixMonthsAgoStartOfDay, 1);
+
+            if (isBefore(fromDateStartOfDay, sixMonthsMinusOneDay)) {
+                throw new Error(`From date (${fromDateStartOfDay.toISOString()}) cannot be more than 6 months in the past (${sixMonthsAgoStartOfDay.toISOString()}).`);
+            }
+
+            const currentDateStartOfDay = startOfDay(new Date);
+            const toDateStartOfDay = startOfDay(toDate);
+
+            if (isAfter(toDateStartOfDay, currentDateStartOfDay)) {
+                throw new Error(`To date (${toDateStartOfDay.toISOString()}) cannot be in the future (${currentDateStartOfDay.toISOString()}).`);
             }
 
             const filteredData: T[] | null = await this.getItemsByFromToImpl(data, fromDate, toDate);
 
             if (filteredData == null || filteredData.length === 0) {
-                this.log('getItemsByFromToChartsHandler:: Filtered data is null or empty, sending empty response');
                 reply.send({});
                 return null;
             }
-
-            this.log(`getItemsByFromToChartsHandler:: Got filtered items. Type of filteredData: ${typeof filteredData}, Length of filteredData: ${GetDataLengthForPrints(filteredData)}`);
 
             return { data: filteredData };
 
         } catch (error) {
             const err = error as Error;
             reply.code(400).send({ error: String(err.message) });
-            this.log(`getItemsByFromToChartsHandler:: Error occurred: ${err.message}`);
             return null
         }
     }

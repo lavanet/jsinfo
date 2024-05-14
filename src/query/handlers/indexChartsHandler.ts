@@ -28,12 +28,10 @@ interface CuRelayQueryData {
 }
 
 interface QosQueryData {
-    // 2024-04-30T22:00:00.000Z
     date: string;
     qosSyncAvg: number;
     qosAvailabilityAvg: number;
     qosLatencyAvg: number;
-    relaySum: number;
 }
 
 export const IndexChartsRawHandlerOpts: RouteShorthandOptions = {
@@ -135,6 +133,7 @@ class IndexChartsData extends CachedDiskDbDataFetcher<IndexChartResponse> {
         let currentDate = new Date();
         let sixMonthsAgo = new Date();
         sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+        sixMonthsAgo.setDate(sixMonthsAgo.getDate() - 2);
 
         while (currentDate >= sixMonthsAgo) {
             let startDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
@@ -156,7 +155,7 @@ class IndexChartsData extends CachedDiskDbDataFetcher<IndexChartResponse> {
                     )
                 ).
                 groupBy(sql`${JsinfoSchema.aggHourlyrelayPayments.specId}`, sql`mydate`).
-                orderBy(sql`mydate`);
+                orderBy(sql`mydate DESC`);
 
             // Verify and format the data
             monthlyData.forEach(item => {
@@ -185,6 +184,7 @@ class IndexChartsData extends CachedDiskDbDataFetcher<IndexChartResponse> {
         let currentDate = new Date();
         let sixMonthsAgo = new Date();
         sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+        sixMonthsAgo.setDate(sixMonthsAgo.getDate() - 2);
 
         const qosDataFormatted: { [key: string]: number } = {};
 
@@ -194,24 +194,22 @@ class IndexChartsData extends CachedDiskDbDataFetcher<IndexChartResponse> {
 
             let monthlyData: QosQueryData[] = await QueryGetJsinfoReadDbInstance().select({
                 date: sql<string>`DATE_TRUNC('day', ${JsinfoSchema.aggHourlyrelayPayments.datehour}) as mydate`,
-                qosSyncAvg: sql<number>`sum(case when ${JsinfoSchema.aggHourlyrelayPayments.qosSyncAvg} is not null and ${JsinfoSchema.aggHourlyrelayPayments.qosSyncAvg} != 0 then ${JsinfoSchema.aggHourlyrelayPayments.qosSyncAvg} else 0 end)`,
-                qosAvailabilityAvg: sql<number>`sum(case when ${JsinfoSchema.aggHourlyrelayPayments.qosAvailabilityAvg} is not null and ${JsinfoSchema.aggHourlyrelayPayments.qosAvailabilityAvg} != 0 then ${JsinfoSchema.aggHourlyrelayPayments.qosAvailabilityAvg} else 0 end)`,
-                qosLatencyAvg: sql<number>`sum(case when ${JsinfoSchema.aggHourlyrelayPayments.qosLatencyAvg} is not null and ${JsinfoSchema.aggHourlyrelayPayments.qosLatencyAvg} != 0 then ${JsinfoSchema.aggHourlyrelayPayments.qosLatencyAvg} else 0 end)`,
-                relaySum: sql<number>`sum(case when ${JsinfoSchema.aggHourlyrelayPayments.relaySum} is not null and ${JsinfoSchema.aggHourlyrelayPayments.relaySum} != 0 then ${JsinfoSchema.aggHourlyrelayPayments.relaySum} else 0 end)`
+                qosSyncAvg: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.qosSyncAvg}*${JsinfoSchema.aggHourlyrelayPayments.relaySum})/sum(${JsinfoSchema.aggHourlyrelayPayments.relaySum})`,
+                qosAvailabilityAvg: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.qosAvailabilityAvg}*${JsinfoSchema.aggHourlyrelayPayments.relaySum})/sum(${JsinfoSchema.aggHourlyrelayPayments.relaySum})`,
+                qosLatencyAvg: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.qosLatencyAvg}*${JsinfoSchema.aggHourlyrelayPayments.relaySum})/sum(${JsinfoSchema.aggHourlyrelayPayments.relaySum})`,
             }).from(JsinfoSchema.aggHourlyrelayPayments).
                 where(and(
                     gt(sql<Date>`DATE(${JsinfoSchema.aggHourlyrelayPayments.datehour})`, sql<Date>`${startDate}`),
                     lt(sql<Date>`DATE(${JsinfoSchema.aggHourlyrelayPayments.datehour})`, sql<Date>`${endDate}`)
                 )).
                 groupBy(sql`mydate`).
-                orderBy(sql`mydate`);
+                orderBy(sql`mydate DESC`);
 
             // Verify and format the data
             monthlyData.forEach(item => {
                 item.qosSyncAvg = Number(item.qosSyncAvg);
                 item.qosAvailabilityAvg = Number(item.qosAvailabilityAvg);
                 item.qosLatencyAvg = Number(item.qosLatencyAvg);
-                item.relaySum = Number(item.relaySum);
 
                 if (isNaN(Date.parse(item.date))) {
                     throw new Error(`Data format does not match the QosQueryData interface. Item: ${JSON.stringify(item)}. Reason: item.date is not a valid date.`);
@@ -221,15 +219,9 @@ class IndexChartsData extends CachedDiskDbDataFetcher<IndexChartResponse> {
                     throw new Error(`Data format does not match the QosQueryData interface. Item: ${JSON.stringify(item)}. Reason: item.qosAvailabilityAvg is not a number.`);
                 } else if (isNaN(item.qosLatencyAvg)) {
                     throw new Error(`Data format does not match the QosQueryData interface. Item: ${JSON.stringify(item)}. Reason: item.qosLatencyAvg is not a number.`);
-                } else if (isNaN(item.relaySum)) {
-                    throw new Error(`Data format does not match the QosQueryData interface. Item: ${JSON.stringify(item)}. Reason: item.relaySum is not a number.`);
                 }
 
-                const qos = Math.cbrt(
-                    (item.qosSyncAvg * item.relaySum) / item.relaySum *
-                    (item.qosAvailabilityAvg * item.relaySum) / item.relaySum *
-                    (item.qosLatencyAvg * item.relaySum) / item.relaySum
-                );
+                const qos = Math.cbrt(item.qosSyncAvg * item.qosAvailabilityAvg * item.qosLatencyAvg);
 
                 qosDataFormatted[item.date] = qos;
             });
@@ -284,7 +276,6 @@ class IndexChartsData extends CachedDiskDbDataFetcher<IndexChartResponse> {
 
         const filteredData = data.filter(item => {
             const itemDate = new Date(item.date);
-            console.log('Current item:', JSON.stringify(item).substring(0, 1000));
             return itemDate >= fromDate && itemDate <= toDate;
         });
 

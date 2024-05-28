@@ -130,7 +130,7 @@ const createHealthReportQuery = (addr: string) => {
         .where(eq(JsinfoSchema.providerHealthHourly.provider, addr))
         .orderBy(desc(JsinfoSchema.providerHealthHourly.timestamp))
         .offset(0)
-        .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
+        .limit(10000); // JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
 }
 
 const getHealthReportBlocksMessage = (item: HealthReportResponse) => {

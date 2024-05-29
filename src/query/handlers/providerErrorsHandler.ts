@@ -3,7 +3,7 @@
 
 import path from 'path';
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryCheckRelaysReadDbInstance, QueryGetRelaysReadDbInstance } from '../queryDb';
+import { QueryGetRelaysReadDbInstance } from '../queryDb';
 import { eq, desc } from "drizzle-orm";
 import { Pagination } from '../utils/queryPagination';
 import { CSVEscape, CompareValues, GetAndValidateProviderAddressFromRequest } from '../utils/queryUtils';
@@ -73,7 +73,7 @@ class ProviderErrorsData extends CachedDiskDbDataFetcher<ErrorsReportReponse> {
     protected async fetchDataFromDb(): Promise<ErrorsReportReponse[]> {
         const result = await QueryGetRelaysReadDbInstance().select().from(RelaysSchema.lavaReportError)
             .where(eq(RelaysSchema.lavaReportError.provider, this.addr))
-            .orderBy(desc(RelaysSchema.lavaReportError.created_at)).offset(0).limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION)
+            .orderBy(desc(RelaysSchema.lavaReportError.id)).offset(0).limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION)
 
         return result.map((row: ErrorsReport) => ({
             id: row.id,

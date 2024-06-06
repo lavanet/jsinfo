@@ -4,7 +4,14 @@ import * as JsinfoSchema from '../../schemas/jsinfoSchema';
 import { GetOrSetConsumer, GetOrSetProvider, GetOrSetSpec, SetTx } from "../setLatest";
 import { EventParseUlava, EventProcessAttributes, EventParseProviderAddress, EventParseInt, EventParseFloat } from "../eventUtils";
 
-// Mint is not used
+// 2024May31:
+// checking event on https://lava.explorers.guru/transaction/D294DFDD8D39F0F6E096738F559783AD6ACC1FD606C5E9F7F30A0C49DC77FB3D
+// descrptionString is - strconv.FormatUint(rws.serverID, 10)
+// Mint and ClientFee are 0 in the code, reliabilityPay is false in the code
+// Fulltext for this event is not stored
+// totalCUInEpoch, rewardedCU, uniqueIdentifier - are not stored
+// BasePay - does not exist in the event
+// QoSReport - on chain and is not saved
 
 /*
 EventDebug txs event 1085946 lava_relay_payment {

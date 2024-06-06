@@ -2,7 +2,7 @@
 // src/query/handlers/providerStakesHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryGetJsinfoReadDbInstance } from '../queryDb';
+import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../queryDb';
 import * as JsinfoSchema from '../../schemas/jsinfoSchema';
 import { desc, eq } from "drizzle-orm";
 import { Pagination, ParsePaginationFromString } from '../utils/queryPagination';
@@ -71,15 +71,17 @@ class ProviderStakesData extends CachedDiskDbDataFetcher<JsinfoSchema.ProviderSt
         return ProviderStakesData.GetInstanceBase(addr);
     }
 
-    protected getCacheFilePath(): string {
+    protected getCacheFilePathImpl(): string {
         return path.join(this.cacheDir, `ProviderStakesData_${this.addr}`);
     }
 
-    protected getCSVFileName(): string {
+    protected getCSVFileNameImpl(): string {
         return `ProviderStakes_${this.addr}.csv`;
     }
 
     protected async fetchDataFromDb(): Promise<JsinfoSchema.ProviderStake[]> {
+        await QueryCheckJsinfoReadDbInstance();
+
         let thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 

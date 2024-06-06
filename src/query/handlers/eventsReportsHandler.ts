@@ -66,11 +66,11 @@ class EventsReportsData extends CachedDiskDbDataFetcher<EventsReportsResponse> {
         return EventsReportsData.GetInstanceBase();
     }
 
-    protected getCacheFilePath(): string {
+    protected getCacheFilePathImpl(): string {
         return path.join(this.cacheDir, 'EventsReportsCachedHandlerData');
     }
 
-    protected getCSVFileName(): string {
+    protected getCSVFileNameImpl(): string {
         return `EventsReports.csv`;
     }
 
@@ -110,12 +110,16 @@ class EventsReportsData extends CachedDiskDbDataFetcher<EventsReportsResponse> {
         pagination: Pagination | null
     ): Promise<EventsReportsResponse[] | null> {
         const defaultSortKey = "datetime";
-        const defaultPagination = ParsePaginationFromString(
-            `${defaultSortKey},descending,1,${JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE}`
-        );
 
-        // Use the provided pagination or the default one
-        const finalPagination: Pagination = pagination ?? defaultPagination;
+        let finalPagination: Pagination;
+
+        if (pagination) {
+            finalPagination = pagination;
+        } else {
+            finalPagination = ParsePaginationFromString(
+                `${defaultSortKey},descending,1,${JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE}`
+            );
+        }
 
         // If sortKey is null, set it to the defaultSortKey
         if (finalPagination.sortKey === null) {

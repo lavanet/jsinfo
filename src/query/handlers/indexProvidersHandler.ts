@@ -59,11 +59,11 @@ class IndexProvidersData extends CachedDiskDbDataFetcher<IndexProvidersResponse>
         super("IndexProvidersData");
     }
 
-    protected getCacheFilePath(): string {
+    protected getCacheFilePathImpl(): string {
         return path.join(this.cacheDir, `IndexProvidersData`);
     }
 
-    protected getCSVFileName(): string {
+    protected getCSVFileNameImpl(): string {
         return `LavaTopProviders.csv`;
     }
 
@@ -72,6 +72,8 @@ class IndexProvidersData extends CachedDiskDbDataFetcher<IndexProvidersResponse>
     }
 
     protected async fetchDataFromDb(): Promise<IndexProvidersResponse[]> {
+        await QueryCheckJsinfoReadDbInstance();
+
         let res4 = await QueryGetJsinfoReadDbInstance().select({
             address: JsinfoSchema.aggHourlyrelayPayments.provider,
             rewardSum: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.rewardSum})`,
@@ -131,12 +133,16 @@ class IndexProvidersData extends CachedDiskDbDataFetcher<IndexProvidersResponse>
         pagination: Pagination | null
     ): Promise<IndexProvidersResponse[] | null> {
         const defaultSortKey = "totalStake";
-        const defaultPagination = ParsePaginationFromString(
-            `${defaultSortKey},descending,1,${JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE}`
-        );
 
-        // Use the provided pagination or the default one
-        const finalPagination: Pagination = pagination ?? defaultPagination;
+        let finalPagination: Pagination;
+
+        if (pagination) {
+            finalPagination = pagination;
+        } else {
+            finalPagination = ParsePaginationFromString(
+                `${defaultSortKey},descending,1,${JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE}`
+            );
+        }
 
         // If sortKey is null, set it to the defaultSortKey
         if (finalPagination.sortKey === null) {
@@ -190,16 +196,13 @@ class IndexProvidersData extends CachedDiskDbDataFetcher<IndexProvidersResponse>
 }
 
 export async function IndexProvidersCachedHandler(request: FastifyRequest, reply: FastifyReply) {
-    await QueryCheckJsinfoReadDbInstance()
     return await IndexProvidersData.GetInstance().getPaginatedItemsCachedHandler(request, reply)
 }
 
 export async function IndexProvidersItemCountRawHandler(request: FastifyRequest, reply: FastifyReply) {
-    await QueryCheckJsinfoReadDbInstance()
     return await IndexProvidersData.GetInstance().getTotalItemCountRawHandler(request, reply)
 }
 
 export async function IndexProvidersCSVRawHandler(request: FastifyRequest, reply: FastifyReply) {
-    await QueryCheckJsinfoReadDbInstance()
     return await IndexProvidersData.GetInstance().getCSVRawHandler(request, reply)
 }

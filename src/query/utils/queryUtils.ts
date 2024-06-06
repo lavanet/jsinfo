@@ -42,8 +42,6 @@ export function CSVEscape(str: string): string {
 let GetAndValidateProviderAddressFromRequest_cache = {};
 
 export async function GetAndValidateProviderAddressFromRequest(request: FastifyRequest, reply: FastifyReply): Promise<string> {
-    await QueryCheckJsinfoReadDbInstance();
-
     const { addr } = request.params as { addr: string };
     if (addr.length != 44 || !addr.startsWith('lava@')) {
         reply.code(400).send({ error: 'Bad provider address' });
@@ -55,6 +53,8 @@ export async function GetAndValidateProviderAddressFromRequest(request: FastifyR
         return addr;
     }
 
+    await QueryCheckJsinfoReadDbInstance();
+
     res = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.providers).where(eq(JsinfoSchema.providers.address, addr)).limit(1);
 
     if (res.length != 1) {
@@ -65,6 +65,36 @@ export async function GetAndValidateProviderAddressFromRequest(request: FastifyR
     GetAndValidateProviderAddressFromRequest_cache[addr] = true;
 
     return addr;
+}
+
+let GetAndValidateSpecIdFromRequest_cache = {};
+
+export async function GetAndValidateSpecIdFromRequest(request: FastifyRequest, reply: FastifyReply): Promise<string> {
+    const { specId } = request.params as { specId: string };
+    if (specId.length <= 0) {
+        reply.code(400).send({ error: 'invalid specId' });
+        return '';
+    }
+
+    const upSpecId = specId.toUpperCase();
+
+    let res = GetAndValidateSpecIdFromRequest_cache[upSpecId];
+    if (res) {
+        return upSpecId;
+    }
+
+    await QueryCheckJsinfoReadDbInstance();
+
+    res = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.specs).where(eq(JsinfoSchema.specs.id, upSpecId)).limit(1);
+
+    if (res.length != 1) {
+        reply.code(400).send({ error: 'specId does not exist' });
+        return '';
+    }
+
+    GetAndValidateSpecIdFromRequest_cache[upSpecId] = true;
+
+    return upSpecId;
 }
 
 export function GetNestedValue(obj: any, keyPath: string): string | number | null {

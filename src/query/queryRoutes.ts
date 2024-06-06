@@ -10,8 +10,8 @@ import { CacheLinksCachedHandler, CacheLinksCachedHandlerOpts } from './handlers
 import { AutoCompleteLinksCachedHandler, AutoCompleteLinksCachedHandlerOpts } from './handlers/autoCompleteLinksHandler';
 
 import { IndexHandler, IndexHandlerOpts } from './handlers/indexHandler';
-import { IndexChartsRawHandler, IndexChartsRawHandlerOpts } from './handlers/indexChartsHandler';
 import { IndexProvidersCachedHandler, IndexProvidersCachedHandlerOpts, IndexProvidersItemCountRawHandler, IndexProvidersCSVRawHandler } from './handlers/indexProvidersHandler';
+import { IndexChartsRawHandler, IndexChartsRawHandlerOpts } from './handlers/indexChartsHandler';
 
 import { ProviderHandler, ProviderHandlerOpts } from './handlers/providerHandler';
 import { ProviderHealthCachedHandler, ProviderHealthCachedHandlerOpts, ProviderHealthItemCountRawHandler, ProviderHealthCSVRawHandler } from './handlers/providerHealthHandler';
@@ -27,9 +27,12 @@ import { EventsEventsCachedHandlerOpts, EventsEventsCachedHandler, EventsEventsI
 import { EventsRewardsCachedHandlerOpts, EventsRewardsCachedHandler, EventsRewardsItemCountRawHandler, EventsRewardsCSVRawHandler } from './handlers/eventsRewardsHandler';
 import { EventsReportsCachedHandlerOpts, EventsReportsCachedHandler, EventsReportsItemCountRawHandler, EventsReportsCSVRawHandler } from './handlers/eventsReportsHandler';
 
+import { SpecCachedHandler, SpecCachedHandlerOpts } from './handlers/specHandler';
+import { SpecChartsRawHandler, SpecChartsRawHandlerOpts } from './handlers/specChartsHandler';
+import { SpecStakesCachedHandler, SpecStakesCachedHandlerOpts, SpecStakesItemCountRawHandler, SpecStakesCSVRawHandler } from './handlers/specStakesHandler';
+
 import { ProvidersCachedHandler, ProvidersCachedHandlerOpts } from './handlers/providersHandler';
 import { SpecsCachedHandler, SpecsCachedHandlerOpts } from './handlers/specsHandler';
-import { SpecCachedHandler, SpecCachedHandlerOpts } from './handlers/specHandler';
 import { ConsumersCachedHandler, ConsumersCachedHandlerOpts } from './handlers/consumersHandler';
 import { ConsumerCahcedHandler, ConsumerCahcedHandlerOpts } from './handlers/consumerHandler';
 import { EventsCachedHandler, EventsCachedHandlerOpts } from './handlers/eventsHandler';
@@ -45,10 +48,8 @@ RegisterServerHandlerWithCache('/autoCompleteLinksHandler', AutoCompleteLinksCac
 
 RegisterServerHandlerWithCache('/index', IndexHandlerOpts, IndexHandler);
 RegisterServerHandlerWithCache('/indexProviders', IndexProvidersCachedHandlerOpts, IndexProvidersCachedHandler, IndexProvidersItemCountRawHandler);
-
-GetServerInstance().get('/indexCharts', IndexChartsRawHandlerOpts, IndexChartsRawHandler);
-
 GetServerInstance().get('/indexProvidersCsv', IndexProvidersCSVRawHandler);
+GetServerInstance().get('/indexCharts', IndexChartsRawHandlerOpts, IndexChartsRawHandler);
 
 RegisterServerHandlerWithCache('/provider/:addr', ProviderHandlerOpts, ProviderHandler);
 
@@ -74,7 +75,11 @@ RegisterServerHandlerWithCache('/providers', ProvidersCachedHandlerOpts, Provide
 RegisterServerHandlerWithCache('/specs', SpecsCachedHandlerOpts, SpecsCachedHandler);
 RegisterServerHandlerWithCache('/consumers', ConsumersCachedHandlerOpts, ConsumersCachedHandler);
 RegisterServerHandlerWithCache('/consumer/:addr', ConsumerCahcedHandlerOpts, ConsumerCahcedHandler);
+
 RegisterServerHandlerWithCache('/spec/:specId', SpecCachedHandlerOpts, SpecCachedHandler);
+RegisterServerHandlerWithCache('/specStakes/:specId', SpecStakesCachedHandlerOpts, SpecStakesCachedHandler, SpecStakesItemCountRawHandler);
+GetServerInstance().get('/specStakesCsv/:specId', SpecStakesCSVRawHandler);
+GetServerInstance().get('/specCharts/:specId', SpecChartsRawHandlerOpts, SpecChartsRawHandler);
 
 RegisterServerHandlerWithCache('/events', EventsCachedHandlerOpts, EventsCachedHandler);
 RegisterServerHandlerWithCache('/eventsEvents', EventsEventsCachedHandlerOpts, EventsEventsCachedHandler, EventsEventsItemCountRawHandler);

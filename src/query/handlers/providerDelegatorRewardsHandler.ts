@@ -5,7 +5,7 @@
 
 import path from 'path';
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryGetJsinfoReadDbInstance } from '../queryDb';
+import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../queryDb';
 import { eq, desc } from "drizzle-orm";
 import { Pagination } from '../utils/queryPagination';
 import { CompareValues, GetAndValidateProviderAddressFromRequest } from '../utils/queryUtils';
@@ -56,15 +56,17 @@ class ProviderDelegatorRewardsData extends CachedDiskDbDataFetcher<DelegatorRewa
         return ProviderDelegatorRewardsData.GetInstanceBase(addr);
     }
 
-    protected getCSVFileName(): string {
+    protected getCSVFileNameImpl(): string {
         return `ProviderDelegatorRewards_${this.addr}.csv`;
     }
 
-    protected getCacheFilePath(): string {
+    protected getCacheFilePathImpl(): string {
         return path.join(this.cacheDir, `ProviderDelegatorRewardsHandlerData_${this.addr}`);
     }
 
     protected async fetchDataFromDb(): Promise<DelegatorRewardReponse[]> {
+        await QueryCheckJsinfoReadDbInstance();
+
         const result = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.dualStackingDelegatorRewards)
             .where(eq(JsinfoSchema.dualStackingDelegatorRewards.provider, this.addr))
             .orderBy(desc(JsinfoSchema.dualStackingDelegatorRewards.timestamp)).offset(0).limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION)

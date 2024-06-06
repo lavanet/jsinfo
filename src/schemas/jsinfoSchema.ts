@@ -100,6 +100,9 @@ export const relayPayments = pgTable('relay_payments', {
 export type RelayPayment = typeof relayPayments.$inferSelect
 export type InsertRelayPayment = typeof relayPayments.$inferInsert
 
+// 5Jun24 - query on consumer = ? takes 30-60 seconds - adding index on consumer column manually:
+// CREATE INDEX IF NOT EXISTS consumer_idx ON relay_payments USING btree ("consumer");
+
 export const aggHourlyrelayPayments = pgTable('agg_hourly_relay_payments', {
   provider: text('provider').references(() => providers.address),
   datehour: timestamp('datehour', { mode: "string" }),
@@ -264,6 +267,9 @@ export const providerHealthHourly = pgTable('provider_health_hourly', {
 
 export type ProviderHealthHourly = typeof providerHealthHourly.$inferSelect;
 export type InsertProviderHealthHourly = typeof providerHealthHourly.$inferInsert;
+
+// 5Jun24 - query on health was a little slow - adding index on provider column manually helps
+// CREATE INDEX idx_provider_health_hourly_provider ON provider_health_hourly(provider);
 
 export const dualStackingDelegatorRewards = pgTable('dual_stacking_delegator_rewards', {
   id: serial('id').primaryKey(),

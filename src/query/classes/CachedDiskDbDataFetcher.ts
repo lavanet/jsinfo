@@ -5,7 +5,7 @@ import fs from 'fs';
 import { Pagination, ParsePaginationFromRequest } from "../utils/queryPagination";
 import { FastifyReply, FastifyRequest } from "fastify";
 import { GetDataLength, GetDataLengthForPrints } from "../utils/queryUtils";
-import { subMonths, isAfter, isBefore, parseISO, addDays, startOfDay, subDays } from 'date-fns';
+import { subMonths, isAfter, isBefore, parseISO, startOfDay, subDays } from 'date-fns';
 
 if (!GetDataLengthForPrints) {
     throw new Error("GetDataLengthForPrints is undefined or null");
@@ -13,6 +13,8 @@ if (!GetDataLengthForPrints) {
 
 export class CachedDiskDbDataFetcher<T> {
     protected cacheDir: string = JSINFO_QUERY_CACHEDIR;
+    protected cacheFilePath: string = "";
+    protected csvFileName: string = "";
     protected cacheAgeLimit: number = JSINFO_QUERY_HANDLER_CACHE_TIME_SECONDS; // 15 minutes in seconds
     protected data: any = null;
     protected data_fetched: boolean = false;
@@ -58,12 +60,26 @@ export class CachedDiskDbDataFetcher<T> {
         }
     }
 
+    protected getCacheFilePathImpl(): string {
+        throw new Error("Method 'getCacheFilePathImpl' must be implemented.");
+    }
+
     protected getCacheFilePath(): string {
-        throw new Error("Method 'getCacheFilePath' must be implemented.");
+        if (this.cacheFilePath === "") {
+            this.cacheFilePath = this.getCacheFilePathImpl();
+        }
+        return this.cacheFilePath;
+    }
+
+    protected getCSVFileNameImpl(): string {
+        throw new Error("Method 'getCSVFileNameImpl' must be implemented.");
     }
 
     protected getCSVFileName(): string {
-        throw new Error("Method 'getCSVFileName' must be implemented.");
+        if (this.csvFileName === "") {
+            this.csvFileName = this.getCSVFileNameImpl();
+        }
+        return this.csvFileName;
     }
 
     protected async fetchDataFromDb(): Promise<T[]> {

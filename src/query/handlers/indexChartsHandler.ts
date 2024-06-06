@@ -3,8 +3,8 @@
 import { FastifyReply, FastifyRequest, RouteShorthandOptions } from 'fastify';
 import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../queryDb';
 import * as JsinfoSchema from '../../schemas/jsinfoSchema';
-import { sql, desc, gt, and, inArray, between, lt } from "drizzle-orm";
-import { FormatDateItem } from '../utils/queryDateUtils';
+import { sql, desc, gt, and, inArray, lt } from "drizzle-orm";
+import { FormatDateItems } from '../utils/queryDateUtils';
 import { CachedDiskDbDataFetcher } from '../classes/CachedDiskDbDataFetcher';
 import path from 'path';
 
@@ -77,7 +77,7 @@ class IndexChartsData extends CachedDiskDbDataFetcher<IndexChartResponse> {
         return IndexChartsData.GetInstanceBase();
     }
 
-    protected getCacheFilePath(): string {
+    protected getCacheFilePathImpl(): string {
         return path.join(this.cacheDir, `IndexChartsData`);
     }
 
@@ -280,33 +280,14 @@ class IndexChartsData extends CachedDiskDbDataFetcher<IndexChartResponse> {
     }
 }
 
-export async function IndexChartsRawHandler(request: FastifyRequest, reply: FastifyReply, debug = false) {
-    if (debug) console.log('IndexChartsRawHandler:: Start');
-    await QueryCheckJsinfoReadDbInstance();
-    if (debug) console.log('IndexChartsRawHandler:: QueryCheckJsinfoReadDbInstance done');
-
+export async function IndexChartsRawHandler(request: FastifyRequest, reply: FastifyReply) {
     let ret: { data: IndexChartResponse[] } | null = await IndexChartsData.GetInstance().getItemsByFromToChartsHandler(request, reply);
-    if (debug) console.log('IndexChartsRawHandler:: getItemsByFromToChartsHandler done');
 
     if (ret == null) {
-        if (debug) console.log('IndexChartsRawHandler:: ret is null, returning reply');
         return reply;
     }
 
-    const uniqueYears = new Set(ret.data.map(item => new Date(item.date).getFullYear()));
-    if (debug) console.log(`IndexChartsRawHandler:: uniqueYears: ${Array.from(uniqueYears).join(', ')}`);
+    let formattedData: IndexChartResponse[] = FormatDateItems<IndexChartResponse>(ret.data);
 
-    const addYears = uniqueYears.size > 1;
-    if (debug) console.log(`IndexChartsRawHandler:: addYears: ${addYears}`);
-
-    let formattedData: IndexChartResponse[] = ret.data.map(item => {
-        return {
-            ...item,
-            date: FormatDateItem(new Date(item.date), addYears)
-        };
-    });
-    if (debug) console.log('IndexChartsRawHandler:: formattedData created');
-
-    if (debug) console.log('IndexChartsRawHandler:: End');
     return reply.send({ data: formattedData });
 }

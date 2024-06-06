@@ -78,15 +78,17 @@ class EventsRewardsData extends CachedDiskDbDataFetcher<EventsRewardsResponse> {
         return EventsRewardsData.GetInstanceBase();
     }
 
-    protected getCacheFilePath(): string {
+    protected getCacheFilePathImpl(): string {
         return path.join(this.cacheDir, 'EventsRewardsCachedHandlerData');
     }
 
-    protected getCSVFileName(): string {
+    protected getCSVFileNameImpl(): string {
         return `EventsRewards.csv`;
     }
 
     protected async fetchDataFromDb(): Promise<EventsRewardsResponse[]> {
+        await QueryCheckJsinfoReadDbInstance();
+
         try {
             const thirtyDaysAgo = new Date();
             thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -126,12 +128,15 @@ class EventsRewardsData extends CachedDiskDbDataFetcher<EventsRewardsResponse> {
         pagination: Pagination | null
     ): Promise<EventsRewardsResponse[] | null> {
         const defaultSortKey = "id";
-        const defaultPagination = ParsePaginationFromString(
-            `${defaultSortKey},descending,1,${JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE}`
-        );
+        let finalPagination: Pagination;
 
-        // Use the provided pagination or the default one
-        const finalPagination: Pagination = pagination ?? defaultPagination;
+        if (pagination) {
+            finalPagination = pagination;
+        } else {
+            finalPagination = ParsePaginationFromString(
+                `${defaultSortKey},descending,1,${JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE}`
+            );
+        }
 
         // If sortKey is null, set it to the defaultSortKey
         if (finalPagination.sortKey === null) {
@@ -215,16 +220,13 @@ class EventsRewardsData extends CachedDiskDbDataFetcher<EventsRewardsResponse> {
 }
 
 export async function EventsRewardsCachedHandler(request: FastifyRequest, reply: FastifyReply) {
-    await QueryCheckJsinfoReadDbInstance()
     return await EventsRewardsData.GetInstance().getPaginatedItemsCachedHandler(request, reply)
 }
 
 export async function EventsRewardsItemCountRawHandler(request: FastifyRequest, reply: FastifyReply) {
-    await QueryCheckJsinfoReadDbInstance()
     return await EventsRewardsData.GetInstance().getTotalItemCountRawHandler(request, reply)
 }
 
 export async function EventsRewardsCSVRawHandler(request: FastifyRequest, reply: FastifyReply) {
-    await QueryCheckJsinfoReadDbInstance()
     return await EventsRewardsData.GetInstance().getCSVRawHandler(request, reply)
 }

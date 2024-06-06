@@ -2,7 +2,7 @@
 // src/query/handlers/providerHealth.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryGetJsinfoReadDbInstance } from '../queryDb';
+import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../queryDb';
 import * as JsinfoSchema from '../../schemas/jsinfoSchema';
 import { eq, desc } from "drizzle-orm";
 import { Pagination } from '../utils/queryPagination';
@@ -68,15 +68,17 @@ class ProviderHealthData extends CachedDiskDbDataFetcher<HealthReportResponse> {
         return ProviderHealthData.GetInstanceBase(addr);
     }
 
-    protected getCacheFilePath(): string {
+    protected getCacheFilePathImpl(): string {
         return path.join(this.cacheDir, `ProviderHealthHandlerData_${this.addr}`);
     }
 
-    protected getCSVFileName(): string {
+    protected getCSVFileNameImpl(): string {
         return `ProviderHealth_${this.addr}.csv`;
     }
 
     protected async fetchDataFromDb(): Promise<HealthReportResponse[]> {
+        await QueryCheckJsinfoReadDbInstance();
+
         let query = createHealthReportQuery(this.addr);
         let res: HealthReportResponse[] = await query;
         return ApplyHealthResponseGroupingAndTextFormatting(res);

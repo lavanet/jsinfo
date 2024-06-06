@@ -2,7 +2,7 @@
 // src/query/handlers/providerRewardsHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryGetJsinfoReadDbInstance } from '../queryDb';
+import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../queryDb';
 import * as JsinfoSchema from '../../schemas/jsinfoSchema';
 import { and, desc, eq, gte } from "drizzle-orm";
 import { Pagination, ParsePaginationFromString } from '../utils/queryPagination';
@@ -132,15 +132,17 @@ class ProviderRewardsData extends CachedDiskDbDataFetcher<ProviderRewardsRespons
         return ProviderRewardsData.GetInstanceBase(addr);
     }
 
-    protected getCacheFilePath(): string {
+    protected getCacheFilePathImpl(): string {
         return path.join(this.cacheDir, `ProviderRewardsData_${this.addr}`);
     }
 
-    protected getCSVFileName(): string {
+    protected getCSVFileNameImpl(): string {
         return `ProviderRewards_${this.addr}.csv`;
     }
 
     protected async fetchDataFromDb(): Promise<ProviderRewardsResponse[]> {
+        await QueryCheckJsinfoReadDbInstance();
+
         let thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
@@ -161,12 +163,16 @@ class ProviderRewardsData extends CachedDiskDbDataFetcher<ProviderRewardsRespons
         pagination: Pagination | null
     ): Promise<ProviderRewardsResponse[] | null> {
         const defaultSortKey = "relay_payments.id";
-        const defaultPagination = ParsePaginationFromString(
-            `${defaultSortKey},descending,1,${JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE}`
-        );
 
-        // Use the provided pagination or the default one
-        const finalPagination: Pagination = pagination ?? defaultPagination;
+        let finalPagination: Pagination;
+
+        if (pagination) {
+            finalPagination = pagination;
+        } else {
+            finalPagination = ParsePaginationFromString(
+                `${defaultSortKey},descending,1,${JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE}`
+            );
+        }
 
         // If sortKey is null, set it to the defaultSortKey
         if (finalPagination.sortKey === null) {

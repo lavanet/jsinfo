@@ -86,7 +86,6 @@ export async function ConsumerCahcedHandler(request: FastifyRequest, reply: Fast
         )).
         orderBy(sql<Date>`DATE(${JsinfoSchema.blocks.datetime})`)
 
-    //
     const conflictsRet = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.conflictResponses).where(eq(JsinfoSchema.conflictResponses.consumer, addr)).
         orderBy(desc(JsinfoSchema.conflictResponses.id)).offset(0).limit(50)
     const subsBuyRet = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.subscriptionBuys).where(eq(JsinfoSchema.subscriptionBuys.consumer, addr)).

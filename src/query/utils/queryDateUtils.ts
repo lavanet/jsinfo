@@ -25,3 +25,19 @@ export function FormatDateItem(date: Date, addYears: boolean = false): string {
 
     return formattedDate;
 }
+
+interface DictWithDate {
+    date: string;
+}
+
+export function FormatDateItems<T extends DictWithDate>(data: T[]): T[] {
+    const uniqueYears = new Set(data.map(item => new Date(item.date).getFullYear()));
+    const addYears = uniqueYears.size > 1;
+
+    return data.map(item => {
+        return {
+            ...item,
+            date: FormatDateItem(new Date(item.date), addYears)
+        };
+    });
+}

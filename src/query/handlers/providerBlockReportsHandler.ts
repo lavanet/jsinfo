@@ -4,7 +4,7 @@
 // curl http://localhost:8081/providerBlockReports/lava@1tlkpa7t48fjl7qan4ete6xh0lsy679flnqdw57
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryGetJsinfoReadDbInstance } from '../queryDb';
+import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../queryDb';
 import * as JsinfoSchema from '../../schemas/jsinfoSchema';
 import { and, desc, eq, gte } from "drizzle-orm";
 import { Pagination, ParsePaginationFromRequest } from '../utils/queryPagination';
@@ -74,15 +74,17 @@ class ProviderBlockReportsData extends CachedDiskDbDataFetcher<BlockReportsRepon
         return ProviderBlockReportsData.GetInstanceBase(addr);
     }
 
-    protected getCSVFileName(): string {
+    protected getCSVFileNameImpl(): string {
         return `ProviderBlockReports_${this.addr}.csv`;
     }
 
-    protected getCacheFilePath(): string {
+    protected getCacheFilePathImpl(): string {
         return path.join(this.cacheDir, `ProviderBlockReportsData_${this.addr}`);
     }
 
     protected async fetchDataFromDb(): Promise<BlockReportsReponse[]> {
+        await QueryCheckJsinfoReadDbInstance();
+
         let thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 

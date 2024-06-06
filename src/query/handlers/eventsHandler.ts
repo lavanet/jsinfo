@@ -15,15 +15,6 @@ export const EventsCachedHandlerOpts: RouteShorthandOptions = {
                     datetime: {
                         type: 'number'
                     },
-                    events: {
-                        type: 'array'
-                    },
-                    payments: {
-                        type: 'array',
-                    },
-                    reports: {
-                        type: 'array',
-                    },
                 }
             }
         }

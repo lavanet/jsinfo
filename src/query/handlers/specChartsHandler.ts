@@ -36,6 +36,10 @@ interface SpecCuRelayQueryData {
     relaySum: number;
 }
 
+type SpecCuRelayQueryDataWithProvider = {
+    provider: string | null;
+} & SpecCuRelayQueryData;
+
 interface SpecCuRelayData {
     date: string;
     providerOrMoniker: string;
@@ -226,34 +230,35 @@ class SpecChartsData extends CachedDiskDbDataFetcher<SpecChartResponse> {
                 });
             });
 
-            for (let provider in top10Providers) {
-                let monthlyData: SpecCuRelayQueryData[] = await QueryGetJsinfoReadDbInstance().select({
-                    date: sql<string>`DATE_TRUNC('day', ${JsinfoSchema.aggHourlyrelayPayments.datehour}) as mydate`,
-                    cuSum: sql<number>`sum(COALESCE(NULLIF(${JsinfoSchema.aggHourlyrelayPayments.cuSum}, 0), 0))`,
-                    relaySum: sql<number>`sum(COALESCE(NULLIF(${JsinfoSchema.aggHourlyrelayPayments.relaySum}, 0), 0))`,
-                }).from(JsinfoSchema.aggHourlyrelayPayments).
-                    groupBy(sql`mydate`).
-                    where(and(
-                        and(
-                            gt(sql<Date>`DATE(${JsinfoSchema.aggHourlyrelayPayments.datehour})`, sql<Date>`${startDate}`),
-                            lt(sql<Date>`DATE(${JsinfoSchema.aggHourlyrelayPayments.datehour})`, sql<Date>`${endDate}`)
-                        ),
-                        and(
-                            eq(JsinfoSchema.aggHourlyrelayPayments.specId, this.spec),
-                            eq(JsinfoSchema.aggHourlyrelayPayments.provider, provider)
-                        )
-                    )).orderBy(sql`mydate`);
+            let providers = Object.keys(top10Providers);
+            let monthlyData: SpecCuRelayQueryDataWithProvider[] = await QueryGetJsinfoReadDbInstance().select({
+                date: sql<string>`DATE_TRUNC('day', ${JsinfoSchema.aggHourlyrelayPayments.datehour}) as mydate`,
+                cuSum: sql<number>`sum(COALESCE(NULLIF(${JsinfoSchema.aggHourlyrelayPayments.cuSum}, 0), 0))`,
+                relaySum: sql<number>`sum(COALESCE(NULLIF(${JsinfoSchema.aggHourlyrelayPayments.relaySum}, 0), 0))`,
+                provider: JsinfoSchema.aggHourlyrelayPayments.provider
+            }).from(JsinfoSchema.aggHourlyrelayPayments).
+                groupBy(sql`mydate`, JsinfoSchema.aggHourlyrelayPayments.provider).
+                where(and(
+                    and(
+                        gt(sql<Date>`DATE(${JsinfoSchema.aggHourlyrelayPayments.datehour})`, sql<Date>`${startDate}`),
+                        lt(sql<Date>`DATE(${JsinfoSchema.aggHourlyrelayPayments.datehour})`, sql<Date>`${endDate}`)
+                    ),
+                    and(
+                        eq(JsinfoSchema.aggHourlyrelayPayments.specId, this.spec),
+                        inArray(JsinfoSchema.aggHourlyrelayPayments.provider, providers)
+                    )
+                )).orderBy(sql`mydate`);
 
-                let providerOrMoniker = top10Providers[provider] ? top10Providers[provider] : provider;
-                monthlyData.forEach(item => {
-                    formatedData.push({
-                        date: item.date,
-                        cus: item.cuSum,
-                        relays: item.relaySum,
-                        providerOrMoniker: providerOrMoniker
-                    });
+            monthlyData.forEach(item => {
+                let item_provider = item.provider!;
+                let providerOrMoniker = top10Providers[item_provider] ? top10Providers[item_provider] : item.provider;
+                formatedData.push({
+                    date: item.date,
+                    cus: item.cuSum,
+                    relays: item.relaySum,
+                    providerOrMoniker: providerOrMoniker
                 });
-            }
+            });
 
             currentDate.setMonth(currentDate.getMonth() - 1);
         }

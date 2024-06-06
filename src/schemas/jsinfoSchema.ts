@@ -95,6 +95,7 @@ export const relayPayments = pgTable('relay_payments', {
   return {
     nameIdx: index("name_idx").on(table.specId),
     tsIdx: index("ts_idx").on(table.datetime),
+    constumerIdx: index("consumer_idx").on(table.consumer),
   };
 });
 export type RelayPayment = typeof relayPayments.$inferSelect
@@ -263,6 +264,11 @@ export const providerHealthHourly = pgTable('provider_health_hourly', {
   block: integer('block').default(sql`NULL`),
   blocksaway: integer('blocksaway').default(sql`NULL`),
   latency: integer('latency').default(sql`NULL`),
+}, (table) => {
+  return {
+    providerIdx: index("provider_idx").on(table.provider),
+    timestampIdx: index("timestamp_idx").on(table.timestamp),
+  };
 });
 
 export type ProviderHealthHourly = typeof providerHealthHourly.$inferSelect;

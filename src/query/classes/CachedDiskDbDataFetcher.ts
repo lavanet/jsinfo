@@ -17,8 +17,9 @@ export class CachedDiskDbDataFetcher<T> {
     protected csvFileName: string = "";
     protected cacheAgeLimit: number = JSINFO_QUERY_HANDLER_CACHE_TIME_SECONDS; // 15 minutes in seconds
     protected data: any = null;
-    protected data_fetched: boolean = false;
-    protected data_fetching: boolean = false;
+    protected isDataEmpty: boolean = false;
+    protected isDataFetched: boolean = false;
+    protected isDataFetching: boolean = false;
     protected className: string;
     protected debug: boolean = true;
 
@@ -125,32 +126,33 @@ export class CachedDiskDbDataFetcher<T> {
     protected async runFetchAndCacheThreadIfNeeded() {
         this.log('runFetchAndCacheThreadIfNeeded:: called');
 
-        if (this.data_fetching) {
+        if (this.isDataFetching) {
             this.log('runFetchAndCacheThreadIfNeeded:: Data is already fetching, returning early');
             return;
         }
 
         if (this.lockExists() && this.lockIsFresh()) {
-            this.log(`runFetchAndCacheThreadIfNeeded:: data_fetched: ${this.data_fetched}, didDataExpire: ${this.didDataExpire()}, Data not fetched yet or data expired, fetching data`);
+            this.log(`runFetchAndCacheThreadIfNeeded:: isDataFetched: ${this.isDataFetched}, didDataExpire: ${this.didDataExpire()}, Data not fetched yet or data expired, fetching data`);
             return null;
         }
 
         this.log('runFetchAndCacheThreadIfNeeded:: Creating lock');
         this.createLock();
-        this.data_fetching = true;
+        this.isDataFetching = true;
 
-        if (this.data_fetched && !this.didDataExpire()) {
+        if (this.isDataFetched && !this.didDataExpire()) {
             this.log('runFetchAndCacheThreadIfNeeded:: Data already fetched and not expired, no need to fetch');
             return;
         }
 
-        this.log(`runFetchAndCacheThreadIfNeeded:: data_fetched: ${this.data_fetched}, didDataExpire: ${this.didDataExpire()}, Data not fetched yet or data expired, fetching data`);
+        this.log(`runFetchAndCacheThreadIfNeeded:: isDataFetched: ${this.isDataFetched}, didDataExpire: ${this.didDataExpire()}, Data not fetched yet or data expired, fetching data`);
         setImmediate(() => this.fetchAndCacheData());
     }
 
     private async fetchAndCacheData() {
-        let retries = 3;
+        let retries = 5;
         let intervalId: any = null;
+        let empty_data = 3;
 
         while (retries > 0) {
             try {
@@ -174,19 +176,33 @@ export class CachedDiskDbDataFetcher<T> {
 
                 const cacheFilePath = this.getCacheFilePath();
 
-                if (data == null || GetDataLength(data) === 0) {
-                    this.log('fetchAndCacheData:: Data is null or empty, retrying');
+                if (data == null) {
+                    this.log('fetchAndCacheData:: Data is null, retrying');
                     retries--;
+                    continue;
+                }
+
+                if (GetDataLength(data) === 0) {
+                    this.log('fetchAndCacheData:: Data is empty, retrying');
+                    retries--;
+                    empty_data--;
+                    if (empty_data == 0) {
+                        this.log('fetchAndCacheData:: Data is empty, no more retries');
+                        fs.writeFileSync(cacheFilePath, JSON.stringify({ "empty": true }));
+                        this.isDataFetched = true;
+                        this.data = { "empty": true };
+                        this.isDataEmpty = true;
+                    }
                     continue;
                 }
 
                 this.log(`fetchAndCacheData:: Writing data to cache file: ${cacheFilePath}`);
                 fs.writeFileSync(cacheFilePath, JSON.stringify(data));
 
-                this.data_fetched = true;
+                this.isDataFetched = true;
                 this.data = data;
 
-                this.log(`fetchAndCacheData:: data_fetched set to: ${this.data_fetched}, data length: ${this.data.length}, Data fetched and written to cache`);
+                this.log(`fetchAndCacheData:: isDataFetched set to: ${this.isDataFetched}, data length: ${this.data.length}, Data fetched and written to cache`);
                 break;
 
             } catch (e) {
@@ -200,7 +216,7 @@ export class CachedDiskDbDataFetcher<T> {
             }
         }
 
-        this.data_fetching = false;
+        this.isDataFetching = false;
         this.log('fetchAndCacheData:: Deleting lock');
         this.deleteLock();
     }
@@ -250,6 +266,7 @@ export class CachedDiskDbDataFetcher<T> {
             this.log('fetchDataFromCache:: Cache file exists, reading data');
             const rawData = fs.readFileSync(cacheFilePath, 'utf-8');
             this.data = JSON.parse(rawData);
+            this.isDataEmpty = this.data && this.data.empty === true;
         }
 
         if (this.data == null || GetDataLength(this.data) === 0) {
@@ -278,6 +295,10 @@ export class CachedDiskDbDataFetcher<T> {
         try {
             const data = await this.fetchDataFromCache();
 
+            if (this.isDataEmpty) {
+                return { data: [] }
+            }
+
             this.log(`getPaginatedItemsCachedHandler:: Fetched data from cache. Type of data: ${Object.prototype.toString.call(data)}, Length of data: ${GetDataLengthForPrints(data)}`);
 
             if (data == null) return {};
@@ -299,6 +320,10 @@ export class CachedDiskDbDataFetcher<T> {
     public async getItemsByFromToChartsHandler(request: FastifyRequest, reply: FastifyReply): Promise<{ data: T[] } | null> {
         try {
             const data = await this.fetchDataFromCache();
+
+            if (this.isDataEmpty) {
+                return { data: [] };
+            }
 
             if (data == null) {
                 reply.send({});
@@ -336,9 +361,13 @@ export class CachedDiskDbDataFetcher<T> {
 
             const filteredData: T[] | null = await this.getItemsByFromToImpl(data, fromDate, toDate);
 
-            if (filteredData == null || filteredData.length === 0) {
+            if (filteredData == null) {
                 reply.send({});
                 return null;
+            }
+
+            if (GetDataLength(filteredData) == 0) {
+                return { data: [] };
             }
 
             return { data: filteredData };
@@ -353,6 +382,10 @@ export class CachedDiskDbDataFetcher<T> {
     public async getTotalItemCountRawHandler(request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> {
         try {
             const data = await this.fetchDataFromCache();
+            if (this.isDataEmpty) {
+                reply.send({ itemCount: 0 });
+                return reply;
+            }
             if (data == null) {
                 reply.send({});
                 return reply;
@@ -370,14 +403,18 @@ export class CachedDiskDbDataFetcher<T> {
     public async getCSVRawHandler(request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> {
         try {
             const data = await this.fetchDataFromCache();
+            if (this.isDataEmpty) {
+                reply.send("Data is empty");
+                return reply;
+            }
             if (data == null) {
-                reply.send({});
+                reply.send("Data is unavailable now");
                 return reply;
             }
 
             let csv = await this.getCSVImpl(data);
             if (csv == null) {
-                reply.send({});
+                reply.send("Data is not available is csv");
                 return reply;
             }
 

@@ -51,12 +51,6 @@ export const ProviderHandlerOpts: RouteShorthandOptions = {
                     reports: {
                         type: 'array',
                     },
-                    qosData: {
-                        type: 'array',
-                    },
-                    data: {
-                        type: 'array',
-                    },
                     claimedRewards: {
                         type: 'string'
                     },
@@ -75,7 +69,6 @@ export async function ProviderHandler(request: FastifyRequest, reply: FastifyRep
         return;
     }
 
-    //
     const res = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.providers).where(eq(JsinfoSchema.providers.address, addr)).limit(1)
     if (res.length != 1) {
         reply.code(400).send({ error: 'Provider does not exist' });
@@ -111,44 +104,6 @@ export async function ProviderHandler(request: FastifyRequest, reply: FastifyRep
     stakesRes.forEach((stake) => {
         stakeSum += stake.stake!
     })
-
-    //
-    // Get graph with 1 day resolution
-    let data1 = await QueryGetJsinfoReadDbInstance().select({
-        date: sql`DATE_TRUNC('day', ${JsinfoSchema.aggHourlyrelayPayments.datehour}) as mydate`,
-        chainId: JsinfoSchema.aggHourlyrelayPayments.specId,
-        cuSum: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.cuSum})`,
-        relaySum: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.relaySum})`,
-        rewardSum: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.rewardSum})`,
-    }).from(JsinfoSchema.aggHourlyrelayPayments).
-        where(
-            and(
-                gt(sql<string>`DATE_TRUNC('day', ${JsinfoSchema.aggHourlyrelayPayments.datehour})`, sql<Date>`now() - interval '30 day'`),
-                eq(JsinfoSchema.aggHourlyrelayPayments.provider, addr)
-            )
-        ).
-        groupBy(sql`${JsinfoSchema.aggHourlyrelayPayments.specId}`, sql`mydate`).
-        orderBy(sql`mydate`)
-
-    //
-    // QoS graph
-    let qosDataRaw = await QueryGetJsinfoReadDbInstance().select({
-        date: sql`DATE_TRUNC('day', ${JsinfoSchema.aggHourlyrelayPayments.datehour}) as mydate`,
-        qosSyncAvg: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.qosSyncAvg}*${JsinfoSchema.aggHourlyrelayPayments.relaySum})/sum(${JsinfoSchema.aggHourlyrelayPayments.relaySum})`,
-        qosAvailabilityAvg: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.qosAvailabilityAvg}*${JsinfoSchema.aggHourlyrelayPayments.relaySum})/sum(${JsinfoSchema.aggHourlyrelayPayments.relaySum})`,
-        qosLatencyAvg: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.qosLatencyAvg}*${JsinfoSchema.aggHourlyrelayPayments.relaySum})/sum(${JsinfoSchema.aggHourlyrelayPayments.relaySum})`,
-        qosSyncExcAvg: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.qosSyncExcAvg}*${JsinfoSchema.aggHourlyrelayPayments.relaySum})/sum(${JsinfoSchema.aggHourlyrelayPayments.relaySum})`,
-        qosAvailabilityExcAvg: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.qosAvailabilityAvg}*${JsinfoSchema.aggHourlyrelayPayments.relaySum})/sum(${JsinfoSchema.aggHourlyrelayPayments.relaySum})`,
-        qosLatencyExcAv: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.qosLatencyExcAvg}*${JsinfoSchema.aggHourlyrelayPayments.relaySum})/sum(${JsinfoSchema.aggHourlyrelayPayments.relaySum})`,
-    }).from(JsinfoSchema.aggHourlyrelayPayments).
-        where(
-            and(
-                gt(sql<string>`DATE_TRUNC('day', ${JsinfoSchema.aggHourlyrelayPayments.datehour})`, sql<Date>`now() - interval '30 day'`),
-                eq(JsinfoSchema.aggHourlyrelayPayments.provider, addr)
-            )
-        ).
-        groupBy(sql`mydate`).
-        orderBy(sql`mydate`)
 
     const claimedRewards = await QueryGetJsinfoReadDbInstance().select()
         .from(JsinfoSchema.events)
@@ -214,8 +169,6 @@ export async function ProviderHandler(request: FastifyRequest, reply: FastifyRep
         relaySum: relaySum,
         rewardSum: rewardSum,
         stakeSum: stakeSum,
-        qosData: FormatDates(qosDataRaw),
-        data: FormatDates(data1),
         claimedRewards: claimedRewardsSumULava,
         claimableRewards: claimableRewardsULava,
     }

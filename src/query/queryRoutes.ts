@@ -14,6 +14,9 @@ import { IndexProvidersCachedHandler, IndexProvidersCachedHandlerOpts, IndexProv
 import { IndexChartsRawHandler, IndexChartsRawHandlerOpts } from './handlers/indexChartsHandler';
 
 import { ProviderHandler, ProviderHandlerOpts } from './handlers/providerHandler';
+
+import { ProviderChartsRawHandler, ProviderChartsRawHandlerOpts } from './handlers/providerChartsHandler';
+
 import { ProviderHealthCachedHandler, ProviderHealthCachedHandlerOpts, ProviderHealthItemCountRawHandler, ProviderHealthCSVRawHandler } from './handlers/providerHealthHandler';
 import { ProviderErrorsCachedHandler, ProviderErrorsCachedHandlerOpts, ProviderErrorsItemCountRawHandler, ProviderErrorsCSVRawHandler } from './handlers/providerErrorsHandler';
 import { ProviderStakesCachedHandlerOpts, ProviderStakesHandler, ProviderStakesItemCountRawHandler, ProviderStakesCSVRawHandler } from './handlers/providerStakesHandler';
@@ -32,6 +35,7 @@ import { SpecChartsRawHandler, SpecChartsRawHandlerOpts } from './handlers/specC
 import { SpecStakesCachedHandler, SpecStakesCachedHandlerOpts, SpecStakesItemCountRawHandler, SpecStakesCSVRawHandler } from './handlers/specStakesHandler';
 
 import { ProvidersCachedHandler, ProvidersCachedHandlerOpts } from './handlers/providersHandler';
+
 import { SpecsCachedHandler, SpecsCachedHandlerOpts } from './handlers/specsHandler';
 import { ConsumersCachedHandler, ConsumersCachedHandlerOpts } from './handlers/consumersHandler';
 import { ConsumerCahcedHandler, ConsumerCahcedHandlerOpts } from './handlers/consumerHandler';
@@ -52,6 +56,7 @@ GetServerInstance().get('/indexProvidersCsv', IndexProvidersCSVRawHandler);
 GetServerInstance().get('/indexCharts', IndexChartsRawHandlerOpts, IndexChartsRawHandler);
 
 RegisterServerHandlerWithCache('/provider/:addr', ProviderHandlerOpts, ProviderHandler);
+GetServerInstance().get('/providerCharts/:addr', ProviderChartsRawHandlerOpts, ProviderChartsRawHandler);
 
 RegisterServerHandlerWithCache('/providerHealth/:addr', ProviderHealthCachedHandlerOpts, ProviderHealthCachedHandler, ProviderHealthItemCountRawHandler);
 RegisterServerHandlerWithCache('/providerErrors/:addr', ProviderErrorsCachedHandlerOpts, ProviderErrorsCachedHandler, ProviderErrorsItemCountRawHandler);

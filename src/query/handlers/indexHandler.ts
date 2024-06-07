@@ -135,7 +135,7 @@ export async function IndexHandler(request: FastifyRequest, reply: FastifyReply)
                 )
             ).
             groupBy(sql`${JsinfoSchema.aggHourlyrelayPayments.specId}`, sql`mydate`).
-            orderBy(sql`mydate`)
+            orderBy(sql`mydate DESC`)
     }
 
     //
@@ -151,7 +151,7 @@ export async function IndexHandler(request: FastifyRequest, reply: FastifyReply)
     }).from(JsinfoSchema.aggHourlyrelayPayments).
         where(gt(sql<string>`DATE_TRUNC('day', ${JsinfoSchema.aggHourlyrelayPayments.datehour})`, sql<Date>`now() - interval '90 day'`)).
         groupBy(sql`mydate`).
-        orderBy(sql`mydate`)
+        orderBy(sql`mydate DESC`)
 
     return {
         height: latestHeight,

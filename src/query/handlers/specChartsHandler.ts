@@ -171,13 +171,13 @@ class SpecChartsData extends CachedDiskDbDataFetcher<SpecChartResponse> {
                 item.qosLatencyAvg = Number(item.qosLatencyAvg);
 
                 if (isNaN(Date.parse(item.date))) {
-                    throw new Error(`Data format does not match the QosQueryData interface. Item: ${JSON.stringify(item)}. Reason: item.date is not a valid date.`);
+                    throw new Error(`Data format does not match the QosQueryData interface.Item: ${JSON.stringify(item)}.Reason: item.date is not a valid date.`);
                 } else if (isNaN(item.qosSyncAvg)) {
-                    throw new Error(`Data format does not match the QosQueryData interface. Item: ${JSON.stringify(item)}. Reason: item.qosSyncAvg is not a number.`);
+                    throw new Error(`Data format does not match the QosQueryData interface.Item: ${JSON.stringify(item)}.Reason: item.qosSyncAvg is not a number.`);
                 } else if (isNaN(item.qosAvailabilityAvg)) {
-                    throw new Error(`Data format does not match the QosQueryData interface. Item: ${JSON.stringify(item)}. Reason: item.qosAvailabilityAvg is not a number.`);
+                    throw new Error(`Data format does not match the QosQueryData interface.Item: ${JSON.stringify(item)}.Reason: item.qosAvailabilityAvg is not a number.`);
                 } else if (isNaN(item.qosLatencyAvg)) {
-                    throw new Error(`Data format does not match the QosQueryData interface. Item: ${JSON.stringify(item)}. Reason: item.qosLatencyAvg is not a number.`);
+                    throw new Error(`Data format does not match the QosQueryData interface.Item: ${JSON.stringify(item)}.Reason: item.qosLatencyAvg is not a number.`);
                 }
 
                 const qos = Math.cbrt(item.qosSyncAvg * item.qosAvailabilityAvg * item.qosLatencyAvg);
@@ -191,7 +191,7 @@ class SpecChartsData extends CachedDiskDbDataFetcher<SpecChartResponse> {
                 });
             });
 
-            this.log(`getSpecQosData:: Fetched data for month: ${currentDate.getMonth() + 1}-${currentDate.getFullYear()}`);
+            this.log(`getSpecQosData:: Fetched data for month: ${currentDate.getMonth() + 1} -${currentDate.getFullYear()} `);
             currentDate.setMonth(currentDate.getMonth() - 1);
         }
 
@@ -217,9 +217,12 @@ class SpecChartsData extends CachedDiskDbDataFetcher<SpecChartResponse> {
             }).from(JsinfoSchema.aggHourlyrelayPayments).
                 groupBy(sql`mydate`).
                 where(and(
-                    gt(sql<Date>`DATE(${JsinfoSchema.aggHourlyrelayPayments.datehour})`, sql<Date>`${startDate}`),
-                    lt(sql<Date>`DATE(${JsinfoSchema.aggHourlyrelayPayments.datehour})`, sql<Date>`${endDate}`)
-                )).orderBy(sql`mydate`);
+                    and(
+                        gt(sql<Date>`DATE(${JsinfoSchema.aggHourlyrelayPayments.datehour})`, sql<Date>`${startDate} `),
+                        lt(sql<Date>`DATE(${JsinfoSchema.aggHourlyrelayPayments.datehour})`, sql<Date>`${endDate} `)
+                    ),
+                    eq(JsinfoSchema.aggHourlyrelayPayments.specId, this.spec)
+                )).orderBy(sql`mydate DESC`);
 
             allProvidersMonthlyData.forEach(item => {
                 formatedData.push({
@@ -240,14 +243,14 @@ class SpecChartsData extends CachedDiskDbDataFetcher<SpecChartResponse> {
                 groupBy(sql`mydate`, JsinfoSchema.aggHourlyrelayPayments.provider).
                 where(and(
                     and(
-                        gt(sql<Date>`DATE(${JsinfoSchema.aggHourlyrelayPayments.datehour})`, sql<Date>`${startDate}`),
-                        lt(sql<Date>`DATE(${JsinfoSchema.aggHourlyrelayPayments.datehour})`, sql<Date>`${endDate}`)
+                        gt(sql<Date>`DATE(${JsinfoSchema.aggHourlyrelayPayments.datehour})`, sql<Date>`${startDate} `),
+                        lt(sql<Date>`DATE(${JsinfoSchema.aggHourlyrelayPayments.datehour})`, sql<Date>`${endDate} `)
                     ),
                     and(
                         eq(JsinfoSchema.aggHourlyrelayPayments.specId, this.spec),
                         inArray(JsinfoSchema.aggHourlyrelayPayments.provider, providers)
                     )
-                )).orderBy(sql`mydate`);
+                )).orderBy(sql`mydate DESC`);
 
             monthlyData.forEach(item => {
                 let item_provider = item.provider!;

@@ -6,7 +6,7 @@
 import path from 'path';
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../queryDb';
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, gt, and } from "drizzle-orm";
 import { Pagination } from '../utils/queryPagination';
 import { CompareValues, GetAndValidateProviderAddressFromRequest } from '../utils/queryUtils';
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '../queryConsts';
@@ -64,12 +64,53 @@ class ProviderDelegatorRewardsData extends CachedDiskDbDataFetcher<DelegatorRewa
         return path.join(this.cacheDir, `ProviderDelegatorRewardsHandlerData_${this.addr}`);
     }
 
+    protected isSinceDBFetchEnabled(): boolean {
+        return true;
+    }
+
+    protected sinceUniqueField(): string {
+        return "id";
+    }
+
     protected async fetchDataFromDb(): Promise<DelegatorRewardReponse[]> {
         await QueryCheckJsinfoReadDbInstance();
 
         const result = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.dualStackingDelegatorRewards)
             .where(eq(JsinfoSchema.dualStackingDelegatorRewards.provider, this.addr))
-            .orderBy(desc(JsinfoSchema.dualStackingDelegatorRewards.timestamp)).offset(0).limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION)
+            .orderBy(desc(JsinfoSchema.dualStackingDelegatorRewards.id))
+            .offset(0)
+            .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION)
+
+        const highestId = result[0]?.id;
+        if (highestId !== undefined) {
+            this.setSince(highestId);
+        }
+
+        return result.map((row: JsinfoSchema.DualStackingDelegatorRewards) => ({
+            id: row.id,
+            timestamp: row.timestamp?.toISOString(),
+            chainId: row.chainId,
+            amount: row.amount + " " + row.denom
+        }));
+    }
+
+    protected async fetchDataFromDbSinceFlow(since: number | string): Promise<DelegatorRewardReponse[]> {
+        await QueryCheckJsinfoReadDbInstance();
+
+        const result = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.dualStackingDelegatorRewards)
+            .where(and(
+                eq(JsinfoSchema.dualStackingDelegatorRewards.provider, this.addr),
+                gt(JsinfoSchema.dualStackingDelegatorRewards.id, Number(since))
+            )
+            )
+            .orderBy(desc(JsinfoSchema.dualStackingDelegatorRewards.id))
+            .offset(0)
+            .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION)
+
+        const highestId = result[0]?.id;
+        if (highestId !== undefined) {
+            this.setSince(highestId);
+        }
 
         return result.map((row: JsinfoSchema.DualStackingDelegatorRewards) => ({
             id: row.id,
@@ -89,12 +130,7 @@ class ProviderDelegatorRewardsData extends CachedDiskDbDataFetcher<DelegatorRewa
         const start = (pagination.page - 1) * pagination.count;
         const end = start + pagination.count;
 
-        // If slice would fail, return a [0,20] slice
-        if (start < 0 || end < 0 || start > data.length || end > data.length) {
-            return data.slice(0, JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE);
-        }
-
-        return data.slice(start, end);
+        return SafeSlice(data, start, end, JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE);
     }
 
     private sortData(data: DelegatorRewardReponse[], sortKey: string, direction: 'ascending' | 'descending'): DelegatorRewardReponse[] {

@@ -8,7 +8,7 @@ import { desc, eq } from "drizzle-orm";
 import { Pagination, ParsePaginationFromString } from '../utils/queryPagination';
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '../queryConsts';
 import path from 'path';
-import { CSVEscape, CompareValues, GetAndValidateProviderAddressFromRequest } from '../utils/queryUtils';
+import { CSVEscape, CompareValues, GetAndValidateProviderAddressFromRequest, SafeSlice } from '../utils/queryUtils';
 import { ReplaceArchive } from '../../indexer/indexerUtils';
 import { CachedDiskDbDataFetcher } from '../classes/CachedDiskDbDataFetcher';
 
@@ -79,6 +79,9 @@ class ProviderStakesData extends CachedDiskDbDataFetcher<JsinfoSchema.ProviderSt
         return `ProviderStakes_${this.addr}.csv`;
     }
 
+    // Don't enable there is no id on the column
+    // protected isSinceDBFetchEnabled(): boolean 
+
     protected async fetchDataFromDb(): Promise<JsinfoSchema.ProviderStake[]> {
         await QueryCheckJsinfoReadDbInstance();
 
@@ -128,9 +131,7 @@ class ProviderStakesData extends CachedDiskDbDataFetcher<JsinfoSchema.ProviderSt
 
         const start = (finalPagination.page - 1) * finalPagination.count;
         const end = finalPagination.page * finalPagination.count;
-        const paginatedData = data.slice(start, end);
-
-        return paginatedData;
+        return SafeSlice(data, start, end, JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE);
     }
 
     public async getCSVImpl(data: JsinfoSchema.ProviderStake[]): Promise<string> {

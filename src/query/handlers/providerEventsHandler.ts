@@ -4,11 +4,11 @@
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../queryDb';
 import * as JsinfoSchema from '../../schemas/jsinfoSchema';
-import { and, desc, eq, gte } from "drizzle-orm";
+import { and, desc, eq, gt, gte } from "drizzle-orm";
 import { Pagination, ParsePaginationFromString } from '../utils/queryPagination';
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '../queryConsts';
 import path from 'path';
-import { CSVEscape, CompareValues, GetAndValidateProviderAddressFromRequest, GetNestedValue } from '../utils/queryUtils';
+import { CSVEscape, CompareValues, GetAndValidateProviderAddressFromRequest, GetNestedValue, SafeSlice } from '../utils/queryUtils';
 import { CachedDiskDbDataFetcher } from '../classes/CachedDiskDbDataFetcher';
 
 export type ProviderEventsResponse = {
@@ -109,6 +109,14 @@ class ProviderEventsData extends CachedDiskDbDataFetcher<ProviderEventsResponse>
         return `ProviderEvents_${this.addr}.csv`;
     }
 
+    protected isSinceDBFetchEnabled(): boolean {
+        return true;
+    }
+
+    protected sinceUniqueField(): string {
+        return "id";
+    }
+
     protected async fetchDataFromDb(): Promise<ProviderEventsResponse[]> {
         await QueryCheckJsinfoReadDbInstance();
 
@@ -124,6 +132,36 @@ class ProviderEventsData extends CachedDiskDbDataFetcher<ProviderEventsResponse>
                 )
             ).
             orderBy(desc(JsinfoSchema.events.id)).offset(0).limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION)
+
+        const highestId = eventsRes[0]?.events.id;
+        if (highestId !== undefined) {
+            this.setSince(highestId);
+        }
+
+
+        return eventsRes;
+    }
+
+    protected async fetchDataFromDbSinceFlow(since: number | string): Promise<ProviderEventsResponse[]> {
+        await QueryCheckJsinfoReadDbInstance();
+
+        let thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+        const eventsRes = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.events).
+            leftJoin(JsinfoSchema.blocks, eq(JsinfoSchema.events.blockId, JsinfoSchema.blocks.height)).
+            where(
+                and(
+                    eq(JsinfoSchema.events.provider, this.addr),
+                    gt(JsinfoSchema.events.id, Number(since))
+                )
+            ).
+            orderBy(desc(JsinfoSchema.events.id)).offset(0).limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION)
+
+        const highestId = eventsRes[0]?.events.id;
+        if (highestId !== undefined) {
+            this.setSince(highestId);
+        }
 
         return eventsRes;
     }
@@ -167,9 +205,7 @@ class ProviderEventsData extends CachedDiskDbDataFetcher<ProviderEventsResponse>
         // Apply pagination
         const start = (finalPagination.page - 1) * finalPagination.count;
         const end = finalPagination.page * finalPagination.count;
-        const paginatedData = data.slice(start, end);
-
-        return paginatedData;
+        return SafeSlice(data, start, end, JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE);
     }
 
 

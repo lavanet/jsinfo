@@ -3,11 +3,11 @@
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryGetJsinfoReadDbInstance, QueryCheckJsinfoReadDbInstance } from '../queryDb';
 import * as JsinfoSchema from '../../schemas/jsinfoSchema';
-import { asc, desc, eq, gte } from "drizzle-orm";
+import { asc, desc, eq, gte, gt } from "drizzle-orm";
 import { Pagination, ParsePaginationFromString } from '../utils/queryPagination';
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '../queryConsts';
 import path from 'path';
-import { CSVEscape, CompareValues } from '../utils/queryUtils';
+import { CSVEscape, CompareValues, SafeSlice } from '../utils/queryUtils';
 import { CachedDiskDbDataFetcher } from '../classes/CachedDiskDbDataFetcher';
 
 export interface EventsRewardsResponse {
@@ -86,6 +86,14 @@ class EventsRewardsData extends CachedDiskDbDataFetcher<EventsRewardsResponse> {
         return `EventsRewards.csv`;
     }
 
+    protected isSinceDBFetchEnabled(): boolean {
+        return true;
+    }
+
+    protected sinceUniqueField(): string {
+        return "id";
+    }
+
     protected async fetchDataFromDb(): Promise<EventsRewardsResponse[]> {
         await QueryCheckJsinfoReadDbInstance();
 
@@ -116,11 +124,41 @@ class EventsRewardsData extends CachedDiskDbDataFetcher<EventsRewardsResponse> {
                 moniker: data.providers?.moniker !== undefined ? data.providers?.moniker : null,
             }));
 
+            const highestId = flattenedRes[0]?.id;
+            if (highestId !== undefined) {
+                this.setSince(highestId);
+            }
+
             return flattenedRes;
         } catch (error) {
             console.error(`EventsRewardsData error fetching data from DB: ${error}`);
             throw error;
         }
+    }
+
+    protected async fetchDataFromDbSinceFlow(since: number | string): Promise<EventsRewardsResponse[]> {
+        await QueryCheckJsinfoReadDbInstance()
+
+        const paymentsRes = await QueryGetJsinfoReadDbInstance()
+            .select()
+            .from(JsinfoSchema.relayPayments)
+            .leftJoin(JsinfoSchema.providers, eq(JsinfoSchema.relayPayments.provider, JsinfoSchema.providers.address))
+            .where(gt(JsinfoSchema.relayPayments.id, Number(since)))
+            .orderBy(desc(JsinfoSchema.relayPayments.id))
+            .offset(0)
+            .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
+
+        const flattenedRes = paymentsRes.map(data => ({
+            ...data.relay_payments,
+            moniker: data.providers?.moniker !== undefined ? data.providers?.moniker : null,
+        }));
+
+        const highestId = flattenedRes[0]?.id;
+        if (highestId !== undefined) {
+            this.setSince(highestId);
+        }
+
+        return flattenedRes;
     }
 
     public async getPaginatedItemsImpl(
@@ -181,9 +219,7 @@ class EventsRewardsData extends CachedDiskDbDataFetcher<EventsRewardsResponse> {
         // Apply pagination
         const start = (finalPagination.page - 1) * finalPagination.count;
         const end = finalPagination.page * finalPagination.count;
-        const paginatedData = data.slice(start, end);
-
-        return paginatedData;
+        return SafeSlice(data, start, end, JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE);
     }
 
     public async getCSVImpl(data: EventsRewardsResponse[]): Promise<string> {

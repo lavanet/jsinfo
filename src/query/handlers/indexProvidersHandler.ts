@@ -7,7 +7,7 @@ import { sql, desc, inArray, not, eq } from "drizzle-orm";
 import { Pagination, ParsePaginationFromString } from '../utils/queryPagination';
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE } from '../queryConsts';
 import path from 'path';
-import { CSVEscape, CompareValues } from '../utils/queryUtils';
+import { CSVEscape, CompareValues, SafeSlice } from '../utils/queryUtils';
 import { CachedDiskDbDataFetcher } from '../classes/CachedDiskDbDataFetcher';
 
 type IndexProvidersResponse = {
@@ -167,9 +167,7 @@ class IndexProvidersData extends CachedDiskDbDataFetcher<IndexProvidersResponse>
         // Apply pagination
         const start = (finalPagination.page - 1) * finalPagination.count;
         const end = finalPagination.page * finalPagination.count;
-        const paginatedData = data.slice(start, end);
-
-        return paginatedData;
+        return SafeSlice(data, start, end, JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE);
     }
 
     public async getCSVImpl(data: IndexProvidersResponse[]): Promise<string> {

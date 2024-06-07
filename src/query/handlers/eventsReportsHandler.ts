@@ -3,11 +3,11 @@
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryGetJsinfoReadDbInstance, QueryCheckJsinfoReadDbInstance } from '../queryDb';
 import * as JsinfoSchema from '../../schemas/jsinfoSchema';
-import { asc, desc, eq, gte } from "drizzle-orm";
+import { asc, desc, eq, gte, gt } from "drizzle-orm";
 import { Pagination, ParsePaginationFromString } from '../utils/queryPagination';
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '../queryConsts';
 import path from 'path';
-import { CSVEscape, CompareValues } from '../utils/queryUtils';
+import { CSVEscape, CompareValues, SafeSlice } from '../utils/queryUtils';
 import { CachedDiskDbDataFetcher } from '../classes/CachedDiskDbDataFetcher';
 
 export interface EventsReportsResponse {
@@ -74,7 +74,17 @@ class EventsReportsData extends CachedDiskDbDataFetcher<EventsReportsResponse> {
         return `EventsReports.csv`;
     }
 
+    protected isSinceDBFetchEnabled(): boolean {
+        return true;
+    }
+
+    protected sinceUniqueField(): string {
+        return "id";
+    }
+
     protected async fetchDataFromDb(): Promise<EventsReportsResponse[]> {
+        await QueryCheckJsinfoReadDbInstance()
+
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
@@ -87,20 +97,49 @@ class EventsReportsData extends CachedDiskDbDataFetcher<EventsReportsResponse> {
 
         const minBlockHeight = blockHeightQuery[0].height || 0;
 
-        const query = QueryGetJsinfoReadDbInstance()
+        const reportsRes = await QueryGetJsinfoReadDbInstance()
             .select()
             .from(JsinfoSchema.providerReported)
             .leftJoin(JsinfoSchema.providers, eq(JsinfoSchema.providerReported.provider, JsinfoSchema.providers.address))
             .where(gte(JsinfoSchema.providerReported.blockId, minBlockHeight))
             .orderBy(desc(JsinfoSchema.providerReported.id))
+            .offset(0)
             .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
-
-        const reportsRes = await query;
 
         const flattenedEvents = reportsRes.map(data => ({
             ...data.provider_reported,
             moniker: data.providers?.moniker !== undefined ? data.providers?.moniker : null,
         }));
+
+        const highestId = reportsRes[0]?.provider_reported.id;
+        if (highestId !== undefined) {
+            this.setSince(highestId);
+        }
+
+        return flattenedEvents;
+    }
+
+    protected async fetchDataFromDbSinceFlow(since: number | string): Promise<EventsReportsResponse[]> {
+        await QueryCheckJsinfoReadDbInstance()
+
+        const reportsRes = await QueryGetJsinfoReadDbInstance()
+            .select()
+            .from(JsinfoSchema.providerReported)
+            .leftJoin(JsinfoSchema.providers, eq(JsinfoSchema.providerReported.provider, JsinfoSchema.providers.address))
+            .orderBy(desc(JsinfoSchema.providerReported.id))
+            .where(gt(JsinfoSchema.providerReported.id, Number(since)))
+            .offset(0)
+            .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
+
+        const flattenedEvents = reportsRes.map(data => ({
+            ...data.provider_reported,
+            moniker: data.providers?.moniker !== undefined ? data.providers?.moniker : null,
+        }));
+
+        const highestId = reportsRes[0]?.provider_reported.id;
+        if (highestId !== undefined) {
+            this.setSince(highestId);
+        }
 
         return flattenedEvents;
     }
@@ -158,9 +197,7 @@ class EventsReportsData extends CachedDiskDbDataFetcher<EventsReportsResponse> {
         // Apply pagination
         const start = (finalPagination.page - 1) * finalPagination.count;
         const end = finalPagination.page * finalPagination.count;
-        const paginatedData = data.slice(start, end);
-
-        return paginatedData;
+        return SafeSlice(data, start, end, JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE);
     }
 
     public async getCSVImpl(data: EventsReportsResponse[]): Promise<string> {
@@ -193,16 +230,13 @@ class EventsReportsData extends CachedDiskDbDataFetcher<EventsReportsResponse> {
 }
 
 export async function EventsReportsCachedHandler(request: FastifyRequest, reply: FastifyReply) {
-    await QueryCheckJsinfoReadDbInstance()
     return await EventsReportsData.GetInstance().getPaginatedItemsCachedHandler(request, reply)
 }
 
 export async function EventsReportsItemCountRawHandler(request: FastifyRequest, reply: FastifyReply) {
-    await QueryCheckJsinfoReadDbInstance()
     return await EventsReportsData.GetInstance().getTotalItemCountRawHandler(request, reply)
 }
 
 export async function EventsReportsCSVRawHandler(request: FastifyRequest, reply: FastifyReply) {
-    await QueryCheckJsinfoReadDbInstance()
     return await EventsReportsData.GetInstance().getCSVRawHandler(request, reply)
 }

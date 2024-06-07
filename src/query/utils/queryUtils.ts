@@ -131,3 +131,21 @@ export function GetDataLength(data: any): number {
     }
     return 0;
 }
+
+export function GetTypeAsString(obj: any): string {
+    return Object.prototype.toString.call(obj).replace(/^\[object\s|\]$/g, '');
+}
+
+export function SafeSlice<T>(data: T[], start: number, end: number, defaultSize: number): T[] {
+    if (start < 0 || end < 0) {
+        start = 0;
+        end = defaultSize;
+    }
+
+    if (start > data.length || end > data.length) {
+        start = Math.max(0, data.length - defaultSize);
+        end = data.length;
+    }
+
+    return data.slice(start, end);
+}

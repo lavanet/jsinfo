@@ -191,7 +191,7 @@ class SpecChartsData extends CachedDiskDbDataFetcher<SpecChartResponse> {
                 });
             });
 
-            this.log(`getSpecQosData:: Fetched data for month: ${currentDate.getMonth() + 1} -${currentDate.getFullYear()} `);
+            this.log(`getSpecQosData:: Fetched data for month: ${currentDate.getMonth() + 1}/${currentDate.getFullYear()} `);
             currentDate.setMonth(currentDate.getMonth() - 1);
         }
 

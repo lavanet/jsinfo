@@ -6,7 +6,7 @@ import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '..
 import * as JsinfoSchema from '../../schemas/jsinfoSchema';
 import { eq, desc } from "drizzle-orm";
 import { Pagination } from '../utils/queryPagination';
-import { CSVEscape, GetAndValidateProviderAddressFromRequest, GetDataLengthForPrints, IsNotNullAndNotZero } from '../utils/queryUtils';
+import { CSVEscape, GetAndValidateProviderAddressFromRequest, GetDataLengthForPrints, IsNotNullAndNotZero, SafeSlice } from '../utils/queryUtils';
 import { CompareValues } from '../utils/queryUtils';
 import path from 'path';
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '../queryConsts';
@@ -95,12 +95,9 @@ class ProviderHealthData extends CachedDiskDbDataFetcher<HealthReportResponse> {
         const start = (pagination.page - 1) * pagination.count;
         const end = start + pagination.count;
 
-        // If slice would fail, return a [0,20] slice
-        if (start < 0 || end < 0 || start > data.length || end > data.length) {
-            return data.slice(0, JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE);
-        }
+        const result = SafeSlice(data, start, end, JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE);
 
-        return data.slice(start, end);
+        return result;
     }
 
     private sortData(data: HealthReportResponse[], sortKey: string, direction: 'ascending' | 'descending'): HealthReportResponse[] {

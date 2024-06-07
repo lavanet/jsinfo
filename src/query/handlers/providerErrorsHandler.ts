@@ -4,7 +4,7 @@
 import path from 'path';
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryCheckRelaysReadDbInstance, QueryGetRelaysReadDbInstance } from '../queryDb';
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and, gt } from "drizzle-orm";
 import { Pagination } from '../utils/queryPagination';
 import { CSVEscape, CompareValues, GetAndValidateProviderAddressFromRequest } from '../utils/queryUtils';
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '../queryConsts';
@@ -70,12 +70,52 @@ class ProviderErrorsData extends CachedDiskDbDataFetcher<ErrorsReportReponse> {
         return `ProviderErrors_${this.addr}.csv`;
     }
 
+    protected isSinceDBFetchEnabled(): boolean {
+        return true;
+    }
+
+    protected sinceUniqueField(): string {
+        return "id";
+    }
+
     protected async fetchDataFromDb(): Promise<ErrorsReportReponse[]> {
         await QueryCheckRelaysReadDbInstance();
 
         const result = await QueryGetRelaysReadDbInstance().select().from(RelaysSchema.lavaReportError)
             .where(eq(RelaysSchema.lavaReportError.provider, this.addr))
-            .orderBy(desc(RelaysSchema.lavaReportError.id)).offset(0).limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION)
+            .orderBy(desc(RelaysSchema.lavaReportError.id)).
+            offset(0).
+            limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION)
+
+        const highestId = result[0]?.id;
+        if (highestId !== undefined) {
+            this.setSince(highestId);
+        }
+
+        return result.map((row: ErrorsReport) => ({
+            id: row.id,
+            date: row.created_at?.toISOString() || '',
+            spec: row.spec_id || '',
+            error: ParseLavapProviderError(row.errors || ''),
+        })).filter((report: ErrorsReportReponse) => report.date && report.error);
+    }
+
+    protected async fetchDataFromDbSinceFlow(since: number | string): Promise<ErrorsReportReponse[]> {
+        await QueryCheckRelaysReadDbInstance()
+
+        const result = await QueryGetRelaysReadDbInstance().select().from(RelaysSchema.lavaReportError)
+            .where(and(
+                eq(RelaysSchema.lavaReportError.provider, this.addr),
+                gt(RelaysSchema.lavaReportError.id, Number(since))
+            ))
+            .orderBy(desc(RelaysSchema.lavaReportError.id)).
+            offset(0).
+            limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION)
+
+        const highestId = result[0]?.id;
+        if (highestId !== undefined) {
+            this.setSince(highestId);
+        }
 
         return result.map((row: ErrorsReport) => ({
             id: row.id,
@@ -95,12 +135,7 @@ class ProviderErrorsData extends CachedDiskDbDataFetcher<ErrorsReportReponse> {
         const start = (pagination.page - 1) * pagination.count;
         const end = start + pagination.count;
 
-        // If slice would fail, return a [0,20] slice
-        if (start < 0 || end < 0 || start > data.length || end > data.length) {
-            return data.slice(0, JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE);
-        }
-
-        return data.slice(start, end);
+        return SafeSlice(data, start, end, JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE);
     }
 
     private sortData(data: ErrorsReportReponse[], sortKey: string, direction: 'ascending' | 'descending'): ErrorsReportReponse[] {

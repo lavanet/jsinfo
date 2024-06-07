@@ -3,11 +3,11 @@
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryGetJsinfoReadDbInstance, QueryCheckJsinfoReadDbInstance } from '../queryDb';
 import * as JsinfoSchema from '../../schemas/jsinfoSchema';
-import { asc, desc, eq, gte } from "drizzle-orm";
+import { asc, desc, eq, gte, gt } from "drizzle-orm";
 import { Pagination, ParsePaginationFromString } from '../utils/queryPagination';
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '../queryConsts';
 import path from 'path';
-import { CSVEscape, CompareValues } from '../utils/queryUtils';
+import { CSVEscape, CompareValues, SafeSlice } from '../utils/queryUtils';
 import { CachedDiskDbDataFetcher } from '../classes/CachedDiskDbDataFetcher';
 
 export interface EventsEventsResponse {
@@ -92,7 +92,17 @@ class EventsEventsData extends CachedDiskDbDataFetcher<EventsEventsResponse> {
         return `EventsData.csv`;
     }
 
+    protected isSinceDBFetchEnabled(): boolean {
+        return true;
+    }
+
+    protected sinceUniqueField(): string {
+        return "id";
+    }
+
     protected async fetchDataFromDb(): Promise<EventsEventsResponse[]> {
+        await QueryCheckJsinfoReadDbInstance()
+
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
@@ -120,6 +130,38 @@ class EventsEventsData extends CachedDiskDbDataFetcher<EventsEventsResponse> {
             moniker: event.providers?.moniker !== undefined ? event.providers?.moniker : null,
             datetime: event.blocks?.datetime?.toISOString() ?? null
         }));
+
+        const highestId = eventsRes[0]?.events.id;
+        if (highestId !== undefined) {
+            this.setSince(highestId);
+        }
+
+        return flattenedEvents;
+    }
+
+    protected async fetchDataFromDbSinceFlow(since: number | string): Promise<EventsEventsResponse[]> {
+        await QueryCheckJsinfoReadDbInstance()
+
+        const eventsRes = await QueryGetJsinfoReadDbInstance()
+            .select()
+            .from(JsinfoSchema.events)
+            .leftJoin(JsinfoSchema.blocks, eq(JsinfoSchema.events.blockId, JsinfoSchema.blocks.height))
+            .leftJoin(JsinfoSchema.providers, eq(JsinfoSchema.events.provider, JsinfoSchema.providers.address))
+            .where(gt(JsinfoSchema.events.id, Number(since)))
+            .orderBy(desc(JsinfoSchema.events.id))
+            .offset(0)
+            .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
+
+        const flattenedEvents = eventsRes.map(event => ({
+            ...event.events,
+            moniker: event.providers?.moniker !== undefined ? event.providers?.moniker : null,
+            datetime: event.blocks?.datetime?.toISOString() ?? null
+        }));
+
+        const highestId = eventsRes[0]?.events.id;
+        if (highestId !== undefined) {
+            this.setSince(highestId);
+        }
 
         return flattenedEvents;
     }
@@ -185,9 +227,7 @@ class EventsEventsData extends CachedDiskDbDataFetcher<EventsEventsResponse> {
         // Apply pagination
         const start = (finalPagination.page - 1) * finalPagination.count;
         const end = finalPagination.page * finalPagination.count;
-        const paginatedData = data.slice(start, end);
-
-        return paginatedData;
+        return SafeSlice(data, start, end, JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE);
     }
 
     public async getCSVImpl(data: EventsEventsResponse[]): Promise<string> {
@@ -229,16 +269,13 @@ class EventsEventsData extends CachedDiskDbDataFetcher<EventsEventsResponse> {
 }
 
 export async function EventsEventsCachedHandler(request: FastifyRequest, reply: FastifyReply) {
-    await QueryCheckJsinfoReadDbInstance()
     return await EventsEventsData.GetInstance().getPaginatedItemsCachedHandler(request, reply)
 }
 
 export async function EventsEventsItemCountRawHandler(request: FastifyRequest, reply: FastifyReply) {
-    await QueryCheckJsinfoReadDbInstance()
     return await EventsEventsData.GetInstance().getTotalItemCountRawHandler(request, reply)
 }
 
 export async function EventsEventsCSVRawHandler(request: FastifyRequest, reply: FastifyReply) {
-    await QueryCheckJsinfoReadDbInstance()
     return await EventsEventsData.GetInstance().getCSVRawHandler(request, reply)
 }

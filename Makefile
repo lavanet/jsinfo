@@ -33,6 +33,9 @@ indexer_debug_events:
 query:
 	npx nodemon --watch src --ext ts --exec "JSINFO_QUERY_CLEAR_DISKCACHE_ON_START=true JSINFO_QUERY_IS_DEBUG_MODE=true bun run src/query.ts"
 
+query_quick_cache_expiry:
+	npx nodemon --watch src --ext ts --exec "JSINFO_QUERY_CLEAR_DISKCACHE_ON_START=false JSINFO_QUERY_HANDLER_CACHE_FETCH_LOCK_TIME_SECONDS=5 JSINFO_QUERY_HANDLER_CACHE_TIME_SECONDS=5 JSINFO_QUERY_IS_DEBUG_MODE=true bun run src/query.ts"
+
 query_no_nodemon:
 	JSINFO_QUERY_CLEAR_DISKCACHE_ON_START=true JSINFO_QUERY_IS_DEBUG_MODE=true bun run src/query.ts
 

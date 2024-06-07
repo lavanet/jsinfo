@@ -4,11 +4,11 @@
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../queryDb';
 import * as JsinfoSchema from '../../schemas/jsinfoSchema';
-import { and, desc, eq, gte } from "drizzle-orm";
+import { and, desc, eq, gt, gte } from "drizzle-orm";
 import { Pagination, ParsePaginationFromString } from '../utils/queryPagination';
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '../queryConsts';
 import path from 'path';
-import { CSVEscape, CompareValues, GetAndValidateProviderAddressFromRequest, GetNestedValue } from '../utils/queryUtils';
+import { CSVEscape, CompareValues, GetAndValidateProviderAddressFromRequest, GetNestedValue, SafeSlice } from '../utils/queryUtils';
 import { CachedDiskDbDataFetcher } from '../classes/CachedDiskDbDataFetcher';
 
 export type ProviderRewardsResponse = {
@@ -140,6 +140,14 @@ class ProviderRewardsData extends CachedDiskDbDataFetcher<ProviderRewardsRespons
         return `ProviderRewards_${this.addr}.csv`;
     }
 
+    protected isSinceDBFetchEnabled(): boolean {
+        return true;
+    }
+
+    protected sinceUniqueField(): string {
+        return "id";
+    }
+
     protected async fetchDataFromDb(): Promise<ProviderRewardsResponse[]> {
         await QueryCheckJsinfoReadDbInstance();
 
@@ -153,7 +161,36 @@ class ProviderRewardsData extends CachedDiskDbDataFetcher<ProviderRewardsRespons
                     eq(JsinfoSchema.relayPayments.provider, this.addr),
                     gte(JsinfoSchema.relayPayments.datetime, thirtyDaysAgo)
                 )).
-            orderBy(desc(JsinfoSchema.relayPayments.id)).offset(0).limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION)
+            orderBy(desc(JsinfoSchema.relayPayments.id)).
+            offset(0).
+            limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION)
+
+        const highestId = paymentsRes[0]?.relay_payments.id;
+        if (highestId !== undefined) {
+            this.setSince(highestId);
+        }
+
+        return paymentsRes;
+    }
+
+    protected async fetchDataFromDbSinceFlow(since: number | string): Promise<ProviderRewardsResponse[]> {
+        await QueryCheckJsinfoReadDbInstance();
+
+        const paymentsRes = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.relayPayments).
+            leftJoin(JsinfoSchema.blocks, eq(JsinfoSchema.relayPayments.blockId, JsinfoSchema.blocks.height)).
+            where(
+                and(
+                    eq(JsinfoSchema.relayPayments.provider, this.addr),
+                    gt(JsinfoSchema.relayPayments.id, Number(since))
+                )).
+            orderBy(desc(JsinfoSchema.relayPayments.id)).
+            offset(0).
+            limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION)
+
+        const highestId = paymentsRes[0]?.relay_payments.id;
+        if (highestId !== undefined) {
+            this.setSince(highestId);
+        }
 
         return paymentsRes;
     }
@@ -197,11 +234,8 @@ class ProviderRewardsData extends CachedDiskDbDataFetcher<ProviderRewardsRespons
         // Apply pagination
         const start = (finalPagination.page - 1) * finalPagination.count;
         const end = finalPagination.page * finalPagination.count;
-        const paginatedData = data.slice(start, end);
-
-        return paginatedData;
+        return SafeSlice(data, start, end, JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE);
     }
-
 
     public async getCSVImpl(data: ProviderRewardsResponse[]): Promise<string> {
         const columns = [

@@ -6,12 +6,11 @@
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../queryDb';
 import * as JsinfoSchema from '../../schemas/jsinfoSchema';
-import { and, desc, eq, gte } from "drizzle-orm";
-import { Pagination, ParsePaginationFromRequest } from '../utils/queryPagination';
+import { and, desc, eq, gte, gt } from "drizzle-orm";
+import { Pagination } from '../utils/queryPagination';
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '../queryConsts';
-import fs from 'fs';
 import path from 'path';
-import { CompareValues, GetAndValidateProviderAddressFromRequest } from '../utils/queryUtils';
+import { CompareValues, GetAndValidateProviderAddressFromRequest, SafeSlice } from '../utils/queryUtils';
 import { CachedDiskDbDataFetcher } from '../classes/CachedDiskDbDataFetcher';
 
 export interface BlockReportsReponse {
@@ -82,6 +81,14 @@ class ProviderBlockReportsData extends CachedDiskDbDataFetcher<BlockReportsRepon
         return path.join(this.cacheDir, `ProviderBlockReportsData_${this.addr}`);
     }
 
+    protected isSinceDBFetchEnabled(): boolean {
+        return true;
+    }
+
+    protected sinceUniqueField(): string {
+        return "id";
+    }
+
     protected async fetchDataFromDb(): Promise<BlockReportsReponse[]> {
         await QueryCheckJsinfoReadDbInstance();
 
@@ -95,7 +102,43 @@ class ProviderBlockReportsData extends CachedDiskDbDataFetcher<BlockReportsRepon
                     gte(JsinfoSchema.providerLatestBlockReports.timestamp, thirtyDaysAgo)
                 )
             ).
-            orderBy(desc(JsinfoSchema.providerLatestBlockReports.timestamp)).limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
+            orderBy(desc(JsinfoSchema.providerLatestBlockReports.id)).
+            offset(0).
+            limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
+
+        const highestId = result[0]?.id;
+        if (highestId !== undefined) {
+            this.setSince(highestId);
+        }
+
+        return result.map((row: JsinfoSchema.ProviderLatestBlockReports) => ({
+            id: row.id,
+            blockId: row.blockId ?? 0,
+            tx: row.tx ?? '',
+            timestamp: row.timestamp?.toISOString() ?? '',
+            chainId: row.chainId,
+            chainBlockHeight: row.chainBlockHeight ?? 0,
+        }));
+    }
+
+    protected async fetchDataFromDbSinceFlow(since: number | string): Promise<BlockReportsReponse[]> {
+        await QueryCheckJsinfoReadDbInstance()
+
+        let result = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.providerLatestBlockReports).
+            where(
+                and(
+                    eq(JsinfoSchema.providerLatestBlockReports.provider, this.addr),
+                    gt(JsinfoSchema.providerLatestBlockReports.id, Number(since))
+                )
+            ).
+            orderBy(desc(JsinfoSchema.providerLatestBlockReports.id)).
+            offset(0).
+            limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
+
+        const highestId = result[0]?.id;
+        if (highestId !== undefined) {
+            this.setSince(highestId);
+        }
 
         return result.map((row: JsinfoSchema.ProviderLatestBlockReports) => ({
             id: row.id,
@@ -117,12 +160,7 @@ class ProviderBlockReportsData extends CachedDiskDbDataFetcher<BlockReportsRepon
         const start = (pagination.page - 1) * pagination.count;
         const end = start + pagination.count;
 
-        // If slice would fail, return a [0,20] slice
-        if (start < 0 || end < 0 || start > data.length || end > data.length) {
-            return data.slice(0, JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE);
-        }
-
-        return data.slice(start, end);
+        return SafeSlice(data, start, end, JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE);
     }
 
     private sortData(data: BlockReportsReponse[], sortKey: string, direction: 'ascending' | 'descending'): BlockReportsReponse[] {

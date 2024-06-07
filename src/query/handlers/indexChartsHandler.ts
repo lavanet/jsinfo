@@ -173,7 +173,7 @@ class IndexChartsData extends CachedDiskDbDataFetcher<IndexChartResponse> {
 
             mainChartData = mainChartData.concat(monthlyData);
 
-            this.log(`getMainChartData:: Fetched data for month: ${currentDate.getMonth() + 1}-${currentDate.getFullYear()}`);
+            this.log(`getMainChartData:: Fetched data for month: ${currentDate.getMonth() + 1}/${currentDate.getFullYear()}`);
             currentDate.setMonth(currentDate.getMonth() - 1);
         }
 
@@ -226,7 +226,7 @@ class IndexChartsData extends CachedDiskDbDataFetcher<IndexChartResponse> {
                 qosDataFormatted[item.date] = qos;
             });
 
-            this.log(`getQosData:: Fetched data for month: ${currentDate.getMonth() + 1}-${currentDate.getFullYear()}`);
+            this.log(`getQosData:: Fetched data for month: ${currentDate.getMonth() + 1}/${currentDate.getFullYear()}`);
             currentDate.setMonth(currentDate.getMonth() - 1);
         }
 

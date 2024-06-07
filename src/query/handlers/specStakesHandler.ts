@@ -10,7 +10,7 @@ import { ReplaceArchive } from '../../indexer/indexerUtils';
 import { Pagination, ParsePaginationFromString } from '../utils/queryPagination';
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '../queryConsts';
 import path from 'path';
-import { CSVEscape, CompareValues, GetAndValidateSpecIdFromRequest, GetNestedValue } from '../utils/queryUtils';
+import { CSVEscape, CompareValues, GetAndValidateSpecIdFromRequest, GetNestedValue, SafeSlice } from '../utils/queryUtils';
 import { CachedDiskDbDataFetcher } from '../classes/CachedDiskDbDataFetcher';
 
 export type SpecSpecsResponse = {
@@ -96,6 +96,9 @@ class SpecStakesData extends CachedDiskDbDataFetcher<SpecSpecsResponse> {
         return `SpecStakes_${this.spec}.csv`;
     }
 
+    // don't enable column has no id:
+    // protected isSinceDBFetchEnabled(): boolean {
+
     protected async fetchDataFromDb(): Promise<SpecSpecsResponse[]> {
         await QueryCheckJsinfoReadDbInstance();
 
@@ -178,9 +181,7 @@ class SpecStakesData extends CachedDiskDbDataFetcher<SpecSpecsResponse> {
         // Apply pagination
         const start = (finalPagination.page - 1) * finalPagination.count;
         const end = finalPagination.page * finalPagination.count;
-        const paginatedData = data.slice(start, end);
-
-        return paginatedData;
+        return SafeSlice(data, start, end, JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE);
     }
 
     public async getCSVImpl(data: SpecSpecsResponse[]): Promise<string> {

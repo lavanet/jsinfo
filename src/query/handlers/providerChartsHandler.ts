@@ -154,7 +154,7 @@ class ProviderChartsData extends CachedDiskDbDataFetcher<ProviderChartResponse> 
                 });
             });
 
-            this.log(`getProviderQosData:: Fetched data for month: ${currentDate.getMonth() + 1} -${currentDate.getFullYear()} `);
+            this.log(`getProviderQosData:: Fetched data for month: ${currentDate.getMonth() + 1}/${currentDate.getFullYear()} `);
             currentDate.setMonth(currentDate.getMonth() - 1);
         }
 

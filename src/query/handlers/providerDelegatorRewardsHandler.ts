@@ -8,7 +8,7 @@ import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../queryDb';
 import { eq, desc, gt, and } from "drizzle-orm";
 import { Pagination } from '../utils/queryPagination';
-import { CompareValues, GetAndValidateProviderAddressFromRequest } from '../utils/queryUtils';
+import { CompareValues, GetAndValidateProviderAddressFromRequest, SafeSlice } from '../utils/queryUtils';
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '../queryConsts';
 import * as JsinfoSchema from '../../schemas/jsinfoSchema';
 import { CachedDiskDbDataFetcher } from '../classes/CachedDiskDbDataFetcher';

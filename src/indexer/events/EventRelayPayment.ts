@@ -246,6 +246,12 @@ export const ParseEventRelayPayment = (
                 break
               */
 
+        // link data example:
+        // https://lava.explorers.guru/transaction/D294DFDD8D39F0F6E096738F559783AD6ACC1FD606C5E9F7F30A0C49DC77FB3D
+        // QoSReoprt is missing
+        // ClientFee and Mint are missing - but they where always 0 - they are 0 in the code, reliabilityPay is also always false in the code
+        // DescriptionString has a high value and is missing - it's this in the code - strconv.FormatUint(rws.serverID (type:TxRelayPayment), 10) - 
+        // Also missing rewardedCu, totalCUInEpoch, 
         case 'relayNumber':
           dbEvent.relays = EventParseInt(value)
           break

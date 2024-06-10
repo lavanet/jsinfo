@@ -1,4 +1,4 @@
-name: Build jsinfo (Testnet)
+name: Build jsinfo (Main)
 
 # Controls when the workflow will run
 on:

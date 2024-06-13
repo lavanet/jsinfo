@@ -22,8 +22,10 @@ export type SpecSpecsResponse = {
     provider: string | null;
     moniker: string | null;
     blockId: number | null;
-    cuSum: number;
-    relaySum: number;
+    cuSum90Days: number;
+    cuSum30Days: number;
+    relaySum90Days: number;
+    relaySum30Days: number;
 };
 
 export const SpecStakesCachedHandlerOpts: RouteShorthandOptions = {
@@ -61,12 +63,18 @@ export const SpecStakesCachedHandlerOpts: RouteShorthandOptions = {
                                 blockId: {
                                     type: ['number', 'null']
                                 },
-                                cuSum: {
+                                cuSum30Days: {
                                     type: 'number'
                                 },
-                                relaySum: {
+                                relaySum30Days: {
                                     type: 'number'
-                                }
+                                },
+                                cuSum90Days: {
+                                    type: 'number'
+                                },
+                                relaySum90Days: {
+                                    type: 'number'
+                                },
                             }
                         }
                     }
@@ -102,7 +110,8 @@ class SpecStakesData extends CachedDiskDbDataFetcher<SpecSpecsResponse> {
     protected async fetchDataFromDb(): Promise<SpecSpecsResponse[]> {
         await QueryCheckJsinfoReadDbInstance();
 
-        let stakesRes = await QueryGetJsinfoReadDbInstance().select({
+        // Query for 90 days
+        let stakesRes90Days = await QueryGetJsinfoReadDbInstance().select({
             stake: JsinfoSchema.providerStakes.stake,
             appliedHeight: JsinfoSchema.providerStakes.appliedHeight,
             geolocation: JsinfoSchema.providerStakes.geolocation,
@@ -116,8 +125,8 @@ class SpecStakesData extends CachedDiskDbDataFetcher<SpecSpecsResponse> {
             provider: JsinfoSchema.providerStakes.provider,
             moniker: JsinfoSchema.providers.moniker,
             blockId: JsinfoSchema.providerStakes.blockId,
-            cuSum: sql<number>`sum(COALESCE(NULLIF(${JsinfoSchema.aggHourlyrelayPayments.cuSum}, 0), 0))`,
-            relaySum: sql<number>`sum(COALESCE(NULLIF(${JsinfoSchema.aggHourlyrelayPayments.relaySum}, 0), 0))`,
+            cuSum90Days: sql<number>`sum(COALESCE(NULLIF(${JsinfoSchema.aggHourlyrelayPayments.cuSum}, 0), 0))`,
+            relaySum90Days: sql<number>`sum(COALESCE(NULLIF(${JsinfoSchema.aggHourlyrelayPayments.relaySum}, 0), 0))`,
         }).from(JsinfoSchema.providerStakes)
             .leftJoin(JsinfoSchema.providers, eq(JsinfoSchema.providerStakes.provider, JsinfoSchema.providers.address))
             .leftJoin(JsinfoSchema.aggHourlyrelayPayments, and(
@@ -132,14 +141,38 @@ class SpecStakesData extends CachedDiskDbDataFetcher<SpecSpecsResponse> {
             .orderBy(desc(JsinfoSchema.providerStakes.stake))
             .offset(0).limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
 
-        stakesRes = stakesRes
-            .map(item => ({
-                ...item,
-                addonsAndExtensions: ReplaceArchive(item.addonsAndExtensions),
-            }))
-            .sort((a, b) => b.cuSum - a.cuSum);
+        // Query for 30 days
+        let stakesRes30Days = await QueryGetJsinfoReadDbInstance().select({
+            provider: JsinfoSchema.providerStakes.provider,
+            cuSum30Days: sql<number>`sum(COALESCE(NULLIF(${JsinfoSchema.aggHourlyrelayPayments.cuSum}, 0), 0))`,
+            relaySum30Days: sql<number>`sum(COALESCE(NULLIF(${JsinfoSchema.aggHourlyrelayPayments.relaySum}, 0), 0))`,
+        }).from(JsinfoSchema.providerStakes)
+            .leftJoin(JsinfoSchema.providers, eq(JsinfoSchema.providerStakes.provider, JsinfoSchema.providers.address))
+            .leftJoin(JsinfoSchema.aggHourlyrelayPayments, and(
+                eq(JsinfoSchema.providerStakes.provider, JsinfoSchema.aggHourlyrelayPayments.provider),
+                and(
+                    eq(JsinfoSchema.providerStakes.specId, JsinfoSchema.aggHourlyrelayPayments.specId),
+                    gt(sql<string>`DATE_TRUNC('day', ${JsinfoSchema.aggHourlyrelayPayments.datehour})`, sql<Date>`now() - interval '30 day'`)
+                )
+            ))
+            .where(eq(JsinfoSchema.providerStakes.specId, this.spec))
+            .groupBy(JsinfoSchema.providerStakes.provider, JsinfoSchema.providerStakes.specId, JsinfoSchema.providers.moniker)
+            .orderBy(desc(JsinfoSchema.providerStakes.stake))
+            .offset(0).limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
 
-        return stakesRes;
+        let stakesRes30DaysMap = new Map(stakesRes30Days.map(item => [item.provider, item]));
+
+        let combinedStakesRes: SpecSpecsResponse[] = stakesRes90Days.map((item90Days) => {
+            let item30Days = stakesRes30DaysMap.get(item90Days.provider);
+            return {
+                ...item90Days,
+                cuSum30Days: item30Days ? item30Days.cuSum30Days : 0,
+                relaySum30Days: item30Days ? item30Days.relaySum30Days : 0,
+                addonsAndExtensions: ReplaceArchive(item90Days.addonsAndExtensions),
+            };
+        }).sort((a, b) => b.cuSum90Days - a.cuSum90Days);
+
+        return combinedStakesRes;
     }
 
     public async getPaginatedItemsImpl(
@@ -164,7 +197,7 @@ class SpecStakesData extends CachedDiskDbDataFetcher<SpecSpecsResponse> {
         }
 
         // Validate sortKey
-        const validKeys = ["stake", "appliedHeight", "geolocation", "addonsAndExtensions", "status", "provider", "moniker", "blockId", "cuSum", "relaySum"];
+        const validKeys = ["stake", "appliedHeight", "geolocation", "addonsAndExtensions", "status", "provider", "moniker", "blockId", "cuSum30Days", "cuSum90Days", "relaySum30Days", "relaySum90Days"];
         if (!validKeys.includes(finalPagination.sortKey)) {
             const trimmedSortKey = finalPagination.sortKey.substring(0, 500);
             throw new Error(`Invalid sort key: ${trimmedSortKey}`);
@@ -194,8 +227,10 @@ class SpecStakesData extends CachedDiskDbDataFetcher<SpecSpecsResponse> {
             { key: "provider", name: "Provider" },
             { key: "moniker", name: "Moniker" },
             { key: "blockId", name: "Block ID" },
-            { key: "cuSum", name: "CU Sum" },
-            { key: "relaySum", name: "Relay Sum" },
+            { key: "cuSum30Days", name: "30-Day CU Sum" },
+            { key: "cuSum90Days", name: "90-Day CU Sum" },
+            { key: "relaySum30Days", name: "30-Day Relay Sum" },
+            { key: "relaySum90Days", name: "90-Day Relay Sum " },
         ];
 
         let csv = columns.map(column => CSVEscape(column.name)).join(',') + '\n';

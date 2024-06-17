@@ -197,6 +197,7 @@ async function getLatestProvidersAndSpecsAndStakes(
         let unstaking = await lavaClient.epochstorage.stakeStorage({
             index: 'Unstake'
         })
+        console.log("Fetching unstaking stakes - done", unstaking.stakeStorage.stakeEntries);
         unstaking.stakeStorage.stakeEntries.forEach((stake) => {
             console.log(`Processing unstaking stake entry for provider: ${stake.address}`);
             // Only add if no regular stake exists
@@ -209,6 +210,7 @@ async function getLatestProvidersAndSpecsAndStakes(
                     }
                 })
             }
+            console.log(`Processing stake entry for provider: ${stake.address}`);
             processStakeEntry(height, dbProviders, dbStakes, stake, true)
         })
     } catch (error) {

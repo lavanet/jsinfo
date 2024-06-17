@@ -173,51 +173,68 @@ async function getLatestProvidersAndSpecsAndStakes(
     dbSpecs: Map<string, JsinfoSchema.Spec>,
     dbStakes: Map<string, JsinfoSchema.ProviderStake[]>,
 ) {
-    const lavaClient = client.lavanet.lava;
-    dbStakes.clear()
+    try {
+        const lavaClient = client.lavanet.lava;
+        dbStakes.clear()
 
-    // regular stakes
-    let specs = await lavaClient.spec.showAllChains()
-    await Promise.all(specs.chainInfoList.map(async (spec) => {
-        GetOrSetSpec(dbSpecs, null, spec.chainID)
+        // regular stakes
+        console.log("Fetching all chains");
+        let specs = await lavaClient.spec.showAllChains()
+        await Promise.all(specs.chainInfoList.map(async (spec) => {
+            console.log(`Processing spec: ${spec.chainID}`);
+            GetOrSetSpec(dbSpecs, null, spec.chainID)
 
-        let providers = await lavaClient.pairing.providers({ chainID: spec.chainID, showFrozen: true })
-        providers.stakeEntry.forEach((stake) => {
-            processStakeEntry(height, dbProviders, dbStakes, stake, false)
-        })
-    }))
-
-    // unstaking stakes
-    let unstaking = await lavaClient.epochstorage.stakeStorage({
-        index: 'Unstake'
-    })
-    unstaking.stakeStorage.stakeEntries.forEach((stake) => {
-        //
-        // Only add if no regular stake exists
-        // if regular stake exists
-        //      it means the provider restaked without waiting for unstaking period
-        if (dbStakes.get(stake.address) != undefined) {
-            dbStakes.get(stake.address)!.forEach((dbStake) => {
-                if (dbStake.specId == stake.chain) {
-                    return
-                }
+            console.log(`Fetching providers for spec: ${spec.chainID}`);
+            let providers = await lavaClient.pairing.providers({ chainID: spec.chainID, showFrozen: true })
+            providers.stakeEntry.forEach((stake) => {
+                console.log(`Processing stake entry for provider: ${stake.address}`);
+                processStakeEntry(height, dbProviders, dbStakes, stake, false)
             })
-        }
-        processStakeEntry(height, dbProviders, dbStakes, stake, true)
-    })
+        }))
+
+        // unstaking stakes
+        console.log("Fetching unstaking stakes");
+        let unstaking = await lavaClient.epochstorage.stakeStorage({
+            index: 'Unstake'
+        })
+        unstaking.stakeStorage.stakeEntries.forEach((stake) => {
+            console.log(`Processing unstaking stake entry for provider: ${stake.address}`);
+            // Only add if no regular stake exists
+            // if regular stake exists
+            //      it means the provider restaked without waiting for unstaking period
+            if (dbStakes.get(stake.address) != undefined) {
+                dbStakes.get(stake.address)!.forEach((dbStake) => {
+                    if (dbStake.specId == stake.chain) {
+                        return
+                    }
+                })
+            }
+            processStakeEntry(height, dbProviders, dbStakes, stake, true)
+        })
+    } catch (error) {
+        console.error(`An error occurred: ${error}`);
+        throw error;
+    }
 }
 
 async function getLatestPlans(client: LavaClient, dbPlans: Map<string, JsinfoSchema.Plan>) {
-    const lavaClient = client.lavanet.lava;
+    try {
+        const lavaClient = client.lavanet.lava;
 
-    let plans = await lavaClient.plans.list()
-    plans.plansInfo.forEach((plan) => {
-        dbPlans.set(plan.index, {
-            desc: plan.description,
-            id: plan.index,
-            price: parseInt(plan.price.amount),
-        } as JsinfoSchema.Plan)
-    })
+        console.log("Fetching plans");
+        let plans = await lavaClient.plans.list()
+        plans.plansInfo.forEach((plan) => {
+            console.log(`Processing plan: ${plan.index}`);
+            dbPlans.set(plan.index, {
+                desc: plan.description,
+                id: plan.index,
+                price: parseInt(plan.price.amount),
+            } as JsinfoSchema.Plan)
+        })
+    } catch (error) {
+        console.error(`An error occurred: ${error}`);
+        throw error;
+    }
 }
 
 export async function UpdateLatestBlockMeta(

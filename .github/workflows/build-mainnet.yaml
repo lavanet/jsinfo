@@ -63,7 +63,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-buildx-
 
-      - name: TESTNET JsInfo Image Tag
+      - name: MAINNET JsInfo Image Tag
         env:
           IMAGE_TAG: ${{ github.sha }}
           NOW: ${{ env.NOW }}
@@ -81,31 +81,31 @@ jobs:
             --cache-to="type=local,dest=/tmp/.buildx-cache-new" \
             --push -f Dockerfile .
 
-      # - name: DeployOnCommit - Checkout growth-deployments repository
-      #   uses: actions/checkout@v2
-      #   with:
-      #     repository: lavanet/growth-deployments
-      #     token: ${{ secrets.GH_PAT }}
-      #     path: growth-deployments
-      #     ref: main
+      - name: DeployOnCommit - Checkout growth-deployments repository
+        uses: actions/checkout@v2
+        with:
+          repository: lavanet/growth-deployments
+          token: ${{ secrets.GH_PAT }}
+          path: growth-deployments
+          ref: main
 
-      # - name: DeployOnCommit - Update growth-deployments/jsinfo/helm/values.mainnet.yaml
-      #   env:
-      #     IMAGE_TAG: ${{ github.sha }}
-      #     NOW: ${{ env.NOW }}
-      #   run: |
-      #     sed -i 's|tag:.*|tag: '"${IMAGE_TAG}-${NOW}"'|' growth-deployments/jsinfo/helm/values.mainnet.yaml
+      - name: DeployOnCommit - Update growth-deployments/jsinfo/helm/values.mainnet.yaml
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+          NOW: ${{ env.NOW }}
+        run: |
+          sed -i 's|tag:.*|tag: '"${IMAGE_TAG}-${NOW}"'|' growth-deployments/jsinfo/helm/values.mainnet.yaml
 
-      # - name: DeployOnCommit - Commit and push changes
-      #   run: |
-      #     cd growth-deployments
-      #     git config --global user.name 'GitHub Action'
-      #     git config --global user.email 'action@github.com'
-      #     git config --global pull.ff only
-      #     git add jsinfo/helm/values.mainnet.yaml
-      #     git commit -m 'Update jsinfo backend mainnet image tag'
-      #     git pull --rebase
-      #     git push origin
+      - name: DeployOnCommit - Commit and push changes
+        run: |
+          cd growth-deployments
+          git config --global user.name 'GitHub Action'
+          git config --global user.email 'action@github.com'
+          git config --global pull.ff only
+          git add jsinfo/helm/values.mainnet.yaml
+          git commit -m 'Update jsinfo backend mainnet image tag'
+          git pull --rebase
+          git push origin
 
       # Necessary if you don't want your cache to grow forever, until
       # https://github.com/docker/build-push-action/issues/252

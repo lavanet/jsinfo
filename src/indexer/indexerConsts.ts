@@ -30,6 +30,7 @@ export const JSINFO_INDEXER_EVENT_ATTRIBUTE_VALUE_MAX_LENGTH: number = parseInt(
 // lava_provider_bonus_rewards was 600 keys
 export const JSINFO_INDEXER_EVENT_ATTRIBUTE_KEY_COUNT_MAX: number = parseInt(GetEnvVar('JSINFO_INDEXER_EVENT_ATTRIBUTE_KEY_COUNT_MAX', "5000"));
 
+export const JSINFO_INDEXER_RUN_MIGRATIONS: boolean = GetEnvVar('JSINFO_INDEXER_RUN_MIGRATIONS', "false").toLowerCase() == "true";
 // Checks
 
 // Create the directory if it doesn't exist

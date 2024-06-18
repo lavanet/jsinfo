@@ -194,7 +194,7 @@ async function getLatestProvidersAndSpecsAndStakes(
 
         // unstaking stakes
         console.log("lavaClient", lavaClient)
-        console.log("Fetching unstaking stakes 111111", lavaClient.epochstorage);
+        console.log("555555 Fetching unstaking stakes 111111", lavaClient.epochstorage);
         let unstaking = await lavaClient.epochstorage.stakeStorage({
             index: 'Unstake'
         })

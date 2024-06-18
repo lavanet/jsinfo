@@ -26,7 +26,7 @@
   "dependencies": {
     "@cosmjs/stargate": "^0.31.1",
     "@fastify/cors": "^8.5.0",
-    "@lavanet/lavajs": "^0.22.4",
+    "@lavanet/lavajs": "2.1.3",
     "@supercharge/promise-pool": "^3.1.0",
     "async-retry": "^1.3.3",
     "bun-types": "^1.0.17",
@@ -35,6 +35,7 @@
     "drizzle-orm": "^0.29.3",
     "fastify": "^4.23.2",
     "http-proxy": "^1.18.1",
+    "nock": "^13.5.4",
     "pako": "^2.1.0",
     "pino-pretty": "^10.3.1",
     "postgres": "^3.3.5",

@@ -6,6 +6,7 @@ import { ne } from "drizzle-orm";
 import { DoInChunks } from "../utils";
 import { StakeEntry } from '@lavanet/lavajs/dist/codegen/lavanet/lava/epochstorage/stake_entry';
 import { JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE } from './indexerConsts';
+import { ToSignedInt } from './indexerUtils';
 
 export type LavaClient = Awaited<ReturnType<typeof lavajs.lavanet.ClientFactory.createRPCQueryClient>>
 
@@ -145,7 +146,7 @@ function processStakeEntry(
     let stakeArr: JsinfoSchema.ProviderStake[] = dbStakes.get(providerStake.address)!
 
     // status
-    const appliedHeight = providerStake.stakeAppliedBlock.toSigned().toInt()
+    const appliedHeight = ToSignedInt(providerStake.stakeAppliedBlock)
     let status = JsinfoSchema.LavaProviderStakeStatus.Active
     if (isUnstaking) {
         status = JsinfoSchema.LavaProviderStakeStatus.Unstaking
@@ -156,7 +157,7 @@ function processStakeEntry(
         provider: providerStake.address,
         blockId: height,
         specId: providerStake.chain,
-        geolocation: providerStake.geolocation.toNumber(),
+        geolocation: ToSignedInt(providerStake.geolocation),
         addons: addons,
         extensions: extensions,
         status: status,
@@ -173,51 +174,71 @@ async function getLatestProvidersAndSpecsAndStakes(
     dbSpecs: Map<string, JsinfoSchema.Spec>,
     dbStakes: Map<string, JsinfoSchema.ProviderStake[]>,
 ) {
-    const lavaClient = client.lavanet.lava;
-    dbStakes.clear()
+    try {
+        const lavaClient = client.lavanet.lava;
+        dbStakes.clear()
 
-    // regular stakes
-    let specs = await lavaClient.spec.showAllChains()
-    await Promise.all(specs.chainInfoList.map(async (spec) => {
-        GetOrSetSpec(dbSpecs, null, spec.chainID)
+        // regular stakes
+        console.log("Fetching all chains");
+        let specs = await lavaClient.spec.showAllChains()
+        await Promise.all(specs.chainInfoList.map(async (spec) => {
+            console.log(`Processing spec: ${spec.chainID}`);
+            GetOrSetSpec(dbSpecs, null, spec.chainID)
 
-        let providers = await lavaClient.pairing.providers({ chainID: spec.chainID, showFrozen: true })
-        providers.stakeEntry.forEach((stake) => {
-            processStakeEntry(height, dbProviders, dbStakes, stake, false)
-        })
-    }))
-
-    // unstaking stakes
-    let unstaking = await lavaClient.epochstorage.stakeStorage({
-        index: 'Unstake'
-    })
-    unstaking.stakeStorage.stakeEntries.forEach((stake) => {
-        //
-        // Only add if no regular stake exists
-        // if regular stake exists
-        //      it means the provider restaked without waiting for unstaking period
-        if (dbStakes.get(stake.address) != undefined) {
-            dbStakes.get(stake.address)!.forEach((dbStake) => {
-                if (dbStake.specId == stake.chain) {
-                    return
-                }
+            console.log(`Fetching providers for spec: ${spec.chainID}`);
+            let providers = await lavaClient.pairing.providers({ chainID: spec.chainID, showFrozen: true })
+            providers.stakeEntry.forEach((stake) => {
+                console.log(`Processing stake entry for provider: ${stake.address}`);
+                processStakeEntry(height, dbProviders, dbStakes, stake, false)
             })
-        }
-        processStakeEntry(height, dbProviders, dbStakes, stake, true)
-    })
+        }))
+
+        // unstaking stakes
+        console.log("lavaClient", lavaClient)
+        console.log("555555 Fetching unstaking stakes 111111", lavaClient.epochstorage);
+        let unstaking = await lavaClient.epochstorage.stakeStorage({
+            index: 'Unstake'
+        })
+        console.log("Fetching unstaking stakes - done", unstaking.stakeStorage.stakeEntries);
+        unstaking.stakeStorage.stakeEntries.forEach((stake) => {
+            console.log(`Processing unstaking stake entry for provider: ${stake.address}`);
+            // Only add if no regular stake exists
+            // if regular stake exists
+            //      it means the provider restaked without waiting for unstaking period
+            if (dbStakes.get(stake.address) != undefined) {
+                dbStakes.get(stake.address)!.forEach((dbStake) => {
+                    if (dbStake.specId == stake.chain) {
+                        return
+                    }
+                })
+            }
+            console.log(`Processing stake entry for provider: ${stake.address}`);
+            processStakeEntry(height, dbProviders, dbStakes, stake, true)
+        })
+    } catch (error) {
+        console.error(`An error occurred: ${error}`);
+        throw error;
+    }
 }
 
 async function getLatestPlans(client: LavaClient, dbPlans: Map<string, JsinfoSchema.Plan>) {
-    const lavaClient = client.lavanet.lava;
+    try {
+        const lavaClient = client.lavanet.lava;
 
-    let plans = await lavaClient.plans.list()
-    plans.plansInfo.forEach((plan) => {
-        dbPlans.set(plan.index, {
-            desc: plan.description,
-            id: plan.index,
-            price: parseInt(plan.price.amount),
-        } as JsinfoSchema.Plan)
-    })
+        console.log("Fetching plans");
+        let plans = await lavaClient.plans.list()
+        plans.plansInfo.forEach((plan) => {
+            console.log(`Processing plan: ${plan.index}`);
+            dbPlans.set(plan.index, {
+                desc: plan.description,
+                id: plan.index,
+                price: parseInt(plan.price.amount),
+            } as JsinfoSchema.Plan)
+        })
+    } catch (error) {
+        console.error(`An error occurred: ${error}`);
+        throw error;
+    }
 }
 
 export async function UpdateLatestBlockMeta(

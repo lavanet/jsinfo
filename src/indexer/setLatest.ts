@@ -6,6 +6,7 @@ import { ne } from "drizzle-orm";
 import { DoInChunks } from "../utils";
 import { StakeEntry } from '@lavanet/lavajs/dist/codegen/lavanet/lava/epochstorage/stake_entry';
 import { JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE } from './indexerConsts';
+import { ToSignedInt } from './indexerUtils';
 
 export type LavaClient = Awaited<ReturnType<typeof lavajs.lavanet.ClientFactory.createRPCQueryClient>>
 
@@ -145,7 +146,7 @@ function processStakeEntry(
     let stakeArr: JsinfoSchema.ProviderStake[] = dbStakes.get(providerStake.address)!
 
     // status
-    const appliedHeight = providerStake.stakeAppliedBlock.toSigned().toInt()
+    const appliedHeight = ToSignedInt(providerStake.stakeAppliedBlock)
     let status = JsinfoSchema.LavaProviderStakeStatus.Active
     if (isUnstaking) {
         status = JsinfoSchema.LavaProviderStakeStatus.Unstaking
@@ -156,7 +157,7 @@ function processStakeEntry(
         provider: providerStake.address,
         blockId: height,
         specId: providerStake.chain,
-        geolocation: providerStake.geolocation.toNumber(),
+        geolocation: ToSignedInt(providerStake.geolocation),
         addons: addons,
         extensions: extensions,
         status: status,

@@ -7,6 +7,6 @@ disable-alert-suppression: false
 suppression-alert-count-threshold: 0
 metrics-listen-address: ":7776"
 disable-alert-logging: false
-post-results-address: http://localhost:8081/lavapProviderHealth
+post-results-address: http://localhost:6500
 provider_addresses:
   - all

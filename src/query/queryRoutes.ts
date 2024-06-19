@@ -49,7 +49,6 @@ import { ConsumerCahcedHandler, ConsumerCahcedHandlerOpts } from './handlers/con
 import { EventsCachedHandler, EventsCachedHandlerOpts } from './handlers/eventsHandler';
 
 // -- Internal data endpoints --
-import { LavapProviderHealthHandler, LavapProviderHealthHandlerOpts } from './handlers/lavapProviderHealthHandler';
 import { LavapDualStackingDelegatorRewardsHandler, LavapDualStackingDelegatorRewardsOpts } from './handlers/lavapDualStackingDelegatorRewardsHandler';
 
 // -- Server status ajax --
@@ -112,10 +111,6 @@ GetServerInstance().get('/specStakesCsv/:specId', SpecStakesCSVRawHandler);
 GetServerInstance().get('/specCharts/:specId', SpecChartsRawHandlerOpts, SpecChartsRawHandler);
 
 // -- Internal data endpoints --
-if (consts.JSINFO_QUERY_LAVAP_PROVIDER_HEALTH_ENDPOINT_ENABLED) {
-    GetServerInstance().post('/lavapProviderHealth', LavapProviderHealthHandlerOpts, LavapProviderHealthHandler);
-}
-
 if (consts.JSINFO_QUERY_LAVAP_DUAL_STACKING_DELEGATOR_REWARDS_ENDPOINT_ENABLED) {
     GetServerInstance().post('/lavapDualStackingDelegatorRewards', LavapDualStackingDelegatorRewardsOpts, LavapDualStackingDelegatorRewardsHandler);
 }

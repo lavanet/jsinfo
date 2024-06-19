@@ -17,13 +17,13 @@ type ProviderHealthLatestResponse = {
             [iface: string]: {
                 [geolocation: string]: {
                     status: string;
-                    message: string;
+                    data: any | null;
                     timestamp: string;
                 }
             }
         }
     };
-    overall_status: string;
+    overallStatus: string;
 };
 
 type HealthRecord = {
@@ -52,22 +52,20 @@ export const ProviderHealthLatestCachedHandlerOpts: RouteShorthandOptions = {
                                 type: 'object',
                                 additionalProperties: {
                                     type: 'object',
-                                    properties: {
-                                        interface: {
+                                    additionalProperties: {
+                                        type: 'object',
+                                        additionalProperties: {
                                             type: 'object',
-                                            additionalProperties: {
-                                                type: 'object',
-                                                properties: {
-                                                    status: { type: 'string' },
-                                                    message: { type: 'string' },
-                                                    timestamp: { type: 'string' }
-                                                }
+                                            properties: {
+                                                status: { type: 'string' },
+                                                data: { type: ['object', 'null'], additionalProperties: {} },
+                                                timestamp: { type: 'string' }
                                             }
                                         }
                                     }
                                 }
                             },
-                            overall_status: { type: 'string' }
+                            overallStatus: { type: 'string' }
                         }
                     }
                 }
@@ -80,7 +78,7 @@ export async function ProviderHealthLatestCachedHandler(request: FastifyRequest,
     let provider = await GetAndValidateProviderAddressFromRequest(request, reply);
     if (provider === '') {
         // null is retuned for *CachedHandler function - the first caching layer on the request side
-        // replay is returned in the *RawHandler functions - which skip this cache and probably use the CachedDiskDbDataFetcher
+        // reply is returned in the *RawHandler functions - which skip this cache and probably use the CachedDiskDbDataFetcher
         // CachedDiskDbDataFetcher is the layer of caching against the db and not against the query
         return null;
     }
@@ -105,13 +103,11 @@ export async function ProviderHealthLatestCachedHandler(request: FastifyRequest,
         return null;
     }
 
-    console.log("healthRecords", healthRecords.slice(0, 100));
-
     const specs: ProviderHealthLatestResponse['specs'] = {};
     let overallStatus = 'healthy';
 
     for (const record of healthRecords) {
-        const { spec, interface: iface, geolocation, status, timestamp } = record;
+        const { spec, interface: iface, geolocation, status, timestamp, data } = record;
 
         if (!iface || !geolocation) {
             continue;
@@ -122,7 +118,7 @@ export async function ProviderHealthLatestCachedHandler(request: FastifyRequest,
         if (!specs[spec][iface][geolocation]) {
             specs[spec][iface][geolocation] = {
                 status,
-                message: record.data || '',
+                data: data ? JSON.parse(data) : null,
                 timestamp: timestamp.toISOString()
             };
         } else {
@@ -130,7 +126,7 @@ export async function ProviderHealthLatestCachedHandler(request: FastifyRequest,
             if (new Date(existingRecord.timestamp) < timestamp) {
                 specs[spec][iface][geolocation] = {
                     status,
-                    message: record.data || '',
+                    data: data ? JSON.parse(data) : null,
                     timestamp: timestamp.toISOString()
                 };
             }
@@ -149,7 +145,7 @@ export async function ProviderHealthLatestCachedHandler(request: FastifyRequest,
         data: {
             provider,
             specs,
-            overall_status: overallStatus
+            overallStatus
         }
     };
 }

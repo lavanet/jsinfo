@@ -179,16 +179,12 @@ async function getLatestProvidersAndSpecsAndStakes(
         dbStakes.clear()
 
         // regular stakes
-        console.log("Fetching all chains");
         let specs = await lavaClient.spec.showAllChains()
         await Promise.all(specs.chainInfoList.map(async (spec) => {
-            console.log(`Processing spec: ${spec.chainID}`);
             GetOrSetSpec(dbSpecs, null, spec.chainID)
 
-            console.log(`Fetching providers for spec: ${spec.chainID}`);
             let providers = await lavaClient.pairing.providers({ chainID: spec.chainID, showFrozen: true })
             providers.stakeEntry.forEach((stake) => {
-                console.log(`Processing stake entry for provider: ${stake.address}`);
                 processStakeEntry(height, dbProviders, dbStakes, stake, false)
             })
         }))

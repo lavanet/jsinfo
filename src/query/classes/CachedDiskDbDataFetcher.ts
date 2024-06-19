@@ -12,6 +12,7 @@ import {
     JSINFO_QUERY_HANDLER_CACHE_TIME_SECONDS,
     JSINGO_CACHED_DB_DATA_FETCHER_DEBUG
 } from "../queryConsts";
+import { WriteErrorToFastifyReply } from '../utils/queryServerUtils';
 
 if (!GetDataLengthForPrints) {
     throw new Error("GetDataLengthForPrints is undefined or null");
@@ -481,7 +482,7 @@ export class CachedDiskDbDataFetcher<T> {
 
         } catch (error) {
             const err = error as Error;
-            reply.code(400).send({ error: String(err.message) });
+            WriteErrorToFastifyReply(reply, String(err.message));
             this.log(`getPaginatedItemsCachedHandler:: Error occurred: ${err.message}`);
             return null
         }
@@ -543,7 +544,7 @@ export class CachedDiskDbDataFetcher<T> {
 
         } catch (error) {
             const err = error as Error;
-            reply.code(400).send({ error: String(err.message) });
+            WriteErrorToFastifyReply(reply, String(err.message));
             return null
         }
     }
@@ -564,7 +565,7 @@ export class CachedDiskDbDataFetcher<T> {
 
         } catch (error) {
             const err = error as Error;
-            reply.code(400).send({ error: String(err.message) });
+            WriteErrorToFastifyReply(reply, String(err.message));
             return reply;
         }
     }
@@ -594,7 +595,7 @@ export class CachedDiskDbDataFetcher<T> {
 
         } catch (error) {
             const err = error as Error;
-            reply.code(400).send({ error: String(err.message) });
+            WriteErrorToFastifyReply(reply, String(err.message));
             return reply;
         }
     }

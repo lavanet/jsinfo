@@ -7,6 +7,7 @@ import * as consts from './queryConsts';
 import fs from 'fs';
 import path from 'path';
 import { validatePaginationString } from './utils/queryPagination';
+import { WriteErrorToFastifyReply } from './utils/queryServerUtils';
 
 interface CacheEntry {
     isFetching: Date | null;
@@ -253,21 +254,16 @@ class RequestCache {
     ): (request: FastifyRequest, reply: FastifyReply) => Promise<any> {
         return async (request: FastifyRequest, reply: FastifyReply) => {
             const query = request.query as { [key: string]: unknown };
-            const shouldUseCache = consts.JSINFO_QUERY_CACHE_ENABLED;
-
-            if (query.cache) {
-                console.log(`Request received from ${request.ip} for ${request.url} with query parameters ${JSON.stringify(query)}`);
-            }
 
             if (query.pagination && typeof query.pagination === 'string') {
                 if (!validatePaginationString(query.pagination)) {
                     console.log('Failed to parse pagination:', query.pagination);
-                    reply.code(400).send({ error: 'Bad pagination argument' });
+                    WriteErrorToFastifyReply(reply, 'Bad pagination argument');
                     return reply;
                 }
             }
 
-            if (shouldUseCache) {
+            if (consts.JSINFO_QUERY_CACHE_ENABLED) {
                 console.log(`RequestCache: Using cache for ${request.url}`);
                 const data = await this.getOrFetchData(request, reply, handler);
                 // returns null on error and handler handled the response
@@ -282,7 +278,7 @@ class RequestCache {
 
             const handlerData = await handler(request, reply);
             // returns null on error and handler handled the response
-            if (handlerData == null) return;
+            if (handlerData == null) return reply;
             if (this.isValidData(handlerData)) {
                 reply.send(handlerData);
                 return reply;

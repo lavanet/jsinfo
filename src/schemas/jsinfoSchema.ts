@@ -279,7 +279,7 @@ export const providerHealth = pgTable('provider_health', {
   spec: varchar("spec", { length: 50 }).notNull(),
   geolocation: varchar("geolocation", { length: 10 }).default(sql`NULL`),
   interface: varchar("interface", { length: 50 }).default(sql`NULL`),
-  status: varchar("status", { length: 10 }).notNull(), // 'healthy', 'frozen', 'unhealthy'
+  status: varchar("status", { length: 10 }).notNull(), // 'healthy', 'frozen', 'unhealthy', 'jailed'
   data: varchar("data", { length: 1024 }).default(sql`NULL`),
 }, (table) => {
   return {

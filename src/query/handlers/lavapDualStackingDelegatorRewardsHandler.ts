@@ -5,6 +5,7 @@ import * as JsinfoSchema from '../../schemas/jsinfoSchema';
 import { QueryCheckJsinfoDbInstance, QueryGetJsinfoDbInstance } from '../queryDb';
 import { lt } from "drizzle-orm";
 import { JSINFO_QUERY_PROVIDER_DUAL_STACKING_DELEGATOR_REWARDS_CUTOFF_DAYS } from '../queryConsts';
+import { WriteErrorToFastifyReply } from '../utils/queryServerUtils';
 
 type RewardInput = {
     provider: string;
@@ -62,7 +63,7 @@ export async function LavapDualStackingDelegatorRewardsHandler(request: FastifyR
 
     // Validate and parse request
     if (!body || !('rewards' in body)) {
-        reply.status(400).send({ error: 'Invalid request body or missing rewards property' });
+        WriteErrorToFastifyReply(reply, 'Invalid request body or missing rewards property');
         return;
     }
 

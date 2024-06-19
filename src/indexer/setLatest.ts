@@ -228,10 +228,8 @@ async function getLatestPlans(client: LavaClient, dbPlans: Map<string, JsinfoSch
     try {
         const lavaClient = client.lavanet.lava;
 
-        console.log("Fetching plans");
         let plans = await lavaClient.plans.list()
         plans.plansInfo.forEach((plan) => {
-            console.log(`Processing plan: ${plan.index}`);
             dbPlans.set(plan.index, {
                 desc: plan.description,
                 id: plan.index,

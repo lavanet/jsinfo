@@ -124,22 +124,15 @@
     {
       "idx": 17,
       "version": "5",
-      "when": 1718632703869,
-      "tag": "0017_zippy_shockwave",
+      "when": 1718633528841,
+      "tag": "0017_lumpy_liz_osborn",
       "breakpoints": true
     },
     {
       "idx": 18,
       "version": "5",
-      "when": 1718633484798,
-      "tag": "0018_simple_proteus",
-      "breakpoints": true
-    },
-    {
-      "idx": 19,
-      "version": "5",
-      "when": 1718633528841,
-      "tag": "0019_lumpy_liz_osborn",
+      "when": 1718755118266,
+      "tag": "0018_petite_vindicator",
       "breakpoints": true
     }
   ]

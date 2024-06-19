@@ -280,7 +280,7 @@ export const providerHealth = pgTable('provider_health', {
   geolocation: varchar("geolocation", { length: 10 }).default(sql`NULL`),
   interface: varchar("interface", { length: 50 }).default(sql`NULL`),
   status: varchar("status", { length: 10 }).notNull(), // 'healthy', 'frozen', 'unhealthy'
-  message: varchar("message", { length: 1024 }).default(sql`NULL`),
+  data: varchar("data", { length: 1024 }).default(sql`NULL`),
 }, (table) => {
   return {
     providerIdx: index("provider_health_provider_idx").on(table.provider),
@@ -290,6 +290,21 @@ export const providerHealth = pgTable('provider_health', {
 
 export type ProviderHealth = typeof providerHealth.$inferSelect;
 export type InsertProviderHealth = typeof providerHealth.$inferInsert;
+
+export const providerAccountInfo = pgTable('provider_accountinfo', {
+  id: serial('id').primaryKey(),
+  provider: text('provider').references(() => providers.address),
+  timestamp: timestamp('timestamp').notNull(),
+  data: text("data").default(sql`NULL`),
+}, (table) => {
+  return {
+    providerIdx: index("provider_accountinfo_provider_idx").on(table.provider),
+    timestampIdx: index("provider_accountinfo_timestamp_idx").on(table.timestamp),
+  };
+});
+
+export type ProviderAccountInfo = typeof providerAccountInfo.$inferSelect;
+export type InsertProviderAccountInfo = typeof providerAccountInfo.$inferInsert;
 
 export const dualStackingDelegatorRewards = pgTable('dual_stacking_delegator_rewards', {
   id: serial('id').primaryKey(),

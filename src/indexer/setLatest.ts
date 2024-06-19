@@ -193,15 +193,23 @@ async function getLatestProvidersAndSpecsAndStakes(
             })
         }))
 
-        // unstaking stakes
-        console.log("lavaClient", lavaClient)
-        console.log("555555 Fetching unstaking stakes 111111", lavaClient.epochstorage);
-        let unstaking = await lavaClient.epochstorage.stakeStorage({
-            index: 'Unstake'
-        })
-        console.log("Fetching unstaking stakes - done", unstaking.stakeStorage.stakeEntries);
+        let unstaking;
+        try {
+            // unstaking stakes
+            unstaking = await lavaClient.epochstorage.stakeStorage({
+                index: 'Unstake'
+            });
+        } catch (error) {
+            // checked with the consensus team - if the unstake list is empty we get this error - happens on mainnet
+            if ((error + "").includes('rpc error: code = InvalidArgument desc = not found: invalid request')) {
+                console.log('The unstake list is empty.');
+                return; // exit the function if the unstake list is empty
+            } else {
+                throw error; // re-throw the error if it's not the one we're expecting
+            }
+        }
+
         unstaking.stakeStorage.stakeEntries.forEach((stake) => {
-            console.log(`Processing unstaking stake entry for provider: ${stake.address}`);
             // Only add if no regular stake exists
             // if regular stake exists
             //      it means the provider restaked without waiting for unstaking period
@@ -212,7 +220,6 @@ async function getLatestProvidersAndSpecsAndStakes(
                     }
                 })
             }
-            console.log(`Processing stake entry for provider: ${stake.address}`);
             processStakeEntry(height, dbProviders, dbStakes, stake, true)
         })
     } catch (error) {

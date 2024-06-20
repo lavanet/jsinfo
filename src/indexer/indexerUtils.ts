@@ -26,6 +26,9 @@ export function ReplaceArchive(str: string): string {
 
 export function ToSignedInt(input: bigint | number | string | Long): number {
     let num;
+    if (["9223372036854776000", "2147483647", "-1"].some(maxValue => (input + "").includes(maxValue))) {
+        return -1;
+    }
     if (Long.isLong(input)) {
         num = input.toSigned().toInt();
     } else if (typeof input === 'bigint') {

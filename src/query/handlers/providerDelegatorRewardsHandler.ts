@@ -8,7 +8,7 @@ import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../queryDb';
 import { eq, desc, gt, and } from "drizzle-orm";
 import { Pagination } from '../utils/queryPagination';
-import { CompareValues, GetAndValidateProviderAddressFromRequest, SafeSlice } from '../utils/queryUtils';
+import { CompareValues, GetAndValidateProviderAddressFromRequest, GetDataLength, SafeSlice } from '../utils/queryUtils';
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '../queryConsts';
 import * as JsinfoSchema from '../../schemas/jsinfoSchema';
 import { CachedDiskDbDataFetcher } from '../classes/CachedDiskDbDataFetcher';
@@ -80,6 +80,11 @@ class ProviderDelegatorRewardsData extends CachedDiskDbDataFetcher<DelegatorRewa
             .orderBy(desc(JsinfoSchema.dualStackingDelegatorRewards.id))
             .offset(0)
             .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION)
+
+        if (GetDataLength(result) === 0) {
+            this.setDataIsEmpty();
+            return [];
+        }
 
         const highestId = result[0]?.id;
         if (highestId !== undefined) {

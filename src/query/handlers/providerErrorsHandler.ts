@@ -6,7 +6,7 @@ import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryCheckRelaysReadDbInstance, QueryGetRelaysReadDbInstance } from '../queryDb';
 import { eq, desc, and, gt } from "drizzle-orm";
 import { Pagination } from '../utils/queryPagination';
-import { CSVEscape, CompareValues, GetAndValidateProviderAddressFromRequest, SafeSlice } from '../utils/queryUtils';
+import { CSVEscape, CompareValues, GetAndValidateProviderAddressFromRequest, GetDataLength, SafeSlice } from '../utils/queryUtils';
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '../queryConsts';
 import { ParseLavapProviderError } from '../utils/lavapProvidersErrorParser';
 import * as RelaysSchema from '../../schemas/relaysSchema';
@@ -86,6 +86,11 @@ class ProviderErrorsData extends CachedDiskDbDataFetcher<ErrorsReportReponse> {
             .orderBy(desc(RelaysSchema.lavaReportError.id)).
             offset(0).
             limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION)
+
+        if (GetDataLength(result) === 0) {
+            this.setDataIsEmpty();
+            return [];
+        }
 
         const highestId = result[0]?.id;
         if (highestId !== undefined) {

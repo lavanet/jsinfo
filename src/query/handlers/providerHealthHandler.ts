@@ -6,7 +6,7 @@ import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '..
 import * as JsinfoSchema from '../../schemas/jsinfoSchema';
 import { eq, desc } from "drizzle-orm";
 import { Pagination } from '../utils/queryPagination';
-import { CSVEscape, GetAndValidateProviderAddressFromRequest, GetDataLengthForPrints, IsNotNullAndNotZero, SafeSlice } from '../utils/queryUtils';
+import { CSVEscape, GetAndValidateProviderAddressFromRequest, GetDataLength, GetDataLengthForPrints, IsNotNullAndNotZero, SafeSlice } from '../utils/queryUtils';
 import { CompareValues } from '../utils/queryUtils';
 import path from 'path';
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '../queryConsts';
@@ -81,6 +81,12 @@ class ProviderHealthData extends CachedDiskDbDataFetcher<HealthReportResponse> {
 
         let query = createHealthReportQuery(this.addr);
         let res: HealthReportResponse[] = await query;
+
+        if (GetDataLength(res) === 0) {
+            this.setDataIsEmpty();
+            return [];
+        }
+
         return ApplyHealthResponseGroupingAndTextFormatting(res);
     }
 

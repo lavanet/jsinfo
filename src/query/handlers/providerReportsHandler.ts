@@ -8,7 +8,7 @@ import { and, desc, eq, gt, gte } from "drizzle-orm";
 import { Pagination, ParsePaginationFromString } from '../utils/queryPagination';
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '../queryConsts';
 import path from 'path';
-import { CSVEscape, CompareValues, GetAndValidateProviderAddressFromRequest, GetNestedValue, SafeSlice } from '../utils/queryUtils';
+import { CSVEscape, CompareValues, GetAndValidateProviderAddressFromRequest, GetDataLength, GetNestedValue, SafeSlice } from '../utils/queryUtils';
 import { CachedDiskDbDataFetcher } from '../classes/CachedDiskDbDataFetcher';
 
 export type ProviderReportsResponse = {
@@ -143,6 +143,11 @@ class ProviderReportsData extends CachedDiskDbDataFetcher<ProviderReportsRespons
             orderBy(desc(JsinfoSchema.providerReported.id)).
             offset(0).
             limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
+
+        if (GetDataLength(reportsRes) === 0) {
+            this.setDataIsEmpty();
+            return [];
+        }
 
         const highestId = reportsRes[0]?.provider_reported.id;
         if (highestId !== undefined) {

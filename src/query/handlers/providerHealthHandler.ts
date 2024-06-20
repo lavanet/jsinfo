@@ -80,7 +80,6 @@ class ProviderHealthData extends CachedDiskDbDataFetcher<HealthReportEntry> {
         await QueryCheckJsinfoReadDbInstance();
 
         let query = createHealthReportQuery(this.addr);
-<<<<<<< HEAD
         let res: HealthReportEntry[] = await query;
         res = ApplyHealthResponseGroupingAndTextFormatting(res);
 
@@ -89,17 +88,12 @@ class ProviderHealthData extends CachedDiskDbDataFetcher<HealthReportEntry> {
             res = res.concat(healthV2Data);
         }
 
-        return res;
-=======
-        let res: HealthReportResponse[] = await query;
-
         if (GetDataLength(res) === 0) {
             this.setDataIsEmpty();
             return [];
         }
 
-        return ApplyHealthResponseGroupingAndTextFormatting(res);
->>>>>>> mainnet
+        return res;
     }
 
     public async getPaginatedItemsImpl(data: HealthReportEntry[], pagination: Pagination | null): Promise<HealthReportEntry[] | null> {

@@ -12,6 +12,7 @@ import {
     JSINFO_QUERY_HANDLER_CACHE_TIME_SECONDS,
     JSINGO_CACHED_DB_DATA_FETCHER_DEBUG
 } from "../queryConsts";
+import { WriteErrorToFastifyReply } from '../utils/queryServerUtils';
 
 if (!GetDataLengthForPrints) {
     throw new Error("GetDataLengthForPrints is undefined or null");
@@ -299,10 +300,24 @@ export class CachedDiskDbDataFetcher<T> {
         return null;
     }
 
+    protected setDataIsEmpty(): void {
+        this.log("setDataIsEmpty:: Called")
+        fs.writeFileSync(this.getCacheFilePath(), JSON.stringify({ "empty": true }));
+        this.isDataFetched = true;
+        this.data = { "empty": true };
+        this.isDataEmpty = true;
+    }
+
     private async fetchAndCacheDataBg() {
         this.log('fetchAndCacheDataBg:: Called');
 
+        // data is about to be refetched - check if it's possible to get non empty data
+        this.isDataEmpty = false;
+
         let data = await this.fetchDataBg();
+
+        // data is still empty, return
+        if (this.isDataEmpty) return;
 
         let empty_data_retries = 3;
 
@@ -322,10 +337,7 @@ export class CachedDiskDbDataFetcher<T> {
                     empty_data_retries--;
                     if (empty_data_retries == 0) {
                         this.log(`fetchAndCacheDataBg:: Data is empty, no more retries, since: ${this.getSinceDebugString()}, empty_data_retries: ${empty_data_retries}`);
-                        fs.writeFileSync(this.getCacheFilePath(), JSON.stringify({ "empty": true }));
-                        this.isDataFetched = true;
-                        this.data = { "empty": true };
-                        this.isDataEmpty = true;
+                        this.setDataIsEmpty();
                     }
                     data = await this.fetchDataBg();
                     continue;
@@ -409,7 +421,6 @@ export class CachedDiskDbDataFetcher<T> {
         this.deleteFile(this.getCacheFilePath());
         this.deleteFile(this.getSinceFilePath());
         this.deleteFile(this.getLockFilePath());
-        this.isDataEmpty = false;
         this.sinceData = null;
         this.sinceDataDate = null;
         this.isDataEmpty = false;
@@ -481,7 +492,7 @@ export class CachedDiskDbDataFetcher<T> {
 
         } catch (error) {
             const err = error as Error;
-            reply.code(400).send({ error: String(err.message) });
+            WriteErrorToFastifyReply(reply, String(err.message));
             this.log(`getPaginatedItemsCachedHandler:: Error occurred: ${err.message}`);
             return null
         }
@@ -543,7 +554,7 @@ export class CachedDiskDbDataFetcher<T> {
 
         } catch (error) {
             const err = error as Error;
-            reply.code(400).send({ error: String(err.message) });
+            WriteErrorToFastifyReply(reply, String(err.message));
             return null
         }
     }
@@ -564,7 +575,7 @@ export class CachedDiskDbDataFetcher<T> {
 
         } catch (error) {
             const err = error as Error;
-            reply.code(400).send({ error: String(err.message) });
+            WriteErrorToFastifyReply(reply, String(err.message));
             return reply;
         }
     }
@@ -594,7 +605,7 @@ export class CachedDiskDbDataFetcher<T> {
 
         } catch (error) {
             const err = error as Error;
-            reply.code(400).send({ error: String(err.message) });
+            WriteErrorToFastifyReply(reply, String(err.message));
             return reply;
         }
     }

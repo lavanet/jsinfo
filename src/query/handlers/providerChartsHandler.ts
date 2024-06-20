@@ -7,7 +7,7 @@ import { sql, gt, and, lt, eq } from "drizzle-orm";
 import { FormatDateItems } from '../utils/queryDateUtils';
 import { CachedDiskDbDataFetcher } from '../classes/CachedDiskDbDataFetcher';
 import path from 'path';
-import { GetAndValidateProviderAddressFromRequest } from '../utils/queryUtils';
+import { GetAndValidateProviderAddressFromRequest, GetDataLength } from '../utils/queryUtils';
 
 type ProviderChartCuRelay = {
     specId: string;
@@ -250,6 +250,10 @@ class ProviderChartsData extends CachedDiskDbDataFetcher<ProviderChartResponse> 
         await QueryCheckJsinfoReadDbInstance()
 
         const providerMainChartData = await this.getSpecRelayCuChartWithTopProviders();
+        if (GetDataLength(providerMainChartData) === 0) {
+            this.setDataIsEmpty();
+            return [];
+        }
         const providerQosData = await this.getProviderQosData();
         const providerCombinedData = this.combineData(providerMainChartData, providerQosData);
 

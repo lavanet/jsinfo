@@ -3,8 +3,9 @@
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import * as JsinfoSchema from '../../schemas/jsinfoSchema';
 import { QueryCheckJsinfoDbInstance, QueryGetJsinfoDbInstance } from '../queryDb';
-import { lt } from "drizzle-orm";
+import { eq, lt, and, desc } from "drizzle-orm";
 import { JSINFO_QUERY_PROVIDER_DUAL_STACKING_DELEGATOR_REWARDS_CUTOFF_DAYS } from '../queryConsts';
+import { WriteErrorToFastifyReply } from '../utils/queryServerUtils';
 
 type RewardInput = {
     provider: string;
@@ -62,13 +63,13 @@ export async function LavapDualStackingDelegatorRewardsHandler(request: FastifyR
 
     // Validate and parse request
     if (!body || !('rewards' in body)) {
-        reply.status(400).send({ error: 'Invalid request body or missing rewards property' });
+        WriteErrorToFastifyReply(reply, 'Invalid request body or missing rewards property');
         return;
     }
 
     const rewards: RewardInput[] = body.rewards as RewardInput[];
 
-    let provider: string | null = null;
+    let provider: string = "";
 
     let addTimestamp = new Date();
 
@@ -107,10 +108,29 @@ export async function LavapDualStackingDelegatorRewardsHandler(request: FastifyR
                 await tx.delete(JsinfoSchema.dualStackingDelegatorRewards).where(lt(JsinfoSchema.dualStackingDelegatorRewards.timestamp, cutoffDate));
             }
 
-            const result = await tx.insert(JsinfoSchema.dualStackingDelegatorRewards).values(insertData)
-                .returning({ chain: JsinfoSchema.dualStackingDelegatorRewards.chainId });
+            // Iterate over each entry in insertData
+            for (const data of insertData) {
 
-            console.log(`[${new Date().toISOString()}] LavapDualStackingDelegatorRewardsHandler: Provider: ${provider}. Inserted ${result.length} reward entries. chains: ${JSON.stringify(result)}`);
+                // Fetch the latest entry for the same provider and chainId
+                let latestEntries = await tx.select().from(JsinfoSchema.dualStackingDelegatorRewards)
+                    .where(and(
+                        eq(JsinfoSchema.dualStackingDelegatorRewards.chainId, data.chainId),
+                        eq(JsinfoSchema.dualStackingDelegatorRewards.provider, data.provider)
+                    ))
+                    .orderBy(desc(JsinfoSchema.dualStackingDelegatorRewards.timestamp))
+                    .offset(0)
+                    .limit(1);
+
+                let latestEntry = latestEntries ? latestEntries[0] : null;
+
+                // Only insert new data if it's different from the latest entry
+                if (!latestEntry || latestEntry.amount !== data.amount || latestEntry.denom !== data.denom) {
+                    const result = await tx.insert(JsinfoSchema.dualStackingDelegatorRewards).values(data)
+                        .returning({ chain: JsinfoSchema.dualStackingDelegatorRewards.chainId });
+
+                    console.log(`[${new Date().toISOString()}] LavapDualStackingDelegatorRewardsHandler: Provider: ${data.provider}. Inserted 1 reward entry. chains: ${JSON.stringify(result)}`);
+                }
+            }
         });
 
         reply.code(200).send({ status: 'success', message: 'Rewards processed successfully.' });

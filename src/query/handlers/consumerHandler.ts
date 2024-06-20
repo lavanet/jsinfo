@@ -5,6 +5,7 @@ import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../queryDb';
 import * as JsinfoSchema from '../../schemas/jsinfoSchema';
 import { sql, desc, gt, and, eq } from "drizzle-orm";
+import { GetAndValidateProviderAddressFromRequest } from '../utils/queryUtils';
 
 export const ConsumerCahcedHandlerOpts: RouteShorthandOptions = {
     schema: {
@@ -42,16 +43,8 @@ export const ConsumerCahcedHandlerOpts: RouteShorthandOptions = {
 export async function ConsumerCahcedHandler(request: FastifyRequest, reply: FastifyReply) {
     await QueryCheckJsinfoReadDbInstance()
 
-    const { addr } = request.params as { addr: string }
-    if (addr.length != 44 || !addr.startsWith('lava@')) {
-        reply.code(400).send({ error: 'Bad provider name' });
-        return;
-    }
-
-    //
-    const res = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.consumers).where(eq(JsinfoSchema.consumers.address, addr)).limit(1)
-    if (res.length != 1) {
-        reply.code(400).send({ error: 'Provider does not exist' });
+    let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
+    if (addr === '') {
         return reply;
     }
 

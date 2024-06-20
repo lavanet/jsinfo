@@ -6,6 +6,7 @@ import { ne } from "drizzle-orm";
 import { DoInChunks } from "../utils";
 import { StakeEntry } from '@lavanet/lavajs/dist/codegen/lavanet/lava/epochstorage/stake_entry';
 import { JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE } from './indexerConsts';
+import { ToSignedIntOrMinusOne } from './indexerUtils';
 
 export type LavaClient = Awaited<ReturnType<typeof lavajs.lavanet.ClientFactory.createRPCQueryClient>>
 
@@ -145,7 +146,7 @@ function processStakeEntry(
     let stakeArr: JsinfoSchema.ProviderStake[] = dbStakes.get(providerStake.address)!
 
     // status
-    const appliedHeight = providerStake.stakeAppliedBlock.toSigned().toInt()
+    const appliedHeight = ToSignedIntOrMinusOne(providerStake.stakeAppliedBlock)
     let status = JsinfoSchema.LavaProviderStakeStatus.Active
     if (isUnstaking) {
         status = JsinfoSchema.LavaProviderStakeStatus.Unstaking
@@ -156,7 +157,7 @@ function processStakeEntry(
         provider: providerStake.address,
         blockId: height,
         specId: providerStake.chain,
-        geolocation: providerStake.geolocation.toNumber(),
+        geolocation: ToSignedIntOrMinusOne(providerStake.geolocation),
         addons: addons,
         extensions: extensions,
         status: status,
@@ -173,51 +174,72 @@ async function getLatestProvidersAndSpecsAndStakes(
     dbSpecs: Map<string, JsinfoSchema.Spec>,
     dbStakes: Map<string, JsinfoSchema.ProviderStake[]>,
 ) {
-    const lavaClient = client.lavanet.lava;
-    dbStakes.clear()
+    try {
+        const lavaClient = client.lavanet.lava;
+        dbStakes.clear()
 
-    // regular stakes
-    let specs = await lavaClient.spec.showAllChains()
-    await Promise.all(specs.chainInfoList.map(async (spec) => {
-        GetOrSetSpec(dbSpecs, null, spec.chainID)
+        // regular stakes
+        let specs = await lavaClient.spec.showAllChains()
+        await Promise.all(specs.chainInfoList.map(async (spec) => {
+            GetOrSetSpec(dbSpecs, null, spec.chainID)
 
-        let providers = await lavaClient.pairing.providers({ chainID: spec.chainID, showFrozen: true })
-        providers.stakeEntry.forEach((stake) => {
-            processStakeEntry(height, dbProviders, dbStakes, stake, false)
-        })
-    }))
-
-    // unstaking stakes
-    let unstaking = await lavaClient.epochstorage.stakeStorage({
-        index: 'Unstake'
-    })
-    unstaking.stakeStorage.stakeEntries.forEach((stake) => {
-        //
-        // Only add if no regular stake exists
-        // if regular stake exists
-        //      it means the provider restaked without waiting for unstaking period
-        if (dbStakes.get(stake.address) != undefined) {
-            dbStakes.get(stake.address)!.forEach((dbStake) => {
-                if (dbStake.specId == stake.chain) {
-                    return
-                }
+            let providers = await lavaClient.pairing.providers({ chainID: spec.chainID, showFrozen: true })
+            providers.stakeEntry.forEach((stake) => {
+                processStakeEntry(height, dbProviders, dbStakes, stake, false)
             })
+        }))
+
+        let unstaking;
+        try {
+            // unstaking stakes
+            unstaking = await lavaClient.epochstorage.stakeStorage({
+                index: 'Unstake'
+            });
+        } catch (error) {
+            // checked with the consensus team - if the unstake list is empty we get this error - happens on mainnet
+            if ((error + "").includes('rpc error: code = InvalidArgument desc = not found: invalid request')) {
+                console.log('The unstake list is empty.');
+                return; // exit the function if the unstake list is empty
+            } else {
+                throw error; // re-throw the error if it's not the one we're expecting
+            }
         }
-        processStakeEntry(height, dbProviders, dbStakes, stake, true)
-    })
+
+        unstaking.stakeStorage.stakeEntries.forEach((stake) => {
+            // Only add if no regular stake exists
+            // if regular stake exists
+            //      it means the provider restaked without waiting for unstaking period
+            if (dbStakes.get(stake.address) != undefined) {
+                dbStakes.get(stake.address)!.forEach((dbStake) => {
+                    if (dbStake.specId == stake.chain) {
+                        return
+                    }
+                })
+            }
+            processStakeEntry(height, dbProviders, dbStakes, stake, true)
+        })
+    } catch (error) {
+        console.error(`An error occurred: ${error}`);
+        throw error;
+    }
 }
 
 async function getLatestPlans(client: LavaClient, dbPlans: Map<string, JsinfoSchema.Plan>) {
-    const lavaClient = client.lavanet.lava;
+    try {
+        const lavaClient = client.lavanet.lava;
 
-    let plans = await lavaClient.plans.list()
-    plans.plansInfo.forEach((plan) => {
-        dbPlans.set(plan.index, {
-            desc: plan.description,
-            id: plan.index,
-            price: parseInt(plan.price.amount),
-        } as JsinfoSchema.Plan)
-    })
+        let plans = await lavaClient.plans.list()
+        plans.plansInfo.forEach((plan) => {
+            dbPlans.set(plan.index, {
+                desc: plan.description,
+                id: plan.index,
+                price: parseInt(plan.price.amount),
+            } as JsinfoSchema.Plan)
+        })
+    } catch (error) {
+        console.error(`An error occurred: ${error}`);
+        throw error;
+    }
 }
 
 export async function UpdateLatestBlockMeta(
@@ -282,7 +304,6 @@ export async function UpdateLatestBlockMeta(
             await Promise.all(Array.from(static_dbStakes.values()).map(async (stakes) => {
                 return stakes.map(async (stake) => {
                     if (stake.specId == null || stake.specId == "") return;
-                    // console.log("schema.providerStakes.provider,JsinfoSchema.providerStakes.specId", stake)
                     return await tx.insert(JsinfoSchema.providerStakes)
                         .values(stake)
                         .onConflictDoUpdate(

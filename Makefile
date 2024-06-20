@@ -27,6 +27,12 @@ docker_compose_indexer:
 indexer:
 	NODE_TLS_REJECT_UNAUTHORIZED=0 bun run src/indexer.ts
 
+indexer_with_migrations:
+	JSINFO_INDEXER_RUN_MIGRATIONS=true NODE_TLS_REJECT_UNAUTHORIZED=0 bun run src/indexer.ts
+
+indexer_with_debugger:
+	NODE_TLS_REJECT_UNAUTHORIZED=0 bun --inspect-brk run src/indexer.ts
+
 indexer_debug_events:
 	JSINFO_INDEXER_DEBUG_DUMP_EVENTS=true NODE_TLS_REJECT_UNAUTHORIZED=0 bun run src/indexer.ts
 
@@ -51,8 +57,8 @@ query_no_cache:
 run_lavapProviderHealth:
 	cd lavapProviderHealth && python run.py
 
-query_test_health_handeler:
-	bun test providerHealthHandler.test.ts 
+# query_test_health_handeler:
+# 	bun test providerHealthHandler.test.ts 
 
 query_test_lavap_prodiver_error_parsing:
 	bun run ./src/query/utils/lavapProvidersErrorParser.test.ts 

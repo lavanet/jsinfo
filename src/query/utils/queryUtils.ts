@@ -4,6 +4,7 @@ import { FastifyReply, FastifyRequest } from "fastify";
 import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from "../queryDb";
 import * as JsinfoSchema from '../../schemas/jsinfoSchema';
 import { eq } from "drizzle-orm";
+import { WriteErrorToFastifyReply } from "./queryServerUtils";
 
 export function CompareValues(aValue: string | number | null, bValue: string | number | null, direction: 'ascending' | 'descending') {
     // Check if direction is 'ascending' or 'descending'
@@ -44,7 +45,7 @@ let GetAndValidateProviderAddressFromRequest_cache = {};
 export async function GetAndValidateProviderAddressFromRequest(request: FastifyRequest, reply: FastifyReply): Promise<string> {
     const { addr } = request.params as { addr: string };
     if (addr.length != 44 || !addr.startsWith('lava@')) {
-        reply.code(400).send({ error: 'Bad provider address' });
+        WriteErrorToFastifyReply(reply, 'Bad provider address');
         return '';
     }
 
@@ -58,7 +59,7 @@ export async function GetAndValidateProviderAddressFromRequest(request: FastifyR
     res = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.providers).where(eq(JsinfoSchema.providers.address, addr)).limit(1);
 
     if (res.length != 1) {
-        reply.code(400).send({ error: 'Provider does not exist' });
+        WriteErrorToFastifyReply(reply, 'Provider does not exist');
         return '';
     }
 
@@ -72,7 +73,7 @@ let GetAndValidateSpecIdFromRequest_cache = {};
 export async function GetAndValidateSpecIdFromRequest(request: FastifyRequest, reply: FastifyReply): Promise<string> {
     const { specId } = request.params as { specId: string };
     if (specId.length <= 0) {
-        reply.code(400).send({ error: 'invalid specId' });
+        WriteErrorToFastifyReply(reply, 'invalid specId');
         return '';
     }
 
@@ -88,7 +89,7 @@ export async function GetAndValidateSpecIdFromRequest(request: FastifyRequest, r
     res = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.specs).where(eq(JsinfoSchema.specs.id, upSpecId)).limit(1);
 
     if (res.length != 1) {
-        reply.code(400).send({ error: 'specId does not exist' });
+        WriteErrorToFastifyReply(reply, 'specId does not exist');
         return '';
     }
 

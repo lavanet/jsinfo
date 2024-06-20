@@ -6,7 +6,7 @@ import { ne } from "drizzle-orm";
 import { DoInChunks } from "../utils";
 import { StakeEntry } from '@lavanet/lavajs/dist/codegen/lavanet/lava/epochstorage/stake_entry';
 import { JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE } from './indexerConsts';
-import { ToSignedInt } from './indexerUtils';
+import { ToSignedIntOrMinusOne } from './indexerUtils';
 
 export type LavaClient = Awaited<ReturnType<typeof lavajs.lavanet.ClientFactory.createRPCQueryClient>>
 
@@ -146,7 +146,7 @@ function processStakeEntry(
     let stakeArr: JsinfoSchema.ProviderStake[] = dbStakes.get(providerStake.address)!
 
     // status
-    const appliedHeight = ToSignedInt(providerStake.stakeAppliedBlock)
+    const appliedHeight = ToSignedIntOrMinusOne(providerStake.stakeAppliedBlock)
     let status = JsinfoSchema.LavaProviderStakeStatus.Active
     if (isUnstaking) {
         status = JsinfoSchema.LavaProviderStakeStatus.Unstaking
@@ -157,7 +157,7 @@ function processStakeEntry(
         provider: providerStake.address,
         blockId: height,
         specId: providerStake.chain,
-        geolocation: ToSignedInt(providerStake.geolocation),
+        geolocation: ToSignedIntOrMinusOne(providerStake.geolocation),
         addons: addons,
         extensions: extensions,
         status: status,
@@ -260,7 +260,6 @@ export async function UpdateLatestBlockMeta(
         // Insert all specs
         const arrSpecs = Array.from(static_dbSpecs.values())
         await DoInChunks(JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, arrSpecs, async (arr: any) => {
-            console.log("inserting DoInChunks", arr)
             await tx.insert(JsinfoSchema.specs)
                 .values(arr)
                 .onConflictDoNothing();
@@ -270,7 +269,6 @@ export async function UpdateLatestBlockMeta(
         const arrProviders = Array.from(static_dbProviders.values())
         await DoInChunks(JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, arrProviders, async (arr: any) => {
             return arr.map(async (provider: any) => {
-                console.log("inserting provider", provider)
                 return await tx.insert(JsinfoSchema.providers)
                     .values(provider)
                     .onConflictDoUpdate(
@@ -306,7 +304,6 @@ export async function UpdateLatestBlockMeta(
             await Promise.all(Array.from(static_dbStakes.values()).map(async (stakes) => {
                 return stakes.map(async (stake) => {
                     if (stake.specId == null || stake.specId == "") return;
-                    console.log("inserting stake", stake)
                     return await tx.insert(JsinfoSchema.providerStakes)
                         .values(stake)
                         .onConflictDoUpdate(

@@ -88,14 +88,11 @@ class ProviderHealthData extends CachedDiskDbDataFetcher<HealthReportEntry> {
             res = res.concat(healthV2Data);
         }
 
-<<<<<<< HEAD
-=======
         if (GetDataLength(res) === 0) {
             this.setDataIsEmpty();
             return [];
         }
 
->>>>>>> main
         return res;
     }
 

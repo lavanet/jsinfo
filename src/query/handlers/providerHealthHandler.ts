@@ -6,7 +6,7 @@ import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '..
 import * as JsinfoSchema from '../../schemas/jsinfoSchema';
 import { eq, desc } from "drizzle-orm";
 import { Pagination } from '../utils/queryPagination';
-import { CSVEscape, GetAndValidateProviderAddressFromRequest, GetDataLengthForPrints, IsNotNullAndNotZero, SafeSlice } from '../utils/queryUtils';
+import { CSVEscape, GetAndValidateProviderAddressFromRequest, GetDataLength, GetDataLengthForPrints, IsNotNullAndNotZero, SafeSlice } from '../utils/queryUtils';
 import { CompareValues } from '../utils/queryUtils';
 import path from 'path';
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '../queryConsts';
@@ -88,6 +88,14 @@ class ProviderHealthData extends CachedDiskDbDataFetcher<HealthReportEntry> {
             res = res.concat(healthV2Data);
         }
 
+<<<<<<< HEAD
+=======
+        if (GetDataLength(res) === 0) {
+            this.setDataIsEmpty();
+            return [];
+        }
+
+>>>>>>> main
         return res;
     }
 
@@ -303,7 +311,8 @@ const ParseMessageFromHealthV2 = (data: string | null): string => {
 
         if (parsedData.jail_end_time && parsedData.jails) {
             const date = new Date(parsedData.jail_end_time * 1000);
-            return `Jail end time: ${date.toISOString()}, Jails: ${parsedData.jails}`;
+            let formattedDate = `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}:${date.getSeconds().toString().padStart(2, '0')}`;
+            return `Jail end time: ${formattedDate}, Jails: ${parsedData.jails}`;
         }
 
         if (parsedData.block && parsedData.others) {

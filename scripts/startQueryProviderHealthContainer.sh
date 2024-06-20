@@ -9,6 +9,7 @@ trap 'echo "Warning: Script received SIGSEGV, ignoring"' 11;
 trap 'echo "Error: Script terminated by signal, ignoring"' 2 15;
 ulimit -c unlimited
 
+# this is a must since the list of providers comes from here
 echo "QueryPod $(date) :: Sleeping 1 minute before starting the first script..."
 sleep 60
 

@@ -7,7 +7,7 @@ import { sql, desc, gt, and, lt, eq, inArray } from "drizzle-orm";
 import { FormatDateItems } from '../utils/queryDateUtils';
 import { CachedDiskDbDataFetcher } from '../classes/CachedDiskDbDataFetcher';
 import path from 'path';
-import { GetAndValidateSpecIdFromRequest } from '../utils/queryUtils';
+import { GetAndValidateSpecIdFromRequest, GetDataLength } from '../utils/queryUtils';
 
 type SpecChartCuRelay = {
     provider: string;
@@ -296,6 +296,10 @@ class SpecChartsData extends CachedDiskDbDataFetcher<SpecChartResponse> {
         await QueryCheckJsinfoReadDbInstance()
 
         const specTop10Providers = await this.getSpecTop10Providers();
+        if (GetDataLength(specTop10Providers) === 0) {
+            this.setDataIsEmpty();
+            return [];
+        }
         const specMainChartData = await this.getSpecRelayCuChartWithTopProviders(specTop10Providers);
         const specQosData = await this.getSpecQosData();
         const specCombinedData = this.combineData(specMainChartData, specQosData);

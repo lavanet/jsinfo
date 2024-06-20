@@ -8,7 +8,7 @@ import { desc, eq } from "drizzle-orm";
 import { Pagination, ParsePaginationFromString } from '../utils/queryPagination';
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '../queryConsts';
 import path from 'path';
-import { CSVEscape, CompareValues, GetAndValidateProviderAddressFromRequest, SafeSlice } from '../utils/queryUtils';
+import { CSVEscape, CompareValues, GetAndValidateProviderAddressFromRequest, GetDataLength, SafeSlice } from '../utils/queryUtils';
 import { ReplaceArchive } from '../../indexer/indexerUtils';
 import { CachedDiskDbDataFetcher } from '../classes/CachedDiskDbDataFetcher';
 
@@ -97,6 +97,11 @@ class ProviderStakesData extends CachedDiskDbDataFetcher<JsinfoSchema.ProviderSt
             item.addons = item.addons ? item.addons : "-";
             return item;
         });
+
+        if (GetDataLength(stakesRes) === 0) {
+            this.setDataIsEmpty();
+            return [];
+        }
 
         return stakesRes;
     }

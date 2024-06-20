@@ -10,7 +10,7 @@ import { and, desc, eq, gte, gt } from "drizzle-orm";
 import { Pagination } from '../utils/queryPagination';
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '../queryConsts';
 import path from 'path';
-import { CompareValues, GetAndValidateProviderAddressFromRequest, SafeSlice } from '../utils/queryUtils';
+import { CompareValues, GetAndValidateProviderAddressFromRequest, GetDataLength, SafeSlice } from '../utils/queryUtils';
 import { CachedDiskDbDataFetcher } from '../classes/CachedDiskDbDataFetcher';
 
 export interface BlockReportsReponse {
@@ -105,6 +105,11 @@ class ProviderBlockReportsData extends CachedDiskDbDataFetcher<BlockReportsRepon
             orderBy(desc(JsinfoSchema.providerLatestBlockReports.id)).
             offset(0).
             limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
+
+        if (GetDataLength(result) === 0) {
+            this.setDataIsEmpty();
+            return [];
+        }
 
         const highestId = result[0]?.id;
         if (highestId !== undefined) {

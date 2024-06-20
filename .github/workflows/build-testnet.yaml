@@ -75,7 +75,7 @@ jobs:
           IMAGE_TAG: ${{ github.sha }}
           NOW: ${{ env.NOW }}
         run: |
-          docker buildx build -t $REGISTRY:$IMAGE_TAG -t $REGISTRY:$IMAGE_TAG-$NOW \
+          docker buildx build -t $REGISTRY:$IMAGE_TAG  -t $REGISTRY:$IMAGE_TAG-$NOW \
             -t $REGISTRY:$IMAGE_TAG-$NOW \
             --cache-from="type=local,src=/tmp/.buildx-cache" \
             --cache-to="type=local,dest=/tmp/.buildx-cache-new" \
@@ -105,7 +105,7 @@ jobs:
           git add jsinfo/helm/values.testnet.yaml
           git commit -m 'Update jsinfo backend testnet image tag'
           git pull --rebase
-          git push origin || (git pull  --rebase && git push origin)
+          git push origin || (git pull --rebase && git push origin)
 
       # Necessary if you don't want your cache to grow forever, until
       # https://github.com/docker/build-push-action/issues/252

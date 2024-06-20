@@ -398,9 +398,11 @@ def parse_accountinfo_spec(result: Dict[str, Dict[str, List[str]]], key: str, pr
                 result[key][chain].append(interface)
             
             if provider.get("jail_end_time","0") != "0":
-                if chain not in result["jailed"]:
-                    result["jailed"][chain] = []
-                result["jailed"][chain].append((interface, {"jail_end_time": provider["jail_end_time"], "jails": provider.get("jails", "0")}))
+                jail_end_time = datetime.fromtimestamp(int(provider["jail_end_time"]))
+                if jail_end_time > datetime.now():
+                    if chain not in result["jailed"]:
+                        result["jailed"][chain] = []
+                    result["jailed"][chain].append((interface, {"jail_end_time": provider["jail_end_time"], "jails": provider.get("jails", "0")}))
 
 def parse_accountinfo_command(output: Dict[str, Any]) -> Dict[str, Dict[str, List[str]]]:
     result: Dict[str, Dict[str, List[str]]] = {"healthy": {}, "unstaked": {}, "frozen": {}, "jailed": {}}

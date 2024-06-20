@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 
 import os, requests, subprocess, json, threading, shlex, string, time, random, queue, psycopg2
 from datetime import datetime

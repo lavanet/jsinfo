@@ -7,6 +7,7 @@ import { sql, desc, gt, and, inArray, lt } from "drizzle-orm";
 import { FormatDateItems } from '../utils/queryDateUtils';
 import { CachedDiskDbDataFetcher } from '../classes/CachedDiskDbDataFetcher';
 import path from 'path';
+import { GetDataLength } from '../utils/queryUtils';
 
 type CuRelayItem = {
     chainId: string;
@@ -262,6 +263,10 @@ class IndexChartsData extends CachedDiskDbDataFetcher<IndexChartResponse> {
         await QueryCheckJsinfoReadDbInstance()
 
         const topChains = await this.getTopChains();
+        if (GetDataLength(topChains) === 0) {
+            this.setDataIsEmpty();
+            return [];
+        }
         const mainChartData = await this.getMainChartData(topChains);
         const qosData = await this.getQosData();
         const combinedData = this.combineData(mainChartData, qosData);

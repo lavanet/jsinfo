@@ -7,7 +7,7 @@ import { sql, desc, inArray, not, eq } from "drizzle-orm";
 import { Pagination, ParsePaginationFromString } from '../utils/queryPagination';
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE } from '../queryConsts';
 import path from 'path';
-import { CSVEscape, CompareValues, SafeSlice } from '../utils/queryUtils';
+import { CSVEscape, CompareValues, GetDataLength, SafeSlice } from '../utils/queryUtils';
 import { CachedDiskDbDataFetcher } from '../classes/CachedDiskDbDataFetcher';
 
 type IndexProvidersResponse = {
@@ -81,6 +81,10 @@ class IndexProvidersData extends CachedDiskDbDataFetcher<IndexProvidersResponse>
             groupBy(JsinfoSchema.aggHourlyrelayPayments.provider).
             orderBy(desc(sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.rewardSum})`))
 
+        if (GetDataLength(res4) === 0) {
+            this.setDataIsEmpty();
+            return [];
+        }
         let providersAddrs: string[] = []
 
         res4.map((provider) => {
@@ -93,6 +97,12 @@ class IndexProvidersData extends CachedDiskDbDataFetcher<IndexProvidersResponse>
 
         // provider details
         let res44 = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.providers).where(inArray(JsinfoSchema.providers.address, providersAddrs))
+
+        if (GetDataLength(res44) === 0) {
+            this.setDataIsEmpty();
+            return [];
+        }
+
         let providerStakesRes = await QueryGetJsinfoReadDbInstance().select({
             provider: JsinfoSchema.providerStakes.provider,
             totalActiveServices: sql<number>`sum(case when ${JsinfoSchema.providerStakes.status} = ${JsinfoSchema.LavaProviderStakeStatus.Active} then 1 else 0 end)`,
@@ -101,6 +111,11 @@ class IndexProvidersData extends CachedDiskDbDataFetcher<IndexProvidersResponse>
         }).from(JsinfoSchema.providerStakes)
             .where(not(eq(JsinfoSchema.providerStakes.status, JsinfoSchema.LavaProviderStakeStatus.Frozen)))
             .groupBy(JsinfoSchema.providerStakes.provider);
+
+        if (GetDataLength(providerStakesRes) === 0) {
+            this.setDataIsEmpty();
+            return [];
+        }
 
         let providersDetails: IndexProvidersResponse[] = []
         res4.forEach((provider) => {

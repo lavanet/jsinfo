@@ -9,9 +9,6 @@ trap 'echo "Warning: Script received SIGSEGV, ignoring"' 11;
 trap 'echo "Error: Script terminated by signal, ignoring"' 2 15;
 ulimit -c unlimited
 
-echo "QueryPod $(date) :: Sleeping 1 minute before starting the first script..."
-sleep 60
-
 # Run the first script in an endless loop
 while true; do
     echo "QueryPod $(date) probe1 :: Starting 'python3 lavapProviderHealth/run.py'..."

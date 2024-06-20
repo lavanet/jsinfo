@@ -5,8 +5,11 @@ RUN mkdir /lava
 WORKDIR /lava
 RUN apk add --update python3 py3-pip git bash jq curl make gcc go linux-headers
 
-# version  1.2.1
-RUN git clone https://github.com/lavanet/lava.git . && git checkout 201f062ffc6296f383e4e25eb4acd872423fe4c2
+# support for the lavapProviderHealth script
+RUN pip3 install requests python-dateutil psycopg2-binary
+
+# health probe branch - 20/06/2024 commit
+RUN git clone https://github.com/lavanet/lava.git . && git checkout d984bf4bc5eb83fe530fb5c1a206ece9911b32a4
 RUN chmod +x ./scripts/init_install.sh && bash ./scripts/init_install.sh
 RUN LAVA_BINARY=all make build
 ENV PATH="/lava/build:${PATH}"

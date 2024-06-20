@@ -6,7 +6,7 @@ import { ne } from "drizzle-orm";
 import { DoInChunks } from "../utils";
 import { StakeEntry } from '@lavanet/lavajs/dist/codegen/lavanet/lava/epochstorage/stake_entry';
 import { JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE } from './indexerConsts';
-import { ToSignedInt } from './indexerUtils';
+import { ToSignedIntOrMinusOne } from './indexerUtils';
 
 export type LavaClient = Awaited<ReturnType<typeof lavajs.lavanet.ClientFactory.createRPCQueryClient>>
 
@@ -146,7 +146,7 @@ function processStakeEntry(
     let stakeArr: JsinfoSchema.ProviderStake[] = dbStakes.get(providerStake.address)!
 
     // status
-    const appliedHeight = ToSignedInt(providerStake.stakeAppliedBlock)
+    const appliedHeight = ToSignedIntOrMinusOne(providerStake.stakeAppliedBlock)
     let status = JsinfoSchema.LavaProviderStakeStatus.Active
     if (isUnstaking) {
         status = JsinfoSchema.LavaProviderStakeStatus.Unstaking
@@ -157,7 +157,7 @@ function processStakeEntry(
         provider: providerStake.address,
         blockId: height,
         specId: providerStake.chain,
-        geolocation: ToSignedInt(providerStake.geolocation),
+        geolocation: ToSignedIntOrMinusOne(providerStake.geolocation),
         addons: addons,
         extensions: extensions,
         status: status,
@@ -179,16 +179,12 @@ async function getLatestProvidersAndSpecsAndStakes(
         dbStakes.clear()
 
         // regular stakes
-        console.log("Fetching all chains");
         let specs = await lavaClient.spec.showAllChains()
         await Promise.all(specs.chainInfoList.map(async (spec) => {
-            console.log(`Processing spec: ${spec.chainID}`);
             GetOrSetSpec(dbSpecs, null, spec.chainID)
 
-            console.log(`Fetching providers for spec: ${spec.chainID}`);
             let providers = await lavaClient.pairing.providers({ chainID: spec.chainID, showFrozen: true })
             providers.stakeEntry.forEach((stake) => {
-                console.log(`Processing stake entry for provider: ${stake.address}`);
                 processStakeEntry(height, dbProviders, dbStakes, stake, false)
             })
         }))
@@ -232,10 +228,8 @@ async function getLatestPlans(client: LavaClient, dbPlans: Map<string, JsinfoSch
     try {
         const lavaClient = client.lavanet.lava;
 
-        console.log("Fetching plans");
         let plans = await lavaClient.plans.list()
         plans.plansInfo.forEach((plan) => {
-            console.log(`Processing plan: ${plan.index}`);
             dbPlans.set(plan.index, {
                 desc: plan.description,
                 id: plan.index,
@@ -310,7 +304,6 @@ export async function UpdateLatestBlockMeta(
             await Promise.all(Array.from(static_dbStakes.values()).map(async (stakes) => {
                 return stakes.map(async (stake) => {
                     if (stake.specId == null || stake.specId == "") return;
-                    // console.log("schema.providerStakes.provider,JsinfoSchema.providerStakes.specId", stake)
                     return await tx.insert(JsinfoSchema.providerStakes)
                         .values(stake)
                         .onConflictDoUpdate(

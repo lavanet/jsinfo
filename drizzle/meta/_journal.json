@@ -120,6 +120,20 @@
       "when": 1717714134256,
       "tag": "0016_woozy_venus",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "5",
+      "when": 1718633528841,
+      "tag": "0017_lumpy_liz_osborn",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "5",
+      "when": 1718755118266,
+      "tag": "0018_petite_vindicator",
+      "breakpoints": true
     }
   ]
 }

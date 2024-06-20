@@ -7,6 +7,7 @@ import pino from 'pino';
 import RequestCache from './queryCache';
 
 import { JSINFO_QUERY_HIGH_POST_BODY_LIMIT, JSINFO_QUERY_FASITY_PRINT_LOGS } from './queryConsts';
+import { AddErrorResponseToFastifyServerOpts, ItemCountOpts } from './utils/queryServerUtils';
 
 const requestCache: RequestCache = new RequestCache();
 
@@ -27,68 +28,6 @@ const server: FastifyInstance = Fastify({
 
 server.register(fastifyCors, { origin: "*" });
 
-export function AddErrorResponseToFastifyServerOpts(consumerOpts: RouteShorthandOptions): RouteShorthandOptions {
-    const schema = consumerOpts.schema || {};
-    const response = schema.response || {};
-
-    return {
-        ...consumerOpts,
-        schema: {
-            ...schema,
-            response: {
-                ...response,
-                400: {
-                    type: 'object',
-                    properties: {
-                        error: { type: 'string' },
-                    },
-                },
-            },
-        },
-    };
-}
-
-export function AddItemCountResponseToFastifyServerOpts(consumerOpts: RouteShorthandOptions): RouteShorthandOptions {
-    const schema = consumerOpts.schema || {};
-    const response = schema.response || {};
-    const existing200Response = response[200] || {};
-
-    return {
-        ...consumerOpts,
-        schema: {
-            ...schema,
-            response: {
-                ...response,
-                200: {
-                    anyOf: [
-                        existing200Response,
-                        {
-                            type: 'object',
-                            properties: {
-                                itemCount: { type: 'number' },
-                            },
-                        },
-                    ],
-                },
-            },
-        },
-    };
-}
-
-const itemCountOpts: RouteShorthandOptions = {
-    schema: {
-        response: {
-            200: {
-                type: 'object',
-                properties: {
-                    itemCount: { type: 'number' },
-                },
-                required: [],
-            },
-        },
-    },
-};
-
 export function RegisterServerHandlerWithCache(
     path: string,
     opts: RouteShorthandOptions,
@@ -106,7 +45,7 @@ export function RegisterServerHandlerWithCache(
 
     if (ItemCountRawHandler) {
         console.log("Registering ItemCountRawHandler for path: " + "/item-count" + path);
-        server.get("/item-count" + path, itemCountOpts, ItemCountRawHandler);
+        server.get("/item-count" + path, ItemCountOpts, ItemCountRawHandler);
     }
 }
 

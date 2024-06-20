@@ -8,8 +8,9 @@ import * as JsinfoSchema from '../../schemas/jsinfoSchema';
 import { sql, desc, gt, and, eq } from "drizzle-orm";
 import { FormatDates } from '../utils/queryDateUtils';
 import { GetAndValidateProviderAddressFromRequest } from '../utils/queryUtils';
+import { WriteErrorToFastifyReply } from '../utils/queryServerUtils';
 
-export const ProviderHandlerOpts: RouteShorthandOptions = {
+export const ProviderCachedHandlerOpts: RouteShorthandOptions = {
     schema: {
         response: {
             200: {
@@ -63,7 +64,7 @@ export const ProviderHandlerOpts: RouteShorthandOptions = {
     }
 }
 
-export async function ProviderHandler(request: FastifyRequest, reply: FastifyReply) {
+export async function ProviderCachedHandler(request: FastifyRequest, reply: FastifyReply) {
     let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
     if (addr === '') {
         return;
@@ -71,7 +72,7 @@ export async function ProviderHandler(request: FastifyRequest, reply: FastifyRep
 
     const res = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.providers).where(eq(JsinfoSchema.providers.address, addr)).limit(1)
     if (res.length != 1) {
-        reply.code(400).send({ error: 'Provider does not exist' });
+        WriteErrorToFastifyReply(reply, 'Provider does not exist')
         return reply;
     }
 

@@ -517,30 +517,36 @@ def parse_and_save_provider_health_status_from_request(data: Dict[str, Any], gui
         log("parse_and_save_provider_health_status_from_request", "bad data:: Keys 'providerData' or 'unhealthyProviders' not found in data: " + safe_json_dump(data))
         return None
     
+    processed_ids = set()
+
+    # First loop over unhealthyProviders
+    for key, value in data.get('unhealthyProviders', {}).items():            
+        provider_id, spec, apiinterface = key.strip('"').split(' | ')
+        if value.strip().lower() == "context deadline exceeded":
+            value = {"message": "provider query timed out"}
+        elif value.strip() != "":
+            value = {"message": value}
+        else:
+            value = ""
+        db_add_provider_health_data(guid, provider_id, spec, apiinterface, "unhealthy", value)
+        processed_ids.add(key)
+
     for key, value in data.get('providerData', {}).items():
+        if key in processed_ids:
+            continue
         provider_id, spec, apiinterface = key.strip('"').split(' | ')
 
         if data['latestBlocks'][spec] == 0:
-            db_add_provider_health_data(guid, provider_id, spec, apiinterface, "unhealthy", {"message": "lateset block request failed for spec"})
-        if value['block'] == 0:
-            db_add_provider_health_data(guid, provider_id, spec, apiinterface, "unhealthy", {"message": "lateset block request failed on provider side"})
+            db_add_provider_health_data(guid, provider_id, spec, apiinterface, "unhealthy", {"message": "latest block request failed for spec"})
+        elif value['block'] == 0:
+            db_add_provider_health_data(guid, provider_id, spec, apiinterface, "unhealthy", {"message": "latest block request failed on provider side"})
         else:
             health_data = {
                 'block': value['block'],
                 'others': data['latestBlocks'][spec],
                 'latency': value['latency'],
             }
-
             db_add_provider_health_data(guid, provider_id, spec, apiinterface, "healthy", health_data)
-
-    for key, value in data.get('unhealthyProviders', {}).items():            
-        provider_id, spec, apiinterface = key.strip('"').split(' | ')
-        print("!! value: ", value)
-        if value.strip() != "":
-            value = {"message": value}
-        else:
-            value = ""
-        db_add_provider_health_data(guid, provider_id, spec, apiinterface, "unhealthy", value)
 
     return parsed_data
     

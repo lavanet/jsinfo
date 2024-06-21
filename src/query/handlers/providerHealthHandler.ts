@@ -317,8 +317,8 @@ const ParseMessageFromHealthV2 = (data: string | null): string => {
             const latestBlock = parsedData.others;
             let finalMessage = `${blockMessage} / Others: 0x${(latestBlock).toString(16)}`;
 
-            if (parsedData.Latency) {
-                const latencyInMs = parsedData.Latency / 1000000;
+            if (parsedData.latency) {
+                const latencyInMs = parsedData.latency / 1000000;
                 finalMessage += `, Latency: ${latencyInMs.toFixed(0)} ms`;
             }
 

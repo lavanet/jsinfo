@@ -510,6 +510,11 @@ def main() -> None:
     for thread in threads:
         thread.join()
 
+def fmt_unhealthy_error(msg):
+    if msg.strip().lower() == "context deadline exceeded":
+        return "provider query timed out"
+    return msg
+
 def parse_and_save_provider_health_status_from_request(data: Dict[str, Any], guid: str) -> List[Dict[str, Any]]:
     parsed_data: List[Dict[str, Any]] = []
 
@@ -519,34 +524,52 @@ def parse_and_save_provider_health_status_from_request(data: Dict[str, Any], gui
     
     processed_ids = set()
 
-    # First loop over unhealthyProviders
-    for key, value in data.get('unhealthyProviders', {}).items():            
-        provider_id, spec, apiinterface = key.strip('"').split(' | ')
-        if value.strip().lower() == "context deadline exceeded":
-            value = {"message": "provider query timed out"}
-        elif value.strip() != "":
-            value = {"message": value}
-        else:
-            value = ""
-        db_add_provider_health_data(guid, provider_id, spec, apiinterface, "unhealthy", value)
-        processed_ids.add(key)
-
     for key, value in data.get('providerData', {}).items():
         if key in processed_ids:
             continue
+        processed_ids.add(key)
+
         provider_id, spec, apiinterface = key.strip('"').split(' | ')
 
         if data['latestBlocks'][spec] == 0:
-            db_add_provider_health_data(guid, provider_id, spec, apiinterface, "unhealthy", {"message": "latest block request failed for spec"})
-        elif value['block'] == 0:
-            db_add_provider_health_data(guid, provider_id, spec, apiinterface, "unhealthy", {"message": "latest block request failed on provider side"})
+            msg = data.get('unhealthyProviders', {}).get(key, "lateset block request failed for spec")
+            msg = fmt_unhealthy_error(msg)
+            db_add_provider_health_data(guid, provider_id, spec, apiinterface, "unhealthy", {"message": msg})
+        if value['block'] == 0:
+            msg = data.get('unhealthyProviders', {}).get(key, "lateset block request failed on provider side")
+            msg = fmt_unhealthy_error(msg)
+            db_add_provider_health_data(guid, provider_id, spec, apiinterface, "unhealthy", {"message": msg})
         else:
             health_data = {
                 'block': value['block'],
                 'others': data['latestBlocks'][spec],
                 'latency': value['latency'],
             }
+
             db_add_provider_health_data(guid, provider_id, spec, apiinterface, "healthy", health_data)
+
+    for key, value in data.get('unhealthyProviders', {}).items():
+        if key in processed_ids:
+            continue
+        processed_ids.add(key)
+                
+        provider_id, spec, apiinterface = key.strip('"').split(' | ')
+
+        if value.strip() != "":
+            value = {"message": fmt_unhealthy_error(value)}
+        else:
+            value = ""
+        db_add_provider_health_data(guid, provider_id, spec, apiinterface, "unhealthy", value)
+
+
+    for key, value in data.get('frozenProviders', {}).items():
+        if key in processed_ids:
+            continue
+        processed_ids.add(key)
+            
+        provider_id, spec, apiinterface = key.strip('"').split(' | ')
+        
+        db_add_provider_health_data(guid, provider_id, spec, apiinterface, "frozen", "")
 
     return parsed_data
     

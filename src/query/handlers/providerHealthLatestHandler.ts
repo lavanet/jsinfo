@@ -10,22 +10,6 @@ import { providerHealth } from '../../schemas/jsinfoSchema';
 import { GetAndValidateProviderAddressFromRequest } from '../utils/queryUtils';
 import { WriteErrorToFastifyReply } from '../utils/queryServerUtils';
 
-type ProviderHealthLatestResponse = {
-    provider: string;
-    specs: {
-        [spec: string]: {
-            [iface: string]: {
-                [geolocation: string]: {
-                    status: string;
-                    data: any | null;
-                    timestamp: string;
-                }
-            }
-        }
-    };
-    overallStatus: string;
-};
-
 type HealthRecord = {
     id: number;
     provider: string | null;
@@ -37,6 +21,24 @@ type HealthRecord = {
     interface: string | null;
     status: string;
 }
+
+type ProviderHealthLatestResponse = {
+    provider: string;
+    specs: {
+        [spec: string]: {
+            overallStatus: string;
+            interfaces: {
+                [iface: string]: {
+                    [geolocation: string]: {
+                        status: string;
+                        data: any | null;
+                        timestamp: string;
+                    }
+                }
+            }
+        }
+    };
+};
 
 export const ProviderHealthLatestCachedHandlerOpts: RouteShorthandOptions = {
     schema: {
@@ -52,20 +54,25 @@ export const ProviderHealthLatestCachedHandlerOpts: RouteShorthandOptions = {
                                 type: 'object',
                                 additionalProperties: {
                                     type: 'object',
-                                    additionalProperties: {
-                                        type: 'object',
-                                        additionalProperties: {
+                                    properties: {
+                                        overallStatus: { type: 'string' },
+                                        interfaces: {
                                             type: 'object',
-                                            properties: {
-                                                status: { type: 'string' },
-                                                data: { type: ['object', 'null'], additionalProperties: {} },
-                                                timestamp: { type: 'string' }
+                                            additionalProperties: {
+                                                type: 'object',
+                                                additionalProperties: {
+                                                    type: 'object',
+                                                    properties: {
+                                                        status: { type: 'string' },
+                                                        data: { type: ['object', 'null'], additionalProperties: {} },
+                                                        timestamp: { type: 'string' }
+                                                    }
+                                                }
                                             }
                                         }
                                     }
                                 }
-                            },
-                            overallStatus: { type: 'string' }
+                            }
                         }
                     }
                 }
@@ -103,8 +110,12 @@ export async function ProviderHealthLatestCachedHandler(request: FastifyRequest,
         return null;
     }
 
+    if (healthRecords.length === 0) {
+        WriteErrorToFastifyReply(reply, 'No health records for provider');
+        return null;
+    }
+
     const specs: ProviderHealthLatestResponse['specs'] = {};
-    let overallStatus = 'healthy';
 
     for (const record of healthRecords) {
         const { spec, interface: iface, geolocation, status, timestamp, data } = record;
@@ -113,18 +124,26 @@ export async function ProviderHealthLatestCachedHandler(request: FastifyRequest,
             continue;
         }
 
-        if (!specs[spec]) specs[spec] = {};
-        if (!specs[spec][iface]) specs[spec][iface] = {};
-        if (!specs[spec][iface][geolocation]) {
-            specs[spec][iface][geolocation] = {
+        if (!specs[spec]) {
+            specs[spec] = {
+                overallStatus: 'healthy',
+                interfaces: {
+                    [iface]: {}
+                }
+            };
+        }
+
+        if (!specs[spec].interfaces[iface]) specs[spec].interfaces[iface] = {};
+        if (!specs[spec].interfaces[iface][geolocation]) {
+            specs[spec].interfaces[iface][geolocation] = {
                 status,
                 data: data ? JSON.parse(data) : null,
                 timestamp: timestamp.toISOString()
             };
         } else {
-            const existingRecord = specs[spec][iface][geolocation];
+            const existingRecord = specs[spec].interfaces[iface][geolocation];
             if (new Date(existingRecord.timestamp) < timestamp) {
-                specs[spec][iface][geolocation] = {
+                specs[spec].interfaces[iface][geolocation] = {
                     status,
                     data: data ? JSON.parse(data) : null,
                     timestamp: timestamp.toISOString()
@@ -133,10 +152,10 @@ export async function ProviderHealthLatestCachedHandler(request: FastifyRequest,
         }
 
         if (status !== 'healthy') {
-            if (overallStatus == "degraded") {
-                overallStatus = 'unhealthy';
+            if (specs[spec].overallStatus == "degraded") {
+                specs[spec].overallStatus = 'unhealthy';
             } else {
-                overallStatus = (overallStatus === 'healthy') ? 'degraded' : overallStatus;
+                specs[spec].overallStatus = (specs[spec].overallStatus === 'healthy') ? 'degraded' : specs[spec].overallStatus;
             }
         }
     }
@@ -144,8 +163,7 @@ export async function ProviderHealthLatestCachedHandler(request: FastifyRequest,
     return {
         data: {
             provider,
-            specs,
-            overallStatus
+            specs
         }
     };
 }

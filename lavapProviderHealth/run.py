@@ -518,7 +518,7 @@ def fmt_unhealthy_error(msg):
 def parse_and_save_provider_health_status_from_request(data: Dict[str, Any], guid: str) -> List[Dict[str, Any]]:
     parsed_data: List[Dict[str, Any]] = []
 
-    if 'providerData' not in data or 'unhealthyProviders' not in data or not 'latestBlocks' in data:
+    if 'providerData' not in data and 'unhealthyProviders' not in data and not 'latestBlocks' in data:
         log("parse_and_save_provider_health_status_from_request", "bad data:: Keys 'providerData' or 'unhealthyProviders' not found in data: " + safe_json_dump(data))
         return None
     
@@ -568,7 +568,7 @@ def parse_and_save_provider_health_status_from_request(data: Dict[str, Any], gui
         processed_ids.add(key)
             
         provider_id, spec, apiinterface = key.strip('"').split(' | ')
-        
+
         db_add_provider_health_data(guid, provider_id, spec, apiinterface, "frozen", "")
 
     return parsed_data

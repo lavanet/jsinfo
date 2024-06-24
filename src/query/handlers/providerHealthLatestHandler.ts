@@ -24,8 +24,9 @@ type HealthRecord = {
 
 type ProviderHealthLatestResponse = {
     provider: string;
-    specs: {
-        [spec: string]: {
+    specs: Array<{
+        spec: string;
+        specData: {
             overallStatus: string;
             interfaces: {
                 [iface: string]: {
@@ -37,7 +38,7 @@ type ProviderHealthLatestResponse = {
                 }
             }
         }
-    };
+    }>;
 };
 
 export const ProviderHealthLatestCachedHandlerOpts: RouteShorthandOptions = {
@@ -51,21 +52,27 @@ export const ProviderHealthLatestCachedHandlerOpts: RouteShorthandOptions = {
                         properties: {
                             provider: { type: 'string' },
                             specs: {
-                                type: 'object',
-                                additionalProperties: {
+                                type: 'array',
+                                items: {
                                     type: 'object',
                                     properties: {
-                                        overallStatus: { type: 'string' },
-                                        interfaces: {
+                                        spec: { type: 'string' },
+                                        specData: {
                                             type: 'object',
-                                            additionalProperties: {
-                                                type: 'object',
-                                                additionalProperties: {
+                                            properties: {
+                                                overallStatus: { type: 'string' },
+                                                interfaces: {
                                                     type: 'object',
-                                                    properties: {
-                                                        status: { type: 'string' },
-                                                        data: { type: 'string' },
-                                                        timestamp: { type: 'string' }
+                                                    additionalProperties: {
+                                                        type: 'object',
+                                                        additionalProperties: {
+                                                            type: 'object',
+                                                            properties: {
+                                                                status: { type: 'string' },
+                                                                data: { type: 'string' },
+                                                                timestamp: { type: 'string' }
+                                                            }
+                                                        }
                                                     }
                                                 }
                                             }
@@ -145,7 +152,8 @@ export async function ProviderHealthLatestCachedHandler(request: FastifyRequest,
         WriteErrorToFastifyReply(reply, 'No health records for provider');
         return null;
     }
-    const specs: ProviderHealthLatestResponse['specs'] = {};
+    const specsArray: ProviderHealthLatestResponse['specs'] = [];
+    const specsData: { [spec: string]: { overallStatus: string; interfaces: { [iface: string]: { [geolocation: string]: { status: string; data: string; timestamp: string; } } } } } = {};
     const healthStatusPerSpec: { [spec: string]: { allHealthy: boolean, allUnhealthy: boolean } } = {};
 
     for (const record of healthRecords) {
@@ -155,8 +163,8 @@ export async function ProviderHealthLatestCachedHandler(request: FastifyRequest,
             continue;
         }
 
-        if (!specs[spec]) {
-            specs[spec] = {
+        if (!specsData[spec]) {
+            specsData[spec] = {
                 overallStatus: 'healthy',
                 interfaces: {
                     [iface]: {}
@@ -167,18 +175,18 @@ export async function ProviderHealthLatestCachedHandler(request: FastifyRequest,
 
         let status_updated = false;
 
-        if (!specs[spec].interfaces[iface]) specs[spec].interfaces[iface] = {};
-        if (!specs[spec].interfaces[iface][geolocation]) {
-            specs[spec].interfaces[iface][geolocation] = {
+        if (!specsData[spec].interfaces[iface]) specsData[spec].interfaces[iface] = {};
+        if (!specsData[spec].interfaces[iface][geolocation]) {
+            specsData[spec].interfaces[iface][geolocation] = {
                 status,
                 data: ParseMessageFromHealthV2(data),
                 timestamp: timestamp.toISOString()
             };
             status_updated = true;
         } else {
-            const existingRecord = specs[spec].interfaces[iface][geolocation];
+            const existingRecord = specsData[spec].interfaces[iface][geolocation];
             if (new Date(existingRecord.timestamp) < timestamp) {
-                specs[spec].interfaces[iface][geolocation] = {
+                specsData[spec].interfaces[iface][geolocation] = {
                     status,
                     data: ParseMessageFromHealthV2(data),
                     timestamp: timestamp.toISOString()
@@ -196,20 +204,23 @@ export async function ProviderHealthLatestCachedHandler(request: FastifyRequest,
         }
     }
 
-    for (const spec in specs) {
+    for (const spec in specsData) {
         if (healthStatusPerSpec[spec].allHealthy) {
-            specs[spec].overallStatus = 'healthy';
+            specsData[spec].overallStatus = 'healthy';
         } else if (healthStatusPerSpec[spec].allUnhealthy) {
-            specs[spec].overallStatus = 'unhealthy';
+            specsData[spec].overallStatus = 'unhealthy';
         } else {
-            specs[spec].overallStatus = 'degraded';
+            specsData[spec].overallStatus = 'degraded';
         }
+        specsArray.push({ spec, specData: specsData[spec] });
     }
+
+    specsArray.sort((a, b) => a.spec.localeCompare(b.spec));
 
     return {
         data: {
             provider,
-            specs
+            specs: specsArray
         }
     };
 }

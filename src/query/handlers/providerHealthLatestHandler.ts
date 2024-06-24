@@ -31,7 +31,7 @@ type ProviderHealthLatestResponse = {
                 [iface: string]: {
                     [geolocation: string]: {
                         status: string;
-                        data: any | null;
+                        data: string;
                         timestamp: string;
                     }
                 }
@@ -64,7 +64,7 @@ export const ProviderHealthLatestCachedHandlerOpts: RouteShorthandOptions = {
                                                     type: 'object',
                                                     properties: {
                                                         status: { type: 'string' },
-                                                        data: { type: ['object', 'null'], additionalProperties: {} },
+                                                        data: { type: 'string' },
                                                         timestamp: { type: 'string' }
                                                     }
                                                 }
@@ -81,12 +81,48 @@ export const ProviderHealthLatestCachedHandlerOpts: RouteShorthandOptions = {
     }
 };
 
+const ParseMessageFromHealthV2 = (data: any | null): string => {
+    if (!data) return "";
+    try {
+        const parsedData = JSON.parse(data);
+
+        if (parsedData.message) {
+            return parsedData.message;
+        }
+
+        if (parsedData.jail_end_time && parsedData.jails) {
+            const date = new Date(parsedData.jail_end_time * 1000);
+            let formattedDate = `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}:${date.getSeconds().toString().padStart(2, '0')}`;
+            return `End Time:${formattedDate}`; // , Jails:${parsedData.jails}
+        }
+
+        if (parsedData.block && parsedData.others) {
+            const blockMessage = `Block: 0x${(parsedData.block).toString(16)}`;
+            const latestBlock = parsedData.others;
+            let finalMessage = `${blockMessage}, Others: 0x${(latestBlock).toString(16)}`;
+
+            if (parsedData.latency) {
+                const latencyInMs = parsedData.latency / 1000000;
+                finalMessage += `. ${latencyInMs.toFixed(0)}ms`;
+            }
+
+            return finalMessage;
+        }
+
+        return "";
+    } catch (e) {
+        console.error('ParseMessageFromHealthV2 - failed parsing data:', e);
+        return "";
+    }
+}
+
+// null is retuned for *CachedHandler function - the first caching layer on the request side
+// reply is returned in the *RawHandler functions - which skip this cache and probably use the CachedDiskDbDataFetcher
+// CachedDiskDbDataFetcher is the layer of caching against the db and not against the query
+
 export async function ProviderHealthLatestCachedHandler(request: FastifyRequest, reply: FastifyReply): Promise<{ data: ProviderHealthLatestResponse } | null> {
     let provider = await GetAndValidateProviderAddressFromRequest(request, reply);
     if (provider === '') {
-        // null is retuned for *CachedHandler function - the first caching layer on the request side
-        // reply is returned in the *RawHandler functions - which skip this cache and probably use the CachedDiskDbDataFetcher
-        // CachedDiskDbDataFetcher is the layer of caching against the db and not against the query
         return null;
     }
 
@@ -109,13 +145,8 @@ export async function ProviderHealthLatestCachedHandler(request: FastifyRequest,
         WriteErrorToFastifyReply(reply, 'No health records for provider');
         return null;
     }
-
-    if (healthRecords.length === 0) {
-        WriteErrorToFastifyReply(reply, 'No health records for provider');
-        return null;
-    }
-
     const specs: ProviderHealthLatestResponse['specs'] = {};
+    const healthStatusPerSpec: { [spec: string]: { allHealthy: boolean, allUnhealthy: boolean } } = {};
 
     for (const record of healthRecords) {
         const { spec, interface: iface, geolocation, status, timestamp, data } = record;
@@ -131,32 +162,47 @@ export async function ProviderHealthLatestCachedHandler(request: FastifyRequest,
                     [iface]: {}
                 }
             };
+            healthStatusPerSpec[spec] = { allHealthy: true, allUnhealthy: true };
         }
+
+        let status_updated = false;
 
         if (!specs[spec].interfaces[iface]) specs[spec].interfaces[iface] = {};
         if (!specs[spec].interfaces[iface][geolocation]) {
             specs[spec].interfaces[iface][geolocation] = {
                 status,
-                data: data ? JSON.parse(data) : null,
+                data: ParseMessageFromHealthV2(data),
                 timestamp: timestamp.toISOString()
             };
+            status_updated = true;
         } else {
             const existingRecord = specs[spec].interfaces[iface][geolocation];
             if (new Date(existingRecord.timestamp) < timestamp) {
                 specs[spec].interfaces[iface][geolocation] = {
                     status,
-                    data: data ? JSON.parse(data) : null,
+                    data: ParseMessageFromHealthV2(data),
                     timestamp: timestamp.toISOString()
                 };
+                status_updated = true;
             }
         }
 
-        if (status !== 'healthy') {
-            if (specs[spec].overallStatus == "degraded") {
-                specs[spec].overallStatus = 'unhealthy';
+        if (status_updated) {
+            if (status !== 'healthy') {
+                healthStatusPerSpec[spec].allHealthy = false;
             } else {
-                specs[spec].overallStatus = (specs[spec].overallStatus === 'healthy') ? 'degraded' : specs[spec].overallStatus;
+                healthStatusPerSpec[spec].allUnhealthy = false;
             }
+        }
+    }
+
+    for (const spec in specs) {
+        if (healthStatusPerSpec[spec].allHealthy) {
+            specs[spec].overallStatus = 'healthy';
+        } else if (healthStatusPerSpec[spec].allUnhealthy) {
+            specs[spec].overallStatus = 'unhealthy';
+        } else {
+            specs[spec].overallStatus = 'degraded';
         }
     }
 

@@ -23,6 +23,7 @@ export interface HealthReportEntry {
     provider: string | null;
     spec: string;
     interface: string | null;
+    region?: string;
 }
 
 export const ProviderHealthCachedHandlerOpts: RouteShorthandOptions = {
@@ -42,7 +43,9 @@ export const ProviderHealthCachedHandlerOpts: RouteShorthandOptions = {
                                 interface: { type: 'string' },
                                 status: { type: 'string' },
                                 message: { type: 'string' },
-                            }
+                                region: { type: 'string' },
+                            },
+                            required: ['id', 'timestamp', 'spec', 'interface', 'status', 'message']
                         }
                     }
                 }
@@ -93,6 +96,10 @@ class ProviderHealthData extends CachedDiskDbDataFetcher<HealthReportEntry> {
             return [];
         }
 
+        res.forEach((entry: HealthReportEntry) => {
+            entry.region = entry.region || '';
+        });
+
         return res;
     }
 
@@ -115,7 +122,7 @@ class ProviderHealthData extends CachedDiskDbDataFetcher<HealthReportEntry> {
     private sortData(data: HealthReportEntry[], sortKey: string, direction: 'ascending' | 'descending'): HealthReportEntry[] {
         if (sortKey === "-" || sortKey === "") sortKey = "timestamp";
 
-        if (!["timestamp", "spec", "interface", "status", "message"].includes(sortKey)) {
+        if (!["timestamp", "spec", "interface", "status", "region", "message"].includes(sortKey)) {
             console.log(`Invalid sortKey: ${sortKey}`);
             sortKey = "timestamp"
         }
@@ -128,7 +135,7 @@ class ProviderHealthData extends CachedDiskDbDataFetcher<HealthReportEntry> {
     }
 
     public async getCSVImpl(data: HealthReportEntry[]): Promise<string> {
-        let csv = 'time,spec,interface,status,message\n';
+        let csv = 'time,spec,interface,status,region,message\n';
         data.forEach((item: HealthReportEntry) => {
             csv += `${item.timestamp},${CSVEscape(item.spec)},${CSVEscape(item.interface || "")},${CSVEscape(item.status)},${CSVEscape(item.message || "")}\n`;
         });
@@ -276,6 +283,7 @@ const GetHealthV2Data = async (addr: string): Promise<HealthReportEntry[]> => {
         interface: JsinfoSchema.providerHealth.interface,
         status: JsinfoSchema.providerHealth.status,
         data: JsinfoSchema.providerHealth.data,
+        region: JsinfoSchema.providerHealth.geolocation
     }).from(JsinfoSchema.providerHealth)
         .where(eq(JsinfoSchema.providerHealth.provider, addr))
         .orderBy(desc(JsinfoSchema.providerHealth.id))
@@ -287,6 +295,7 @@ const GetHealthV2Data = async (addr: string): Promise<HealthReportEntry[]> => {
         spec: item.spec,
         interface: item.interface,
         status: item.status,
+        region: item.region || "",
         message: ParseMessageFromHealthV2(item.data),
         block: null,
         latency: null,
@@ -315,11 +324,11 @@ const ParseMessageFromHealthV2 = (data: string | null): string => {
         if (parsedData.block && parsedData.others) {
             const blockMessage = `Block: 0x${(parsedData.block).toString(16)}`;
             const latestBlock = parsedData.others;
-            let finalMessage = `${blockMessage} / Others: 0x${(latestBlock).toString(16)}`;
+            let finalMessage = `${blockMessage}, Others: 0x${(latestBlock).toString(16)}`;
 
             if (parsedData.latency) {
                 const latencyInMs = parsedData.latency / 1000000;
-                finalMessage += `, Latency: ${latencyInMs.toFixed(0)} ms`;
+                finalMessage += `. Latency: ${latencyInMs.toFixed(0)}ms`;
             }
 
             return finalMessage;
@@ -329,33 +338,6 @@ const ParseMessageFromHealthV2 = (data: string | null): string => {
     } catch (e) {
         console.error('ParseMessageFromHealthV2 - failed parsing data:', e);
         return "";
-    }
-}
-
-const parseHealthReportData = (data: string | null): string | null => {
-    if (!data) return null;
-    try {
-        const parsedData = JSON.parse(data);
-
-        if (parsedData.message) {
-            return parsedData.message;
-        }
-
-        if (parsedData.jail_end_time && parsedData.jails) {
-            const date = new Date(parsedData.jail_end_time * 1000);
-            return `Jail end time: ${date.toISOString()}, Jails: ${parsedData.jails}`;
-        }
-
-        if (parsedData.Block && parsedData.Others) {
-            const blockMessage = `Block: 0x${(parsedData.Block).toString(16)}`;
-            const latestBlock = parsedData.Others;
-            return `${blockMessage} / Others: 0x${(latestBlock).toString(16)}`;
-        }
-
-        return JSON.stringify(parsedData);
-    } catch (e) {
-        console.error('Failed to parse data:', e);
-        return data;
     }
 }
 

@@ -93,7 +93,7 @@ const ParseMessageFromHealthV2 = (data: any | null): string => {
         if (parsedData.jail_end_time && parsedData.jails) {
             const date = new Date(parsedData.jail_end_time * 1000);
             let formattedDate = `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}:${date.getSeconds().toString().padStart(2, '0')}`;
-            return `End Time:${formattedDate}`; // , Jails:${parsedData.jails}
+            return `End Time:${formattedDate}, Jails:${parsedData.jails}`;
         }
 
         if (parsedData.block && parsedData.others) {

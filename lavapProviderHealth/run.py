@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 
-import os, requests, subprocess, json, threading, shlex, string, time, random, queue, psycopg2
+import os, requests, subprocess, json, threading, shlex, string, time, random, queue, psycopg2, traceback
 from datetime import datetime
 from datetime import timezone
 from dateutil.parser import parse as parse_date
 from dateutil.relativedelta import relativedelta
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from typing import Dict, List, Optional, Any
+from pathlib import Path
 
 def log(function: str, content: str) -> None:
     timestamp: str = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
@@ -21,6 +22,21 @@ def get_env_var(name, default):
         log("env_vars", f"{name} is set to {value}")
     return value
 
+def parse_dotenv_for_var(var_name):
+    current_dir = Path(__file__).parent
+    parent_dir = current_dir.parent
+
+    dotenv_path = current_dir / '.env'
+    if not dotenv_path.exists():
+        dotenv_path = parent_dir / '.env'
+
+    if dotenv_path.exists():
+        with open(dotenv_path, 'r') as file:
+            for line in file:
+                if line.startswith(var_name):
+                    return line.strip().split('=', 1)[1]
+    return None
+
 # Constants
 POSTGRES_URL = os.environ.get('JSINFO_HEALTHPROBEJOB_POSTGRESQL_URL', 'postgres://jsinfo:secret@localhost:5432/jsinfo')
 PROVIDERS_URL: str = get_env_var('JSINFO_HEALTHPROBEJOB_PROVIDERS_URL', "https://jsinfo.lavanet.xyz/providers")
@@ -30,9 +46,19 @@ HPLAWNS_FILENAME = os.path.abspath(HPLAWNS_FILENAME)
 HPLAWNS_QUERY_INTERVAL = relativedelta(days=int(get_env_var('JSINFO_HEALTHPROBEJOB_HPLAWNS_QUERY_INTERVAL', 1)))
 DEBUG_PRINT_ACCOUNT_INFO_STDOUT: bool = get_env_var('JSINFO_HEALTHPROBEJOB_DEBUG_PRINT_ACCOUNT_INFO_STDOUT', 'False') == 'True'
 HTTP_SERVER_ADDRESS: tuple[str, int] = tuple(json.loads(get_env_var('JSINFO_HEALTHPROBEJOB_HTTP_SERVER_ADDRESS', json.dumps(('127.0.0.1', 6500)))))
-GEO_LOCATION: bool = get_env_var('JSINFO_HEALTHPROBEJOB_GEO_LOCATION', 'US')
+GEO_LOCATION: bool = get_env_var('JSINFO_HEALTHPROBEJOB_GEO_LOCATION', 'EU')
 CD_ON_START: str = get_env_var('JSINFO_HEALTHPROBEJOB_CD_ON_START', "~/Documents/lava_projects/lava/config/health_examples")
 BATCH_AMOUNT: int = get_env_var('JSINFO_HEALTHPROBEJOB_BATCH_AMOUNT', 8)
+
+# Parse some vars from the .env file
+env_var_value = parse_dotenv_for_var('JSINFO_HEALTHPROBEJOB_POSTGRESQL_URL')
+if env_var_value:
+    POSTGRES_URL = env_var_value
+    log("env", "The JSINFO_HEALTHPROBEJOB_POSTGRESQL_URL env file was loaded from disk.")
+env_var_value = parse_dotenv_for_var('JSINFO_HEALTHPROBEJOB_NODE_URL')
+if env_var_value:
+    NODE_URL = env_var_value
+    log("env", "The JSINFO_HEALTHPROBEJOB_NODE_URL env file was loaded from disk:" + env_var_value)
 
 HEALTH_RESULTS_GUID: str = ''.join(random.choices(string.ascii_letters + string.digits, k=32))
 
@@ -134,14 +160,14 @@ def is_status_better(old_status: str, new_status: str, old_data: str, new_data: 
     elif old_data_json != None and new_data_json == None:
         return False
     
-    old_block = old_data_json.get('Block', 0)
-    new_block = new_data_json.get('Block', 0)
+    old_block = old_data_json.get('block', 0)
+    new_block = new_data_json.get('block', 0)
 
     if new_block > old_block:
         return True
     
-    old_others = old_data_json.get('Others', 0)
-    new_others = new_data_json.get('Others', 0)
+    old_others = old_data_json.get('others', 0)
+    new_others = new_data_json.get('others', 0)
 
     if new_others > old_others:
         return True
@@ -221,20 +247,32 @@ def replace_for_compare(data):
 def db_worker_work_accountinfo(data):
     log("db_worker_work_accountinfo", f"Processing item: {data}")
     execute_db_operation("""
-        SELECT data FROM provider_accountinfo WHERE provider = %s ORDER BY timestamp DESC LIMIT 1
+        SELECT data, timestamp FROM provider_accountinfo WHERE provider = %s ORDER BY timestamp DESC LIMIT 1
     """, (data['provider_id'],))
     result = db_cur.fetchone()
     if result is not None:
         existing_data = result[0].replace(" ", "").replace("\t", "").replace("\n", "").lower()
         new_data = data['data'].replace(" ", "").replace("\t", "").replace("\n", "").lower()
-    if result is None or replace_for_compare(existing_data) != replace_for_compare(new_data):
+        if replace_for_compare(existing_data) == replace_for_compare(new_data):
+            # If data is the same, update the timestamp of the existing record
+            execute_db_operation("""
+                UPDATE provider_accountinfo SET timestamp = %s WHERE provider = %s
+            """, (data['timestamp'], data['provider_id']))
+            log("db_worker_work_accountinfo", "Data is the same - timestamp updated for existing record")
+        else:
+            # If data is different, insert a new record
+            execute_db_operation("""
+                INSERT INTO provider_accountinfo (provider, timestamp, data)
+                VALUES (%s, %s, %s)
+            """, (data['provider_id'], data['timestamp'], data['data']))
+            log("db_worker_work_accountinfo", "New record inserted")
+    else:
+        # If no existing record, insert a new one
         execute_db_operation("""
             INSERT INTO provider_accountinfo (provider, timestamp, data)
             VALUES (%s, %s, %s)
         """, (data['provider_id'], data['timestamp'], data['data']))
-        log("db_worker_work_accountinfo", "New record inserted")
-    else:
-        log("db_worker_work_accountinfo", "No new record inserted, data is the same")
+        log("db_worker_work_accountinfo", "New record inserted because no existing data was found")
 
 def db_worker_work_health(data):
     log("db_worker_work_health", f"Processing item: {data}")
@@ -380,7 +418,6 @@ def replace_archive(input_string: str) -> str:
     return input_string
 
 def run_accountinfo_command(address: str) -> Optional[Dict[str, Any]]:
-    # log('run_accountinfo_command', f'Starting pairing command for address: {address}')
     command = f"lavad q pairing account-info {address} --output json --node {NODE_URL}"
     output = run_command(command, print_stdout=DEBUG_PRINT_ACCOUNT_INFO_STDOUT)
     log('run_accountinfo_command', 'Pairing command completed.')
@@ -410,7 +447,7 @@ def parse_accountinfo_spec(result: Dict[str, Dict[str, List[str]]], key: str, pr
             jail_end_time = datetime.fromtimestamp(int(provider.get("jail_end_time", "0")))
             jails = datetime.fromtimestamp(int(provider.get("jails", "0")))
             if jail_end_time != 0 or jails != 0:
-                if jail_end_time > datetime.now(timezone.utc) and jails > 2:
+                if ensure_offset_aware(jail_end_time) > datetime.now(timezone.utc) and jails > 2:
                     if chain not in result["frozen"]:
                         result["frozen"][chain] = []
                     result["frozen"][chain].append((interface, {"message": "run to unfreeze: lavad tx pairing unfreeze " + chain}))
@@ -441,6 +478,13 @@ def run_health_command(address: str, single_provider_specs_interfaces_data: Opti
     run_command(command)
     log('run_health_command', 'Health command completed.')
 
+def ensure_offset_aware(dt):
+    if isinstance(dt, str):
+        dt = parse_date(dt)
+    if dt.tzinfo is None or dt.tzinfo.utcoffset(dt) is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt
+
 def get_provider_addresses() -> List[str]:
     log('get_provider_addresses', 'Fetching provider addresses...')
     response = requests.get(PROVIDERS_URL)
@@ -450,7 +494,7 @@ def get_provider_addresses() -> List[str]:
     for provider in providers:
         address: str = provider['address']
         next_query_time: Optional[str] = next_query_times.get(address, None)
-        if next_query_time is None or parse_date(next_query_time) <= datetime.now(timezone.utc):
+        if next_query_time is None or ensure_offset_aware(next_query_time) <= datetime.now(timezone.utc):
             addresses.append(address)
     log('get_provider_addresses', f'Fetched {len(addresses)} provider addresses.')
     return addresses
@@ -497,7 +541,7 @@ def process_batch(batch):
                 process_lava_id_address(address)
                 log("process_batch", f"Successfully processed address: {address}")
             except Exception as e:
-                log("process_batch", f"Error processing address: {address}. Error: {str(e)}")
+                log("process_batch", f"Error processing address: {address}. Error: {str(e)}\nStack Trace: {traceback.format_exc()}")
         log("process_batch", "Finished loop")
 
 def main() -> None:

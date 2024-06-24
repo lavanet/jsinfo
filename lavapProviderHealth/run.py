@@ -447,10 +447,9 @@ def parse_accountinfo_spec(result: Dict[str, Dict[str, List[str]]], key: str, pr
             jail_end_time = provider.get("jail_end_time", "0")
             if jail_end_time == "1970-01-01 00:00:00":
                 jail_end_time = "0"
-            jail_end_time = int(jail_end_time)
             jails = int(provider.get("jails", "0"))
-            if jail_end_time != 0 or jails != 0:
-                if ensure_offset_aware(datetime.fromtimestamp(jail_end_time)) > datetime.now(timezone.utc) and jails > 2:
+            if jail_end_time != "0" or jails != 0:
+                if parse_date_to_utc(jail_end_time) > datetime.now(timezone.utc) and jails > 2:
                     if chain not in result["frozen"]:
                         result["frozen"][chain] = []
                     result["frozen"][chain].append((interface, {"message": "run to unfreeze: lavad tx pairing unfreeze " + chain}))
@@ -481,8 +480,10 @@ def run_health_command(address: str, single_provider_specs_interfaces_data: Opti
     run_command(command)
     log('run_health_command', 'Health command completed.')
 
-def ensure_offset_aware(dt):
-    if isinstance(dt, str):
+def parse_date_to_utc(dt):
+    if isinstance(dt, int) or (isinstance(dt, str) and dt.isdigit()):
+        dt = datetime.fromtimestamp(int(dt), timezone.utc)
+    elif isinstance(dt, str):
         dt = parse_date(dt)
     if dt.tzinfo is None or dt.tzinfo.utcoffset(dt) is None:
         dt = dt.replace(tzinfo=timezone.utc)
@@ -497,7 +498,7 @@ def get_provider_addresses() -> List[str]:
     for provider in providers:
         address: str = provider['address']
         next_query_time: Optional[str] = next_query_times.get(address, None)
-        if next_query_time is None or ensure_offset_aware(next_query_time) <= datetime.now(timezone.utc):
+        if next_query_time is None or parse_date_to_utc(next_query_time) <= datetime.now(timezone.utc):
             addresses.append(address)
     log('get_provider_addresses', f'Fetched {len(addresses)} provider addresses.')
     return addresses

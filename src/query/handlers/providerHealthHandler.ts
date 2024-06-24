@@ -6,12 +6,11 @@ import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '..
 import * as JsinfoSchema from '../../schemas/jsinfoSchema';
 import { eq, desc } from "drizzle-orm";
 import { Pagination } from '../utils/queryPagination';
-import { CSVEscape, GetAndValidateProviderAddressFromRequest, GetDataLength, GetDataLengthForPrints, IsNotNullAndNotZero, SafeSlice } from '../utils/queryUtils';
+import { CSVEscape, GetAndValidateProviderAddressFromRequest, GetDataLength, IsNotNullAndNotZero, ParseDateToUtc, SafeSlice } from '../utils/queryUtils';
 import { CompareValues } from '../utils/queryUtils';
 import path from 'path';
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '../queryConsts';
 import { CachedDiskDbDataFetcher } from '../classes/CachedDiskDbDataFetcher';
-
 export interface HealthReportEntry {
     message: string | null;
     block: number | null;
@@ -306,6 +305,8 @@ const GetHealthV2Data = async (addr: string): Promise<HealthReportEntry[]> => {
     return healthReportEntries
 }
 
+
+
 const ParseMessageFromHealthV2 = (data: string | null): string => {
     if (!data) return "";
     try {
@@ -316,7 +317,10 @@ const ParseMessageFromHealthV2 = (data: string | null): string => {
         }
 
         if (parsedData.jail_end_time && parsedData.jails) {
-            const date = new Date(parsedData.jail_end_time * 1000);
+            const date = ParseDateToUtc(parsedData.jail_end_time);
+            // bad db data
+            const is1970Included = `${parsedData.jail_end_time}${parsedData.jails}${date}`.includes("1970-01-01");
+            if (is1970Included) return "";
             let formattedDate = `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}:${date.getSeconds().toString().padStart(2, '0')}`;
             return `Jail end time: ${formattedDate}, Jails: ${parsedData.jails}`;
         }

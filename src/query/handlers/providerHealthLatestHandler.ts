@@ -7,7 +7,7 @@ import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryGetJsinfoReadDbInstance } from '../queryDb';
 import { eq, and, gte, desc } from "drizzle-orm";
 import { providerHealth } from '../../schemas/jsinfoSchema';
-import { GetAndValidateProviderAddressFromRequest } from '../utils/queryUtils';
+import { GetAndValidateProviderAddressFromRequest, ParseDateToUtc } from '../utils/queryUtils';
 import { WriteErrorToFastifyReply } from '../utils/queryServerUtils';
 
 type HealthRecord = {
@@ -98,7 +98,10 @@ const ParseMessageFromHealthV2 = (data: any | null): string => {
         }
 
         if (parsedData.jail_end_time && parsedData.jails) {
-            const date = new Date(parsedData.jail_end_time * 1000);
+            const date = ParseDateToUtc(parsedData.jail_end_time);
+            // bad db data
+            const is1970Included = `${parsedData.jail_end_time}${parsedData.jails}${date}`.includes("1970-01-01");
+            if (is1970Included) return "";
             let formattedDate = `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}:${date.getSeconds().toString().padStart(2, '0')}`;
             return `End Time:${formattedDate}, Jails:${parsedData.jails}`;
         }

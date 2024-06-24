@@ -1,4 +1,4 @@
-## Js info
+## JsInfo
 
 ### Generate migrations
 

@@ -476,7 +476,9 @@ def run_health_command(address: str, single_provider_specs_interfaces_data: Opti
     log('run_health_command', f'Starting health command for address: {address}')
     command = f"lavap test health health_all_providers.yml --node {NODE_URL} --single-provider-address {address} --post-results-guid {HEALTH_RESULTS_GUID} --run-once-and-exit --post-results-skip-spec"
     if single_provider_specs_interfaces_data is not None:
-        command += " --single-provider-specs-interfaces-data " + shlex.quote(json.dumps(single_provider_specs_interfaces_data))
+        transformed_data = {provider: [interface[0] for interface in interfaces] 
+                    for provider, interfaces in single_provider_specs_interfaces_data.items()}
+        command += " --single-provider-specs-interfaces-data " + shlex.quote(json.dumps(transformed_data))
     run_command(command)
     log('run_health_command', 'Health command completed.')
 

@@ -438,7 +438,7 @@ def parse_accountinfo_spec(result: Dict[str, Dict[str, List[str]]], key: str, pr
             result[key][chain] = []
         for interface in api_interfaces:
             if interface not in result[key][chain]:
-                result[key][chain].append(interface)
+                result[key][chain].append((interface, ""))
             
             # from the docs:
             # https://github.com/lavanet/lava/blob/6249399121690effe2b12cc3adc1d099c343235c/x/pairing/README.md#L220
@@ -452,7 +452,7 @@ def parse_accountinfo_spec(result: Dict[str, Dict[str, List[str]]], key: str, pr
                 if parse_date_to_utc(jail_end_time) > datetime.now(timezone.utc) and jails > 2:
                     if chain not in result["frozen"]:
                         result["frozen"][chain] = []
-                    result["frozen"][chain].append((interface, "run to unfreeze: lavad tx pairing unfreeze " + chain))
+                    result["frozen"][chain].append((interface, {"message": "run to unfreeze: lavad tx pairing unfreeze " + chain}))
                 else:
                     if chain not in result["jailed"]:
                         result["jailed"][chain] = []
@@ -523,12 +523,12 @@ def process_lava_id_address(address: str) -> None:
         run_health_command(address, single_provider_specs_interfaces_data = info_command_parsed_json["healthy"])
 
     for spec, api_interfaces in info_command_parsed_json["frozen"].items():
-        for api_interface in api_interfaces:
-            db_add_provider_health_data(HEALTH_RESULTS_GUID, address, spec, api_interface, "frozen", "")
+        for api_interface, data in api_interfaces:
+            db_add_provider_health_data(HEALTH_RESULTS_GUID, address, spec, api_interface, "frozen", data)
     
     for spec, api_interfaces in info_command_parsed_json["unstaked"].items():
-        for api_interface in api_interfaces:
-            db_add_provider_health_data(HEALTH_RESULTS_GUID, address, spec, api_interface, "unstaked", "")
+        for api_interface, data in api_interfaces:
+            db_add_provider_health_data(HEALTH_RESULTS_GUID, address, spec, api_interface, "unstaked", data)
     
     for spec, api_interfaces_and_data in info_command_parsed_json["jailed"].items():
         for api_interface, data in api_interfaces_and_data:

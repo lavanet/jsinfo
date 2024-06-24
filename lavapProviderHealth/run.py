@@ -9,7 +9,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from typing import Dict, List, Optional, Any
 
 def log(function: str, content: str) -> None:
-    timestamp: str = datetime.now(timezone.UTC).strftime('%Y-%m-%d %H:%M:%S')
+    timestamp: str = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
     trimmed_content = content[:2000] + ' ...' if len(content) > 2000 else content
     print(f"[{timestamp}] HealthProbePyLog [{threading.current_thread().name}] :: {function} :: {trimmed_content}")
 
@@ -91,7 +91,7 @@ def db_add_provider_health_data(guid: str, provider_id: str, spec: str, apiinter
     db_save_data_to_queue({
         'type': 'health',
         'guid': guid,
-        'timestamp': datetime.now(timezone.UTC).isoformat(),
+        'timestamp': datetime.now(timezone.utc).isoformat(),
         'provider_id': provider_id,
         'spec': spec,
         'apiinterface': apiinterface,
@@ -104,7 +104,7 @@ def db_add_accountinfo_data(provider_id: str, data: Any) -> None:
     global db_provider_health_queue, db_queue_condition
     db_save_data_to_queue({
         'type': 'accountinfo',
-        'timestamp': datetime.now(timezone.UTC).isoformat(),
+        'timestamp': datetime.now(timezone.utc).isoformat(),
         'provider_id': provider_id,
         'data': db_json_data(data)
     })
@@ -365,7 +365,7 @@ def haplawns_read_addresses_from_file() -> Dict[str, str]:
 
 def haplawns_write_address_to_file(address: str) -> None:
     addresses = haplawns_read_addresses_from_file()
-    addresses[address] = (datetime.now(timezone.UTC) + HPLAWNS_QUERY_INTERVAL).isoformat()
+    addresses[address] = (datetime.now(timezone.utc) + HPLAWNS_QUERY_INTERVAL).isoformat()
     with open(HPLAWNS_FILENAME, 'w') as f:
         json.dump(addresses, f)
 
@@ -405,7 +405,7 @@ def parse_accountinfo_spec(result: Dict[str, Dict[str, List[str]]], key: str, pr
             jail_end_time = datetime.fromtimestamp(int(provider.get("jail_end_time", "0")))
             jails = datetime.fromtimestamp(int(provider.get("jails", "0")))
             if jail_end_time != 0 or jails != 0:
-                if jail_end_time > datetime.now(timezone.UTC) and jails > 2:
+                if jail_end_time > datetime.now(timezone.utc) and jails > 2:
                     if chain not in result["frozen"]:
                         result["frozen"][chain] = []
                     result["frozen"][chain].append((interface, {"message": "run to unfreeze: lavad tx pairing unfreeze " + chain}))
@@ -445,7 +445,7 @@ def get_provider_addresses() -> List[str]:
     for provider in providers:
         address: str = provider['address']
         next_query_time: Optional[str] = next_query_times.get(address, None)
-        if next_query_time is None or parse_date(next_query_time) <= datetime.now(timezone.UTC):
+        if next_query_time is None or parse_date(next_query_time) <= datetime.now(timezone.utc):
             addresses.append(address)
     log('get_provider_addresses', f'Fetched {len(addresses)} provider addresses.')
     return addresses

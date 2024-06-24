@@ -444,10 +444,10 @@ def parse_accountinfo_spec(result: Dict[str, Dict[str, List[str]]], key: str, pr
             # https://github.com/lavanet/lava/blob/6249399121690effe2b12cc3adc1d099c343235c/x/pairing/README.md#L220
             # if I have a provider with jails > 2 and jail_end_time < date.now()  provider status should be frozen with a message of run to unfreeze: lavad tx pairing unfreeze CHAINID
             # otherwise if jails > 0 || jail_end_time I consider the provider jailed
-            jail_end_time = datetime.fromtimestamp(int(provider.get("jail_end_time", "0")))
+            jail_end_time = int(provider.get("jail_end_time", "0"))
             jails = int(provider.get("jails", "0"))
             if jail_end_time != 0 or jails != 0:
-                if ensure_offset_aware(jail_end_time) > datetime.now(timezone.utc) and jails > 2:
+                if ensure_offset_aware(datetime.fromtimestamp(jail_end_time)) > datetime.now(timezone.utc) and jails > 2:
                     if chain not in result["frozen"]:
                         result["frozen"][chain] = []
                     result["frozen"][chain].append((interface, {"message": "run to unfreeze: lavad tx pairing unfreeze " + chain}))

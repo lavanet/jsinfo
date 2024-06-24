@@ -452,7 +452,7 @@ def parse_accountinfo_spec(result: Dict[str, Dict[str, List[str]]], key: str, pr
                 if parse_date_to_utc(jail_end_time) > datetime.now(timezone.utc) and jails > 2:
                     if chain not in result["frozen"]:
                         result["frozen"][chain] = []
-                    result["frozen"][chain].append((interface, {"message": "run to unfreeze: lavad tx pairing unfreeze " + chain}))
+                    result["frozen"][chain].append((interface, "run to unfreeze: lavad tx pairing unfreeze " + chain))
                 else:
                     if chain not in result["jailed"]:
                         result["jailed"][chain] = []

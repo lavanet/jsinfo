@@ -445,8 +445,11 @@ def parse_accountinfo_spec(result: Dict[str, Dict[str, List[str]]], key: str, pr
             # if I have a provider with jails > 2 and jail_end_time < date.now()  provider status should be frozen with a message of run to unfreeze: lavad tx pairing unfreeze CHAINID
             # otherwise if jails > 0 || jail_end_time I consider the provider jailed
             jail_end_time = int(provider.get("jail_end_time", "0"))
+            if jail_end_time == "1970-01-01 00:00:00":
+                jail_end_time = 0
+            jail_end_time = int(jail_end_time)
             jails = int(provider.get("jails", "0"))
-            if jail_end_time != 0 or jails != 0:
+            if jail_end_time == "0" or jails != 0:
                 if ensure_offset_aware(datetime.fromtimestamp(jail_end_time)) > datetime.now(timezone.utc) and jails > 2:
                     if chain not in result["frozen"]:
                         result["frozen"][chain] = []

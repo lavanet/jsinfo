@@ -243,7 +243,7 @@ def db_worker_work_health(data):
     """, (data['provider_id'], data['guid'], data['spec'], data['apiinterface'], GEO_LOCATION))
     result = db_cur.fetchone()
     if result is None:
-        log("db_worker_work_health", "No existing record found, inserting new record")
+        log("db_worker_work_health", f"No existing record found, inserting new record for provider {data['provider_id']}, GUID: {data['guid']}, Spec: {data['spec']}, API Interface: {data['apiinterface']}")
         execute_db_operation("""
             INSERT INTO provider_health (provider, timestamp, guid, spec, geolocation, interface, status, data)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
@@ -251,15 +251,15 @@ def db_worker_work_health(data):
     else:
         old_status, old_data = result
         if is_status_better(old_status, data['status'], old_data, data['data']):
-            log("db_worker_work_health", f"Updating status from {old_status} to {data['status']} for provider {data['provider_id']}")
+            log("db_worker_work_health", f"Updating status from {old_status} to {data['status']} for provider {data['provider_id']}, GUID: {data['guid']}, Spec: {data['spec']}, API Interface: {data['apiinterface']}")
             execute_db_operation("""
                 UPDATE provider_health SET status = %s, data = %s WHERE provider = %s AND guid = %s AND spec = %s AND interface = %s AND geolocation = %s
             """, (data['status'], data['data'], data['provider_id'], data['guid'], data['spec'], data['apiinterface'], GEO_LOCATION))
         else:
-            log("db_worker_work_health", f"Updating timestamp for provider {data['provider_id']}")
+            log("db_worker_work_health", f"Updating timestamp for provider {data['provider_id']}, GUID: {data['guid']}, Spec: {data['spec']}, API Interface: {data['apiinterface']}")
             execute_db_operation("""
-                UPDATE provider_health SET timestamp = %s WHERE provider = %s AND guid = %s AND spec = %s AND interface = %s AND geolocation = %s
-            """, (data['timestamp'], data['provider_id'], data['guid'], data['spec'], data['apiinterface'], GEO_LOCATION))
+                UPDATE provider_health SET timestamp = NOW() WHERE provider = %s AND guid = %s AND spec = %s AND interface = %s AND geolocation = %s
+            """, (data['provider_id'], data['guid'], data['spec'], data['apiinterface'], GEO_LOCATION))
     db_provider_health_queue.task_done()
 
 def db_worker():

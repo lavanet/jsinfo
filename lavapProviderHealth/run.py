@@ -255,6 +255,11 @@ def db_worker_work_health(data):
             execute_db_operation("""
                 UPDATE provider_health SET status = %s, data = %s WHERE provider = %s AND guid = %s AND spec = %s AND interface = %s AND geolocation = %s
             """, (data['status'], data['data'], data['provider_id'], data['guid'], data['spec'], data['apiinterface'], GEO_LOCATION))
+        else:
+            log("db_worker_work_health", f"Updating timestamp for provider {data['provider_id']}")
+            execute_db_operation("""
+                UPDATE provider_health SET timestamp = %s WHERE provider = %s AND guid = %s AND spec = %s AND interface = %s AND geolocation = %s
+            """, (data['timestamp'], data['provider_id'], data['guid'], data['spec'], data['apiinterface'], GEO_LOCATION))
     db_provider_health_queue.task_done()
 
 def db_worker():

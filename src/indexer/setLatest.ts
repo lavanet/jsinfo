@@ -311,9 +311,9 @@ export async function UpdateLatestBlockMeta(
                                 target: [JsinfoSchema.providerStakes.provider, JsinfoSchema.providerStakes.specId],
                                 set: {
                                     stake: stake.stake,
-                                    appliedHeight: stake.appliedHeight,
+                                    appliedHeight: ToSignedIntOrMinusOne(stake.appliedHeight),
                                     blockId: height,
-                                    geolocation: stake.geolocation,
+                                    geolocation: ToSignedIntOrMinusOne(stake.geolocation),
                                     addons: stake.addons,
                                     extensions: stake.extensions,
                                     status: stake.status,

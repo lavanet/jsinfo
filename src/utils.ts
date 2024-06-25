@@ -86,32 +86,6 @@ export async function ConnectToRpc(rpc: string): Promise<RpcConnection> {
         throw error;
     }
 
-    // ugly hack for staging - START
-    // https://lavanetxyz.slack.com/archives/C03NVQ5E3H7/p1706179067788329
-
-    // 20240432 - Works without it ?
-    // if (process.env.JSINFO_INDEXER_USE_PROXY_ON_RPC_ACCESS === 'true') {
-    //     // assert that this enabled
-    //     GetEnvVar("NODE_TLS_REJECT_UNAUTHORIZED")
-
-    //     const httpProxy = require('http-proxy');
-
-    //     const proxy = httpProxy.createProxyServer({
-    //         target: rpc,
-    //         changeOrigin: true,
-    //         secure: false,
-    //         verbose: true,
-    //         verifySSL: false,
-    //     });
-
-    //     proxy.listen(9191);
-
-    //     logger.info('Proxy server is running on port 9191');
-
-    //     rpc = 'http://localhost:9191';
-    // }
-    // ugly hack for staging - END 
-
     logger.info(`ConnectToRpc:: connecting to ${rpc}`);
     const client = await StargateClient.connect(rpc);
     logger.info(`ConnectToRpc:: connected to StargateClient`);

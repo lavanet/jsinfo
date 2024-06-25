@@ -161,9 +161,8 @@ function processStakeEntry(
         addons: addons,
         extensions: extensions,
         status: status,
-
         stake: parseInt(providerStake.stake.amount),
-        appliedHeight: appliedHeight,
+        appliedHeight: ToSignedIntOrMinusOne(appliedHeight),
     } as JsinfoSchema.ProviderStake)
 }
 

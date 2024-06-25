@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import os, requests, subprocess, json, threading, shlex, string, time, random, queue, psycopg2, traceback
+import sys, re, os, requests, subprocess, json, threading, shlex, string, time, random, queue, psycopg2, traceback
 from datetime import datetime
 from datetime import timezone
 from dateutil.parser import parse as parse_date
@@ -48,7 +48,7 @@ DEBUG_PRINT_ACCOUNT_INFO_STDOUT: bool = get_env_var('JSINFO_HEALTHPROBEJOB_DEBUG
 HTTP_SERVER_ADDRESS: tuple[str, int] = tuple(json.loads(get_env_var('JSINFO_HEALTHPROBEJOB_HTTP_SERVER_ADDRESS', json.dumps(('127.0.0.1', 6500)))))
 GEO_LOCATION: bool = get_env_var('JSINFO_HEALTHPROBEJOB_GEO_LOCATION', 'EU')
 CD_ON_START: str = get_env_var('JSINFO_HEALTHPROBEJOB_CD_ON_START', "~/Documents/lava_projects/lava/config/health_examples")
-BATCH_AMOUNT: int = get_env_var('JSINFO_HEALTHPROBEJOB_BATCH_AMOUNT', 8)
+BATCH_AMOUNT: int = get_env_var('JSINFO_HEALTHPROBEJOB_BATCH_AMOUNT', 15)
 
 # Parse some vars from the .env file
 env_var_value = parse_dotenv_for_var('JSINFO_HEALTHPROBEJOB_POSTGRESQL_URL')
@@ -550,14 +550,19 @@ def process_batch(batch):
                 log("process_batch", f"Error processing address: {address}. Error: {str(e)}\nStack Trace: {traceback.format_exc()}")
         log("process_batch", "Finished loop")
 
-def main() -> None:
+def main(lava_id = None) -> None:
     os.chdir(os.path.expanduser(CD_ON_START))
 
     server_thread = threading.Thread(target=run_server, name="http_server")
     server_thread.start()
 
+    if lava_id:
+        log("main - one provider mode", f"Processing address: {lava_id}")
+        process_lava_id_address(lava_id)
+        log("main - one provider mode", f"Successfully processed address: {lava_id}")
+        exit_script()
+    
     addresses = get_provider_addresses()
-    random.shuffle(addresses)
 
     batch_size = len(addresses) // BATCH_AMOUNT
 
@@ -664,5 +669,25 @@ def run_server() -> None:
         log("run_server", f"Server failed with error: {e}")
         exit_script()
 
+def print_help():
+    print("Usage: run.py [lava_id?]")
+    print("lava_id should be in the format: lava@<id>")
+    print("Example: run.py lava@1uhnqhw75xyu4kxj7lqhenlnl8kw62x263tmt8h")
+    exit_script()
+
+def is_valid_lava_id(lava_id):
+    return re.match(r"^lava@[0-9a-zA-Z]+$", lava_id) is not None
+
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) > 1:
+        if sys.argv[1] in ("-h", "--help"):
+            print_help()
+        lava_id = sys.argv[1]
+        if not is_valid_lava_id(lava_id):
+            print("Error: Invalid lava_id format.")
+            print_help()
+    else:
+        lava_id = None
+
+    main(lava_id)
+

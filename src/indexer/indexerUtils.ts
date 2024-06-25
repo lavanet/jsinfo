@@ -24,7 +24,8 @@ export function ReplaceArchive(str: string): string {
     return str.replace(/(archive,)+archive/g, "archive");
 }
 
-export function ToSignedIntOrMinusOne(input: bigint | number | string | Long): number {
+export function ToSignedIntOrMinusOne(input: bigint | number | string | Long | null): number {
+    if (input === null) return 0;
     let num;
     if (["9223372036854776000", "2147483647", "-1"].some(maxValue => (input + "").includes(maxValue))) {
         return -1;

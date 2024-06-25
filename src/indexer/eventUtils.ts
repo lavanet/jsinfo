@@ -66,7 +66,12 @@ export function EventParseInt(value: string): number {
         throw new Error(`EventParseInt: Value is not a valid integer: ${value}`);
     }
 
-    return parseInt(value, 10);
+    const numberValue = parseInt(value, 10);
+    if (numberValue > Number.MAX_SAFE_INTEGER) {
+        throw new Error(`EventParseInt: Value is larger than the maximum safe integer: ${value}`);
+    }
+
+    return numberValue;
 }
 
 export function EventParseFloat(value: string): number {

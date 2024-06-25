@@ -58,6 +58,11 @@ export const ProcessOneEvent = (
     static_dbPlans: Map<string, JsinfoSchema.Plan>,
     static_dbStakes: Map<string, JsinfoSchema.ProviderStake[]>,
 ) => {
+
+    if (height > Number.MAX_SAFE_INTEGER) {
+        throw new Error(`ProcessOneEvent: block height is larger than the maximum safe integer: ${height}`);
+    }
+
     switch (evt.type) {
         //
         // Providers

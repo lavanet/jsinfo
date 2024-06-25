@@ -57,9 +57,6 @@ query_no_cache:
 run_lavapProviderHealth:
 	cd lavapProviderHealth && python run.py
 
-# query_test_health_handeler:
-# 	bun test providerHealthHandler.test.ts 
-
 query_test_lavap_prodiver_error_parsing:
 	bun run ./src/query/utils/lavapProvidersErrorParser.test.ts 
 

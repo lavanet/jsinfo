@@ -86,32 +86,6 @@ export async function ConnectToRpc(rpc: string): Promise<RpcConnection> {
         throw error;
     }
 
-    // ugly hack for staging - START
-    // https://lavanetxyz.slack.com/archives/C03NVQ5E3H7/p1706179067788329
-
-    // 20240432 - Works without it ?
-    // if (process.env.JSINFO_INDEXER_USE_PROXY_ON_RPC_ACCESS === 'true') {
-    //     // assert that this enabled
-    //     GetEnvVar("NODE_TLS_REJECT_UNAUTHORIZED")
-
-    //     const httpProxy = require('http-proxy');
-
-    //     const proxy = httpProxy.createProxyServer({
-    //         target: rpc,
-    //         changeOrigin: true,
-    //         secure: false,
-    //         verbose: true,
-    //         verifySSL: false,
-    //     });
-
-    //     proxy.listen(9191);
-
-    //     logger.info('Proxy server is running on port 9191');
-
-    //     rpc = 'http://localhost:9191';
-    // }
-    // ugly hack for staging - END 
-
     logger.info(`ConnectToRpc:: connecting to ${rpc}`);
     const client = await StargateClient.connect(rpc);
     logger.info(`ConnectToRpc:: connected to StargateClient`);
@@ -155,10 +129,20 @@ export async function GetPostgresUrl(): Promise<string> {
     return cachedPostgresUrl!;
 }
 
-export async function DoInChunks(sz: number, arr: any, cb: (arr: any) => Promise<any>) {
+export async function DoInChunks(sz: number, arr: any[], cb: (arr: any[]) => Promise<any>) {
     while (arr.length != 0) {
-        const tmpArr = arr.splice(0, sz)
-        await cb(tmpArr)
+        const tmpArr = arr.splice(0, sz);
+        try {
+            await cb(tmpArr);
+        } catch (error) {
+            console.error(`Error processing chunk: ${JSON.stringify(tmpArr)}`);
+            console.error(`Callback function: ${cb.toString()}`);
+            if (error instanceof Error) {
+                console.error(`Error message: ${error.message}`);
+                console.error(`Stack Trace: ${error.stack}`);
+            }
+            throw error;
+        }
     }
-    return
+    return;
 }

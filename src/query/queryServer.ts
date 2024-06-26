@@ -4,12 +4,10 @@ import Fastify, { FastifyBaseLogger, FastifyInstance, RouteShorthandOptions, Fas
 import fastifyCors from '@fastify/cors';
 
 import pino from 'pino';
-import RequestCache from './queryCache';
 
 import { JSINFO_QUERY_HIGH_POST_BODY_LIMIT, JSINFO_QUERY_FASITY_PRINT_LOGS } from './queryConsts';
-import { AddErrorResponseToFastifyServerOpts, ItemCountOpts } from './utils/queryServerUtils';
-
-const requestCache: RequestCache = new RequestCache();
+import { AddErrorResponseToFastifyServerOpts, ItemCountOpts, WriteErrorToFastifyReply } from './utils/queryServerUtils';
+import { validatePaginationString } from './utils/queryPagination';
 
 const FastifyLogger: FastifyBaseLogger = pino({
     level: 'warn',
@@ -28,20 +26,46 @@ const server: FastifyInstance = Fastify({
 
 server.register(fastifyCors, { origin: "*" });
 
-export function RegisterServerHandlerWithCache(
+function handleRequestWithPagination(
+    handler: (request: FastifyRequest, reply: FastifyReply) => Promise<any>
+): (request: FastifyRequest, reply: FastifyReply) => Promise<any> {
+    return async (request: FastifyRequest, reply: FastifyReply) => {
+        const query = request.query as { [key: string]: unknown };
+
+        if (query.pagination && typeof query.pagination === 'string') {
+            if (!validatePaginationString(query.pagination)) {
+                console.log('Failed to parse pagination:', query.pagination);
+                WriteErrorToFastifyReply(reply, 'Bad pagination argument');
+                return reply;
+            }
+        }
+
+        const handlerData = await handler(request, reply);
+        // returns null on error and handler handled the response
+        if (handlerData == null) return reply;
+        if (isValidData(handlerData)) {
+            reply.send(handlerData);
+            return reply;
+        }
+
+        reply.send({});
+        return reply;
+    };
+}
+
+function isValidData(data: any): boolean {
+    return typeof data === 'object' && data !== null;
+}
+
+export function RegistePaginationServerHandler(
     path: string,
     opts: RouteShorthandOptions,
     handler: (request: FastifyRequest, reply: FastifyReply) => Promise<any>,
     ItemCountRawHandler?: (request: FastifyRequest, reply: FastifyReply) => Promise<any>
 ) {
-    console.log("Registering last-updated for path: " + "/last-updated" + path);
-    server.get("/last-updated" + path, async (request: FastifyRequest, reply: FastifyReply) => {
-        await requestCache.handleGetDataLastUpdatedDate(request, reply)
-    });
-
     console.log("Registering handlerfor path: " + path);
     opts = AddErrorResponseToFastifyServerOpts(opts);
-    server.get(path, opts, requestCache.handleRequestWithCache(handler));
+    server.get(path, opts, handleRequestWithPagination(handler));
 
     if (ItemCountRawHandler) {
         console.log("Registering ItemCountRawHandler for path: " + "/item-count" + path);

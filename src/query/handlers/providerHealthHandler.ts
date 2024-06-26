@@ -9,8 +9,8 @@ import { Pagination } from '../utils/queryPagination';
 import { CSVEscape, GetAndValidateProviderAddressFromRequest, GetDataLength, IsNotNullAndNotZero, ParseDateToUtc, SafeSlice } from '../utils/queryUtils';
 import { CompareValues } from '../utils/queryUtils';
 import path from 'path';
-import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '../queryConsts';
-import { CachedDiskDbDataFetcher } from '../classes/CachedDiskDbDataFetcher';
+import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE } from '../queryConsts';
+import { RequestHandlerBase } from '../classes/RequestHandlerBase';
 export interface HealthReportEntry {
     message: string | null;
     block: number | null;
@@ -53,7 +53,7 @@ export const ProviderHealthCachedHandlerOpts: RouteShorthandOptions = {
     }
 }
 
-class ProviderHealthData extends CachedDiskDbDataFetcher<HealthReportEntry> {
+class ProviderHealthData extends RequestHandlerBase<HealthReportEntry> {
     private addr: string;
 
     constructor(addr: string) {
@@ -66,80 +66,80 @@ class ProviderHealthData extends CachedDiskDbDataFetcher<HealthReportEntry> {
         this.addr = addr;
     }
 
-    public static GetInstance(addr: string): ProviderHealthData {
-        return ProviderHealthData.GetInstanceBase(addr);
+    public GetInstance()(addr: string): ProviderHealthData {
+        return ProviderHealthData.GetInstance()(addr);
     }
 
     protected getCacheFilePathImpl(): string {
-        return path.join(this.cacheDir, `ProviderHealthHandlerData_${this.addr}`);
-    }
+    return path.join(this.cacheDir, `ProviderHealthHandlerData_${this.addr}`);
+}
 
     protected getCSVFileNameImpl(): string {
-        return `ProviderHealth_${this.addr}.csv`;
-    }
+    return `ProviderHealth_${this.addr}.csv`;
+}
 
-    protected async fetchDataFromDb(): Promise<HealthReportEntry[]> {
-        await QueryCheckJsinfoReadDbInstance();
+    protected async fetchAllDataFromDb(): Promise < HealthReportEntry[] > {
+    await QueryCheckJsinfoReadDbInstance();
 
         let query = createHealthReportQuery(this.addr);
-        let res: HealthReportEntry[] = await query;
-        res = ApplyHealthResponseGroupingAndTextFormatting(res);
+    let res: HealthReportEntry[] = await query;
+    res = ApplyHealthResponseGroupingAndTextFormatting(res);
 
-        const healthV2Data = await GetHealthV2Data(this.addr);
-        if (healthV2Data && healthV2Data.length > 0) {
-            res = res.concat(healthV2Data);
-        }
+    const healthV2Data = await GetHealthV2Data(this.addr);
+    if(healthV2Data && healthV2Data.length > 0) {
+    res = res.concat(healthV2Data);
+}
 
-        if (GetDataLength(res) === 0) {
-            this.setDataIsEmpty();
-            return [];
-        }
+if (GetDataLength(res) === 0) {
+    this.setDataIsEmpty();
+    return [];
+}
 
-        res.forEach((entry: HealthReportEntry) => {
-            entry.region = entry.region || '';
-        });
+res.forEach((entry: HealthReportEntry) => {
+    entry.region = entry.region || '';
+});
 
-        return res;
+return res;
     }
 
-    public async getPaginatedItemsImpl(data: HealthReportEntry[], pagination: Pagination | null): Promise<HealthReportEntry[] | null> {
+    public async fetchDataWithPaginationFromDb(data: HealthReportEntry[], pagination: Pagination | null): Promise < HealthReportEntry[] | null > {
 
-        if (pagination == null) {
-            return data.slice(0, JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE);
-        }
+    if(pagination == null) {
+    return data.slice(0, JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE);
+}
 
-        data = this.sortData(data, pagination.sortKey || "", pagination.direction);
+data = this.sortData(data, pagination.sortKey || "", pagination.direction);
 
-        const start = (pagination.page - 1) * pagination.count;
-        const end = start + pagination.count;
+const start = (pagination.page - 1) * pagination.count;
+const end = start + pagination.count;
 
-        const result = SafeSlice(data, start, end, JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE);
+const result = SafeSlice(data, start, end, JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE);
 
-        return result;
+return result;
     }
 
     private sortData(data: HealthReportEntry[], sortKey: string, direction: 'ascending' | 'descending'): HealthReportEntry[] {
-        if (sortKey === "-" || sortKey === "") sortKey = "timestamp";
+    if (sortKey === "-" || sortKey === "") sortKey = "timestamp";
 
-        if (!["timestamp", "spec", "interface", "status", "region", "message"].includes(sortKey)) {
-            console.log(`Invalid sortKey: ${sortKey}`);
-            sortKey = "timestamp"
-        }
-
-        return data.sort((a, b) => {
-            const aValue = a[sortKey];
-            const bValue = b[sortKey];
-            return CompareValues(aValue, bValue, direction);
-        });
+    if (!["timestamp", "spec", "interface", "status", "region", "message"].includes(sortKey)) {
+        console.log(`Invalid sortKey: ${sortKey}`);
+        sortKey = "timestamp"
     }
 
-    public async getCSVImpl(data: HealthReportEntry[]): Promise<string> {
-        let csv = 'time,spec,interface,status,region,message\n';
-        data.forEach((item: HealthReportEntry) => {
-            csv += `${item.timestamp},${CSVEscape(item.spec)},${CSVEscape(item.interface || "")},${CSVEscape(item.status)},${CSVEscape(item.message || "")}\n`;
-        });
-        return csv;
-    }
+    return data.sort((a, b) => {
+        const aValue = a[sortKey];
+        const bValue = b[sortKey];
+        return CompareValues(aValue, bValue, direction);
+    });
+}
+
+    public async getCSVImpl(data: HealthReportEntry[]): Promise < string > {
+    let csv = 'time,spec,interface,status,region,message\n';
+    data.forEach((item: HealthReportEntry) => {
+        csv += `${item.timestamp},${CSVEscape(item.spec)},${CSVEscape(item.interface || "")},${CSVEscape(item.status)},${CSVEscape(item.message || "")}\n`;
+    });
+    return csv;
+}
 }
 
 const createHealthReportQuery = (addr: string) => {
@@ -350,7 +350,7 @@ export async function ProviderHealthCachedHandler(request: FastifyRequest, reply
     if (addr === '') {
         return null;
     }
-    return await ProviderHealthData.GetInstance(addr).getPaginatedItemsCachedHandler(request, reply);
+    return await ProviderHealthData.GetInstance()(addr).getPaginatedItemsCachedHandler(request, reply);
 }
 
 export async function ProviderHealthItemCountRawHandler(request: FastifyRequest, reply: FastifyReply) {
@@ -358,7 +358,7 @@ export async function ProviderHealthItemCountRawHandler(request: FastifyRequest,
     if (addr === '') {
         return reply;
     }
-    return await ProviderHealthData.GetInstance(addr).getTotalItemCountRawHandler(request, reply)
+    return await ProviderHealthData.GetInstance()(addr).getTotalItemCountRawHandler(request, reply)
 }
 
 export async function ProviderHealthCSVRawHandler(request: FastifyRequest, reply: FastifyReply) {
@@ -366,5 +366,5 @@ export async function ProviderHealthCSVRawHandler(request: FastifyRequest, reply
     if (addr === '') {
         return reply;
     }
-    return await ProviderHealthData.GetInstance(addr).getCSVRawHandler(request, reply);
+    return await ProviderHealthData.GetInstance()(addr).getCSVRawHandler(request, reply);
 }

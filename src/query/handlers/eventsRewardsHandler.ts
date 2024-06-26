@@ -8,7 +8,7 @@ import { Pagination, ParsePaginationFromString } from '../utils/queryPagination'
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '../queryConsts';
 import path from 'path';
 import { CSVEscape, CompareValues, GetDataLength, SafeSlice } from '../utils/queryUtils';
-import { CachedDiskDbDataFetcher } from '../classes/CachedDiskDbDataFetcher';
+import { RequestHandlerBase } from '../classes/RequestHandlerBase';
 
 export interface EventsRewardsResponse {
     id: number | null;
@@ -68,80 +68,53 @@ export const EventsRewardsCachedHandlerOpts: RouteShorthandOptions = {
 };
 
 
-class EventsRewardsData extends CachedDiskDbDataFetcher<EventsRewardsResponse> {
+class EventsRewardsData extends RequestHandlerBase<EventsRewardsResponse> {
 
     constructor() {
         super("EventsRewardsData");
     }
 
-    public static GetInstance(): EventsRewardsData {
-        return EventsRewardsData.GetInstanceBase();
-    }
-
-    protected getCacheFilePathImpl(): string {
-        return path.join(this.cacheDir, 'EventsRewardsCachedHandlerData');
+    public GetInstance(): EventsRewardsData {
+        return EventsRewardsData.GetInstance();
     }
 
     protected getCSVFileNameImpl(): string {
         return `EventsRewards.csv`;
     }
 
-    protected isSinceDBFetchEnabled(): boolean {
-        return true;
-    }
-
-    protected sinceUniqueField(): string {
-        return "id";
-    }
-
-    protected async fetchDataFromDb(): Promise<EventsRewardsResponse[]> {
+    protected async fetchAllDataFromDb(): Promise<EventsRewardsResponse[]> {
         await QueryCheckJsinfoReadDbInstance();
 
-        try {
-            const thirtyDaysAgo = new Date();
-            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-            const blockHeightQuery = await QueryGetJsinfoReadDbInstance()
-                .select()
-                .from(JsinfoSchema.blocks)
-                .where(gte(JsinfoSchema.blocks.datetime, thirtyDaysAgo))
-                .orderBy(asc(JsinfoSchema.blocks.datetime))
-                .limit(1);
+        const blockHeightQuery = await QueryGetJsinfoReadDbInstance()
+            .select()
+            .from(JsinfoSchema.blocks)
+            .where(gte(JsinfoSchema.blocks.datetime, thirtyDaysAgo))
+            .orderBy(asc(JsinfoSchema.blocks.datetime))
+            .limit(1);
 
-            const minBlockHeight = blockHeightQuery[0].height || 0;
+        const minBlockHeight = blockHeightQuery[0].height || 0;
 
-            const paymentsRes = await QueryGetJsinfoReadDbInstance()
-                .select()
-                .from(JsinfoSchema.relayPayments)
-                .leftJoin(JsinfoSchema.providers, eq(JsinfoSchema.relayPayments.provider, JsinfoSchema.providers.address))
-                .where(gte(JsinfoSchema.relayPayments.blockId, minBlockHeight))
-                .orderBy(desc(JsinfoSchema.relayPayments.id))
-                .offset(0)
-                .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
+        const paymentsRes = await QueryGetJsinfoReadDbInstance()
+            .select()
+            .from(JsinfoSchema.relayPayments)
+            .leftJoin(JsinfoSchema.providers, eq(JsinfoSchema.relayPayments.provider, JsinfoSchema.providers.address))
+            .where(gte(JsinfoSchema.relayPayments.blockId, minBlockHeight))
+            .orderBy(desc(JsinfoSchema.relayPayments.id))
+            .offset(0)
+            .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
 
-            if (GetDataLength(paymentsRes) === 0) {
-                this.setDataIsEmpty();
-                return [];
-            }
+        const flattenedRes = paymentsRes.map(data => ({
+            ...data.relay_payments,
+            moniker: data.providers?.moniker !== undefined ? data.providers?.moniker : null,
+        }));
 
-            const flattenedRes = paymentsRes.map(data => ({
-                ...data.relay_payments,
-                moniker: data.providers?.moniker !== undefined ? data.providers?.moniker : null,
-            }));
-
-            const highestId = flattenedRes[0]?.id;
-            if (highestId !== undefined) {
-                this.setSince(highestId);
-            }
-
-            return flattenedRes;
-        } catch (error) {
-            console.error(`EventsRewardsData error fetching data from DB: ${error}`);
-            throw error;
-        }
+        return flattenedRes;
     }
 
-    protected async fetchDataFromDbSinceFlow(since: number | string): Promise<EventsRewardsResponse[]> {
+    protected async fetchAllDataFromDbSinceFlow(since: number | string): Promise<EventsRewardsResponse[]> {
         await QueryCheckJsinfoReadDbInstance()
 
         const paymentsRes = await QueryGetJsinfoReadDbInstance()
@@ -158,18 +131,9 @@ class EventsRewardsData extends CachedDiskDbDataFetcher<EventsRewardsResponse> {
             moniker: data.providers?.moniker !== undefined ? data.providers?.moniker : null,
         }));
 
-        const highestId = flattenedRes[0]?.id;
-        if (highestId !== undefined) {
-            this.setSince(highestId);
-        }
-
         return flattenedRes;
     }
-
-    public async getPaginatedItemsImpl(
-        data: EventsRewardsResponse[],
-        pagination: Pagination | null
-    ): Promise<EventsRewardsResponse[] | null> {
+    public async fetchDataWithPaginationFromDb(pagination: Pagination): Promise<EventsRewardsResponse[] | null> {
         const defaultSortKey = "id";
         let finalPagination: Pagination;
 

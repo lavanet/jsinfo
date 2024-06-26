@@ -156,7 +156,7 @@ def is_status_better(old_status: str, new_status: str, old_data: str, new_data: 
     new_data_json = safe_load_json_or_none(new_data)
 
     if old_data_json == None and new_data_json == None:
-        raise Exception("is_status_better - Both old and new data are None, old_data: " + str(old_data) + ", new_data: " + str(new_data))
+        return False
     if old_data_json is None and new_data_json != None:
         return True
     elif old_data_json != None and new_data_json == None:

@@ -8,7 +8,7 @@ import { Pagination, ParsePaginationFromString } from '../utils/queryPagination'
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '../queryConsts';
 import path from 'path';
 import { CSVEscape, CompareValues, GetDataLength, SafeSlice } from '../utils/queryUtils';
-import { CachedDiskDbDataFetcher } from '../classes/CachedDiskDbDataFetcher';
+import { RequestHandlerBase } from '../classes/RequestHandlerBase';
 
 export interface EventsReportsResponse {
     provider: string | null;
@@ -56,33 +56,21 @@ export const EventsReportsCachedHandlerOpts: RouteShorthandOptions = {
 };
 
 
-class EventsReportsData extends CachedDiskDbDataFetcher<EventsReportsResponse> {
+class EventsReportsData extends RequestHandlerBase<EventsReportsResponse> {
 
     constructor() {
         super("EventsReportsData");
     }
 
-    public static GetInstance(): EventsReportsData {
-        return EventsReportsData.GetInstanceBase();
-    }
-
-    protected getCacheFilePathImpl(): string {
-        return path.join(this.cacheDir, 'EventsReportsCachedHandlerData');
+    public GetInstance(): EventsReportsData {
+        return EventsReportsData.GetInstance();
     }
 
     protected getCSVFileNameImpl(): string {
         return `EventsReports.csv`;
     }
 
-    protected isSinceDBFetchEnabled(): boolean {
-        return true;
-    }
-
-    protected sinceUniqueField(): string {
-        return "id";
-    }
-
-    protected async fetchDataFromDb(): Promise<EventsReportsResponse[]> {
+    protected async fetchAllDataFromDb(): Promise<EventsReportsResponse[]> {
         await QueryCheckJsinfoReadDbInstance()
 
         const thirtyDaysAgo = new Date();
@@ -106,53 +94,14 @@ class EventsReportsData extends CachedDiskDbDataFetcher<EventsReportsResponse> {
             .offset(0)
             .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
 
-        if (GetDataLength(reportsRes) === 0) {
-            this.setDataIsEmpty();
-            return [];
-        }
-
         const flattenedEvents = reportsRes.map(data => ({
             ...data.provider_reported,
             moniker: data.providers?.moniker !== undefined ? data.providers?.moniker : null,
         }));
 
-        const highestId = reportsRes[0]?.provider_reported.id;
-        if (highestId !== undefined) {
-            this.setSince(highestId);
-        }
-
         return flattenedEvents;
     }
-
-    protected async fetchDataFromDbSinceFlow(since: number | string): Promise<EventsReportsResponse[]> {
-        await QueryCheckJsinfoReadDbInstance()
-
-        const reportsRes = await QueryGetJsinfoReadDbInstance()
-            .select()
-            .from(JsinfoSchema.providerReported)
-            .leftJoin(JsinfoSchema.providers, eq(JsinfoSchema.providerReported.provider, JsinfoSchema.providers.address))
-            .orderBy(desc(JsinfoSchema.providerReported.id))
-            .where(gt(JsinfoSchema.providerReported.id, Number(since)))
-            .offset(0)
-            .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
-
-        const flattenedEvents = reportsRes.map(data => ({
-            ...data.provider_reported,
-            moniker: data.providers?.moniker !== undefined ? data.providers?.moniker : null,
-        }));
-
-        const highestId = reportsRes[0]?.provider_reported.id;
-        if (highestId !== undefined) {
-            this.setSince(highestId);
-        }
-
-        return flattenedEvents;
-    }
-
-    public async getPaginatedItemsImpl(
-        data: EventsReportsResponse[],
-        pagination: Pagination | null
-    ): Promise<EventsReportsResponse[] | null> {
+    public async fetchDataWithPaginationFromDb(pagination: Pagination): Promise<EventsReportsResponse[] | null> {
         const defaultSortKey = "datetime";
 
         let finalPagination: Pagination;

@@ -5,9 +5,7 @@ import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '..
 import * as JsinfoSchema from '../../schemas/jsinfoSchema';
 import { sql, desc, gt, and, inArray, lt } from "drizzle-orm";
 import { FormatDateItems } from '../utils/queryDateUtils';
-import { CachedDiskDbDataFetcher } from '../classes/CachedDiskDbDataFetcher';
-import path from 'path';
-import { GetDataLength } from '../utils/queryUtils';
+import { RequestHandlerBase } from '../classes/RequestHandlerBase';
 
 type CuRelayItem = {
     chainId: string;
@@ -68,18 +66,14 @@ export const IndexChartsRawHandlerOpts: RouteShorthandOptions = {
     }
 };
 
-class IndexChartsData extends CachedDiskDbDataFetcher<IndexChartResponse> {
+class IndexChartsData extends RequestHandlerBase<IndexChartResponse> {
 
     constructor() {
         super("IndexChartsData");
     }
 
-    public static GetInstance(): IndexChartsData {
-        return IndexChartsData.GetInstanceBase();
-    }
-
-    protected getCacheFilePathImpl(): string {
-        return path.join(this.cacheDir, `IndexChartsData`);
+    public GetInstance(): IndexChartsData {
+        return IndexChartsData.GetInstance();
     }
 
     private async getTopChains(): Promise<string[]> {
@@ -101,8 +95,6 @@ class IndexChartsData extends CachedDiskDbDataFetcher<IndexChartResponse> {
         if (topChains.length === 0 || topChainsQueryRes.length === 0) {
             console.warn('getTopChains empty data for topSpecs:: topChains:', topChains, 'topChainsQueryRes:', topChainsQueryRes);
         }
-
-        this.log(`getTopChains result: ${JSON.stringify(topChains)}`);
 
         return topChains;
     }
@@ -259,7 +251,7 @@ class IndexChartsData extends CachedDiskDbDataFetcher<IndexChartResponse> {
         });
     }
 
-    protected async fetchDataFromDb(): Promise<IndexChartResponse[]> {
+    protected async fetchAllDataFromDb(): Promise<IndexChartResponse[]> {
         await QueryCheckJsinfoReadDbInstance()
 
         const topChains = await this.getTopChains();

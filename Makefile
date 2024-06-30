@@ -37,22 +37,13 @@ indexer_debug_events:
 	JSINFO_INDEXER_DEBUG_DUMP_EVENTS=true NODE_TLS_REJECT_UNAUTHORIZED=0 bun run src/indexer.ts
 
 query:
-	npx nodemon --watch src --ext ts --exec "JSINFO_QUERY_CLEAR_DISKCACHE_ON_START=true JSINFO_QUERY_IS_DEBUG_MODE=true bun run src/query.ts"
-
-query_quick_cache_expiry:
-	npx nodemon --watch src --ext ts --exec "JSINFO_QUERY_CLEAR_DISKCACHE_ON_START=false JSINFO_QUERY_HANDLER_CACHE_FETCH_LOCK_TIME_SECONDS=5 JSINFO_QUERY_HANDLER_CACHE_TIME_SECONDS=5 JSINFO_QUERY_IS_DEBUG_MODE=true bun --inspect run src/query.ts"
+	npx nodemon --watch src --ext ts --exec "JSINFO_QUERY_IS_DEBUG_MODE=true bun run src/query.ts"
 
 query_no_nodemon:
-	JSINFO_QUERY_CLEAR_DISKCACHE_ON_START=true JSINFO_QUERY_IS_DEBUG_MODE=true bun run src/query.ts
+	JSINFO_QUERY_IS_DEBUG_MODE=true bun run src/query.ts
 
 query_port8090:
 	JSINFO_QUERY_PORT=8090 make query
-
-query_populate_mode:
-	JSINFO_QUERY_CLEAR_DISKCACHE_ON_START=true JSINFO_QUERY_IS_DEBUG_MODE=true JSINFO_QUERY_CACHE_POPULTAE_MODE=true bun run src/query.ts
-
-query_no_cache:
-	JSINFO_QUERY_CLEAR_DISKCACHE_ON_START=true JSINFO_QUERY_IS_DEBUG_MODE=true JSINFO_QUERY_CACHE_ENABLED=false bun run src/query.ts
 
 run_lavapProviderHealth:
 	cd lavapProviderHealth && python run.py

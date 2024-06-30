@@ -6,9 +6,8 @@ import * as JsinfoSchema from '../../schemas/jsinfoSchema';
 import { sql, desc, inArray, not, eq } from "drizzle-orm";
 import { Pagination, ParsePaginationFromString } from '../utils/queryPagination';
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE } from '../queryConsts';
-import path from 'path';
 import { CSVEscape, CompareValues, GetDataLength, SafeSlice } from '../utils/queryUtils';
-import { CachedDiskDbDataFetcher } from '../classes/CachedDiskDbDataFetcher';
+import { RequestHandlerBase } from '../classes/RequestHandlerBase';
 
 type IndexProvidersResponse = {
     addr: string,
@@ -53,25 +52,17 @@ export const IndexProvidersCachedHandlerOpts: RouteShorthandOptions = {
     }
 }
 
-class IndexProvidersData extends CachedDiskDbDataFetcher<IndexProvidersResponse> {
+class IndexProvidersData extends RequestHandlerBase<IndexProvidersResponse> {
 
     constructor() {
         super("IndexProvidersData");
-    }
-
-    protected getCacheFilePathImpl(): string {
-        return path.join(this.cacheDir, `IndexProvidersData`);
     }
 
     protected getCSVFileNameImpl(): string {
         return `LavaTopProviders.csv`;
     }
 
-    public static GetInstance(): IndexProvidersData {
-        return IndexProvidersData.GetInstanceBase();
-    }
-
-    protected async fetchDataFromDb(): Promise<IndexProvidersResponse[]> {
+    protected async fetchAllDataFromDb(): Promise<IndexProvidersResponse[]> {
         await QueryCheckJsinfoReadDbInstance();
 
         let res4 = await QueryGetJsinfoReadDbInstance().select({
@@ -99,7 +90,6 @@ class IndexProvidersData extends CachedDiskDbDataFetcher<IndexProvidersResponse>
         let res44 = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.providers).where(inArray(JsinfoSchema.providers.address, providersAddrs))
 
         if (GetDataLength(res44) === 0) {
-            this.setDataIsEmpty();
             return [];
         }
 
@@ -113,7 +103,6 @@ class IndexProvidersData extends CachedDiskDbDataFetcher<IndexProvidersResponse>
             .groupBy(JsinfoSchema.providerStakes.provider);
 
         if (GetDataLength(providerStakesRes) === 0) {
-            this.setDataIsEmpty();
             return [];
         }
 
@@ -142,11 +131,7 @@ class IndexProvidersData extends CachedDiskDbDataFetcher<IndexProvidersResponse>
 
         return providersDetails;
     }
-
-    public async getPaginatedItemsImpl(
-        data: IndexProvidersResponse[],
-        pagination: Pagination | null
-    ): Promise<IndexProvidersResponse[] | null> {
+    public async fetchDataWithPaginationFromDb(pagination: Pagination): Promise<IndexProvidersResponse[] | null> {
         const defaultSortKey = "totalStake";
 
         let finalPagination: Pagination;

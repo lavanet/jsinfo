@@ -11,7 +11,7 @@ import { Pagination } from '../utils/queryPagination';
 import { CompareValues, GetAndValidateProviderAddressFromRequest, GetDataLength, SafeSlice } from '../utils/queryUtils';
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '../queryConsts';
 import * as JsinfoSchema from '../../schemas/jsinfoSchema';
-import { CachedDiskDbDataFetcher } from '../classes/CachedDiskDbDataFetcher';
+import { RequestHandlerBase } from '../classes/RequestHandlerBase';
 
 export interface DelegatorRewardReponse {
     id: number;
@@ -44,7 +44,7 @@ export const ProviderDelegatorRewardsCachedHandlerOpts: RouteShorthandOptions = 
     }
 }
 
-class ProviderDelegatorRewardsData extends CachedDiskDbDataFetcher<DelegatorRewardReponse> {
+class ProviderDelegatorRewardsData extends RequestHandlerBase<DelegatorRewardReponse> {
     private addr: string;
 
     constructor(addr: string) {
@@ -52,44 +52,47 @@ class ProviderDelegatorRewardsData extends CachedDiskDbDataFetcher<DelegatorRewa
         this.addr = addr;
     }
 
-    public static GetInstance(addr: string): ProviderDelegatorRewardsData {
-        return ProviderDelegatorRewardsData.GetInstanceBase(addr);
+    public GetInstance()(addr: string): ProviderDelegatorRewardsData {
+        return ProviderDelegatorRewardsData.GetInstance()(addr);
     }
 
     protected getCSVFileNameImpl(): string {
-        return `ProviderDelegatorRewards_${this.addr}.csv`;
-    }
+    return `ProviderDelegatorRewards_${this.addr}.csv`;
+}
 
-    protected getCacheFilePathImpl(): string {
-        return path.join(this.cacheDir, `ProviderDelegatorRewardsHandlerData_${this.addr}`);
-    }
-
-    protected isSinceDBFetchEnabled(): boolean {
-        return true;
-    }
-
-    protected sinceUniqueField(): string {
-        return "id";
-    }
-
-    protected async fetchDataFromDb(): Promise<DelegatorRewardReponse[]> {
-        await QueryCheckJsinfoReadDbInstance();
+    protected async fetchAllDataFromDb(): Promise < DelegatorRewardReponse[] > {
+    await QueryCheckJsinfoReadDbInstance();
 
         const result = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.dualStackingDelegatorRewards)
-            .where(eq(JsinfoSchema.dualStackingDelegatorRewards.provider, this.addr))
-            .orderBy(desc(JsinfoSchema.dualStackingDelegatorRewards.id))
-            .offset(0)
-            .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION)
+        .where(eq(JsinfoSchema.dualStackingDelegatorRewards.provider, this.addr))
+        .orderBy(desc(JsinfoSchema.dualStackingDelegatorRewards.id))
+        .offset(0)
+        .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION)
 
-        if (GetDataLength(result) === 0) {
-            this.setDataIsEmpty();
-            return [];
-        }
+        if(GetDataLength(result) === 0) {
+    return [];
+}
 
-        const highestId = result[0]?.id;
-        if (highestId !== undefined) {
-            this.setSince(highestId);
-        }
+return result.map((row: JsinfoSchema.DualStackingDelegatorRewards) => ({
+    id: row.id,
+    timestamp: row.timestamp?.toISOString(),
+    chainId: row.chainId,
+    amount: row.amount + " " + row.denom
+}));
+    }
+
+    protected async fetchAllDataFromDbSinceFlow(since: number | string): Promise < DelegatorRewardReponse[] > {
+    await QueryCheckJsinfoReadDbInstance();
+
+        const result = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.dualStackingDelegatorRewards)
+        .where(and(
+            eq(JsinfoSchema.dualStackingDelegatorRewards.provider, this.addr),
+            gt(JsinfoSchema.dualStackingDelegatorRewards.id, Number(since))
+        )
+        )
+        .orderBy(desc(JsinfoSchema.dualStackingDelegatorRewards.id))
+        .offset(0)
+        .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION)
 
         return result.map((row: JsinfoSchema.DualStackingDelegatorRewards) => ({
             id: row.id,
@@ -97,72 +100,46 @@ class ProviderDelegatorRewardsData extends CachedDiskDbDataFetcher<DelegatorRewa
             chainId: row.chainId,
             amount: row.amount + " " + row.denom
         }));
-    }
+}
 
-    protected async fetchDataFromDbSinceFlow(since: number | string): Promise<DelegatorRewardReponse[]> {
-        await QueryCheckJsinfoReadDbInstance();
+    public async fetchDataWithPaginationFromDb(data: DelegatorRewardReponse[], pagination: Pagination | null): Promise < DelegatorRewardReponse[] | null > {
+    if(pagination == null) {
+    return data.slice(0, JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE);
+}
 
-        const result = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.dualStackingDelegatorRewards)
-            .where(and(
-                eq(JsinfoSchema.dualStackingDelegatorRewards.provider, this.addr),
-                gt(JsinfoSchema.dualStackingDelegatorRewards.id, Number(since))
-            )
-            )
-            .orderBy(desc(JsinfoSchema.dualStackingDelegatorRewards.id))
-            .offset(0)
-            .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION)
+data = this.sortData(data, pagination.sortKey || "", pagination.direction);
 
-        const highestId = result[0]?.id;
-        if (highestId !== undefined) {
-            this.setSince(highestId);
-        }
+const start = (pagination.page - 1) * pagination.count;
+const end = start + pagination.count;
 
-        return result.map((row: JsinfoSchema.DualStackingDelegatorRewards) => ({
-            id: row.id,
-            timestamp: row.timestamp?.toISOString(),
-            chainId: row.chainId,
-            amount: row.amount + " " + row.denom
-        }));
-    }
-
-    public async getPaginatedItemsImpl(data: DelegatorRewardReponse[], pagination: Pagination | null): Promise<DelegatorRewardReponse[] | null> {
-        if (pagination == null) {
-            return data.slice(0, JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE);
-        }
-
-        data = this.sortData(data, pagination.sortKey || "", pagination.direction);
-
-        const start = (pagination.page - 1) * pagination.count;
-        const end = start + pagination.count;
-
-        return SafeSlice(data, start, end, JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE);
+return SafeSlice(data, start, end, JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE);
     }
 
     private sortData(data: DelegatorRewardReponse[], sortKey: string, direction: 'ascending' | 'descending'): DelegatorRewardReponse[] {
-        if (sortKey === "-" || sortKey === "") sortKey = "timestamp";
+    if (sortKey === "-" || sortKey === "") sortKey = "timestamp";
 
-        if (sortKey && ["timestamp", "chain_id", "amount"].includes(sortKey)) {
-            if (sortKey !== "timestamp" || direction !== "descending") {
-                // default
-            }
-        } else {
-            console.log(`Invalid sortKey: ${sortKey}`);
+    if (sortKey && ["timestamp", "chain_id", "amount"].includes(sortKey)) {
+        if (sortKey !== "timestamp" || direction !== "descending") {
+            // default
         }
-
-        return data.sort((a, b) => {
-            const aValue = a[sortKey];
-            const bValue = b[sortKey];
-            return CompareValues(aValue, bValue, direction);
-        });
+    } else {
+        console.log(`Invalid sortKey: ${sortKey}`);
     }
 
-    public async getCSVImpl(data: DelegatorRewardReponse[]): Promise<string> {
-        let csv = 'time,chainId,amount\n';
-        data.forEach((item: DelegatorRewardReponse) => {
-            csv += `${item.timestamp},${item.chainId},${item.amount}\n`;
-        });
-        return csv;
-    }
+    return data.sort((a, b) => {
+        const aValue = a[sortKey];
+        const bValue = b[sortKey];
+        return CompareValues(aValue, bValue, direction);
+    });
+}
+
+    public async getCSVImpl(data: DelegatorRewardReponse[]): Promise < string > {
+    let csv = 'time,chainId,amount\n';
+    data.forEach((item: DelegatorRewardReponse) => {
+        csv += `${item.timestamp},${item.chainId},${item.amount}\n`;
+    });
+    return csv;
+}
 }
 
 export async function ProviderDelegatorRewardsCachedHandler(request: FastifyRequest, reply: FastifyReply) {
@@ -170,7 +147,7 @@ export async function ProviderDelegatorRewardsCachedHandler(request: FastifyRequ
     if (addr === '') {
         return null;
     }
-    return await ProviderDelegatorRewardsData.GetInstance(addr).getPaginatedItemsCachedHandler(request, reply)
+    return await ProviderDelegatorRewardsData.GetInstance()(addr).getPaginatedItemsCachedHandler(request, reply)
 }
 
 export async function ProviderDelegatorRewardsItemCountRawHandler(request: FastifyRequest, reply: FastifyReply) {
@@ -178,7 +155,7 @@ export async function ProviderDelegatorRewardsItemCountRawHandler(request: Fasti
     if (addr === '') {
         return reply;
     }
-    return await ProviderDelegatorRewardsData.GetInstance(addr).getTotalItemCountRawHandler(request, reply)
+    return await ProviderDelegatorRewardsData.GetInstance()(addr).getTotalItemCountRawHandler(request, reply)
 }
 
 export async function ProviderDelegatorRewardsCSVRawHandler(request: FastifyRequest, reply: FastifyReply) {
@@ -186,5 +163,5 @@ export async function ProviderDelegatorRewardsCSVRawHandler(request: FastifyRequ
     if (addr === '') {
         return reply;
     }
-    return await ProviderDelegatorRewardsData.GetInstance(addr).getCSVRawHandler(request, reply)
+    return await ProviderDelegatorRewardsData.GetInstance()(addr).getCSVRawHandler(request, reply)
 }

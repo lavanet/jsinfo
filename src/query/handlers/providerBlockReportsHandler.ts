@@ -11,7 +11,7 @@ import { Pagination } from '../utils/queryPagination';
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '../queryConsts';
 import path from 'path';
 import { CompareValues, GetAndValidateProviderAddressFromRequest, GetDataLength, SafeSlice } from '../utils/queryUtils';
-import { CachedDiskDbDataFetcher } from '../classes/CachedDiskDbDataFetcher';
+import { RequestHandlerBase } from '../classes/RequestHandlerBase';
 
 export interface BlockReportsReponse {
     id: number;
@@ -61,7 +61,7 @@ export const ProviderBlockReportsCachedHandlerOpts: RouteShorthandOptions = {
     }
 };
 
-class ProviderBlockReportsData extends CachedDiskDbDataFetcher<BlockReportsReponse> {
+class ProviderBlockReportsData extends RequestHandlerBase<BlockReportsReponse> {
     private addr: string;
 
     constructor(addr: string) {
@@ -69,130 +69,96 @@ class ProviderBlockReportsData extends CachedDiskDbDataFetcher<BlockReportsRepon
         this.addr = addr;
     }
 
-    public static GetInstance(addr: string): ProviderBlockReportsData {
-        return ProviderBlockReportsData.GetInstanceBase(addr);
+    public GetInstance()(addr: string): ProviderBlockReportsData {
+        return ProviderBlockReportsData.GetInstance()(addr);
     }
 
     protected getCSVFileNameImpl(): string {
-        return `ProviderBlockReports_${this.addr}.csv`;
-    }
+    return `ProviderBlockReports_${this.addr}.csv`;
+}
 
     protected getCacheFilePathImpl(): string {
-        return path.join(this.cacheDir, `ProviderBlockReportsData_${this.addr}`);
-    }
+    return path.join(this.cacheDir, `ProviderBlockReportsData_${this.addr}`);
+}
 
     protected isSinceDBFetchEnabled(): boolean {
-        return true;
-    }
+    return true;
+}
 
     protected sinceUniqueField(): string {
-        return "id";
-    }
+    return "id";
+}
 
-    protected async fetchDataFromDb(): Promise<BlockReportsReponse[]> {
-        await QueryCheckJsinfoReadDbInstance();
+    protected async fetchAllDataFromDb(): Promise < BlockReportsReponse[] > {
+    await QueryCheckJsinfoReadDbInstance();
 
         let thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-        let result = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.providerLatestBlockReports).
-            where(
-                and(
-                    eq(JsinfoSchema.providerLatestBlockReports.provider, this.addr),
-                    gte(JsinfoSchema.providerLatestBlockReports.timestamp, thirtyDaysAgo)
-                )
-            ).
-            orderBy(desc(JsinfoSchema.providerLatestBlockReports.id)).
-            offset(0).
-            limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
+    let result = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.providerLatestBlockReports).
+        where(
+            and(
+                eq(JsinfoSchema.providerLatestBlockReports.provider, this.addr),
+                gte(JsinfoSchema.providerLatestBlockReports.timestamp, thirtyDaysAgo)
+            )
+        ).
+        orderBy(desc(JsinfoSchema.providerLatestBlockReports.id)).
+        offset(0).
+        limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
 
-        if (GetDataLength(result) === 0) {
-            this.setDataIsEmpty();
-            return [];
-        }
+    if(GetDataLength(result) === 0) {
+    this.setDataIsEmpty();
+    return [];
+}
 
-        const highestId = result[0]?.id;
-        if (highestId !== undefined) {
-            this.setSince(highestId);
-        }
-
-        return result.map((row: JsinfoSchema.ProviderLatestBlockReports) => ({
-            id: row.id,
-            blockId: row.blockId ?? 0,
-            tx: row.tx ?? '',
-            timestamp: row.timestamp?.toISOString() ?? '',
-            chainId: row.chainId,
-            chainBlockHeight: row.chainBlockHeight ?? 0,
-        }));
+return result.map((row: JsinfoSchema.ProviderLatestBlockReports) => ({
+    id: row.id,
+    blockId: row.blockId ?? 0,
+    tx: row.tx ?? '',
+    timestamp: row.timestamp?.toISOString() ?? '',
+    chainId: row.chainId,
+    chainBlockHeight: row.chainBlockHeight ?? 0,
+}));
     }
 
-    protected async fetchDataFromDbSinceFlow(since: number | string): Promise<BlockReportsReponse[]> {
-        await QueryCheckJsinfoReadDbInstance()
+    public async fetchDataWithPaginationFromDb(data: BlockReportsReponse[], pagination: Pagination | null): Promise < BlockReportsReponse[] | null > {
+    if(pagination == null) {
+    return data.slice(0, JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE);
+}
 
-        let result = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.providerLatestBlockReports).
-            where(
-                and(
-                    eq(JsinfoSchema.providerLatestBlockReports.provider, this.addr),
-                    gt(JsinfoSchema.providerLatestBlockReports.id, Number(since))
-                )
-            ).
-            orderBy(desc(JsinfoSchema.providerLatestBlockReports.id)).
-            offset(0).
-            limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
+data = this.sortData(data, pagination.sortKey || "", pagination.direction);
 
-        const highestId = result[0]?.id;
-        if (highestId !== undefined) {
-            this.setSince(highestId);
-        }
+const start = (pagination.page - 1) * pagination.count;
+const end = start + pagination.count;
 
-        return result.map((row: JsinfoSchema.ProviderLatestBlockReports) => ({
-            id: row.id,
-            blockId: row.blockId ?? 0,
-            tx: row.tx ?? '',
-            timestamp: row.timestamp?.toISOString() ?? '',
-            chainId: row.chainId,
-            chainBlockHeight: row.chainBlockHeight ?? 0,
-        }));
-    }
-
-    public async getPaginatedItemsImpl(data: BlockReportsReponse[], pagination: Pagination | null): Promise<BlockReportsReponse[] | null> {
-        if (pagination == null) {
-            return data.slice(0, JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE);
-        }
-
-        data = this.sortData(data, pagination.sortKey || "", pagination.direction);
-
-        const start = (pagination.page - 1) * pagination.count;
-        const end = start + pagination.count;
-
-        return SafeSlice(data, start, end, JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE);
+return SafeSlice(data, start, end, JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE);
     }
 
     private sortData(data: BlockReportsReponse[], sortKey: string, direction: 'ascending' | 'descending'): BlockReportsReponse[] {
-        if (sortKey === "-" || sortKey === "") sortKey = "timestamp";
+    if (sortKey === "-" || sortKey === "") sortKey = "timestamp";
 
-        if (sortKey && ["timestamp", "chain_id", "amount"].includes(sortKey)) {
-            if (sortKey !== "timestamp" || direction !== "descending") {
-                // default
-            }
-        } else {
-            console.log(`Invalid sortKey: ${sortKey}`);
+    if (sortKey && ["timestamp", "chain_id", "amount"].includes(sortKey)) {
+        if (sortKey !== "timestamp" || direction !== "descending") {
+            // default
         }
-
-        return data.sort((a, b) => {
-            const aValue = a[sortKey];
-            const bValue = b[sortKey];
-            return CompareValues(aValue, bValue, direction);
-        });
+    } else {
+        console.log(`Invalid sortKey: ${sortKey}`);
     }
 
-    public async getCSVImpl(data: BlockReportsReponse[]): Promise<string> {
-        let csv = 'time,blockId,tx,chainId,chainBlockHeight\n';
-        data.forEach((item: BlockReportsReponse) => {
-            csv += `${item.timestamp},${item.blockId},${item.chainId},${item.chainBlockHeight}\n`;
-        });
-        return csv;
-    }
+    return data.sort((a, b) => {
+        const aValue = a[sortKey];
+        const bValue = b[sortKey];
+        return CompareValues(aValue, bValue, direction);
+    });
+}
+
+    public async getCSVImpl(data: BlockReportsReponse[]): Promise < string > {
+    let csv = 'time,blockId,tx,chainId,chainBlockHeight\n';
+    data.forEach((item: BlockReportsReponse) => {
+        csv += `${item.timestamp},${item.blockId},${item.chainId},${item.chainBlockHeight}\n`;
+    });
+    return csv;
+}
 }
 
 export async function ProviderBlockReportsCachedHandler(request: FastifyRequest, reply: FastifyReply) {
@@ -200,7 +166,7 @@ export async function ProviderBlockReportsCachedHandler(request: FastifyRequest,
     if (addr === '') {
         return null;
     }
-    return await ProviderBlockReportsData.GetInstance(addr).getPaginatedItemsCachedHandler(request, reply)
+    return await ProviderBlockReportsData.GetInstance()(addr).getPaginatedItemsCachedHandler(request, reply)
 }
 
 export async function ProviderBlockReportsItemCountRawHandler(request: FastifyRequest, reply: FastifyReply) {
@@ -208,7 +174,7 @@ export async function ProviderBlockReportsItemCountRawHandler(request: FastifyRe
     if (addr === '') {
         return reply;
     }
-    return await ProviderBlockReportsData.GetInstance(addr).getTotalItemCountRawHandler(request, reply)
+    return await ProviderBlockReportsData.GetInstance()(addr).getTotalItemCountRawHandler(request, reply)
 }
 
 export async function ProviderBlockReportsCSVRawHandler(request: FastifyRequest, reply: FastifyReply) {
@@ -216,5 +182,5 @@ export async function ProviderBlockReportsCSVRawHandler(request: FastifyRequest,
     if (addr === '') {
         return reply;
     }
-    return await ProviderBlockReportsData.GetInstance(addr).getCSVRawHandler(request, reply)
+    return await ProviderBlockReportsData.GetInstance()(addr).getCSVRawHandler(request, reply)
 }

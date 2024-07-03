@@ -3,7 +3,7 @@
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryCheckJsinfoReadDbInstance, GetLatestBlock } from '../queryDb';
 
-export const EventsCachedHandlerOpts: RouteShorthandOptions = {
+export const EventsPaginatedHandlerOpts: RouteShorthandOptions = {
     schema: {
         response: {
             200: {
@@ -21,7 +21,7 @@ export const EventsCachedHandlerOpts: RouteShorthandOptions = {
     }
 }
 
-export async function EventsCachedHandler(request: FastifyRequest, reply: FastifyReply) {
+export async function EventsPaginatedHandler(request: FastifyRequest, reply: FastifyReply) {
     await QueryCheckJsinfoReadDbInstance()
 
     const { latestHeight, latestDatetime } = await GetLatestBlock()

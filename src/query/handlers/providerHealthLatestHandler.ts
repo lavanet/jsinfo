@@ -41,7 +41,7 @@ type ProviderHealthLatestResponse = {
     }>;
 };
 
-export const ProviderHealthLatestCachedHandlerOpts: RouteShorthandOptions = {
+export const ProviderHealthLatestPaginatedHandlerOpts: RouteShorthandOptions = {
     schema: {
         response: {
             200: {
@@ -126,11 +126,11 @@ const ParseMessageFromHealthV2 = (data: any | null): string => {
     }
 }
 
-// null is retuned for *CachedHandler function - the first caching layer on the request side
+// null is retuned for *PaginatedHandler function - the first caching layer on the request side
 // reply is returned in the *RawHandler functions - which skip this cache and probably use the RequestHandlerBase
 // RequestHandlerBase is the layer of caching against the db and not against the query
 
-export async function ProviderHealthLatestCachedHandler(request: FastifyRequest, reply: FastifyReply): Promise<{ data: ProviderHealthLatestResponse } | null> {
+export async function ProviderHealthLatestPaginatedHandler(request: FastifyRequest, reply: FastifyReply): Promise<{ data: ProviderHealthLatestResponse } | null> {
     let provider = await GetAndValidateProviderAddressFromRequest(request, reply);
     if (provider === '') {
         return null;

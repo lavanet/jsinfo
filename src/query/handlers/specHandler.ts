@@ -7,7 +7,7 @@ import * as JsinfoSchema from '../../schemas/jsinfoSchema';
 import { sql, eq, count } from "drizzle-orm";
 import { GetAndValidateSpecIdFromRequest } from '../utils/queryUtils';
 
-export const SpecCachedHandlerOpts: RouteShorthandOptions = {
+export const SpecPaginatedHandlerOpts: RouteShorthandOptions = {
     schema: {
         response: {
             200: {
@@ -40,7 +40,7 @@ export const SpecCachedHandlerOpts: RouteShorthandOptions = {
     }
 }
 
-export async function SpecCachedHandler(request: FastifyRequest, reply: FastifyReply) {
+export async function SpecPaginatedHandler(request: FastifyRequest, reply: FastifyReply) {
 
     let spec = await GetAndValidateSpecIdFromRequest(request, reply);
     if (spec === '') {

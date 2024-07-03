@@ -3,10 +3,10 @@
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../queryDb';
 import * as JsinfoSchema from '../../schemas/jsinfoSchema';
-import { sql, desc, inArray, not, eq } from "drizzle-orm";
+import { sql, desc, not, eq, asc, and, isNull } from "drizzle-orm";
 import { Pagination, ParsePaginationFromString } from '../utils/queryPagination';
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE } from '../queryConsts';
-import { CSVEscape, CompareValues, GetDataLength, SafeSlice } from '../utils/queryUtils';
+import { CSVEscape } from '../utils/queryUtils';
 import { RequestHandlerBase } from '../classes/RequestHandlerBase';
 
 type IndexProvidersResponse = {
@@ -17,7 +17,7 @@ type IndexProvidersResponse = {
     totalStake: number,
 };
 
-export const IndexProvidersCachedHandlerOpts: RouteShorthandOptions = {
+export const IndexProvidersPaginatedHandlerOpts: RouteShorthandOptions = {
     schema: {
         response: {
             200: {
@@ -58,80 +58,69 @@ class IndexProvidersData extends RequestHandlerBase<IndexProvidersResponse> {
         super("IndexProvidersData");
     }
 
+    public static GetInstance(): IndexProvidersData {
+        return IndexProvidersData.GetInstanceBase();
+    }
+
     protected getCSVFileNameImpl(): string {
         return `LavaTopProviders.csv`;
     }
 
-    protected async fetchAllDataFromDb(): Promise<IndexProvidersResponse[]> {
+    protected async fetchAllRecords(): Promise<IndexProvidersResponse[]> {
         await QueryCheckJsinfoReadDbInstance();
 
-        let res4 = await QueryGetJsinfoReadDbInstance().select({
-            address: JsinfoSchema.aggHourlyrelayPayments.provider,
-            rewardSum: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.rewardSum})`,
-        }).from(JsinfoSchema.aggHourlyrelayPayments).
-            groupBy(JsinfoSchema.aggHourlyrelayPayments.provider).
-            orderBy(desc(sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.rewardSum})`))
-
-        if (GetDataLength(res4) === 0) {
-            this.setDataIsEmpty();
-            return [];
-        }
-        let providersAddrs: string[] = []
-
-        res4.map((provider) => {
-            providersAddrs.push(provider.address!)
-        })
-
-        if (providersAddrs.length == 0) {
-            throw new Error('Providers do not exist');
-        }
-
-        // provider details
-        let res44 = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.providers).where(inArray(JsinfoSchema.providers.address, providersAddrs))
-
-        if (GetDataLength(res44) === 0) {
-            return [];
-        }
-
-        let providerStakesRes = await QueryGetJsinfoReadDbInstance().select({
+        const res = await QueryGetJsinfoReadDbInstance().select({
             provider: JsinfoSchema.providerStakes.provider,
-            totalActiveServices: sql<number>`sum(case when ${JsinfoSchema.providerStakes.status} = ${JsinfoSchema.LavaProviderStakeStatus.Active} then 1 else 0 end)`,
-            totalServices: sql<number>`count(${JsinfoSchema.providerStakes.specId})`,
+            totalServices: sql<string>`concat(sum(case when ${JsinfoSchema.providerStakes.status} = ${JsinfoSchema.LavaProviderStakeStatus.Active} then 1 else 0 end), ' / ', count(${JsinfoSchema.providerStakes.specId}))`,
             totalStake: sql<number>`sum(${JsinfoSchema.providerStakes.stake})`,
+            rewardSum: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.rewardSum})`,
+            moniker: JsinfoSchema.providers.moniker,
         }).from(JsinfoSchema.providerStakes)
-            .where(not(eq(JsinfoSchema.providerStakes.status, JsinfoSchema.LavaProviderStakeStatus.Frozen)))
-            .groupBy(JsinfoSchema.providerStakes.provider);
+            .leftJoin(JsinfoSchema.aggHourlyrelayPayments, eq(JsinfoSchema.providerStakes.provider, JsinfoSchema.aggHourlyrelayPayments.provider))
+            .leftJoin(JsinfoSchema.providers, eq(JsinfoSchema.providerStakes.provider, JsinfoSchema.providers.address))
+            .where(
+                and(
+                    not(eq(JsinfoSchema.providerStakes.status, JsinfoSchema.LavaProviderStakeStatus.Frozen)),
+                    not(isNull(JsinfoSchema.providerStakes.provider)),
+                    not(eq(JsinfoSchema.providerStakes.provider, ''))
+                )
+            )
+            .groupBy(JsinfoSchema.providerStakes.provider, JsinfoSchema.providers.moniker)
+            .orderBy(desc(sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.rewardSum})`))
 
-        if (GetDataLength(providerStakesRes) === 0) {
-            return [];
-        }
-
-        let providersDetails: IndexProvidersResponse[] = []
-        res4.forEach((provider) => {
-            let moniker = ''
-            let totalServices = '0'
-            let totalStake = 0;
-            let tmp1 = res44.find((el) => el.address == provider.address)
-            if (tmp1) {
-                moniker = tmp1.moniker!
-            }
-            let tmp2 = providerStakesRes.find((el) => el.provider == provider.address)
-            if (tmp2) {
-                totalServices = `${tmp2.totalActiveServices} / ${tmp2.totalServices}`
-                totalStake = tmp2.totalStake
-            }
-            providersDetails.push({
-                addr: provider.address!,
-                moniker: moniker,
-                rewardSum: provider.rewardSum,
-                totalServices: totalServices,
-                totalStake: totalStake,
-            })
-        })
+        const providersDetails: IndexProvidersResponse[] = res.map(provider => ({
+            addr: provider.provider || "",
+            moniker: provider.moniker || "",
+            rewardSum: provider.rewardSum,
+            totalServices: provider.totalServices!,
+            totalStake: provider.totalStake,
+        }));
 
         return providersDetails;
     }
-    public async fetchDataWithPaginationFromDb(pagination: Pagination): Promise<IndexProvidersResponse[] | null> {
+
+    protected async fetchRecordCountFromDb(): Promise<number> {
+        await QueryCheckJsinfoReadDbInstance();
+
+        const res = await QueryGetJsinfoReadDbInstance()
+            .select({
+                count: sql<number>`count(DISTINCT ${JsinfoSchema.providerStakes.provider})`
+            })
+            .from(JsinfoSchema.providerStakes)
+            .leftJoin(JsinfoSchema.aggHourlyrelayPayments, eq(JsinfoSchema.providerStakes.provider, JsinfoSchema.aggHourlyrelayPayments.provider))
+            .leftJoin(JsinfoSchema.providers, eq(JsinfoSchema.providerStakes.provider, JsinfoSchema.providers.address))
+            .where(
+                and(
+                    not(eq(JsinfoSchema.providerStakes.status, JsinfoSchema.LavaProviderStakeStatus.Frozen)),
+                    not(isNull(JsinfoSchema.providerStakes.provider)),
+                    not(eq(JsinfoSchema.providerStakes.provider, ''))
+                )
+            );
+
+        return res[0].count ?? 0;
+    }
+
+    public async fetchPaginatedRecords(pagination: Pagination | null): Promise<IndexProvidersResponse[]> {
         const defaultSortKey = "totalStake";
 
         let finalPagination: Pagination;
@@ -144,33 +133,65 @@ class IndexProvidersData extends RequestHandlerBase<IndexProvidersResponse> {
             );
         }
 
-        // If sortKey is null, set it to the defaultSortKey
+        // Ensure the sort key is valid or use the default
         if (finalPagination.sortKey === null) {
             finalPagination.sortKey = defaultSortKey;
         }
 
-        // Validate sortKey
-        const validKeys = ["moniker", "addr", "rewardSum", "totalServices", "totalStake"];
-        if (!validKeys.includes(finalPagination.sortKey)) {
+        // Define the key-to-column mapping based on the schema provided
+        const keyToColumnMap = {
+            addr: JsinfoSchema.providerStakes.provider,
+            moniker: JsinfoSchema.providers.moniker,
+            rewardSum: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.rewardSum})`,
+            totalServices: sql<string>`concat(sum(case when ${JsinfoSchema.providerStakes.status} = ${JsinfoSchema.LavaProviderStakeStatus.Active} then 1 else 0 end), ' / ', count(${JsinfoSchema.providerStakes.specId}))`,
+            totalStake: sql<number>`sum(${JsinfoSchema.providerStakes.stake})`
+        };
+
+        // Check if the sort key is in the map, throw an error if not
+        if (!Object.keys(keyToColumnMap).includes(finalPagination.sortKey)) {
             const trimmedSortKey = finalPagination.sortKey.substring(0, 500);
             throw new Error(`Invalid sort key: ${trimmedSortKey}`);
         }
 
-        // Apply sorting
-        data.sort((a, b) => {
-            const sortKey = finalPagination.sortKey as string;
-            const aValue = a[sortKey];
-            const bValue = b[sortKey];
-            return CompareValues(aValue, bValue, finalPagination.direction);
-        });
+        await QueryCheckJsinfoReadDbInstance();
 
-        // Apply pagination
-        const start = (finalPagination.page - 1) * finalPagination.count;
-        const end = finalPagination.page * finalPagination.count;
-        return SafeSlice(data, start, end, JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE);
+        const sortColumn = keyToColumnMap[finalPagination.sortKey];
+        const orderFunction = finalPagination.direction === 'ascending' ? asc : desc;
+
+        // Execute the query with proper sorting, pagination using offset and limit
+        const data = await QueryGetJsinfoReadDbInstance()
+            .select({
+                provider: JsinfoSchema.providerStakes.provider,
+                totalServices: sql<string>`concat(sum(case when ${JsinfoSchema.providerStakes.status} = ${JsinfoSchema.LavaProviderStakeStatus.Active} then 1 else 0 end), ' / ', count(${JsinfoSchema.providerStakes.specId}))`,
+                totalStake: sql<number>`sum(${JsinfoSchema.providerStakes.stake})`,
+                rewardSum: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.rewardSum})`,
+                moniker: JsinfoSchema.providers.moniker,
+            })
+            .from(JsinfoSchema.providerStakes)
+            .leftJoin(JsinfoSchema.aggHourlyrelayPayments, eq(JsinfoSchema.providerStakes.provider, JsinfoSchema.aggHourlyrelayPayments.provider))
+            .leftJoin(JsinfoSchema.providers, eq(JsinfoSchema.providerStakes.provider, JsinfoSchema.providers.address))
+            .where(
+                and(
+                    not(eq(JsinfoSchema.providerStakes.status, JsinfoSchema.LavaProviderStakeStatus.Frozen)),
+                    not(isNull(JsinfoSchema.providerStakes.provider)),
+                    not(eq(JsinfoSchema.providerStakes.provider, ''))
+                )
+            )
+            .groupBy(JsinfoSchema.providerStakes.provider, JsinfoSchema.providers.moniker)
+            .orderBy(orderFunction(sortColumn))
+            .offset((finalPagination.page - 1) * finalPagination.count)
+            .limit(finalPagination.count);
+
+        return data.map(item => ({
+            addr: item.provider || "",
+            moniker: item.moniker || "",
+            rewardSum: item.rewardSum,
+            totalServices: item.totalServices,
+            totalStake: item.totalStake
+        }));
     }
 
-    public async getCSVImpl(data: IndexProvidersResponse[]): Promise<string> {
+    protected async convertRecordsToCsv(data: IndexProvidersResponse[]): Promise<string> {
         const columns = [
             { key: "moniker", name: "Moniker" },
             { key: "addr", name: "Provider Address" },
@@ -193,14 +214,14 @@ class IndexProvidersData extends RequestHandlerBase<IndexProvidersResponse> {
     }
 }
 
-export async function IndexProvidersCachedHandler(request: FastifyRequest, reply: FastifyReply) {
-    return await IndexProvidersData.GetInstance().getPaginatedItemsCachedHandler(request, reply)
+export async function IndexProvidersPaginatedHandler(request: FastifyRequest, reply: FastifyReply) {
+    return await IndexProvidersData.GetInstance().PaginatedRecordsRequestHandler(request, reply)
 }
 
-export async function IndexProvidersItemCountRawHandler(request: FastifyRequest, reply: FastifyReply) {
-    return await IndexProvidersData.GetInstance().getTotalItemCountRawHandler(request, reply)
+export async function IndexProvidersItemCountPaginatiedHandler(request: FastifyRequest, reply: FastifyReply) {
+    return await IndexProvidersData.GetInstance().getTotalItemCountPaginatiedHandler(request, reply)
 }
 
 export async function IndexProvidersCSVRawHandler(request: FastifyRequest, reply: FastifyReply) {
-    return await IndexProvidersData.GetInstance().getCSVRawHandler(request, reply)
+    return await IndexProvidersData.GetInstance().CSVRequestHandler(request, reply)
 }

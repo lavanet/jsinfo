@@ -5,12 +5,11 @@
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { GetLatestBlock, QueryGetJsinfoReadDbInstance } from '../queryDb';
 import * as JsinfoSchema from '../../schemas/jsinfoSchema';
-import { sql, desc, gt, and, eq } from "drizzle-orm";
-import { FormatDates } from '../utils/queryDateUtils';
+import { sql, desc, and, eq } from "drizzle-orm";
 import { GetAndValidateProviderAddressFromRequest } from '../utils/queryUtils';
 import { WriteErrorToFastifyReply } from '../utils/queryServerUtils';
 
-export const ProviderCachedHandlerOpts: RouteShorthandOptions = {
+export const ProviderPaginatedHandlerOpts: RouteShorthandOptions = {
     schema: {
         response: {
             200: {
@@ -64,7 +63,7 @@ export const ProviderCachedHandlerOpts: RouteShorthandOptions = {
     }
 }
 
-export async function ProviderCachedHandler(request: FastifyRequest, reply: FastifyReply) {
+export async function ProviderPaginatedHandler(request: FastifyRequest, reply: FastifyReply) {
     let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
     if (addr === '') {
         return;

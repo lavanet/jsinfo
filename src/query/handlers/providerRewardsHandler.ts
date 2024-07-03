@@ -4,11 +4,10 @@
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../queryDb';
 import * as JsinfoSchema from '../../schemas/jsinfoSchema';
-import { and, desc, eq, gt, gte } from "drizzle-orm";
+import { asc, desc, eq, gte, sql, and } from "drizzle-orm";
 import { Pagination, ParsePaginationFromString } from '../utils/queryPagination';
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '../queryConsts';
-import path from 'path';
-import { CSVEscape, CompareValues, GetAndValidateProviderAddressFromRequest, GetDataLength, GetNestedValue, SafeSlice } from '../utils/queryUtils';
+import { CSVEscape, GetAndValidateProviderAddressFromRequest } from '../utils/queryUtils';
 import { RequestHandlerBase } from '../classes/RequestHandlerBase';
 
 export type ProviderRewardsResponse = {
@@ -33,7 +32,7 @@ export type ProviderRewardsResponse = {
     blocks: { datetime: Date | null; height: number | null } | null
 };
 
-export const ProviderRewardsCachedHandlerOpts: RouteShorthandOptions = {
+export const ProviderRewardsPaginatedHandlerOpts: RouteShorthandOptions = {
     schema: {
         response: {
             200: {
@@ -128,129 +127,144 @@ class ProviderRewardsData extends RequestHandlerBase<ProviderRewardsResponse> {
         this.addr = addr;
     }
 
-    public GetInstance()(addr: string): ProviderRewardsData {
-        return ProviderRewardsData.GetInstance()(addr);
+    public static GetInstance(addr: string): ProviderRewardsData {
+        return ProviderRewardsData.GetInstanceBase(addr);
     }
-
-    protected getCacheFilePathImpl(): string {
-    return path.join(this.cacheDir, `ProviderRewardsData_${this.addr}`);
-}
 
     protected getCSVFileNameImpl(): string {
-    return `ProviderRewards_${this.addr}.csv`;
-}
+        return `ProviderRewards_${this.addr}.csv`;
+    }
 
-    protected isSinceDBFetchEnabled(): boolean {
-    return true;
-}
-
-    protected sinceUniqueField(): string {
-    return "id";
-}
-
-    protected async fetchAllDataFromDb(): Promise < ProviderRewardsResponse[] > {
-    await QueryCheckJsinfoReadDbInstance();
+    protected async fetchAllRecords(): Promise<ProviderRewardsResponse[]> {
+        await QueryCheckJsinfoReadDbInstance();
 
         let thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    const paymentsRes = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.relayPayments).
-        leftJoin(JsinfoSchema.blocks, eq(JsinfoSchema.relayPayments.blockId, JsinfoSchema.blocks.height)).
-        where(
-            and(
-                eq(JsinfoSchema.relayPayments.provider, this.addr),
-                gte(JsinfoSchema.relayPayments.datetime, thirtyDaysAgo)
-            )).
-        orderBy(desc(JsinfoSchema.relayPayments.id)).
-        offset(0).
-        limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION)
+        console.log("dasd", this.addr);
 
-        if(GetDataLength(paymentsRes) === 0) {
-    this.setDataIsEmpty();
-    return [];
-}
+        const paymentsRes = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.relayPayments).
+            leftJoin(JsinfoSchema.blocks, eq(JsinfoSchema.relayPayments.blockId, JsinfoSchema.blocks.height)).
+            where(
+                and(
+                    eq(JsinfoSchema.relayPayments.provider, this.addr),
+                    gte(JsinfoSchema.relayPayments.datetime, thirtyDaysAgo)
+                )).
+            orderBy(desc(JsinfoSchema.relayPayments.id)).
+            offset(0).
+            limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION)
 
-return paymentsRes;
-    }    
-    public async fetchDataWithPaginationFromDb(pagination: Pagination): Promise < ProviderRewardsResponse[] | null > {
-    const defaultSortKey = "relay_payments.id";
+        console.log("dasd12121", paymentsRes);
 
-    let finalPagination: Pagination;
-
-    if(pagination) {
-        finalPagination = pagination;
-    } else {
-        finalPagination = ParsePaginationFromString(
-            `${defaultSortKey},descending,1,${JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE}`
-        );
+        return paymentsRes;
     }
 
-        // If sortKey is null, set it to the defaultSortKey
-        if(finalPagination.sortKey === null) {
-    finalPagination.sortKey = defaultSortKey;
-}
+    protected async fetchRecordCountFromDb(): Promise<number> {
+        await QueryCheckJsinfoReadDbInstance();
 
-// Validate sortKey
-const validKeys = ["relay_payments.specId", "relay_payments.blockId", "blocks.datetime", "relay_payments.consumer", "relay_payments.relays", "relay_payments.cu", "relay_payments.qosSync", "relay_payments.qosSyncExc"];
-if (!validKeys.includes(finalPagination.sortKey)) {
-    const trimmedSortKey = finalPagination.sortKey.substring(0, 500);
-    throw new Error(`Invalid sort key: ${trimmedSortKey}`);
-}
+        const countResult = await QueryGetJsinfoReadDbInstance()
+            .select({
+                count: sql<number>`count(*)`
+            })
+            .from(JsinfoSchema.relayPayments)
+            .leftJoin(JsinfoSchema.blocks, eq(JsinfoSchema.relayPayments.blockId, JsinfoSchema.blocks.height))
+            .where(eq(JsinfoSchema.relayPayments.provider, this.addr))
+            .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
 
-// Apply sorting
-data.sort((a, b) => {
-    const sortKey = finalPagination.sortKey as string;
-    const aValue = GetNestedValue(a, sortKey);
-    const bValue = GetNestedValue(b, sortKey);
-    return CompareValues(aValue, bValue, finalPagination.direction);
-});
-
-// Apply pagination
-const start = (finalPagination.page - 1) * finalPagination.count;
-const end = finalPagination.page * finalPagination.count;
-return SafeSlice(data, start, end, JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE);
+        return countResult[0].count;
     }
 
-    public async getCSVImpl(data: ProviderRewardsResponse[]): Promise < string > {
-    const columns = [
-        { key: "relay_payments.specId", name: "Spec" },
-        { key: "relay_payments.blockId", name: "Block" },
-        { key: "blocks.datetime", name: "Time" },
-        { key: "relay_payments.consumer", name: "Consumer" },
-        { key: "relay_payments.relays", name: "Relays" },
-        { key: "relay_payments.cu", name: "CU" },
-        { key: "relay_payments.qosSync", name: "QoS" },
-        { key: "relay_payments.qosSyncExc", name: "Excellence" },
-    ];
+    public async fetchPaginatedRecords(pagination: Pagination | null): Promise<ProviderRewardsResponse[]> {
+        const defaultSortKey = "relay_payments.id";
+        let finalPagination: Pagination;
 
-    let csv = columns.map(column => CSVEscape(column.name)).join(',') + '\n';
+        if (pagination) {
+            finalPagination = pagination;
+        } else {
+            finalPagination = ParsePaginationFromString(
+                `${defaultSortKey},descending,1,${JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE}`
+            );
+        }
 
-    data.forEach((item: any) => {
-        csv += columns.map(column => {
-            const keys = column.key.split('.');
-            const value = keys.reduce((obj, key) => (obj && obj[key] !== undefined) ? obj[key] : '', item);
-            return CSVEscape(String(value));
-        }).join(',') + '\n';
-    });
+        if (finalPagination.sortKey === null) {
+            finalPagination.sortKey = defaultSortKey;
+        }
 
-    return csv;
+        const keyToColumnMap = {
+            "relay_payments.id": JsinfoSchema.relayPayments.id,
+            "relay_payments.specId": JsinfoSchema.relayPayments.specId,
+            "relay_payments.blockId": JsinfoSchema.relayPayments.blockId,
+            "blocks.datetime": JsinfoSchema.blocks.datetime,
+            "relay_payments.consumer": JsinfoSchema.relayPayments.consumer,
+            "relay_payments.relays": JsinfoSchema.relayPayments.relays,
+            "relay_payments.cu": JsinfoSchema.relayPayments.cu,
+            "relay_payments.qosSync": JsinfoSchema.relayPayments.qosSync,
+            "relay_payments.qosSyncExc": JsinfoSchema.relayPayments.qosSyncExc
+        };
+
+        if (!Object.keys(keyToColumnMap).includes(finalPagination.sortKey)) {
+            const trimmedSortKey = finalPagination.sortKey.substring(0, 500);
+            throw new Error(`Invalid sort key: ${trimmedSortKey}`);
+        }
+
+        await QueryCheckJsinfoReadDbInstance();
+
+        const sortColumn = keyToColumnMap[finalPagination.sortKey];
+        const orderFunction = finalPagination.direction === 'ascending' ? asc : desc;
+
+        console.log("sortColu111mn: ", sortColumn);
+        const paymentsRes = await QueryGetJsinfoReadDbInstance()
+            .select()
+            .from(JsinfoSchema.relayPayments)
+            .leftJoin(JsinfoSchema.blocks, eq(JsinfoSchema.relayPayments.blockId, JsinfoSchema.blocks.height))
+            .orderBy(orderFunction(sortColumn))
+            .offset((finalPagination.page - 1) * finalPagination.count)
+            .limit(finalPagination.count);
+        console.log("sortCo222lumn: ", sortColumn);
+
+        return paymentsRes;
+    }
+
+    protected async convertRecordsToCsv(data: ProviderRewardsResponse[]): Promise<string> {
+        const columns = [
+            { key: "relay_payments.specId", name: "Spec" },
+            { key: "relay_payments.blockId", name: "Block" },
+            { key: "blocks.datetime", name: "Time" },
+            { key: "relay_payments.consumer", name: "Consumer" },
+            { key: "relay_payments.relays", name: "Relays" },
+            { key: "relay_payments.cu", name: "CU" },
+            { key: "relay_payments.qosSync", name: "QoS" },
+            { key: "relay_payments.qosSyncExc", name: "Excellence" },
+        ];
+
+        let csv = columns.map(column => CSVEscape(column.name)).join(',') + '\n';
+
+        data.forEach((item: any) => {
+            csv += columns.map(column => {
+                const keys = column.key.split('.');
+                const value = keys.reduce((obj, key) => (obj && obj[key] !== undefined) ? obj[key] : '', item);
+                return CSVEscape(String(value));
+            }).join(',') + '\n';
+        });
+
+        return csv;
+    }
 }
-}
 
-export async function ProviderRewardsCachedHandler(request: FastifyRequest, reply: FastifyReply) {
+export async function ProviderRewardsPaginatedHandler(request: FastifyRequest, reply: FastifyReply) {
     let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
     if (addr === '') {
         return null;
     }
-    return await ProviderRewardsData.GetInstance()(addr).getPaginatedItemsCachedHandler(request, reply)
+    return await ProviderRewardsData.GetInstance(addr).PaginatedRecordsRequestHandler(request, reply)
 }
 
-export async function ProviderRewardsItemCountRawHandler(request: FastifyRequest, reply: FastifyReply) {
+export async function ProviderRewardsItemCountPaginatiedHandler(request: FastifyRequest, reply: FastifyReply) {
     let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
     if (addr === '') {
         return reply;
     }
-    return await ProviderRewardsData.GetInstance()(addr).getTotalItemCountRawHandler(request, reply)
+    return await ProviderRewardsData.GetInstance(addr).getTotalItemCountPaginatiedHandler(request, reply)
 }
 
 export async function ProviderRewardsCSVRawHandler(request: FastifyRequest, reply: FastifyReply) {
@@ -258,5 +272,5 @@ export async function ProviderRewardsCSVRawHandler(request: FastifyRequest, repl
     if (addr === '') {
         return reply;
     }
-    return await ProviderRewardsData.GetInstance()(addr).getCSVRawHandler(request, reply)
+    return await ProviderRewardsData.GetInstance(addr).CSVRequestHandler(request, reply)
 }

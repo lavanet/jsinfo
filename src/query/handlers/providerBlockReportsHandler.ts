@@ -6,14 +6,13 @@
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../queryDb';
 import * as JsinfoSchema from '../../schemas/jsinfoSchema';
-import { and, desc, eq, gte, gt } from "drizzle-orm";
-import { Pagination } from '../utils/queryPagination';
+import { asc, desc, eq, sql } from "drizzle-orm";
+import { Pagination, ParsePaginationFromString } from '../utils/queryPagination';
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '../queryConsts';
-import path from 'path';
-import { CompareValues, GetAndValidateProviderAddressFromRequest, GetDataLength, SafeSlice } from '../utils/queryUtils';
+import { GetAndValidateProviderAddressFromRequest } from '../utils/queryUtils';
 import { RequestHandlerBase } from '../classes/RequestHandlerBase';
 
-export interface BlockReportsReponse {
+export interface BlockReportsResponse {
     id: number;
     blockId: number;
     tx: string;
@@ -22,7 +21,7 @@ export interface BlockReportsReponse {
     chainBlockHeight: number;
 }
 
-export const ProviderBlockReportsCachedHandlerOpts: RouteShorthandOptions = {
+export const ProviderBlockReportsPaginatedHandlerOpts: RouteShorthandOptions = {
     schema: {
         response: {
             200: {
@@ -61,7 +60,7 @@ export const ProviderBlockReportsCachedHandlerOpts: RouteShorthandOptions = {
     }
 };
 
-class ProviderBlockReportsData extends RequestHandlerBase<BlockReportsReponse> {
+class ProviderBlockReportsData extends RequestHandlerBase<BlockReportsResponse> {
     private addr: string;
 
     constructor(addr: string) {
@@ -69,112 +68,125 @@ class ProviderBlockReportsData extends RequestHandlerBase<BlockReportsReponse> {
         this.addr = addr;
     }
 
-    public GetInstance()(addr: string): ProviderBlockReportsData {
-        return ProviderBlockReportsData.GetInstance()(addr);
+    public static GetInstance(addr: string): ProviderBlockReportsData {
+        return ProviderBlockReportsData.GetInstanceBase(addr);
     }
 
     protected getCSVFileNameImpl(): string {
-    return `ProviderBlockReports_${this.addr}.csv`;
-}
-
-    protected getCacheFilePathImpl(): string {
-    return path.join(this.cacheDir, `ProviderBlockReportsData_${this.addr}`);
-}
-
-    protected isSinceDBFetchEnabled(): boolean {
-    return true;
-}
-
-    protected sinceUniqueField(): string {
-    return "id";
-}
-
-    protected async fetchAllDataFromDb(): Promise < BlockReportsReponse[] > {
-    await QueryCheckJsinfoReadDbInstance();
-
-        let thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-    let result = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.providerLatestBlockReports).
-        where(
-            and(
-                eq(JsinfoSchema.providerLatestBlockReports.provider, this.addr),
-                gte(JsinfoSchema.providerLatestBlockReports.timestamp, thirtyDaysAgo)
-            )
-        ).
-        orderBy(desc(JsinfoSchema.providerLatestBlockReports.id)).
-        offset(0).
-        limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
-
-    if(GetDataLength(result) === 0) {
-    this.setDataIsEmpty();
-    return [];
-}
-
-return result.map((row: JsinfoSchema.ProviderLatestBlockReports) => ({
-    id: row.id,
-    blockId: row.blockId ?? 0,
-    tx: row.tx ?? '',
-    timestamp: row.timestamp?.toISOString() ?? '',
-    chainId: row.chainId,
-    chainBlockHeight: row.chainBlockHeight ?? 0,
-}));
+        return `ProviderBlockReports_${this.addr}.csv`;
     }
 
-    public async fetchDataWithPaginationFromDb(data: BlockReportsReponse[], pagination: Pagination | null): Promise < BlockReportsReponse[] | null > {
-    if(pagination == null) {
-    return data.slice(0, JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE);
-}
+    protected async fetchAllRecords(): Promise<BlockReportsResponse[]> {
+        await QueryCheckJsinfoReadDbInstance();
 
-data = this.sortData(data, pagination.sortKey || "", pagination.direction);
+        let result = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.providerLatestBlockReports).
+            where(eq(JsinfoSchema.providerLatestBlockReports.provider, this.addr)).
+            orderBy(desc(JsinfoSchema.providerLatestBlockReports.id)).
+            offset(0).
+            limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
 
-const start = (pagination.page - 1) * pagination.count;
-const end = start + pagination.count;
-
-return SafeSlice(data, start, end, JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE);
+        return result.map((row: JsinfoSchema.ProviderLatestBlockReports) => ({
+            id: row.id,
+            blockId: row.blockId ?? 0,
+            tx: row.tx ?? '',
+            timestamp: row.timestamp?.toISOString() ?? '',
+            chainId: row.chainId,
+            chainBlockHeight: row.chainBlockHeight ?? 0,
+        }));
     }
 
-    private sortData(data: BlockReportsReponse[], sortKey: string, direction: 'ascending' | 'descending'): BlockReportsReponse[] {
-    if (sortKey === "-" || sortKey === "") sortKey = "timestamp";
+    protected async fetchRecordCountFromDb(): Promise<number> {
+        await QueryCheckJsinfoReadDbInstance();
 
-    if (sortKey && ["timestamp", "chain_id", "amount"].includes(sortKey)) {
-        if (sortKey !== "timestamp" || direction !== "descending") {
-            // default
+        const countResult = await QueryGetJsinfoReadDbInstance()
+            .select({
+                count: sql<number>`count(*)`
+            })
+            .from(JsinfoSchema.providerLatestBlockReports)
+            .where(eq(JsinfoSchema.providerLatestBlockReports.provider, this.addr))
+            .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
+
+        return countResult[0].count;
+    }
+
+    public async fetchPaginatedRecords(pagination: Pagination | null): Promise<BlockReportsResponse[]> {
+        const defaultSortKey = "id";
+        let finalPagination: Pagination;
+
+        if (pagination) {
+            finalPagination = pagination;
+        } else {
+            finalPagination = ParsePaginationFromString(
+                `${defaultSortKey},descending,1,${JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE}`
+            );
         }
-    } else {
-        console.log(`Invalid sortKey: ${sortKey}`);
+
+        if (finalPagination.sortKey === null) {
+            finalPagination.sortKey = defaultSortKey;
+        }
+
+        const keyToColumnMap = {
+            id: JsinfoSchema.providerLatestBlockReports.id,
+            blockId: JsinfoSchema.providerLatestBlockReports.blockId,
+            tx: JsinfoSchema.providerLatestBlockReports.tx,
+            timestamp: JsinfoSchema.providerLatestBlockReports.timestamp,
+            chainId: JsinfoSchema.providerLatestBlockReports.chainId,
+            chainBlockHeight: JsinfoSchema.providerLatestBlockReports.chainBlockHeight
+        };
+
+        if (!Object.keys(keyToColumnMap).includes(finalPagination.sortKey)) {
+            const trimmedSortKey = finalPagination.sortKey.substring(0, 500);
+            throw new Error(`Invalid sort key: ${trimmedSortKey}`);
+        }
+
+        await QueryCheckJsinfoReadDbInstance();
+
+        const sortColumn = keyToColumnMap[finalPagination.sortKey];
+        const orderFunction = finalPagination.direction === 'ascending' ? asc : desc;
+
+        // Execute the database query
+        const reportsRes = await QueryGetJsinfoReadDbInstance()
+            .select()
+            .from(JsinfoSchema.providerLatestBlockReports)
+            .where(eq(JsinfoSchema.providerLatestBlockReports.provider, this.addr))
+            .orderBy(orderFunction(sortColumn))
+            .offset((finalPagination.page - 1) * finalPagination.count)
+            .limit(finalPagination.count);
+
+        return reportsRes.map(row => ({
+            id: row.id,
+            blockId: row.blockId ?? 0,
+            tx: row.tx ?? '',
+            timestamp: row.timestamp ? row.timestamp.toISOString() : '',
+            chainId: row.chainId,
+            chainBlockHeight: row.chainBlockHeight ?? 0,
+        }));
     }
 
-    return data.sort((a, b) => {
-        const aValue = a[sortKey];
-        const bValue = b[sortKey];
-        return CompareValues(aValue, bValue, direction);
-    });
+
+    protected async convertRecordsToCsv(data: BlockReportsResponse[]): Promise<string> {
+        let csv = 'time,blockId,tx,chainId,chainBlockHeight\n';
+        data.forEach((item: BlockReportsResponse) => {
+            csv += `${item.timestamp},${item.blockId},${item.chainId},${item.chainBlockHeight}\n`;
+        });
+        return csv;
+    }
 }
 
-    public async getCSVImpl(data: BlockReportsReponse[]): Promise < string > {
-    let csv = 'time,blockId,tx,chainId,chainBlockHeight\n';
-    data.forEach((item: BlockReportsReponse) => {
-        csv += `${item.timestamp},${item.blockId},${item.chainId},${item.chainBlockHeight}\n`;
-    });
-    return csv;
-}
-}
-
-export async function ProviderBlockReportsCachedHandler(request: FastifyRequest, reply: FastifyReply) {
+export async function ProviderBlockReportsPaginatedHandler(request: FastifyRequest, reply: FastifyReply) {
     let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
     if (addr === '') {
         return null;
     }
-    return await ProviderBlockReportsData.GetInstance()(addr).getPaginatedItemsCachedHandler(request, reply)
+    return await ProviderBlockReportsData.GetInstance(addr).PaginatedRecordsRequestHandler(request, reply)
 }
 
-export async function ProviderBlockReportsItemCountRawHandler(request: FastifyRequest, reply: FastifyReply) {
+export async function ProviderBlockReportsItemCountPaginatiedHandler(request: FastifyRequest, reply: FastifyReply) {
     let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
     if (addr === '') {
         return reply;
     }
-    return await ProviderBlockReportsData.GetInstance()(addr).getTotalItemCountRawHandler(request, reply)
+    return await ProviderBlockReportsData.GetInstance(addr).getTotalItemCountPaginatiedHandler(request, reply)
 }
 
 export async function ProviderBlockReportsCSVRawHandler(request: FastifyRequest, reply: FastifyReply) {
@@ -182,5 +194,5 @@ export async function ProviderBlockReportsCSVRawHandler(request: FastifyRequest,
     if (addr === '') {
         return reply;
     }
-    return await ProviderBlockReportsData.GetInstance()(addr).getCSVRawHandler(request, reply)
+    return await ProviderBlockReportsData.GetInstance(addr).CSVRequestHandler(request, reply)
 }

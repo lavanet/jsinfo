@@ -29,6 +29,8 @@ export const JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION = parseInt(GetEnvVar("
 
 export const JSINFO_NO_READ_DB = GetEnvVar("JSINFO_NO_READ_DB", "true").toLowerCase() === "true";
 
+export const JSINFO_REQUEST_HANDLER_BASE_DEBUG = GetEnvVar("JSINFO_REQUEST_HANDLER_BASE_DEBUG", "true").toLowerCase() === "true";
+
 const numberQueryConsts = [
     'JSINFO_QUERY_PORT',
     'JSINFO_QUERY_PROVIDER_HEALTH_HOURLY_CUTOFF_DAYS',

@@ -6,7 +6,7 @@ import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '..
 import { isNotNull } from "drizzle-orm";
 import * as JsinfoSchema from '../../schemas/jsinfoSchema';
 
-export const ProvidersCachedHandlerOpts: RouteShorthandOptions = {
+export const ProvidersPaginatedHandlerOpts: RouteShorthandOptions = {
     schema: {
         response: {
             200: {
@@ -21,7 +21,7 @@ export const ProvidersCachedHandlerOpts: RouteShorthandOptions = {
     }
 }
 
-export async function ProvidersCachedHandler(request: FastifyRequest, reply: FastifyReply) {
+export async function ProvidersPaginatedHandler(request: FastifyRequest, reply: FastifyReply) {
     await QueryCheckJsinfoReadDbInstance()
 
     const res = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.providers).where(isNotNull(JsinfoSchema.providers.address))

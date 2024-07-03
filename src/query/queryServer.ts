@@ -43,33 +43,25 @@ function handleRequestWithPagination(
         const handlerData = await handler(request, reply);
         // returns null on error and handler handled the response
         if (handlerData == null) return reply;
-        if (isValidData(handlerData)) {
-            reply.send(handlerData);
-            return reply;
-        }
 
-        reply.send({});
+        reply.send(handlerData);
         return reply;
     };
-}
-
-function isValidData(data: any): boolean {
-    return typeof data === 'object' && data !== null;
 }
 
 export function RegistePaginationServerHandler(
     path: string,
     opts: RouteShorthandOptions,
     handler: (request: FastifyRequest, reply: FastifyReply) => Promise<any>,
-    ItemCountRawHandler?: (request: FastifyRequest, reply: FastifyReply) => Promise<any>
+    ItemCountPaginatiedHandler?: (request: FastifyRequest, reply: FastifyReply) => Promise<any>
 ) {
-    console.log("Registering handlerfor path: " + path);
+    console.log("Registering handler for path: " + path);
     opts = AddErrorResponseToFastifyServerOpts(opts);
     server.get(path, opts, handleRequestWithPagination(handler));
 
-    if (ItemCountRawHandler) {
-        console.log("Registering ItemCountRawHandler for path: " + "/item-count" + path);
-        server.get("/item-count" + path, ItemCountOpts, ItemCountRawHandler);
+    if (ItemCountPaginatiedHandler) {
+        console.log("Registering ItemCountPaginatiedHandler for path: " + "/item-count" + path);
+        server.get("/item-count" + path, ItemCountOpts, ItemCountPaginatiedHandler);
     }
 }
 

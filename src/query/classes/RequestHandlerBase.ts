@@ -1,24 +1,21 @@
 // src/query/classes/RequestHandlerBase.ts
 
-import fs from 'fs';
 import { Pagination, ParsePaginationFromRequest } from "../utils/queryPagination";
 import { FastifyReply, FastifyRequest } from "fastify";
-import { GetDataLength, GetDataLengthForPrints, GetTypeAsString } from "../utils/queryUtils";
-import { subMonths, isAfter, isBefore, parseISO, startOfDay, subDays } from 'date-fns';
+import { GetDataLength, GetDataLengthForPrints } from "../utils/queryUtils";
+import { subMonths, isAfter, isBefore, parseISO, startOfDay } from 'date-fns';
 import { WriteErrorToFastifyReply } from '../utils/queryServerUtils';
+import { JSINFO_REQUEST_HANDLER_BASE_DEBUG } from '../queryConsts';
 
 export class RequestHandlerBase<T> {
+    protected className: string;
     protected csvFileName: string = "";
     protected data: T[] | null = null;
-    protected isDataEmpty: boolean = false;
-    protected isDataFetched: boolean = false;
-    protected dataFetchStartTime: Date | null = null;
-    protected className: string;
-    protected debug: boolean = false;
+    protected debug: boolean = JSINFO_REQUEST_HANDLER_BASE_DEBUG;
 
     private static instances: Map<string, RequestHandlerBase<any>> = new Map();
 
-    protected static GetInstance<C extends new (...args: any[]) => RequestHandlerBase<any>>(this: C, ...args: any[]): InstanceType<C> {
+    protected static GetInstanceBase<C extends new (...args: any[]) => RequestHandlerBase<any>>(this: C, ...args: any[]): InstanceType<C> {
         args.forEach((arg, index) => {
             if (!(arg instanceof Date) && typeof arg !== 'number' && typeof arg !== 'string' && arg !== null && arg !== undefined) {
                 throw new Error(`Invalid type for argument at index ${index}. Expected Date, number, string, null, or undefined but received ${typeof arg}.`);
@@ -32,6 +29,10 @@ export class RequestHandlerBase<T> {
             RequestHandlerBase.instances.set(key, instance);
         }
         return instance as InstanceType<C>;
+    }
+
+    public static GetInstance(...args: any[]): RequestHandlerBase<any> {
+        throw new Error("Method 'GetInstance' must be implemented by subclasses.");
     }
 
     private static generateKeyFromTypeAndArgs(type: Function, args: any[]): string {
@@ -72,135 +73,67 @@ export class RequestHandlerBase<T> {
         return this.csvFileName;
     }
 
-    protected async fetchAllDataFromDb(): Promise<T[]> {
-        throw new Error("Method 'fetchAllDataFromDb' must be implemented.");
+    protected async fetchAllRecords(): Promise<T[]> {
+        throw new Error("Method 'fetchAllRecords' must be implemented.");
     }
 
-    protected async fetchDataWithPaginationFromDb(data: T[], pagination: Pagination | null): Promise<T[] | null> {
-        throw new Error("Method 'fetchDataWithPaginationFromDb' must be implemented.");
+    protected async fetchRecordCountFromDb(): Promise<number> {
+        throw new Error("Method 'fetchRecordCountFromDb' must be implemented.");
     }
 
-    protected async getItemsByFromToImpl(data: T[], fromDate: Date, toDate: Date): Promise<T[] | null> {
-        throw new Error("Method 'getItemsByFromToImpl' must be implemented.");
+    protected async fetchPaginatedRecords(pagination: Pagination | null): Promise<T[]> {
+        throw new Error("Method 'fetchPaginatedRecords' must be implemented.");
     }
 
-    public async getCSVImpl(data: T[]): Promise<string> {
-        throw new Error("Method 'getCSVImpl' must be implemented.");
+    protected async fetchDateRangeRecords(from: Date, to: Date): Promise<T[]> {
+        throw new Error("Method 'fetchDateRangeRecords' must be implemented.");
     }
 
-    private async fetchAndCacheDataBg() {
-        this.log('fetchAndCacheDataBg:: Called');
-        this.isDataEmpty = false;
-        let data = await this.fetchAllDataFromDb();
-
-        if (this.isDataEmpty) return;
-
-        let empty_data_retries = 3;
-
-        while (empty_data_retries > 0) {
-            if (data == null || GetDataLength(data) === 0) {
-                this.log(`fetchAndCacheDataBg:: Data is null or empty, retrying (${empty_data_retries} retries left)`);
-                empty_data_retries--;
-                data = await this.fetchAllDataFromDb();
-                continue;
-            }
-
-            this.isDataFetched = true;
-            fs.writeFileSync(this.getCacheFilePathImpl(), JSON.stringify(data));
-            this.log(`fetchAndCacheDataBg:: Data fetched and written to cache. Data length: ${GetDataLength(data)}`);
-            break;
-        }
+    protected async convertRecordsToCsv(data: T[]): Promise<string> {
+        throw new Error("Method 'convertRecordsToCsv' must be implemented.");
     }
 
-    protected async fetchDataFromCache(): Promise<T[] | null> {
-        this.log('fetchDataFromCache:: calling fetchAndCacheDataBg');
-        await this.fetchAndCacheDataBg();
-
-        if (this.data != null) {
-            this.log(`fetchDataFromCache:: Data fetched from mem, returning data. Length of data: ${GetDataLengthForPrints(this.data)}`);
-            return this.data;
-        }
-
-        this.log(`fetchDataFromCache:: Cache file path: ${this.getCacheFilePathImpl()}`);
-
-        if (fs.existsSync(this.getCacheFilePathImpl())) {
-            this.log('fetchDataFromCache:: Cache file exists, reading data');
-            this.data = JSON.parse(fs.readFileSync(this.getCacheFilePathImpl(), { encoding: 'utf8' }));
-        }
-
-        if (this.data == null || GetDataLength(this.data) === 0) {
-            this.log('fetchDataFromCache:: Data is null or empty, resetting data to null');
-            this.data = null;
-        }
-
-        this.log(`fetchDataFromCache:: Data fetched from disk, returning data. Length of data: ${GetDataLengthForPrints(this.data)}`);
-        return this.data;
-    }
-
-    public async getPaginatedItemsCachedHandler(request: FastifyRequest, reply: FastifyReply): Promise<{ data: T[] } | {} | null> {
+    public async PaginatedRecordsRequestHandler(request: FastifyRequest, reply: FastifyReply): Promise<{ data: T[] } | null> {
+        const startTime = Date.now(); // Start time tracking
         try {
-            const data = await this.fetchAllDataFromDb();
-            if (this.isDataEmpty) {
-                return { data: [] };
-            }
-
-            this.log(`getPaginatedItemsCachedHandler:: Fetched data from cache. Length of data: ${GetDataLengthForPrints(data)}`);
-
-            if (data == null) {
-                return {};
-            }
-
             const pagination = ParsePaginationFromRequest(request);
-            const paginatedData = await this.fetchDataWithPaginationFromDb(data, pagination);
-            this.log(`getPaginatedItemsCachedHandler:: Got paginated items. Length of paginatedData: ${GetDataLengthForPrints(paginatedData)}`);
-
-            if (paginatedData == null) {
-                return {};
-            }
+            const paginatedData = await this.fetchPaginatedRecords(pagination);
+            this.log(`PaginatedRecordsRequestHandler:: Got paginated items. Length of paginatedData: ${GetDataLengthForPrints(paginatedData)}`);
+            const endTime = Date.now(); // End time tracking
+            this.log(`PaginatedRecordsRequestHandler:: Execution time: ${endTime - startTime}ms`); // Log execution time
             return { data: paginatedData };
         } catch (error) {
+            const endTime = Date.now(); // End time tracking in case of error
+            this.log(`PaginatedRecordsRequestHandler:: Execution time: ${endTime - startTime}ms`); // Log execution time even if there's an error
             const err = error as Error;
             WriteErrorToFastifyReply(reply, err.message);
-            this.log(`getPaginatedItemsCachedHandler:: Error occurred: ${err.message}`);
+            this.log(`PaginatedRecordsRequestHandler:: Error occurred: ${err.message}`);
             return null;
         }
     }
 
-    public async getItemsByFromToChartsHandler(request: FastifyRequest, reply: FastifyReply): Promise<{ data: T[] } | null> {
+    public async DateRangeRequestHandler(request: FastifyRequest, reply: FastifyReply): Promise<{ data: T[] } | null> {
         try {
-            const data = await this.fetchDataFromCache();
-            if (this.isDataEmpty) {
-                return { data: [] };
-            }
-
-            if (data == null) {
-                reply.send({});
-                return null;
-            }
-
             const query = request.query as { [key: string]: string };
-            let fromDate = 'f' in query ? parseISO(query.f) : subMonths(new Date(), 3);
-            let toDate = 't' in query ? parseISO(query.t) : new Date();
+            let from = 'f' in query ? parseISO(query.f) : subMonths(new Date(), 3);
+            let to = 't' in query ? parseISO(query.t) : new Date();
 
-            if (isAfter(fromDate, toDate)) {
-                [fromDate, toDate] = [toDate, fromDate];
+            if (isAfter(from, to)) {
+                [from, to] = [to, from];
             }
 
-            fromDate = startOfDay(fromDate);
-            toDate = startOfDay(toDate);
+            from = startOfDay(from);
+            to = startOfDay(to);
 
-            if (isBefore(fromDate, startOfDay(subMonths(new Date(), 6)))) {
+            if (isBefore(from, startOfDay(subMonths(new Date(), 6)))) {
                 throw new Error("From date cannot be more than 6 months in the past.");
             }
 
-            if (isAfter(toDate, startOfDay(new Date()))) {
+            if (isAfter(to, startOfDay(new Date()))) {
                 throw new Error("To date cannot be in the future.");
             }
 
-            const filteredData = await this.getItemsByFromToImpl(data, fromDate, toDate);
-            if (filteredData == null || GetDataLength(filteredData) === 0) {
-                return { data: [] };
-            }
+            const filteredData = await this.fetchDateRangeRecords(from, to);
 
             return { data: filteredData };
         } catch (error) {
@@ -210,14 +143,10 @@ export class RequestHandlerBase<T> {
         }
     }
 
-    public async getTotalItemCountRawHandler(request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> {
+    public async getTotalItemCountPaginatiedHandler(request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> {
         try {
-            const data = await this.fetchDataFromCache();
-            if (this.isDataEmpty || data == null) {
-                reply.send({ itemCount: 0 });
-                return reply;
-            }
-            reply.send({ itemCount: GetDataLength(data) });
+            const itemCount = await this.fetchRecordCountFromDb();
+            reply.send({ itemCount: GetDataLength(itemCount) });
             return reply;
         } catch (error) {
             const err = error as Error;
@@ -226,15 +155,15 @@ export class RequestHandlerBase<T> {
         }
     }
 
-    public async getCSVRawHandler(request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> {
+    public async CSVRequestHandler(request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> {
         try {
-            const data = await this.fetchDataFromCache();
-            if (this.isDataEmpty || data == null) {
+            const data = await this.fetchAllRecords();
+            if (GetDataLength(data) == 0) {
                 reply.send("Data is unavailable now");
                 return reply;
             }
 
-            let csv = await this.getCSVImpl(data);
+            let csv = await this.convertRecordsToCsv(data);
             if (csv == null) {
                 reply.send("Data is not available in CSV format");
                 return reply;

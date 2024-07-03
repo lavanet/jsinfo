@@ -35,10 +35,36 @@ export function CompareValues(aValue: string | number | null, bValue: string | n
     }
 }
 
-export const IsNotNullAndNotZero = (value: number | null) => value !== null && value !== 0;
-
 export function CSVEscape(str: string): string {
     return `"${str.replace(/"/g, '""')}"`;
+}
+
+let GetAndValidateConsumerAddressFromRequest_cache = {};
+
+export async function GetAndValidateConsumerAddressFromRequest(request: FastifyRequest, reply: FastifyReply): Promise<string> {
+    const { addr } = request.params as { addr: string };
+    if (addr.length != 44 || !addr.startsWith('lava@')) {
+        WriteErrorToFastifyReply(reply, 'Bad consumer address');
+        return '';
+    }
+
+    let res = GetAndValidateConsumerAddressFromRequest_cache[addr];
+    if (res) {
+        return addr;
+    }
+
+    await QueryCheckJsinfoReadDbInstance();
+
+    res = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.consumers).where(eq(JsinfoSchema.consumers.address, addr)).limit(1);
+
+    if (res.length != 1) {
+        WriteErrorToFastifyReply(reply, 'Consumer does not exist');
+        return '';
+    }
+
+    GetAndValidateConsumerAddressFromRequest_cache[addr] = true;
+
+    return addr;
 }
 
 let GetAndValidateProviderAddressFromRequest_cache = {};
@@ -99,21 +125,6 @@ export async function GetAndValidateSpecIdFromRequest(request: FastifyRequest, r
     return upSpecId;
 }
 
-export function GetNestedValue(obj: any, keyPath: string): string | number | null {
-    const keys = keyPath.split('.');
-    let value = obj;
-
-    for (let key of keys) {
-        if (value && value[key] !== undefined) {
-            value = value[key];
-        } else {
-            return null;
-        }
-    }
-
-    return value;
-}
-
 export function GetDataLengthForPrints(data: any): string {
     if (data == null) return '<null>';
     if (Array.isArray(data)) {
@@ -136,20 +147,6 @@ export function GetDataLength(data: any): number {
 
 export function GetTypeAsString(obj: any): string {
     return Object.prototype.toString.call(obj).replace(/^\[object\s|\]$/g, '');
-}
-
-export function SafeSlice<T>(data: T[], start: number, end: number, defaultSize: number): T[] {
-    if (start < 0 || end < 0) {
-        start = 0;
-        end = defaultSize;
-    }
-
-    if (start > data.length || end > data.length) {
-        start = Math.max(0, data.length - defaultSize);
-        end = data.length;
-    }
-
-    return data.slice(start, end);
 }
 
 export function ParseDateToUtc(dt: string | number): Date {

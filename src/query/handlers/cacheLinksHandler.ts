@@ -1,11 +1,11 @@
-// src/query/handlers/CacheLinksCachedHandler.ts
+// src/query/handlers/CacheLinksPaginatedHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../queryDb';
 import * as JsinfoSchema from '../../schemas/jsinfoSchema';
 import { isNotNull } from 'drizzle-orm';
 
-export const CacheLinksCachedHandlerOpts: RouteShorthandOptions = {
+export const CacheLinksPaginatedHandlerOpts: RouteShorthandOptions = {
     schema: {
         response: {
             200: {
@@ -20,7 +20,7 @@ export const CacheLinksCachedHandlerOpts: RouteShorthandOptions = {
     }
 }
 
-export async function CacheLinksCachedHandler(request: FastifyRequest, reply: FastifyReply) {
+export async function CacheLinksPaginatedHandler(request: FastifyRequest, reply: FastifyReply) {
     await QueryCheckJsinfoReadDbInstance()
 
     const baseUrls = {

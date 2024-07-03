@@ -3,11 +3,10 @@
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryGetJsinfoReadDbInstance, QueryCheckJsinfoReadDbInstance } from '../queryDb';
 import * as JsinfoSchema from '../../schemas/jsinfoSchema';
-import { asc, desc, eq, gte, gt } from "drizzle-orm";
+import { asc, desc, eq, gte, gt, sql } from "drizzle-orm";
 import { Pagination, ParsePaginationFromString } from '../utils/queryPagination';
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '../queryConsts';
-import path from 'path';
-import { CSVEscape, CompareValues, GetDataLength, SafeSlice } from '../utils/queryUtils';
+import { CSVEscape } from '../utils/queryUtils';
 import { RequestHandlerBase } from '../classes/RequestHandlerBase';
 
 export interface EventsRewardsResponse {
@@ -30,7 +29,7 @@ export interface EventsRewardsResponse {
     tx: string | null;
 }
 
-export const EventsRewardsCachedHandlerOpts: RouteShorthandOptions = {
+export const EventsRewardsPaginatedHandlerOpts: RouteShorthandOptions = {
     schema: {
         response: {
             200: {
@@ -74,34 +73,21 @@ class EventsRewardsData extends RequestHandlerBase<EventsRewardsResponse> {
         super("EventsRewardsData");
     }
 
-    public GetInstance(): EventsRewardsData {
-        return EventsRewardsData.GetInstance();
+    public static GetInstance(): EventsRewardsData {
+        return EventsRewardsData.GetInstanceBase();
     }
 
     protected getCSVFileNameImpl(): string {
         return `EventsRewards.csv`;
     }
 
-    protected async fetchAllDataFromDb(): Promise<EventsRewardsResponse[]> {
+    protected async fetchAllRecords(): Promise<EventsRewardsResponse[]> {
         await QueryCheckJsinfoReadDbInstance();
 
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-        const blockHeightQuery = await QueryGetJsinfoReadDbInstance()
-            .select()
-            .from(JsinfoSchema.blocks)
-            .where(gte(JsinfoSchema.blocks.datetime, thirtyDaysAgo))
-            .orderBy(asc(JsinfoSchema.blocks.datetime))
-            .limit(1);
-
-        const minBlockHeight = blockHeightQuery[0].height || 0;
-
         const paymentsRes = await QueryGetJsinfoReadDbInstance()
             .select()
             .from(JsinfoSchema.relayPayments)
             .leftJoin(JsinfoSchema.providers, eq(JsinfoSchema.relayPayments.provider, JsinfoSchema.providers.address))
-            .where(gte(JsinfoSchema.relayPayments.blockId, minBlockHeight))
             .orderBy(desc(JsinfoSchema.relayPayments.id))
             .offset(0)
             .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
@@ -114,26 +100,21 @@ class EventsRewardsData extends RequestHandlerBase<EventsRewardsResponse> {
         return flattenedRes;
     }
 
-    protected async fetchAllDataFromDbSinceFlow(since: number | string): Promise<EventsRewardsResponse[]> {
-        await QueryCheckJsinfoReadDbInstance()
+    protected async fetchRecordCountFromDb(): Promise<number> {
+        await QueryCheckJsinfoReadDbInstance();
 
-        const paymentsRes = await QueryGetJsinfoReadDbInstance()
-            .select()
+        const countResult = await QueryGetJsinfoReadDbInstance()
+            .select({
+                count: sql<number>`count(*)`
+            })
             .from(JsinfoSchema.relayPayments)
             .leftJoin(JsinfoSchema.providers, eq(JsinfoSchema.relayPayments.provider, JsinfoSchema.providers.address))
-            .where(gt(JsinfoSchema.relayPayments.id, Number(since)))
-            .orderBy(desc(JsinfoSchema.relayPayments.id))
-            .offset(0)
             .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
 
-        const flattenedRes = paymentsRes.map(data => ({
-            ...data.relay_payments,
-            moniker: data.providers?.moniker !== undefined ? data.providers?.moniker : null,
-        }));
-
-        return flattenedRes;
+        return countResult[0].count;
     }
-    public async fetchDataWithPaginationFromDb(pagination: Pagination): Promise<EventsRewardsResponse[] | null> {
+
+    public async fetchPaginatedRecords(pagination: Pagination | null): Promise<EventsRewardsResponse[]> {
         const defaultSortKey = "id";
         let finalPagination: Pagination;
 
@@ -150,48 +131,56 @@ class EventsRewardsData extends RequestHandlerBase<EventsRewardsResponse> {
             finalPagination.sortKey = defaultSortKey;
         }
 
-        // Validate sortKey
-        const validKeys = [
-            "id",
-            "relays",
-            "cu",
-            "pay",
-            "datetime",
-            "qosSync",
-            "qosAvailability",
-            "qosLatency",
-            "qosSyncExc",
-            "qosAvailabilityExc",
-            "qosLatencyExc",
-            "provider",
-            "moniker",
-            "specId",
-            "blockId",
-            "consumer",
-            "tx"
-        ];
-        if (!validKeys.includes(finalPagination.sortKey)) {
+        const keyToColumnMap = {
+            id: JsinfoSchema.relayPayments.id,
+            provider: JsinfoSchema.relayPayments.provider,
+            moniker: JsinfoSchema.providers.moniker,
+            relays: JsinfoSchema.relayPayments.relays,
+            cu: JsinfoSchema.relayPayments.cu,
+            pay: JsinfoSchema.relayPayments.pay,
+            datetime: JsinfoSchema.relayPayments.datetime,
+            qosSync: JsinfoSchema.relayPayments.qosSync,
+            qosAvailability: JsinfoSchema.relayPayments.qosAvailability,
+            qosLatency: JsinfoSchema.relayPayments.qosLatency,
+            qosSyncExc: JsinfoSchema.relayPayments.qosSyncExc,
+            qosAvailabilityExc: JsinfoSchema.relayPayments.qosAvailabilityExc,
+            qosLatencyExc: JsinfoSchema.relayPayments.qosLatencyExc,
+            specId: JsinfoSchema.relayPayments.specId,
+            blockId: JsinfoSchema.relayPayments.blockId,
+            consumer: JsinfoSchema.relayPayments.consumer,
+            tx: JsinfoSchema.relayPayments.tx
+        };
+
+        if (!Object.keys(keyToColumnMap).includes(finalPagination.sortKey)) {
             const trimmedSortKey = finalPagination.sortKey.substring(0, 500);
             throw new Error(`Invalid sort key: ${trimmedSortKey}`);
         }
 
-        // Apply sorting
-        data.sort((a, b) => {
-            if (finalPagination.sortKey !== null) {
-                const aValue = a[finalPagination.sortKey];
-                const bValue = b[finalPagination.sortKey];
-                return CompareValues(aValue, bValue, finalPagination.direction);
-            }
-            return 0;
-        });
+        await QueryCheckJsinfoReadDbInstance()
 
-        // Apply pagination
-        const start = (finalPagination.page - 1) * finalPagination.count;
-        const end = finalPagination.page * finalPagination.count;
-        return SafeSlice(data, start, end, JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE);
+        const sortColumn = keyToColumnMap[finalPagination.sortKey];
+        const orderFunction = finalPagination.direction === 'ascending' ? asc : desc;
+
+        // Calculate offset for pagination
+        const offset = (finalPagination.page - 1) * finalPagination.count;
+
+        const paymentsRes = await QueryGetJsinfoReadDbInstance()
+            .select()
+            .from(JsinfoSchema.relayPayments)
+            .leftJoin(JsinfoSchema.providers, eq(JsinfoSchema.relayPayments.provider, JsinfoSchema.providers.address))
+            .orderBy(orderFunction(sortColumn))
+            .offset(offset)
+            .limit(finalPagination.count);
+
+        const flattenedRewards = paymentsRes.map(data => ({
+            ...data.relay_payments,
+            moniker: data.providers?.moniker !== undefined ? data.providers?.moniker : null,
+        }));
+
+        return flattenedRewards;
     }
 
-    public async getCSVImpl(data: EventsRewardsResponse[]): Promise<string> {
+    protected async convertRecordsToCsv(data: EventsRewardsResponse[]): Promise<string> {
         const columns = [
             { key: "relays", name: "Relays" },
             { key: "cu", name: "CU" },
@@ -224,14 +213,14 @@ class EventsRewardsData extends RequestHandlerBase<EventsRewardsResponse> {
     }
 }
 
-export async function EventsRewardsCachedHandler(request: FastifyRequest, reply: FastifyReply) {
-    return await EventsRewardsData.GetInstance().getPaginatedItemsCachedHandler(request, reply)
+export async function EventsRewardsPaginatedHandler(request: FastifyRequest, reply: FastifyReply) {
+    return await EventsRewardsData.GetInstance().PaginatedRecordsRequestHandler(request, reply)
 }
 
-export async function EventsRewardsItemCountRawHandler(request: FastifyRequest, reply: FastifyReply) {
-    return await EventsRewardsData.GetInstance().getTotalItemCountRawHandler(request, reply)
+export async function EventsRewardsItemCountPaginatiedHandler(request: FastifyRequest, reply: FastifyReply) {
+    return await EventsRewardsData.GetInstance().getTotalItemCountPaginatiedHandler(request, reply)
 }
 
 export async function EventsRewardsCSVRawHandler(request: FastifyRequest, reply: FastifyReply) {
-    return await EventsRewardsData.GetInstance().getCSVRawHandler(request, reply)
+    return await EventsRewardsData.GetInstance().CSVRequestHandler(request, reply)
 }

@@ -3,10 +3,10 @@
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryGetJsinfoReadDbInstance, QueryCheckJsinfoReadDbInstance } from '../queryDb';
 import * as JsinfoSchema from '../../schemas/jsinfoSchema';
-import { asc, desc, eq, gte, gt } from "drizzle-orm";
+import { asc, desc, eq, sql } from "drizzle-orm";
 import { Pagination, ParsePaginationFromString } from '../utils/queryPagination';
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '../queryConsts';
-import { CSVEscape, CompareValues, GetDataLength, SafeSlice } from '../utils/queryUtils';
+import { CSVEscape } from '../utils/queryUtils';
 import { RequestHandlerBase } from '../classes/RequestHandlerBase';
 
 export interface EventsEventsResponse {
@@ -32,7 +32,8 @@ export interface EventsEventsResponse {
     tx: string | null;
     fulltext: string | null;
 }
-export const EventsEventsCachedHandlerOpts: RouteShorthandOptions = {
+
+export const EventsEventsPaginatedHandlerOpts: RouteShorthandOptions = {
     schema: {
         response: {
             200: {
@@ -72,22 +73,21 @@ export const EventsEventsCachedHandlerOpts: RouteShorthandOptions = {
         }
     }
 };
-
 class EventsEventsData extends RequestHandlerBase<EventsEventsResponse> {
 
     constructor() {
         super("EventsEventsData");
     }
 
-    public GetInstance(): EventsEventsData {
-        return EventsEventsData.GetInstance();
+    public static GetInstance(): EventsEventsData {
+        return EventsEventsData.GetInstanceBase();
     }
 
     protected getCSVFileNameImpl(): string {
         return `EventsData.csv`;
     }
 
-    protected async fetchAllDataFromDb(): Promise<EventsEventsResponse[]> {
+    protected async fetchAllRecords(): Promise<EventsEventsResponse[]> {
         await QueryCheckJsinfoReadDbInstance()
 
         const eventsRes = await QueryGetJsinfoReadDbInstance()
@@ -108,8 +108,23 @@ class EventsEventsData extends RequestHandlerBase<EventsEventsResponse> {
         return flattenedEvents;
     }
 
-    public async fetchDataWithPaginationFromDb(pagination: Pagination): Promise<EventsEventsResponse[] | null> {
-        const defaultSortKey = "datetime";
+    protected async fetchRecordCountFromDb(): Promise<number> {
+        await QueryCheckJsinfoReadDbInstance();
+
+        const countResult = await QueryGetJsinfoReadDbInstance()
+            .select({
+                count: sql<number>`count(*)`
+            })
+            .from(JsinfoSchema.events)
+            .leftJoin(JsinfoSchema.blocks, eq(JsinfoSchema.events.blockId, JsinfoSchema.blocks.height))
+            .leftJoin(JsinfoSchema.providers, eq(JsinfoSchema.events.provider, JsinfoSchema.providers.address))
+            .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
+
+        return countResult[0].count;
+    }
+
+    public async fetchPaginatedRecords(pagination: Pagination | null): Promise<EventsEventsResponse[]> {
+        const defaultSortKey = "id";
 
         let finalPagination: Pagination;
 
@@ -125,7 +140,6 @@ class EventsEventsData extends RequestHandlerBase<EventsEventsResponse> {
         if (finalPagination.sortKey === null) {
             finalPagination.sortKey = defaultSortKey;
         }
-
 
         const keyToColumnMap = {
             id: JsinfoSchema.events.id,
@@ -143,10 +157,10 @@ class EventsEventsData extends RequestHandlerBase<EventsEventsResponse> {
             r2: JsinfoSchema.events.r2,
             r3: JsinfoSchema.events.r3,
             provider: JsinfoSchema.events.provider,
-            // "moniker" does not have a direct mapping in the provided events object.
+            moniker: JsinfoSchema.providers.moniker,
             consumer: JsinfoSchema.events.consumer,
             blockId: JsinfoSchema.events.blockId,
-            // "datetime" does not have a direct mapping in the provided events object.
+            datetime: JsinfoSchema.blocks.datetime,
             tx: JsinfoSchema.events.tx,
             fulltext: JsinfoSchema.events.fulltext
         };
@@ -173,9 +187,9 @@ class EventsEventsData extends RequestHandlerBase<EventsEventsResponse> {
             .from(JsinfoSchema.events)
             .leftJoin(JsinfoSchema.blocks, eq(JsinfoSchema.events.blockId, JsinfoSchema.blocks.height))
             .leftJoin(JsinfoSchema.providers, eq(JsinfoSchema.events.provider, JsinfoSchema.providers.address))
-            .orderBy(orderFunction(sortColumn)) // Apply dynamic ordering
-            .offset(offset) // Apply calculated offset for pagination
-            .limit(finalPagination.count); // Apply limit for pagination
+            .orderBy(orderFunction(sortColumn))
+            .offset(offset)
+            .limit(finalPagination.count);
 
         const flattenedEvents = eventsRes.map(event => ({
             ...event.events,
@@ -186,7 +200,7 @@ class EventsEventsData extends RequestHandlerBase<EventsEventsResponse> {
         return flattenedEvents;
     }
 
-    public async getCSVImpl(data: EventsEventsResponse[]): Promise<string> {
+    protected async convertRecordsToCsv(data: EventsEventsResponse[]): Promise<string> {
         const columns = [
             { key: "provider", name: "Provider" },
             { key: "moniker", name: "Moniker" },
@@ -224,14 +238,14 @@ class EventsEventsData extends RequestHandlerBase<EventsEventsResponse> {
     }
 }
 
-export async function EventsEventsCachedHandler(request: FastifyRequest, reply: FastifyReply) {
-    return await EventsEventsData.GetInstance().getPaginatedItemsCachedHandler(request, reply)
+export async function EventsEventsPaginatedHandler(request: FastifyRequest, reply: FastifyReply) {
+    return await EventsEventsData.GetInstance().PaginatedRecordsRequestHandler(request, reply)
 }
 
-export async function EventsEventsItemCountRawHandler(request: FastifyRequest, reply: FastifyReply) {
-    return await EventsEventsData.GetInstance().getTotalItemCountRawHandler(request, reply)
+export async function EventsEventsItemCountPaginatiedHandler(request: FastifyRequest, reply: FastifyReply) {
+    return await EventsEventsData.GetInstance().getTotalItemCountPaginatiedHandler(request, reply)
 }
 
 export async function EventsEventsCSVRawHandler(request: FastifyRequest, reply: FastifyReply) {
-    return await EventsEventsData.GetInstance().getCSVRawHandler(request, reply)
+    return await EventsEventsData.GetInstance().CSVRequestHandler(request, reply)
 }

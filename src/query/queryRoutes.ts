@@ -6,6 +6,9 @@ import * as consts from './queryConsts';
 // -- Server status ajax --
 import { LatestRawHandler, LatestRawHandlerOpts } from './handlers/latestHandler';
 
+// -- list all providers and monikers endpoint ---
+import { ListProvidersRawHandlerOpts, ListProvidersRawHandler } from './handlers/listProvidersHandler';
+
 // -- Server meta ajax --
 import { ProvidersCachedHandler, ProvidersCachedHandlerOpts } from './handlers/providersHandler';
 import { SpecsCachedHandler, SpecsCachedHandlerOpts } from './handlers/specsHandler';
@@ -51,8 +54,12 @@ import { EventsCachedHandler, EventsCachedHandlerOpts } from './handlers/eventsH
 // -- Internal data endpoints --
 import { LavapDualStackingDelegatorRewardsHandler, LavapDualStackingDelegatorRewardsOpts } from './handlers/lavapDualStackingDelegatorRewardsHandler';
 
+
 // -- Server status ajax --
 GetServerInstance().get('/latest', LatestRawHandlerOpts, LatestRawHandler);
+
+// -- list all providers and monikers endpoint ---
+GetServerInstance().get('/listProviders', ListProvidersRawHandlerOpts, ListProvidersRawHandler);
 
 // -- Server meta ajax --
 RegisterServerHandlerWithCache('/providers', ProvidersCachedHandlerOpts, ProvidersCachedHandler);

@@ -152,7 +152,7 @@ export async function ProviderHealthLatestCachedHandler(request: FastifyRequest,
         .limit(1000);
 
     if (healthRecords.length === 0) {
-        WriteErrorToFastifyReply(reply, 'No health records for provider');
+        WriteErrorToFastifyReply(reply, 'No recent health records for provider');
         return null;
     }
     const specsArray: ProviderHealthLatestResponse['specs'] = [];

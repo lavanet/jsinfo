@@ -1,5 +1,7 @@
 // src/query/handlers/ListProvidersRawHandler.ts
 
+// curl http://localhost:8081/cacheLinks | jq
+
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryCheckJsinfoReadDbInstance, GetLatestBlock, QueryGetJsinfoReadDbInstance } from '../queryDb';
 import * as JsinfoSchema from '../../schemas/jsinfoSchema';
@@ -14,21 +16,40 @@ export const ListProvidersRawHandlerOpts: RouteShorthandOptions = {
                     height: { type: 'number' },
                     datetime: { type: 'number' },
                     providers: {
-                        type: 'object',
-                        additionalProperties: {
+                        type: 'array',
+                        items: {
                             type: 'object',
                             properties: {
-                                chain: { type: 'string' },
-                                spec: { type: 'string' },
-                                moniker: { type: 'string' }
+                                provider: { type: 'string' },
+                                specs: {
+                                    type: 'array',
+                                    items: {
+                                        type: 'object',
+                                        properties: {
+                                            chain: { type: 'string' },
+                                            spec: { type: 'string' },
+                                            moniker: { type: 'string' }
+                                        },
+                                        required: ['spec', 'moniker']
+                                    }
+                                }
                             },
-                            required: ['spec', 'moniker']
+                            required: ['provider', 'specs']
                         }
                     }
                 }
             }
         }
     }
+}
+
+interface ProviderEntry {
+    provider: string;
+    specs: {
+        chain: string;
+        spec: string | null;
+        moniker: string | null;
+    }[];
 }
 
 const chainMapping: Record<string, string> = {
@@ -125,14 +146,23 @@ export async function ListProvidersRawHandler(request: FastifyRequest, reply: Fa
         .leftJoin(JsinfoSchema.providers, eq(JsinfoSchema.providerStakes.provider, JsinfoSchema.providers.address))
         .where(isNotNull(JsinfoSchema.providers.address));
 
-    const providers = stakesRes.reduce((acc, stake) => {
-        acc[stake.provider!] = {
+    const providers = stakesRes.reduce<ProviderEntry[]>((acc, stake) => {
+        const providerEntry = acc.find(entry => entry.provider === stake.provider);
+        const specEntry = {
             chain: chainMapping[stake.specId!] || "",
             spec: stake.specId,
             moniker: stake.moniker,
         };
+        if (providerEntry) {
+            providerEntry.specs.push(specEntry);
+        } else {
+            acc.push({
+                provider: stake.provider!,
+                specs: [specEntry]
+            });
+        }
         return acc;
-    }, {});
+    }, []);
 
     const { latestHeight, latestDatetime } = await GetLatestBlock()
     return reply.send({

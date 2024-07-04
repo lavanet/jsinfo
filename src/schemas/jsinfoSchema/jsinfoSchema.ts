@@ -3,7 +3,7 @@
 // Do not use 'drizzle-orm' date, it will cause bugs
 
 import { sql } from 'drizzle-orm'
-import { pgTable, index, text, integer, serial, bigint, real, uniqueIndex, primaryKey, timestamp, doublePrecision, varchar } from 'drizzle-orm/pg-core';
+import { pgTable, index, text, integer, serial, bigint, real, timestamp, varchar, uniqueIndex } from 'drizzle-orm/pg-core';
 
 export const blocks = pgTable('blocks', {
   height: integer('height').unique(),
@@ -65,9 +65,12 @@ export const providerStakes = pgTable('provider_stakes', {
   blockId: integer('block_id').references(() => blocks.height),
 }, (table) => {
   return {
-    pk: primaryKey(table.provider, table.specId),
+    providerStakesIdx: uniqueIndex("providerStakesIdx").on(
+      table.provider,
+      table.specId,),
   };
 });
+
 export type ProviderStake = typeof providerStakes.$inferSelect
 export type InsertProviderStake = typeof providerStakes.$inferInsert
 
@@ -100,27 +103,6 @@ export const relayPayments = pgTable('relay_payments', {
 });
 export type RelayPayment = typeof relayPayments.$inferSelect
 export type InsertRelayPayment = typeof relayPayments.$inferInsert
-
-export const aggHourlyrelayPayments = pgTable('agg_hourly_relay_payments', {
-  provider: text('provider').references(() => providers.address),
-  datehour: timestamp('datehour', { mode: "string" }),
-  specId: text('spec_id').references(() => specs.id),
-  cuSum: bigint('cusum', { mode: 'number' }),
-  relaySum: bigint('relaysum', { mode: 'number' }),
-  rewardSum: bigint('rewardsum', { mode: 'number' }),
-  qosSyncAvg: doublePrecision('qossyncavg'),
-  qosAvailabilityAvg: doublePrecision('qosavailabilityavg'),
-  qosLatencyAvg: doublePrecision('qoslatencyavg'),
-  qosSyncExcAvg: doublePrecision('qossyncexcavg'),
-  qosAvailabilityExcAvg: doublePrecision('qosavailabilityexcavg'),
-  qosLatencyExcAvg: doublePrecision('qoslatencyexcavg'),
-}, (table) => {
-  return {
-    aggHourlyIdx: uniqueIndex("aggHourlyIdx").on(table.datehour, table.specId, table.provider),
-  };
-});
-export type AggHorulyRelayPayment = typeof aggHourlyrelayPayments.$inferSelect
-export type InsertAggHourlyRelayPayment = typeof aggHourlyrelayPayments.$inferInsert
 
 export enum LavaProviderEventType {
   StakeNewProvider = 1,

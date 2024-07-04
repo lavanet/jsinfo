@@ -2,7 +2,8 @@
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../queryDb';
-import * as JsinfoSchema from '../../schemas/jsinfoSchema';
+import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
+import * as JsinfoProviderAgrSchema from '../../schemas/jsinfoSchema/providerRelayPaymentsAgregation';
 import { sql, desc, not, eq, asc, and, isNull } from "drizzle-orm";
 import { Pagination, ParsePaginationFromString } from '../utils/queryPagination';
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE } from '../queryConsts';
@@ -73,10 +74,10 @@ class IndexProvidersData extends RequestHandlerBase<IndexProvidersResponse> {
             provider: JsinfoSchema.providerStakes.provider,
             totalServices: sql<string>`concat(sum(case when ${JsinfoSchema.providerStakes.status} = ${JsinfoSchema.LavaProviderStakeStatus.Active} then 1 else 0 end), ' / ', count(${JsinfoSchema.providerStakes.specId}))`,
             totalStake: sql<number>`sum(${JsinfoSchema.providerStakes.stake})`,
-            rewardSum: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.rewardSum})`,
+            rewardSum: sql<number>`sum(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.rewardSum})`,
             moniker: JsinfoSchema.providers.moniker,
         }).from(JsinfoSchema.providerStakes)
-            .leftJoin(JsinfoSchema.aggHourlyrelayPayments, eq(JsinfoSchema.providerStakes.provider, JsinfoSchema.aggHourlyrelayPayments.provider))
+            .leftJoin(JsinfoProviderAgrSchema.aggHourlyRelayPayments, eq(JsinfoSchema.providerStakes.provider, JsinfoProviderAgrSchema.aggHourlyRelayPayments.provider))
             .leftJoin(JsinfoSchema.providers, eq(JsinfoSchema.providerStakes.provider, JsinfoSchema.providers.address))
             .where(
                 and(
@@ -86,7 +87,7 @@ class IndexProvidersData extends RequestHandlerBase<IndexProvidersResponse> {
                 )
             )
             .groupBy(JsinfoSchema.providerStakes.provider, JsinfoSchema.providers.moniker)
-            .orderBy(desc(sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.rewardSum})`))
+            .orderBy(desc(sql<number>`sum(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.rewardSum})`))
 
         const providersDetails: IndexProvidersResponse[] = res.map(provider => ({
             addr: provider.provider || "",
@@ -107,7 +108,7 @@ class IndexProvidersData extends RequestHandlerBase<IndexProvidersResponse> {
                 count: sql<number>`count(DISTINCT ${JsinfoSchema.providerStakes.provider})`
             })
             .from(JsinfoSchema.providerStakes)
-            .leftJoin(JsinfoSchema.aggHourlyrelayPayments, eq(JsinfoSchema.providerStakes.provider, JsinfoSchema.aggHourlyrelayPayments.provider))
+            .leftJoin(JsinfoProviderAgrSchema.aggHourlyRelayPayments, eq(JsinfoSchema.providerStakes.provider, JsinfoProviderAgrSchema.aggHourlyRelayPayments.provider))
             .leftJoin(JsinfoSchema.providers, eq(JsinfoSchema.providerStakes.provider, JsinfoSchema.providers.address))
             .where(
                 and(
@@ -142,7 +143,7 @@ class IndexProvidersData extends RequestHandlerBase<IndexProvidersResponse> {
         const keyToColumnMap = {
             addr: JsinfoSchema.providerStakes.provider,
             moniker: JsinfoSchema.providers.moniker,
-            rewardSum: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.rewardSum})`,
+            rewardSum: sql<number>`sum(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.rewardSum})`,
             totalServices: sql<string>`concat(sum(case when ${JsinfoSchema.providerStakes.status} = ${JsinfoSchema.LavaProviderStakeStatus.Active} then 1 else 0 end), ' / ', count(${JsinfoSchema.providerStakes.specId}))`,
             totalStake: sql<number>`sum(${JsinfoSchema.providerStakes.stake})`
         };
@@ -164,11 +165,11 @@ class IndexProvidersData extends RequestHandlerBase<IndexProvidersResponse> {
                 provider: JsinfoSchema.providerStakes.provider,
                 totalServices: sql<string>`concat(sum(case when ${JsinfoSchema.providerStakes.status} = ${JsinfoSchema.LavaProviderStakeStatus.Active} then 1 else 0 end), ' / ', count(${JsinfoSchema.providerStakes.specId}))`,
                 totalStake: sql<number>`sum(${JsinfoSchema.providerStakes.stake})`,
-                rewardSum: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.rewardSum})`,
+                rewardSum: sql<number>`sum(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.rewardSum})`,
                 moniker: JsinfoSchema.providers.moniker,
             })
             .from(JsinfoSchema.providerStakes)
-            .leftJoin(JsinfoSchema.aggHourlyrelayPayments, eq(JsinfoSchema.providerStakes.provider, JsinfoSchema.aggHourlyrelayPayments.provider))
+            .leftJoin(JsinfoProviderAgrSchema.aggHourlyRelayPayments, eq(JsinfoSchema.providerStakes.provider, JsinfoProviderAgrSchema.aggHourlyRelayPayments.provider))
             .leftJoin(JsinfoSchema.providers, eq(JsinfoSchema.providerStakes.provider, JsinfoSchema.providers.address))
             .where(
                 and(

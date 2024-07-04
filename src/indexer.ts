@@ -14,7 +14,7 @@ import { LavaBlock } from './indexer/types'
 import { UpdateLatestBlockMeta } from './indexer/setLatest'
 import { DoInChunks, logger, BackoffRetry, ConnectToRpc, RpcConnection } from "./utils";
 import { MigrateDb, GetJsinfoDb } from "./dbUtils";
-import { updateAggHourlyPayments } from "./indexer/aggregate";
+import { aggProviderHourlyRelayPayments } from "./indexer/agregators/aggProviderHourlyRelayPayments";
 
 let static_dbProviders: Map<string, JsinfoSchema.Provider> = new Map()
 let static_dbSpecs: Map<string, JsinfoSchema.Spec> = new Map()
@@ -206,7 +206,7 @@ const indexer = async (): Promise<void> => {
 
     const db = await migrateAndFetchDb();
     await updateBlockMetaInDb(db, rpcConnection);
-    await updateAggHourlyPaymentsCaller(db);
+    await aggProviderHourlyRelayPaymentsCaller(db);
     await fillUpBackoffRetry(db, rpcConnection);
 }
 
@@ -264,13 +264,13 @@ const fillUpBackoffRetryWTimeout = (db: PostgresJsDatabase, rpcConnection: RpcCo
     }, consts.JSINFO_INDEXER_POLL_MS);
 }
 
-const updateAggHourlyPaymentsCaller = async (db: PostgresJsDatabase) => {
-    logger.info(`updateAggHourlyPaymentsCaller started at: ${new Date().toISOString()}`);
+const aggProviderHourlyRelayPaymentsCaller = async (db: PostgresJsDatabase) => {
+    logger.info(`aggProviderHourlyRelayPaymentsCaller started at: ${new Date().toISOString()}`);
     try {
         const start = Date.now();
-        await updateAggHourlyPayments(db);
+        await aggProviderHourlyRelayPayments(db);
         const executionTime = Date.now() - start;
-        logger.info(`Successfully executed db.updateAggHourlyPayments. Execution time: ${executionTime} ms`);
+        logger.info(`Successfully executed db.aggProviderHourlyRelayPayments. Execution time: ${executionTime} ms`);
     } catch (e) {
         logger.error(`Failed to update aggregate hourly payments. Error: ${(e as Error).message}`);
     }
@@ -339,7 +339,7 @@ const fillUp = async (db: PostgresJsDatabase, rpcConnection: RpcConnection) => {
             } catch (e) {
                 logger.info(`UpdateLatestBlockMeta ${e}`);
             }
-            updateAggHourlyPaymentsCaller(db);
+            aggProviderHourlyRelayPaymentsCaller(db);
         }
     }
     fillUpBackoffRetryWTimeout(db, rpcConnection)

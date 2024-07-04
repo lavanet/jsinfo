@@ -4,7 +4,8 @@
 // curl http://localhost:8081/provider/lava@14shwrej05nrraem8mwsnlw50vrtefkajar75ge
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { GetLatestBlock, QueryGetJsinfoReadDbInstance } from '../queryDb';
-import * as JsinfoSchema from '../../schemas/jsinfoSchema';
+import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
+import * as JsinfoProviderAgrSchema from '../../schemas/jsinfoSchema/providerRelayPaymentsAgregation';
 import { sql, desc, and, eq } from "drizzle-orm";
 import { GetAndValidateProviderAddressFromRequest } from '../utils/queryUtils';
 import { WriteErrorToFastifyReply } from '../utils/queryServerUtils';
@@ -84,12 +85,12 @@ export async function ProviderPaginatedHandler(request: FastifyRequest, reply: F
     let relaySum = 0
     let rewardSum = 0
     const cuRelayAndRewardsTotalRes = await QueryGetJsinfoReadDbInstance().select({
-        cuSum: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.cuSum})`,
-        relaySum: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.relaySum})`,
-        rewardSum: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.rewardSum})`,
-    }).from(JsinfoSchema.aggHourlyrelayPayments).
-        where(eq(JsinfoSchema.aggHourlyrelayPayments.provider, addr)).
-        groupBy(JsinfoSchema.aggHourlyrelayPayments.provider)
+        cuSum: sql<number>`sum(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.cuSum})`,
+        relaySum: sql<number>`sum(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.relaySum})`,
+        rewardSum: sql<number>`sum(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.rewardSum})`,
+    }).from(JsinfoProviderAgrSchema.aggHourlyRelayPayments).
+        where(eq(JsinfoProviderAgrSchema.aggHourlyRelayPayments.provider, addr)).
+        groupBy(JsinfoProviderAgrSchema.aggHourlyRelayPayments.provider)
     if (cuRelayAndRewardsTotalRes.length == 1) {
         cuSum = cuRelayAndRewardsTotalRes[0].cuSum
         relaySum = cuRelayAndRewardsTotalRes[0].relaySum

@@ -1,9 +1,12 @@
+// src/indexer/agregators/aggProviderHourlyRelayPayments.ts
+
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { sql } from "drizzle-orm";
-import * as JsinfoSchema from "../schemas/jsinfoSchema";
-import { DoInChunks, logger } from "../utils";
+import * as JsinfoSchema from "../../schemas/jsinfoSchema/jsinfoSchema";
+import * as JsinfoProviderAgrSchema from '../../schemas/jsinfoSchema/providerRelayPaymentsAgregation';
+import { DoInChunks, logger } from "../../utils";
 
-export async function getAggHourlyTimeSpan(db: PostgresJsDatabase): Promise<{ startTime: Date | null, endTime: Date | null }> {
+export async function getProviderAggHourlyTimeSpan(db: PostgresJsDatabase): Promise<{ startTime: Date | null, endTime: Date | null }> {
     // Last relay payment time
     const lastRelayPayment = await db.select({
         datehour: sql`DATE_TRUNC('hour', MAX(${JsinfoSchema.relayPayments.datetime}))`,
@@ -11,15 +14,15 @@ export async function getAggHourlyTimeSpan(db: PostgresJsDatabase): Promise<{ st
         .then(rows => rows[0]?.datehour);
 
     if (!lastRelayPayment) {
-        logger.error("getAggHourlyTimeSpan: No relay payments found");
+        logger.error("getProviderAggHourlyTimeSpan: No relay payments found");
         return { startTime: null, endTime: null };
     }
     const endTime = lastRelayPayment as Date;
 
     // Last aggregated hour
     const lastAggHour = await db.select({
-        datehour: sql`MAX(${JsinfoSchema.aggHourlyrelayPayments.datehour})`,
-    }).from(JsinfoSchema.aggHourlyrelayPayments)
+        datehour: sql`MAX(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.datehour})`,
+    }).from(JsinfoProviderAgrSchema.aggHourlyRelayPayments)
         .then(rows => rows[0]?.datehour);
     let startTime: Date;
     if (lastAggHour) {
@@ -28,19 +31,19 @@ export async function getAggHourlyTimeSpan(db: PostgresJsDatabase): Promise<{ st
         startTime = new Date("2000-01-01T00:00:00Z"); // Default start time if no data is found
     }
 
-    logger.info(`getAggHourlyTimeSpan: startTime ${startTime}, endTime ${endTime}`);
+    logger.info(`getProviderAggHourlyTimeSpan: startTime ${startTime}, endTime ${endTime}`);
     return { startTime, endTime };
 }
 
-export async function updateAggHourlyPayments(db: PostgresJsDatabase) {
-    let { startTime, endTime } = await getAggHourlyTimeSpan(db)
-    logger.info(`updateAggHourlyPayments: startTime ${startTime}, endTime ${endTime}`);
+export async function aggProviderHourlyRelayPayments(db: PostgresJsDatabase) {
+    let { startTime, endTime } = await getProviderAggHourlyTimeSpan(db)
+    logger.info(`aggProviderHourlyRelayPayments: startTime ${startTime}, endTime ${endTime}`);
     if (startTime === null || endTime === null) {
-        logger.error("updateAggHourlyPayments: startTime === null || endTime === null")
+        logger.error("aggProviderHourlyRelayPayments: startTime === null || endTime === null")
         return
     }
     if (startTime > endTime) {
-        logger.error("updateAggHourlyPayments: startTime > endTime")
+        logger.error("aggProviderHourlyRelayPayments: startTime > endTime")
         return
     }
 
@@ -71,7 +74,7 @@ export async function updateAggHourlyPayments(db: PostgresJsDatabase) {
             sql`datehour`,
         )
     if (aggResults.length === 0) {
-        logger.error("updateAggHourlyPayments: no agg results found")
+        logger.error("aggProviderHourlyRelayPayments: no agg results found")
         return;
     }
 
@@ -86,14 +89,14 @@ export async function updateAggHourlyPayments(db: PostgresJsDatabase) {
     );
     await db.transaction(async (tx) => {
         for (const row of latestHourData) {
-            await tx.insert(JsinfoSchema.aggHourlyrelayPayments)
+            await tx.insert(JsinfoProviderAgrSchema.aggHourlyRelayPayments)
                 .values(row as any)
                 .onConflictDoUpdate(
                     {
                         target: [
-                            JsinfoSchema.aggHourlyrelayPayments.datehour,
-                            JsinfoSchema.aggHourlyrelayPayments.provider,
-                            JsinfoSchema.aggHourlyrelayPayments.specId,
+                            JsinfoProviderAgrSchema.aggHourlyRelayPayments.datehour,
+                            JsinfoProviderAgrSchema.aggHourlyRelayPayments.provider,
+                            JsinfoProviderAgrSchema.aggHourlyRelayPayments.specId,
                         ],
                         set: {
                             cuSum: row.cuSum,
@@ -116,7 +119,7 @@ export async function updateAggHourlyPayments(db: PostgresJsDatabase) {
             return;
         }
         await DoInChunks(250, remainingData, async (arr: any) => {
-            await tx.insert(JsinfoSchema.aggHourlyrelayPayments)
+            await tx.insert(JsinfoProviderAgrSchema.aggHourlyRelayPayments)
                 .values(arr)
         })
     })

@@ -2,9 +2,9 @@
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryCheckJsinfoReadDbInstance, GetLatestBlock, QueryGetJsinfoReadDbInstance } from '../queryDb';
-import * as JsinfoSchema from '../../schemas/jsinfoSchema';
-import { sql, desc, gt, and, inArray } from "drizzle-orm";
-import { FormatDates } from '../utils/queryDateUtils';
+import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
+import * as JsinfoProviderAgrSchema from '../../schemas/jsinfoSchema/providerRelayPaymentsAgregation';
+import { sql, desc, gt } from "drizzle-orm";
 import { logger } from '../../utils';
 
 export const IndexHandlerOpts: RouteShorthandOptions = {
@@ -52,10 +52,10 @@ export async function IndexHandler(request: FastifyRequest, reply: FastifyReply)
     let relaySum = 0
     let rewardSum = 0
     let res = await QueryGetJsinfoReadDbInstance().select({
-        cuSum: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.cuSum})`,
-        relaySum: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.relaySum})`,
-        rewardSum: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.rewardSum})`
-    }).from(JsinfoSchema.aggHourlyrelayPayments)
+        cuSum: sql<number>`sum(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.cuSum})`,
+        relaySum: sql<number>`sum(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.relaySum})`,
+        rewardSum: sql<number>`sum(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.rewardSum})`
+    }).from(JsinfoProviderAgrSchema.aggHourlyRelayPayments)
     if (res.length != 0) {
         cuSum = res[0].cuSum
         relaySum = res[0].relaySum
@@ -76,12 +76,12 @@ export async function IndexHandler(request: FastifyRequest, reply: FastifyReply)
     //
     // Get top chains
     let topSpecs = await QueryGetJsinfoReadDbInstance().select({
-        chainId: JsinfoSchema.aggHourlyrelayPayments.specId,
-        relaySum: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.relaySum})`,
-    }).from(JsinfoSchema.aggHourlyrelayPayments).
-        groupBy(sql`${JsinfoSchema.aggHourlyrelayPayments.specId}`).
-        where(gt(sql<Date>`DATE(${JsinfoSchema.aggHourlyrelayPayments.datehour})`, sql<Date>`now() - interval '30 day'`)).
-        orderBy(desc(sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.relaySum})`))
+        chainId: JsinfoProviderAgrSchema.aggHourlyRelayPayments.specId,
+        relaySum: sql<number>`sum(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.relaySum})`,
+    }).from(JsinfoProviderAgrSchema.aggHourlyRelayPayments).
+        groupBy(sql`${JsinfoProviderAgrSchema.aggHourlyRelayPayments.specId}`).
+        where(gt(sql<Date>`DATE(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.datehour})`, sql<Date>`now() - interval '30 day'`)).
+        orderBy(desc(sql<number>`sum(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.relaySum})`))
     let getChains: string[] = []
     topSpecs.map((chain) => {
         if (getChains.length < 8) {

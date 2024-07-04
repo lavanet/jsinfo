@@ -2,7 +2,7 @@
 
 import { FastifyReply, FastifyRequest, RouteShorthandOptions } from 'fastify';
 import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../queryDb';
-import * as JsinfoSchema from '../../schemas/jsinfoSchema';
+import * as JsinfoProviderAgrSchema from '../../schemas/jsinfoSchema/providerRelayPaymentsAgregation';
 import { sql, desc, gt, and, inArray, lt } from "drizzle-orm";
 import { FormatDateItems } from '../utils/queryDateUtils';
 import { RequestHandlerBase } from '../classes/RequestHandlerBase';
@@ -87,11 +87,11 @@ class IndexChartsData extends RequestHandlerBase<IndexChartResponse> {
         sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
         let topChainsQueryRes: { chainId: string | null; }[] = await QueryGetJsinfoReadDbInstance().select({
-            chainId: JsinfoSchema.aggHourlyrelayPayments.specId,
-        }).from(JsinfoSchema.aggHourlyrelayPayments)
-            .groupBy(sql`${JsinfoSchema.aggHourlyrelayPayments.specId}`)
-            .where(gt(sql<Date>`DATE(${JsinfoSchema.aggHourlyrelayPayments.datehour})`, sql<Date>`${sixMonthsAgo}`))
-            .orderBy(desc(sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.relaySum})`));
+            chainId: JsinfoProviderAgrSchema.aggHourlyRelayPayments.specId,
+        }).from(JsinfoProviderAgrSchema.aggHourlyRelayPayments)
+            .groupBy(sql`${JsinfoProviderAgrSchema.aggHourlyRelayPayments.specId}`)
+            .where(gt(sql<Date>`DATE(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.datehour})`, sql<Date>`${sixMonthsAgo}`))
+            .orderBy(desc(sql<number>`sum(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.relaySum})`));
 
         const topChains: string[] = topChainsQueryRes
             .filter(chain => chain.chainId != null && chain.chainId.trim() !== '')
@@ -132,21 +132,21 @@ class IndexChartsData extends RequestHandlerBase<IndexChartResponse> {
         let mainChartData: CuRelayQueryData[] = [];
 
         let monthlyData: CuRelayQueryData[] = await QueryGetJsinfoReadDbInstance().select({
-            date: sql<string>`DATE_TRUNC('day', ${JsinfoSchema.aggHourlyrelayPayments.datehour}) as mydate`,
-            chainId: JsinfoSchema.aggHourlyrelayPayments.specId,
-            cuSum: sql<number>`sum(COALESCE(${JsinfoSchema.aggHourlyrelayPayments.cuSum}, 0))`,
-            relaySum: sql<number>`sum(COALESCE(${JsinfoSchema.aggHourlyrelayPayments.relaySum}, 0))`,
-        }).from(JsinfoSchema.aggHourlyrelayPayments).
+            date: sql<string>`DATE_TRUNC('day', ${JsinfoProviderAgrSchema.aggHourlyRelayPayments.datehour}) as mydate`,
+            chainId: JsinfoProviderAgrSchema.aggHourlyRelayPayments.specId,
+            cuSum: sql<number>`sum(COALESCE(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.cuSum}, 0))`,
+            relaySum: sql<number>`sum(COALESCE(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.relaySum}, 0))`,
+        }).from(JsinfoProviderAgrSchema.aggHourlyRelayPayments).
             where(
                 and(
                     and(
-                        gt(sql<Date>`DATE(${JsinfoSchema.aggHourlyrelayPayments.datehour})`, sql<Date>`${from}`),
-                        lt(sql<Date>`DATE(${JsinfoSchema.aggHourlyrelayPayments.datehour})`, sql<Date>`${to}`)
+                        gt(sql<Date>`DATE(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.datehour})`, sql<Date>`${from}`),
+                        lt(sql<Date>`DATE(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.datehour})`, sql<Date>`${to}`)
                     ),
-                    inArray(JsinfoSchema.aggHourlyrelayPayments.specId, topChains)
+                    inArray(JsinfoProviderAgrSchema.aggHourlyRelayPayments.specId, topChains)
                 )
             ).
-            groupBy(sql`${JsinfoSchema.aggHourlyrelayPayments.specId}`, sql`mydate`).
+            groupBy(sql`${JsinfoProviderAgrSchema.aggHourlyRelayPayments.specId}`, sql`mydate`).
             orderBy(sql`mydate DESC`);
 
         // Verify and format the data
@@ -174,14 +174,14 @@ class IndexChartsData extends RequestHandlerBase<IndexChartResponse> {
         const qosDataFormatted: { [key: string]: number } = {};
 
         let monthlyData: QosQueryData[] = await QueryGetJsinfoReadDbInstance().select({
-            date: sql<string>`DATE_TRUNC('day', ${JsinfoSchema.aggHourlyrelayPayments.datehour}) as mydate`,
-            qosSyncAvg: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.qosSyncAvg}*${JsinfoSchema.aggHourlyrelayPayments.relaySum})/sum(${JsinfoSchema.aggHourlyrelayPayments.relaySum})`,
-            qosAvailabilityAvg: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.qosAvailabilityAvg}*${JsinfoSchema.aggHourlyrelayPayments.relaySum})/sum(${JsinfoSchema.aggHourlyrelayPayments.relaySum})`,
-            qosLatencyAvg: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.qosLatencyAvg}*${JsinfoSchema.aggHourlyrelayPayments.relaySum})/sum(${JsinfoSchema.aggHourlyrelayPayments.relaySum})`,
-        }).from(JsinfoSchema.aggHourlyrelayPayments).
+            date: sql<string>`DATE_TRUNC('day', ${JsinfoProviderAgrSchema.aggHourlyRelayPayments.datehour}) as mydate`,
+            qosSyncAvg: sql<number>`sum(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.qosSyncAvg}*${JsinfoProviderAgrSchema.aggHourlyRelayPayments.relaySum})/sum(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.relaySum})`,
+            qosAvailabilityAvg: sql<number>`sum(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.qosAvailabilityAvg}*${JsinfoProviderAgrSchema.aggHourlyRelayPayments.relaySum})/sum(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.relaySum})`,
+            qosLatencyAvg: sql<number>`sum(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.qosLatencyAvg}*${JsinfoProviderAgrSchema.aggHourlyRelayPayments.relaySum})/sum(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.relaySum})`,
+        }).from(JsinfoProviderAgrSchema.aggHourlyRelayPayments).
             where(and(
-                gt(sql<Date>`DATE(${JsinfoSchema.aggHourlyrelayPayments.datehour})`, sql<Date>`${from}`),
-                lt(sql<Date>`DATE(${JsinfoSchema.aggHourlyrelayPayments.datehour})`, sql<Date>`${to}`)
+                gt(sql<Date>`DATE(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.datehour})`, sql<Date>`${from}`),
+                lt(sql<Date>`DATE(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.datehour})`, sql<Date>`${to}`)
             )).
             groupBy(sql`mydate`).
             orderBy(sql`mydate DESC`);

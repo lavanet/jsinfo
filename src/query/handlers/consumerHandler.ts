@@ -3,7 +3,7 @@
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../queryDb';
-import * as JsinfoSchema from '../../schemas/jsinfoSchema';
+import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import { sql, desc, gt, and, eq } from "drizzle-orm";
 import { GetAndValidateConsumerAddressFromRequest } from '../utils/queryUtils';
 
@@ -41,7 +41,7 @@ export const ConsumerCahcedHandlerOpts: RouteShorthandOptions = {
 }
 
 export async function ConsumerCahcedHandler(request: FastifyRequest, reply: FastifyReply) {
-    // TODO: this is slow - this should use aggHourlyrelayPayments
+    // TODO: this is slow - this should use aggHourlyRelayPayments
     console.log("QueryCheckJsinfoReadDbInstance start");
     await QueryCheckJsinfoReadDbInstance()
     console.log("QueryCheckJsinfoReadDbInstance end");

@@ -147,7 +147,7 @@ class ProviderRewardsData extends RequestHandlerBase<ProviderRewardsResponse> {
             leftJoin(JsinfoSchema.blocks, eq(JsinfoSchema.relayPayments.blockId, JsinfoSchema.blocks.height)).
             where(
                 and(
-                    eq(JsinfoSchema.relayPayments.provider, this.addr),
+                    eq(JsinfoSchema.relayPayments.provider, this.addr), // this line is slow
                     gte(JsinfoSchema.relayPayments.datetime, thirtyDaysAgo)
                 )).
             orderBy(desc(JsinfoSchema.relayPayments.id)).

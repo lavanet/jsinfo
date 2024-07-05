@@ -59,7 +59,7 @@ import { LavapDualStackingDelegatorRewardsHandler, LavapDualStackingDelegatorRew
 GetServerInstance().get('/latest', LatestRawHandlerOpts, LatestRawHandler);
 
 // -- list all providers and monikers endpoint ---
-GetServerInstance().get('/listProviders', ListProvidersRawHandlerOpts, ListProvidersRawHandler);
+RegisterServerHandlerWithCache('/listProviders', ListProvidersRawHandlerOpts, ListProvidersRawHandler);
 
 // -- Server meta ajax --
 RegisterServerHandlerWithCache('/providers', ProvidersCachedHandlerOpts, ProvidersCachedHandler);

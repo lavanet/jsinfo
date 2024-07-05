@@ -1,6 +1,6 @@
 // src/query/handlers/ListProvidersRawHandler.ts
 
-// curl http://localhost:8081/cacheLinks | jq
+// curl http://localhost:8081/listProviders | jq
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryCheckJsinfoReadDbInstance, GetLatestBlock, QueryGetJsinfoReadDbInstance } from '../queryDb';
@@ -13,35 +13,41 @@ export const ListProvidersRawHandlerOpts: RouteShorthandOptions = {
             200: {
                 type: 'object',
                 properties: {
-                    height: { type: 'number' },
-                    datetime: { type: 'number' },
-                    providers: {
-                        type: 'array',
-                        items: {
-                            type: 'object',
-                            properties: {
-                                provider: { type: 'string' },
-                                specs: {
-                                    type: 'array',
-                                    items: {
-                                        type: 'object',
-                                        properties: {
-                                            chain: { type: 'string' },
-                                            spec: { type: 'string' },
-                                            moniker: { type: 'string' }
-                                        },
-                                        required: ['spec', 'moniker']
-                                    }
+                    data: {
+                        type: 'object',
+                        properties: {
+                            height: { type: 'number' },
+                            datetime: { type: 'number' },
+                            providers: {
+                                type: 'array',
+                                items: {
+                                    type: 'object',
+                                    properties: {
+                                        provider: { type: 'string' },
+                                        specs: {
+                                            type: 'array',
+                                            items: {
+                                                type: 'object',
+                                                properties: {
+                                                    chain: { type: 'string' },
+                                                    spec: { type: 'string' },
+                                                    moniker: { type: 'string' }
+                                                },
+                                                required: ['spec', 'moniker']
+                                            }
+                                        }
+                                    },
+                                    required: ['provider', 'specs']
                                 }
-                            },
-                            required: ['provider', 'specs']
-                        }
+                            }
+                        },
+                        required: ['height', 'datetime', 'providers']
                     }
                 }
             }
         }
     }
-}
+};
 
 interface ProviderEntry {
     provider: string;
@@ -53,86 +59,102 @@ interface ProviderEntry {
 }
 
 const chainMapping: Record<string, string> = {
-    ALFAJORES: "CELO",
-    APT1: "APTOS",
-    ARB1: "ARIBTRUM",
-    ARBN: "ARIBTRUM",
-    AXELAR: "AXELAR",
-    AXELART: "AXELAR",
-    BASE: "BASE",
-    BASET: "BASE",
-    BSC: "BSC",
-    BSCT: "BSC",
-    CANTO: "CANTO",
-    CELO: "CELO",
-    COS3: "COSMOS",
-    COS4: "COSMOS",
-    COS5: "COSMOS",
-    COS5T: "COSMOS",
-    COSHUB: "COSMOS",
-    COSHUBT: "COSMOS",
-    COSMOSSDK: "COSMOS",
-    COSMOSSDK45DEP: "COSMOS",
-    COSMOSSDKFULL: "COSMOS",
-    COSMOSWASM: "COSMOS",
-    COSMOSHUB: "COSMOS",
-    COSMOSHUBT: "COSMOS",
-    ETHERMINT: "COSMOS",
-    TENDERMINT: "COSMOS",
-    ETH1: "ETHEREUM",
-    HOL1: "ETHEREUM",
-    EVMOS: "EVMOS",
-    EVMOST: "EVMOS",
-    FTM250: "FANTOM",
-    FTM4002: "FANTOM",
-    FVM: "FILECOIN",
-    GTH1: "ETHEREUM",
-    IBC: "COSMOS",
-    JUN1: "JUNO",
-    JUNT1: "JUNO",
-    LAV1: "LAVA",
-    OPTM: "OPTIMISM",
-    OPTMT: "OPTIMISM",
-    OSMO: "OSMOSIS",
-    OSMOT: "OSMOSIS",
-    POLYGON1: "PLOYGON",
-    POLYGON1T: "PLOYGON",
-    SOLANA: "SOLANA",
-    SOLANAT: "SOLANA",
-    STRK: "STARKNET",
-    STRKT: "STARKNET",
-    SUIT: "SUI",
-    SUI: "SUI",
-    NEAR: "NEAR",
-    NEART: "NEAR",
-    SEP1: "ETHEREUM",
-    ARBS: "ARIBTRUM",
-    OPTMS: "OPTIMISM",
-    STRKS: "STARKNET",
-    AGR: "AGORIC",
-    AGRT: "AGORIC",
-    KOII: "KOII",
-    KOIIT: "KOII",
-    BERAT: "BERACHAIN",
-    SQDSUBGRAPH: "SUBSQUID",
-    FUSE: "FUSE",
-    FUSET: "FUSE",
-    STRGZ: "STARGAZE",
-    STRGZT: "STARGAZE",
-    BLAST: "BLAST",
-    BLASTSP: "BLAST",
-    SECRET: "SECRET",
-    SECRETP: "SECRET",
-    AVAX: "AVALANCHE",
-    AVAXT: "AVALANCHE",
-    OSMOSIS: "OSMOSIS",
-    OSMOSIST: "OSMOSIS",
-    CELESTIA: "CELESTIA",
-    CELESTIATA: "CELESTIA",
-    CELESTIATM: "CELESTIA",
-    UNIONT: "UNION",
-    UNION: "UNION",
-    ETHBEACON: "ETHEREUM"
+    FUSE: "fuse mainnet",
+    STRK: "starknet mainnet",
+    STRKS: "starknet sepolia testnet",
+    LAVA: "lava mainnet",
+    AVAX: "avalanche mainnet",
+    AVAXT: "avalanche testnet",
+    OSMOSIS: "osmosis mainnet",
+    OSMOSIST: "osmosis testnet",
+    NEAR: "near mainnet",
+    NEART: "near testnet",
+    SUIT: "sui devnet",
+    FUELNETWORK: "fuel network graphql",
+    COSMOSSDK45DEP: "cosmos sdk deprecated apis",
+    SOLANA: "solana main net",
+    SOLANAT: "solana test net",
+    SCROLL: "scroll mainnet",
+    SCROLLS: "scroll sepolia testnet",
+    EVMOS: "evmos mainnet",
+    EVMOST: "evmos testnet",
+    TENDERMINT: "tendermint",
+    CANTO: "canto mainnet",
+    COSMOSHUB: "cosmos hub mainnet",
+    COSMOSHUBT: "cosmos hub testnet",
+    COSMOSWASM: "cosmos wasm",
+    FVM: "fvm mainnet",
+    FTM250: "fantom mainnet",
+    FTM4002: "fantom testnet",
+    SQDSUBGRAPH: "subsquid powered subgraph",
+    BERAT: "berachain testnet",
+    MOVEMENT: "movement mainnet",
+    MANTAPACIFIC: "manta pacific mainnet",
+    MANTAPACIFICT: "manta pacific testnet",
+    ETH1: "ethereum mainnet",
+    SEP1: "ethereum testnet sepolia",
+    HOL1: "ethereum testnet holesky",
+    JUN1: "juno mainnet",
+    JUNT1: "juno testnet",
+    BSC: "bsc mainnet",
+    BSCT: "bsc testnet",
+    COSMOSSDKFULL: "full cosmos sdk",
+    IBC: "ibc",
+    SIDET: "side testnet",
+    MORALIS: "moralis advanced api",
+    CELESTIA: "celestia mainnet",
+    CELESTIATM: "celestia mocha testnet",
+    CELESTIATA: "celestia arabica testnet",
+    KOII: "koii main net",
+    KOIIT: "koii test net",
+    MANTLE: "mantle testnet",
+    LAV1: "lava testnet",
+    AXELAR: "axelar mainnet",
+    AXELART: "axelar testnet",
+    AGR: "agoric mainnet",
+    AGRT: "agoric testnet",
+    ETHBEACON: "ethereum beacon mainnet",
+    BASE: "base mainnet",
+    BASES: "base sepolia testnet",
+    BASET: "base sepolia testnet",
+    ZKSYNC: "zksync era mainnet",
+    ZKSYNCSP: "zksync era sepolia testnet",
+    ETHERMINT: "ethermint",
+    SECRET: "secret mainnet",
+    SECRETP: "secret testnet",
+    APT1: "aptos mainnet",
+    OPTM: "optimism mainnet",
+    OPTMS: "optimism sepolia testnet",
+    ARB1: "arbitrum mainnet",
+    ARBN: "arbitrum nova testnet",
+    ARBS: "arbitrum sepolia testnet",
+    KAKAROTT: "kakarot sepolia testnet",
+    BLAST: "blast mainnet",
+    BLASTSP: "blast sepolia testnet",
+    CELO: "celo mainnet",
+    ALFAJORES: "celo alfajores testnet",
+    UNIONT: "union testnet",
+    STRGZ: "stargaze mainnet",
+    STRGZT: "stargaze testnet",
+    NAMTSE: "namada se testnet",
+    COSMOSSDK: "cosmos sdk",
+    POLYGON1: "polygon mainnet",
+    POLYGON1A: "polygon amoy testnet",
+    COS3: "<cosmos - depricated name>",
+    COS4: "<cosmos - depricated name>",
+    COS5: "<cosmos - depricated name>",
+    COS5T: "<cosmos - depricated name>",
+    COSHUB: "<cosmos - depricated name>",
+    COSHUBT: "<cosmos - depricated name>",
+    GTH1: "<not in spec>",
+    OPTMT: "<not in spec>",
+    OSMO: "<not in spec>",
+    OSMOT: "<not in spec>",
+    POLYGON1T: "<not in spec>",
+    STRKT: "<not in spec>",
+    SUI: "<not in spec>",
+    FUSET: "<not in spec>",
+    UNION: "<not in spec>",
 };
 
 export async function ListProvidersRawHandler(request: FastifyRequest, reply: FastifyReply) {
@@ -165,9 +187,12 @@ export async function ListProvidersRawHandler(request: FastifyRequest, reply: Fa
     }, []);
 
     const { latestHeight, latestDatetime } = await GetLatestBlock()
-    return reply.send({
-        height: latestHeight,
-        datetime: latestDatetime,
-        providers
-    });
+
+    return {
+        data: {
+            height: latestHeight,
+            datetime: latestDatetime,
+            providers
+        }
+    };
 }

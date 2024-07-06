@@ -1,11 +1,12 @@
 // src/query/handlers/ListProvidersRawHandler.ts
 
 // curl http://localhost:8081/listProviders | jq
+// curl http://localhost:8081/listProviders | jq | grep ">"
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryCheckJsinfoReadDbInstance, GetLatestBlock, QueryGetJsinfoReadDbInstance } from '../queryDb';
 import * as JsinfoSchema from '../../schemas/jsinfoSchema';
-import { isNotNull, eq } from "drizzle-orm";
+import { isNotNull, eq, and, notLike } from "drizzle-orm";
 
 export const ListProvidersRawHandlerOpts: RouteShorthandOptions = {
     schema: {
@@ -140,21 +141,21 @@ const chainMapping: Record<string, string> = {
     COSMOSSDK: "cosmos sdk",
     POLYGON1: "polygon mainnet",
     POLYGON1A: "polygon amoy testnet",
-    COS3: "<cosmos - depricated name>",
-    COS4: "<cosmos - depricated name>",
-    COS5: "<cosmos - depricated name>",
-    COS5T: "<cosmos - depricated name>",
-    COSHUB: "<cosmos - depricated name>",
-    COSHUBT: "<cosmos - depricated name>",
-    GTH1: "<not in spec>",
-    OPTMT: "<not in spec>",
-    OSMO: "<not in spec>",
-    OSMOT: "<not in spec>",
-    POLYGON1T: "<not in spec>",
-    STRKT: "<not in spec>",
-    SUI: "<not in spec>",
-    FUSET: "<not in spec>",
-    UNION: "<not in spec>",
+    COS3: "osmosis mainnet",
+    COS4: "osmosis testnet",
+    COS5: "cosmos hub mainnet",
+    COS5T: "cosmos hub testnet",
+    COSHUB: "cosmos hub mainnet",
+    COSHUBT: "cosmos hub testnet",
+    GTH1: "ethereum testnet goerli",
+    OPTMT: "optimism goerli testnet",
+    OSMO: "osmosis mainnet",
+    OSMOT: "osmosis testnet",
+    POLYGON1T: "polygon testnet",
+    STRKT: "starknet testnet",
+    SUI: "sui devnet",
+    FUSET: "fuse testnet",
+    UNION: "union mainnet",
 };
 
 export async function ListProvidersRawHandler(request: FastifyRequest, reply: FastifyReply) {
@@ -166,7 +167,15 @@ export async function ListProvidersRawHandler(request: FastifyRequest, reply: Fa
         moniker: JsinfoSchema.providers.moniker,
     }).from(JsinfoSchema.providerStakes)
         .leftJoin(JsinfoSchema.providers, eq(JsinfoSchema.providerStakes.provider, JsinfoSchema.providers.address))
-        .where(isNotNull(JsinfoSchema.providers.address));
+        .where(
+            and(
+                and(
+                    notLike(JsinfoSchema.providers.moniker, 'testnet-lava-%'),
+                    isNotNull(JsinfoSchema.providers.address)
+                ),
+                eq(JsinfoSchema.providerStakes.status, JsinfoSchema.LavaProviderStakeStatus.Active)
+            )
+        );
 
     const providers = stakesRes.reduce<ProviderEntry[]>((acc, stake) => {
         const providerEntry = acc.find(entry => entry.provider === stake.provider);

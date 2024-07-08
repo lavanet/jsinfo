@@ -104,15 +104,15 @@ export async function SpecStakesPaginatedHandler(request: FastifyRequest, reply:
         provider: JsinfoSchema.providerStakes.provider,
         moniker: JsinfoSchema.providers.moniker,
         blockId: JsinfoSchema.providerStakes.blockId,
-        cuSum90Days: sql<number>`sum(COALESCE(NULLIF(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.cuSum}, 0), 0))`,
-        relaySum90Days: sql<number>`sum(COALESCE(NULLIF(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.relaySum}, 0), 0))`,
+        cuSum90Days: sql<number>`SUM(${JsinfoProviderAgrSchema.aggDailyRelayPayments.cuSum})`,
+        relaySum90Days: sql<number>`SUM(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum})`,
     }).from(JsinfoSchema.providerStakes)
         .leftJoin(JsinfoSchema.providers, eq(JsinfoSchema.providerStakes.provider, JsinfoSchema.providers.address))
-        .leftJoin(JsinfoProviderAgrSchema.aggHourlyRelayPayments, and(
-            eq(JsinfoSchema.providerStakes.provider, JsinfoProviderAgrSchema.aggHourlyRelayPayments.provider),
+        .leftJoin(JsinfoProviderAgrSchema.aggDailyRelayPayments, and(
+            eq(JsinfoSchema.providerStakes.provider, JsinfoProviderAgrSchema.aggDailyRelayPayments.provider),
             and(
-                eq(JsinfoSchema.providerStakes.specId, JsinfoProviderAgrSchema.aggHourlyRelayPayments.specId),
-                gt(sql<string>`DATE_TRUNC('day', ${JsinfoProviderAgrSchema.aggHourlyRelayPayments.datehour})`, sql<Date>`now() - interval '90 day'`)
+                eq(JsinfoSchema.providerStakes.specId, JsinfoProviderAgrSchema.aggDailyRelayPayments.specId),
+                gt(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday, sql<Date>`now() - interval '90 day'`)
             )
         ))
         .where(eq(JsinfoSchema.providerStakes.specId, spec))
@@ -123,15 +123,15 @@ export async function SpecStakesPaginatedHandler(request: FastifyRequest, reply:
     // Query for 30 days
     let stakesRes30Days = await QueryGetJsinfoReadDbInstance().select({
         provider: JsinfoSchema.providerStakes.provider,
-        cuSum30Days: sql<number>`sum(COALESCE(NULLIF(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.cuSum}, 0), 0))`,
-        relaySum30Days: sql<number>`sum(COALESCE(NULLIF(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.relaySum}, 0), 0))`,
+        cuSum30Days: sql<number>`SUM(${JsinfoProviderAgrSchema.aggDailyRelayPayments.cuSum})`,
+        relaySum30Days: sql<number>`SUM(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum})`,
     }).from(JsinfoSchema.providerStakes)
         .leftJoin(JsinfoSchema.providers, eq(JsinfoSchema.providerStakes.provider, JsinfoSchema.providers.address))
-        .leftJoin(JsinfoProviderAgrSchema.aggHourlyRelayPayments, and(
-            eq(JsinfoSchema.providerStakes.provider, JsinfoProviderAgrSchema.aggHourlyRelayPayments.provider),
+        .leftJoin(JsinfoProviderAgrSchema.aggDailyRelayPayments, and(
+            eq(JsinfoSchema.providerStakes.provider, JsinfoProviderAgrSchema.aggDailyRelayPayments.provider),
             and(
-                eq(JsinfoSchema.providerStakes.specId, JsinfoProviderAgrSchema.aggHourlyRelayPayments.specId),
-                gt(sql<string>`DATE_TRUNC('day', ${JsinfoProviderAgrSchema.aggHourlyRelayPayments.datehour})`, sql<Date>`now() - interval '30 day'`)
+                eq(JsinfoSchema.providerStakes.specId, JsinfoProviderAgrSchema.aggDailyRelayPayments.specId),
+                gt(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday, sql<Date>`now() - interval '30 day'`)
             )
         ))
         .where(eq(JsinfoSchema.providerStakes.specId, spec))

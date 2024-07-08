@@ -119,21 +119,17 @@ class ProviderReportsData extends RequestHandlerBase<ProviderReportsResponse> {
         let thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-        console.log("dasdsa", this.addr);
-
         let reportsRes = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.providerReported).
             leftJoin(JsinfoSchema.blocks, eq(JsinfoSchema.providerReported.blockId, JsinfoSchema.blocks.height)).
             where(
                 and(
                     eq(JsinfoSchema.providerReported.provider, this.addr),
-                    gte(JsinfoSchema.blocks['datetime'], thirtyDaysAgo)
+                    gte(JsinfoSchema.providerReported.datetime, thirtyDaysAgo)
                 )
             ).
             orderBy(desc(JsinfoSchema.providerReported.id)).
             offset(0).
-            limit(100); //JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
-
-        console.log("dasdsa");
+            limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
 
         return reportsRes;
     }
@@ -143,7 +139,7 @@ class ProviderReportsData extends RequestHandlerBase<ProviderReportsResponse> {
 
         const countResult = await QueryGetJsinfoReadDbInstance()
             .select({
-                count: sql<number>`count(*)`
+                count: sql<number>`COUNT(*)`
             })
             .from(JsinfoSchema.providerReported)
             .leftJoin(JsinfoSchema.blocks, eq(JsinfoSchema.providerReported.blockId, JsinfoSchema.blocks.height))

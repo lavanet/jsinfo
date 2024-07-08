@@ -164,7 +164,7 @@ class ProviderRewardsData extends RequestHandlerBase<ProviderRewardsResponse> {
 
         const countResult = await QueryGetJsinfoReadDbInstance()
             .select({
-                count: sql<number>`count(*)`
+                count: sql<number>`COUNT(*)`
             })
             .from(JsinfoSchema.relayPayments)
             .leftJoin(JsinfoSchema.blocks, eq(JsinfoSchema.relayPayments.blockId, JsinfoSchema.blocks.height))

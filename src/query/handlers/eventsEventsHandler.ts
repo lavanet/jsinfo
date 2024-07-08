@@ -113,7 +113,7 @@ class EventsEventsData extends RequestHandlerBase<EventsEventsResponse> {
 
         const countResult = await QueryGetJsinfoReadDbInstance()
             .select({
-                count: sql<number>`count(*)`
+                count: sql<number>`COUNT(*)`
             })
             .from(JsinfoSchema.events)
             .leftJoin(JsinfoSchema.blocks, eq(JsinfoSchema.events.blockId, JsinfoSchema.blocks.height))

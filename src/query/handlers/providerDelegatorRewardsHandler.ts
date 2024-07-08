@@ -87,7 +87,7 @@ class ProviderDelegatorRewardsData extends RequestHandlerBase<DelegatorRewardRes
 
         const countResult = await QueryGetJsinfoReadDbInstance()
             .select({
-                count: sql<number>`count(*)`
+                count: sql<number>`COUNT(*)`
             })
             .from(JsinfoSchema.dualStackingDelegatorRewards)
             .where(eq(JsinfoSchema.dualStackingDelegatorRewards.provider, this.addr))

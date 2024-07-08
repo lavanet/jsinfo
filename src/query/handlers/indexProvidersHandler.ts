@@ -72,12 +72,12 @@ class IndexProvidersData extends RequestHandlerBase<IndexProvidersResponse> {
 
         const res = await QueryGetJsinfoReadDbInstance().select({
             provider: JsinfoSchema.providerStakes.provider,
-            totalServices: sql<string>`concat(sum(case when ${JsinfoSchema.providerStakes.status} = ${JsinfoSchema.LavaProviderStakeStatus.Active} then 1 else 0 end), ' / ', count(${JsinfoSchema.providerStakes.specId}))`,
-            totalStake: sql<number>`sum(${JsinfoSchema.providerStakes.stake})`,
-            rewardSum: sql<number>`sum(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.rewardSum})`,
+            totalServices: sql<string>`CONCAT(SUM(CASE WHEN ${JsinfoSchema.providerStakes.status} = ${JsinfoSchema.LavaProviderStakeStatus.Active} THEN 1 ELSE 0 END), ' / ', COUNT(${JsinfoSchema.providerStakes.specId}))`,
+            totalStake: sql<number>`SUM(${JsinfoSchema.providerStakes.stake})`,
+            rewardSum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggAllTimeRelayPayments.rewardSum})`,
             moniker: JsinfoSchema.providers.moniker,
         }).from(JsinfoSchema.providerStakes)
-            .leftJoin(JsinfoProviderAgrSchema.aggHourlyRelayPayments, eq(JsinfoSchema.providerStakes.provider, JsinfoProviderAgrSchema.aggHourlyRelayPayments.provider))
+            .leftJoin(JsinfoProviderAgrSchema.aggAllTimeRelayPayments, eq(JsinfoSchema.providerStakes.provider, JsinfoProviderAgrSchema.aggAllTimeRelayPayments.provider))
             .leftJoin(JsinfoSchema.providers, eq(JsinfoSchema.providerStakes.provider, JsinfoSchema.providers.address))
             .where(
                 and(
@@ -87,13 +87,13 @@ class IndexProvidersData extends RequestHandlerBase<IndexProvidersResponse> {
                 )
             )
             .groupBy(JsinfoSchema.providerStakes.provider, JsinfoSchema.providers.moniker)
-            .orderBy(desc(sql<number>`sum(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.rewardSum})`))
+            .orderBy(desc(JsinfoProviderAgrSchema.aggAllTimeRelayPayments.rewardSum))
 
         const providersDetails: IndexProvidersResponse[] = res.map(provider => ({
             addr: provider.provider || "",
             moniker: provider.moniker || "",
             rewardSum: provider.rewardSum,
-            totalServices: provider.totalServices!,
+            totalServices: provider.totalServices || "",
             totalStake: provider.totalStake,
         }));
 
@@ -105,10 +105,10 @@ class IndexProvidersData extends RequestHandlerBase<IndexProvidersResponse> {
 
         const res = await QueryGetJsinfoReadDbInstance()
             .select({
-                count: sql<number>`count(DISTINCT ${JsinfoSchema.providerStakes.provider})`
+                count: sql<number>`COUNT(DISTINCT ${JsinfoSchema.providerStakes.provider})`
             })
             .from(JsinfoSchema.providerStakes)
-            .leftJoin(JsinfoProviderAgrSchema.aggHourlyRelayPayments, eq(JsinfoSchema.providerStakes.provider, JsinfoProviderAgrSchema.aggHourlyRelayPayments.provider))
+            .leftJoin(JsinfoProviderAgrSchema.aggAllTimeRelayPayments, eq(JsinfoSchema.providerStakes.provider, JsinfoProviderAgrSchema.aggAllTimeRelayPayments.provider))
             .leftJoin(JsinfoSchema.providers, eq(JsinfoSchema.providerStakes.provider, JsinfoSchema.providers.address))
             .where(
                 and(
@@ -143,9 +143,9 @@ class IndexProvidersData extends RequestHandlerBase<IndexProvidersResponse> {
         const keyToColumnMap = {
             addr: JsinfoSchema.providerStakes.provider,
             moniker: JsinfoSchema.providers.moniker,
-            rewardSum: sql<number>`sum(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.rewardSum})`,
-            totalServices: sql<string>`concat(sum(case when ${JsinfoSchema.providerStakes.status} = ${JsinfoSchema.LavaProviderStakeStatus.Active} then 1 else 0 end), ' / ', count(${JsinfoSchema.providerStakes.specId}))`,
-            totalStake: sql<number>`sum(${JsinfoSchema.providerStakes.stake})`
+            rewardSum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggAllTimeRelayPayments.rewardSum})`,
+            totalServices: sql<string>`CONCAT(SUM(CASE WHEN ${JsinfoSchema.providerStakes.status} = ${JsinfoSchema.LavaProviderStakeStatus.Active} THEN 1 ELSE 0 END), ' / ', COUNT(${JsinfoSchema.providerStakes.specId}))`,
+            totalStake: sql<number>`SUM(${JsinfoSchema.providerStakes.stake})`
         };
 
         // Check if the sort key is in the map, throw an error if not
@@ -163,13 +163,13 @@ class IndexProvidersData extends RequestHandlerBase<IndexProvidersResponse> {
         const data = await QueryGetJsinfoReadDbInstance()
             .select({
                 provider: JsinfoSchema.providerStakes.provider,
-                totalServices: sql<string>`concat(sum(case when ${JsinfoSchema.providerStakes.status} = ${JsinfoSchema.LavaProviderStakeStatus.Active} then 1 else 0 end), ' / ', count(${JsinfoSchema.providerStakes.specId}))`,
-                totalStake: sql<number>`sum(${JsinfoSchema.providerStakes.stake})`,
-                rewardSum: sql<number>`sum(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.rewardSum})`,
                 moniker: JsinfoSchema.providers.moniker,
+                totalServices: sql<string>`CONCAT(SUM(CASE WHEN ${JsinfoSchema.providerStakes.status} = ${JsinfoSchema.LavaProviderStakeStatus.Active} THEN 1 ELSE 0 END), ' / ', COUNT(${JsinfoSchema.providerStakes.specId}))`,
+                totalStake: sql<number>`SUM(${JsinfoSchema.providerStakes.stake})`,
+                rewardSum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggAllTimeRelayPayments.rewardSum})`,
             })
             .from(JsinfoSchema.providerStakes)
-            .leftJoin(JsinfoProviderAgrSchema.aggHourlyRelayPayments, eq(JsinfoSchema.providerStakes.provider, JsinfoProviderAgrSchema.aggHourlyRelayPayments.provider))
+            .leftJoin(JsinfoProviderAgrSchema.aggAllTimeRelayPayments, eq(JsinfoSchema.providerStakes.provider, JsinfoProviderAgrSchema.aggAllTimeRelayPayments.provider))
             .leftJoin(JsinfoSchema.providers, eq(JsinfoSchema.providerStakes.provider, JsinfoSchema.providers.address))
             .where(
                 and(
@@ -186,7 +186,7 @@ class IndexProvidersData extends RequestHandlerBase<IndexProvidersResponse> {
         return data.map(item => ({
             addr: item.provider || "",
             moniker: item.moniker || "",
-            rewardSum: item.rewardSum,
+            rewardSum: item.rewardSum || 0,
             totalServices: item.totalServices,
             totalStake: item.totalStake
         }));

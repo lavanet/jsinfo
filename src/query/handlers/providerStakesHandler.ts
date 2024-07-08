@@ -95,7 +95,7 @@ class ProviderStakesData extends RequestHandlerBase<JsinfoSchema.ProviderStake> 
 
         const countResult = await QueryGetJsinfoReadDbInstance()
             .select({
-                count: sql<number>`count(*)`
+                count: sql<number>`COUNT(*)`
             })
             .from(JsinfoSchema.providerStakes)
             .where(eq(JsinfoSchema.providerStakes.provider, this.addr))

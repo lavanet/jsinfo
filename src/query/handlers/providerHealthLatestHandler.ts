@@ -6,9 +6,10 @@
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryGetJsinfoReadDbInstance } from '../queryDb';
 import { eq, and, gte, desc } from "drizzle-orm";
-import { providerHealth } from '../../schemas/jsinfoSchema';
-import { GetAndValidateProviderAddressFromRequest, ParseDateToUtc } from '../utils/queryUtils';
+import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
+import { GetAndValidateProviderAddressFromRequest } from '../utils/queryUtils';
 import { WriteErrorToFastifyReply } from '../utils/queryServerUtils';
+import { ParseDateToUtc } from '../utils/queryDateUtils';
 
 type HealthRecord = {
     id: number;
@@ -126,9 +127,8 @@ const ParseMessageFromHealthV2 = (data: any | null): string => {
     }
 }
 
-// null is retuned for *PaginatedHandler function - the first caching layer on the request side
-// reply is returned in the *RawHandler functions - which skip this cache and probably use the RequestHandlerBase
-// RequestHandlerBase is the layer of caching against the db and not against the query
+// null is retuned for *PaginatedHandler functions
+// reply is returned in the *RawHandler functions - does not the use the RequestHandlerBase class
 
 export async function ProviderHealthLatestPaginatedHandler(request: FastifyRequest, reply: FastifyReply): Promise<{ data: ProviderHealthLatestResponse } | null> {
     let provider = await GetAndValidateProviderAddressFromRequest(request, reply);
@@ -141,14 +141,14 @@ export async function ProviderHealthLatestPaginatedHandler(request: FastifyReque
 
     const healthRecords: HealthRecord[] = await QueryGetJsinfoReadDbInstance()
         .select()
-        .from(providerHealth)
+        .from(JsinfoSchema.providerHealth)
         .where(
             and(
-                eq(providerHealth.provider, provider),
-                gte(providerHealth.timestamp, twoDaysAgo)
+                eq(JsinfoSchema.providerHealth.provider, provider),
+                gte(JsinfoSchema.providerHealth.timestamp, twoDaysAgo)
             )
         )
-        .orderBy(desc(providerHealth.timestamp))
+        .orderBy(desc(JsinfoSchema.providerHealth.timestamp))
         .limit(1000);
 
     if (healthRecords.length === 0) {

@@ -21,14 +21,14 @@ type IndexChartResponse = {
 };
 
 interface CuRelayQueryData {
-    date: string;
+    date: string | null;
     chainId: string | null;
     cuSum: number;
     relaySum: number;
 }
 
 interface QosQueryData {
-    date: string;
+    date: string | Date | null;
     qosSyncAvg: number;
     qosAvailabilityAvg: number;
     qosLatencyAvg: number;
@@ -87,11 +87,11 @@ class IndexChartsData extends RequestHandlerBase<IndexChartResponse> {
         sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
         let topChainsQueryRes: { chainId: string | null; }[] = await QueryGetJsinfoReadDbInstance().select({
-            chainId: JsinfoProviderAgrSchema.aggHourlyRelayPayments.specId,
-        }).from(JsinfoProviderAgrSchema.aggHourlyRelayPayments)
-            .groupBy(sql`${JsinfoProviderAgrSchema.aggHourlyRelayPayments.specId}`)
-            .where(gt(sql<Date>`DATE(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.datehour})`, sql<Date>`${sixMonthsAgo}`))
-            .orderBy(desc(sql<number>`sum(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.relaySum})`));
+            chainId: JsinfoProviderAgrSchema.aggDailyRelayPayments.specId,
+        }).from(JsinfoProviderAgrSchema.aggDailyRelayPayments)
+            .groupBy(sql`${JsinfoProviderAgrSchema.aggDailyRelayPayments.specId}`)
+            .where(gt(sql<Date>`DATE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday})`, sql<Date>`${sixMonthsAgo}`))
+            .orderBy(desc(sql<number>`SUM(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum})`));
 
         const topChains: string[] = topChainsQueryRes
             .filter(chain => chain.chainId != null && chain.chainId.trim() !== '')
@@ -132,29 +132,29 @@ class IndexChartsData extends RequestHandlerBase<IndexChartResponse> {
         let mainChartData: CuRelayQueryData[] = [];
 
         let monthlyData: CuRelayQueryData[] = await QueryGetJsinfoReadDbInstance().select({
-            date: sql<string>`DATE_TRUNC('day', ${JsinfoProviderAgrSchema.aggHourlyRelayPayments.datehour}) as mydate`,
-            chainId: JsinfoProviderAgrSchema.aggHourlyRelayPayments.specId,
-            cuSum: sql<number>`sum(COALESCE(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.cuSum}, 0))`,
-            relaySum: sql<number>`sum(COALESCE(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.relaySum}, 0))`,
-        }).from(JsinfoProviderAgrSchema.aggHourlyRelayPayments).
+            date: JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday,
+            chainId: JsinfoProviderAgrSchema.aggDailyRelayPayments.specId,
+            cuSum: sql<number>`SUM(COALESCE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.cuSum}, 0))`,
+            relaySum: sql<number>`SUM(COALESCE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum}, 0))`,
+        }).from(JsinfoProviderAgrSchema.aggDailyRelayPayments).
             where(
                 and(
                     and(
-                        gt(sql<Date>`DATE(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.datehour})`, sql<Date>`${from}`),
-                        lt(sql<Date>`DATE(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.datehour})`, sql<Date>`${to}`)
+                        gt(sql<Date>`DATE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday})`, sql<Date>`${from}`),
+                        lt(sql<Date>`DATE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday})`, sql<Date>`${to}`)
                     ),
-                    inArray(JsinfoProviderAgrSchema.aggHourlyRelayPayments.specId, topChains)
+                    inArray(JsinfoProviderAgrSchema.aggDailyRelayPayments.specId, topChains)
                 )
             ).
-            groupBy(sql`${JsinfoProviderAgrSchema.aggHourlyRelayPayments.specId}`, sql`mydate`).
-            orderBy(sql`mydate DESC`);
+            groupBy(sql`${JsinfoProviderAgrSchema.aggDailyRelayPayments.specId}`, JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday).
+            orderBy(desc(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday));
 
         // Verify and format the data
         monthlyData.forEach(item => {
             item.cuSum = Number(item.cuSum);
             item.relaySum = Number(item.relaySum);
 
-            if (isNaN(Date.parse(item.date))) {
+            if (!item.date || isNaN(Date.parse(item.date))) {
                 throw new Error(`Data format does not match the CuRelayQueryData interface. Item: ${JSON.stringify(item)}. Reason: item.date is not a valid date.`);
             } else if (isNaN(item.cuSum)) {
                 throw new Error(`Data format does not match the CuRelayQueryData interface. Item: ${JSON.stringify(item)}. Reason: item.cuSum is not a number.`);
@@ -174,17 +174,17 @@ class IndexChartsData extends RequestHandlerBase<IndexChartResponse> {
         const qosDataFormatted: { [key: string]: number } = {};
 
         let monthlyData: QosQueryData[] = await QueryGetJsinfoReadDbInstance().select({
-            date: sql<string>`DATE_TRUNC('day', ${JsinfoProviderAgrSchema.aggHourlyRelayPayments.datehour}) as mydate`,
-            qosSyncAvg: sql<number>`sum(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.qosSyncAvg}*${JsinfoProviderAgrSchema.aggHourlyRelayPayments.relaySum})/sum(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.relaySum})`,
-            qosAvailabilityAvg: sql<number>`sum(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.qosAvailabilityAvg}*${JsinfoProviderAgrSchema.aggHourlyRelayPayments.relaySum})/sum(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.relaySum})`,
-            qosLatencyAvg: sql<number>`sum(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.qosLatencyAvg}*${JsinfoProviderAgrSchema.aggHourlyRelayPayments.relaySum})/sum(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.relaySum})`,
-        }).from(JsinfoProviderAgrSchema.aggHourlyRelayPayments).
+            date: JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday,
+            qosSyncAvg: sql<number>`SUM(COALESCE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.qosSyncAvg}, 0)*COALESCE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum}, 0))/NULLIF(SUM(COALESCE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum}, 0)), 0)`,
+            qosAvailabilityAvg: sql<number>`SUM(COALESCE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.qosAvailabilityAvg}, 0)*COALESCE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum}, 0))/NULLIF(SUM(COALESCE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum}, 0)), 0)`,
+            qosLatencyAvg: sql<number>`SUM(COALESCE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.qosLatencyAvg}, 0)*COALESCE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum}, 0))/NULLIF(SUM(COALESCE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum}, 0)), 0)`,
+        }).from(JsinfoProviderAgrSchema.aggDailyRelayPayments).
             where(and(
-                gt(sql<Date>`DATE(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.datehour})`, sql<Date>`${from}`),
-                lt(sql<Date>`DATE(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.datehour})`, sql<Date>`${to}`)
+                gt(sql<Date>`DATE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday})`, sql<Date>`${from}`),
+                lt(sql<Date>`DATE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday})`, sql<Date>`${to}`)
             )).
-            groupBy(sql`mydate`).
-            orderBy(sql`mydate DESC`);
+            groupBy(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday).
+            orderBy(desc(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday));
 
         // Verify and format the data
         monthlyData.forEach(item => {
@@ -215,10 +215,10 @@ class IndexChartsData extends RequestHandlerBase<IndexChartResponse> {
     private combineData(mainChartData: CuRelayQueryData[], qosDataFormatted: { [key: string]: number }): IndexChartResponse[] {
         // Group the mainChartData by date
         const groupedData: { [key: string]: CuRelayItem[] } = mainChartData.reduce((acc, item) => {
-            if (!acc[item.date]) {
-                acc[item.date] = [];
+            if (!acc[item.date!]) {
+                acc[item.date!] = [];
             }
-            acc[item.date].push({
+            acc[item.date!].push({
                 chainId: item.chainId || '',
                 cuSum: item.cuSum,
                 relaySum: item.relaySum

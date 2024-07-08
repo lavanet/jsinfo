@@ -6,9 +6,10 @@ import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '..
 import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import { eq, desc, asc } from "drizzle-orm";
 import { Pagination, ParsePaginationFromString } from '../utils/queryPagination';
-import { CSVEscape, GetAndValidateProviderAddressFromRequest, ParseDateToUtc } from '../utils/queryUtils';
+import { CSVEscape, GetAndValidateProviderAddressFromRequest } from '../utils/queryUtils';
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '../queryConsts';
 import { RequestHandlerBase } from '../classes/RequestHandlerBase';
+import { ParseDateToUtc } from '../utils/queryDateUtils';
 export interface HealthReportEntry {
     message: string | null;
     block: number | null;

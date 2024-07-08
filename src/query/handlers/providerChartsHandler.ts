@@ -3,7 +3,7 @@
 import { FastifyReply, FastifyRequest, RouteShorthandOptions } from 'fastify';
 import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../queryDb';
 import * as JsinfoProviderAgrSchema from '../../schemas/jsinfoSchema/providerRelayPaymentsAgregation';
-import { sql, gt, and, lt } from "drizzle-orm";
+import { sql, gt, and, lt, desc } from "drizzle-orm";
 import { FormatDateItems } from '../utils/queryDateUtils';
 import { RequestHandlerBase } from '../classes/RequestHandlerBase';
 import { GetAndValidateProviderAddressFromRequest, GetDataLength } from '../utils/queryUtils';
@@ -19,7 +19,7 @@ type ProviderChartResponse = {
 } & ProviderQosData;
 
 interface ProviderQosQueryData {
-    date: string;
+    date: string | null;
     qosSyncAvg: number;
     qosAvailabilityAvg: number;
     qosLatencyAvg: number;
@@ -30,7 +30,7 @@ type ProviderQosData = {
 } & ProviderQosQueryData;
 
 interface SpecCuRelayQueryData {
-    date: string;
+    date: string | null;
     cuSum: number;
     relaySum: number;
 }
@@ -98,24 +98,23 @@ class ProviderChartsData extends RequestHandlerBase<ProviderChartResponse> {
         const formatedData: ProviderQosData[] = [];
 
         let monthlyData: ProviderQosQueryData[] = await QueryGetJsinfoReadDbInstance().select({
-            date: sql<string>`DATE_TRUNC('day', ${JsinfoProviderAgrSchema.aggHourlyRelayPayments.datehour}) as mydate`,
-            qosSyncAvg: sql<number>`sum(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.qosSyncAvg}*${JsinfoProviderAgrSchema.aggHourlyRelayPayments.relaySum})/sum(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.relaySum})`,
-            qosAvailabilityAvg: sql<number>`sum(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.qosAvailabilityAvg}*${JsinfoProviderAgrSchema.aggHourlyRelayPayments.relaySum})/sum(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.relaySum})`,
-            qosLatencyAvg: sql<number>`sum(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.qosLatencyAvg}*${JsinfoProviderAgrSchema.aggHourlyRelayPayments.relaySum})/sum(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.relaySum})`,
-        }).from(JsinfoProviderAgrSchema.aggHourlyRelayPayments)
+            date: JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday,
+            qosSyncAvg: sql<number>`SUM(COALESCE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.qosSyncAvg}, 0)*COALESCE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum}, 0))/NULLIF(SUM(COALESCE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum}, 0)), 0)`,
+            qosAvailabilityAvg: sql<number>`SUM(COALESCE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.qosAvailabilityAvg}, 0)*COALESCE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum}, 0))/NULLIF(SUM(COALESCE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum}, 0)), 0)`,
+            qosLatencyAvg: sql<number>`SUM(COALESCE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.qosLatencyAvg}, 0)*COALESCE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum}, 0))/NULLIF(SUM(COALESCE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum}, 0)), 0)`,
+        }).from(JsinfoProviderAgrSchema.aggDailyRelayPayments)
             .where(and(
-                gt(sql<Date>`DATE(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.datehour})`, sql<Date>`${from}`),
-                lt(sql<Date>`DATE(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.datehour})`, sql<Date>`${to}`)
+                gt(sql<Date>`DATE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday})`, sql<Date>`${from}`),
+                lt(sql<Date>`DATE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday})`, sql<Date>`${to}`)
             ))
-            .groupBy(sql`mydate`)
-            .orderBy(sql`mydate DESC`);
+            .orderBy(desc(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday));
 
         monthlyData.forEach(item => {
             item.qosSyncAvg = Number(item.qosSyncAvg);
             item.qosAvailabilityAvg = Number(item.qosAvailabilityAvg);
             item.qosLatencyAvg = Number(item.qosLatencyAvg);
 
-            if (isNaN(Date.parse(item.date))) {
+            if (!item.date || isNaN(Date.parse(item.date))) {
                 throw new Error(`Data format does not match the ProviderQosQueryData interface.Item: ${JSON.stringify(item)}.Reason: item.date is not a valid date.`);
             } else if (isNaN(item.qosSyncAvg)) {
                 throw new Error(`Data format does not match the ProviderQosQueryData interface.Item: ${JSON.stringify(item)}.Reason: item.qosSyncAvg is not a number.`);
@@ -143,21 +142,24 @@ class ProviderChartsData extends RequestHandlerBase<ProviderChartResponse> {
         const formatedData: ProviderCuRelayData[] = [];
 
         let monthlyData: ProviderCuRelayQueryDataWithSpecId[] = await QueryGetJsinfoReadDbInstance().select({
-            date: sql<string>`DATE_TRUNC('day', ${JsinfoProviderAgrSchema.aggHourlyRelayPayments.datehour}) as mydate`,
-            cuSum: sql<number>`sum(COALESCE(NULLIF(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.cuSum}, 0), 0))`,
-            relaySum: sql<number>`sum(COALESCE(NULLIF(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.relaySum}, 0), 0))`,
-            specId: JsinfoProviderAgrSchema.aggHourlyRelayPayments.specId,
-        }).from(JsinfoProviderAgrSchema.aggHourlyRelayPayments)
-            .groupBy(sql`mydate`, JsinfoProviderAgrSchema.aggHourlyRelayPayments.specId)
+            date: JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday,
+            specId: JsinfoProviderAgrSchema.aggDailyRelayPayments.specId,
+            cuSum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggDailyRelayPayments.cuSum})`,
+            relaySum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum})`,
+        }).from(JsinfoProviderAgrSchema.aggDailyRelayPayments)
             .where(and(
-                gt(sql<Date>`DATE(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.datehour})`, sql<Date>`${from}`),
-                lt(sql<Date>`DATE(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.datehour})`, sql<Date>`${to}`)
+                gt(sql<Date>`DATE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday})`, sql<Date>`${from}`),
+                lt(sql<Date>`DATE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday})`, sql<Date>`${to}`)
             ))
-            .orderBy(sql`mydate DESC`);
+            .orderBy(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday);
 
         let dateSums: { [date: string]: { cuSum: number, relaySum: number } } = {};
 
         monthlyData.forEach(item => {
+            if (!item.date) {
+                throw new Error("Item date is null or undefined");
+            }
+
             if (!dateSums[item.date]) {
                 dateSums[item.date] = { cuSum: 0, relaySum: 0 };
             }
@@ -186,7 +188,6 @@ class ProviderChartsData extends RequestHandlerBase<ProviderChartResponse> {
     }
 
     private combineData(providerMainChartData: ProviderCuRelayData[], providerQosData: ProviderQosData[]): ProviderChartResponse[] {
-        // Group the providerMainChartData by date
         const groupedData: { [key: string]: ProviderChartCuRelay[] } = providerMainChartData.reduce((acc, item) => {
             if (!acc[item.date]) {
                 acc[item.date] = [];
@@ -199,11 +200,10 @@ class ProviderChartsData extends RequestHandlerBase<ProviderChartResponse> {
             return acc;
         }, {});
 
-        // Merge the providerQosData with groupedData
         return providerQosData.map(providerQosData => {
             return {
                 ...providerQosData,
-                data: groupedData[providerQosData.date] || []
+                data: groupedData[providerQosData.date!] || []
             };
         });
     }
@@ -212,10 +212,12 @@ class ProviderChartsData extends RequestHandlerBase<ProviderChartResponse> {
         await QueryCheckJsinfoReadDbInstance();
 
         const providerMainChartData = await this.getSpecRelayCuChartWithTopProviders(from, to);
+        console.log("Provider Main Chart Data:", providerMainChartData);
         if (GetDataLength(providerMainChartData) === 0) {
             return [];
         }
         const providerQosData = await this.getProviderQosData(from, to);
+        console.log("Provider QoS Data:", providerQosData);
         const providerCombinedData = this.combineData(providerMainChartData, providerQosData);
 
         return providerCombinedData;

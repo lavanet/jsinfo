@@ -54,10 +54,11 @@ export async function SpecPaginatedHandler(request: FastifyRequest, reply: Fasti
     let relaySum = 0
     let rewardSum = 0
     const cuRelayAndRewardsTotalRes = await QueryGetJsinfoReadDbInstance().select({
-        cuSum: sql<number>`sum(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.cuSum})`,
-        relaySum: sql<number>`sum(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.relaySum})`,
-        rewardSum: sql<number>`sum(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.rewardSum})`,
-    }).from(JsinfoProviderAgrSchema.aggHourlyRelayPayments).where(eq(JsinfoProviderAgrSchema.aggHourlyRelayPayments.specId, spec))
+        cuSum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggAllTimeRelayPayments.cuSum})`,
+        relaySum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggAllTimeRelayPayments.relaySum})`,
+        rewardSum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggAllTimeRelayPayments.rewardSum})`,
+    }).from(JsinfoProviderAgrSchema.aggAllTimeRelayPayments)
+        .where(eq(JsinfoProviderAgrSchema.aggHourlyRelayPayments.specId, spec))
     if (cuRelayAndRewardsTotalRes.length == 1) {
         cuSum = cuRelayAndRewardsTotalRes[0].cuSum
         relaySum = cuRelayAndRewardsTotalRes[0].relaySum

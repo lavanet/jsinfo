@@ -87,7 +87,7 @@ class ProviderErrorsData extends RequestHandlerBase<ErrorsReportResponse> {
 
         const countResult = await QueryGetRelaysReadDbInstance()
             .select({
-                count: sql<number>`count(*)`
+                count: sql<number>`COUNT(*)`
             })
             .from(RelaysSchema.lavaReportError)
             .where(eq(RelaysSchema.lavaReportError.provider, this.addr))

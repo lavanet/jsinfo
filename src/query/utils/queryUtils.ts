@@ -5,7 +5,6 @@ import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from "..
 import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import { eq } from "drizzle-orm";
 import { WriteErrorToFastifyReply } from "./queryServerUtils";
-import { parseISO } from 'date-fns';
 
 export function CompareValues(aValue: string | number | null, bValue: string | number | null, direction: 'ascending' | 'descending') {
     // Check if direction is 'ascending' or 'descending'
@@ -147,21 +146,4 @@ export function GetDataLength(data: any): number {
 
 export function GetTypeAsString(obj: any): string {
     return Object.prototype.toString.call(obj).replace(/^\[object\s|\]$/g, '');
-}
-
-export function ParseDateToUtc(dt: string | number): Date {
-    let date: Date;
-
-    if (typeof dt === 'number' || (typeof dt === 'string' && /^\d+$/.test(dt))) {
-        // Convert Unix timestamp to milliseconds and create a Date object
-        date = new Date(typeof dt === 'string' ? parseInt(dt, 10) * 1000 : dt * 1000);
-    } else if (typeof dt === 'string') {
-        // Parse ISO string to Date
-        date = parseISO(dt);
-    } else {
-        throw new Error('Unsupported date type');
-    }
-
-    // Convert to UTC by creating a new Date object using the UTC values from the original date
-    return new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), date.getHours(), date.getMinutes(), date.getSeconds()));
 }

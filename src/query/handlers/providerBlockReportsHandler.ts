@@ -100,7 +100,7 @@ class ProviderBlockReportsData extends RequestHandlerBase<BlockReportsResponse> 
 
         const countResult = await QueryGetJsinfoReadDbInstance()
             .select({
-                count: sql<number>`count(*)`
+                count: sql<number>`COUNT(*)`
             })
             .from(JsinfoSchema.providerLatestBlockReports)
             .where(eq(JsinfoSchema.providerLatestBlockReports.provider, this.addr))

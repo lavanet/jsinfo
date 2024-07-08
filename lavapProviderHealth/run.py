@@ -155,6 +155,8 @@ def is_status_better(old_status: str, new_status: str, old_data: str, new_data: 
     old_data_json = safe_load_json_or_none(old_data)
     new_data_json = safe_load_json_or_none(new_data)
 
+    if old_data_json == None and new_data_json == None:
+        return False
     if old_data_json is None and new_data_json != None:
         return True
     elif old_data_json != None and new_data_json == None:
@@ -315,7 +317,7 @@ def db_worker():
                 db_worker_work()
                 break
             except Exception as e:
-                log("db_worker", f"Error in attempt {i+1}: {e}")
+                log("db_worker", f"Error in attempt {i+1}: {e}, \nStack Trace: {traceback.format_exc()}")
                 log("db_worker", "Sleeping for 1 second and reconnecting")
                 time.sleep(1)
                 db_reconnect()
@@ -424,15 +426,18 @@ def run_accountinfo_command(address: str) -> Optional[Dict[str, Any]]:
     return safe_json_load(replace_archive(output))
 
 def parse_accountinfo_spec(result: Dict[str, Dict[str, List[str]]], key: str, provider: Dict[str, Any]) -> None:
+    if provider is None:
+        log("parse_accountinfo_spec", f"Error: Provider is None. Key: {key}, Provider: {provider}")
+        return
     chain: str = provider.get('chain', '')
     if len(chain) < 2:
-        log(f"Error: Chain is less than 2 characters. Chain: {chain}, Key: {key}, Provider: {provider}")
+        log("parse_accountinfo_spec", f"Error: Chain is less than 2 characters. Chain: {chain}, Key: {key}, Provider: {provider}")
         return
     endpoints: List[Dict[str, Any]] = provider.get('endpoints', [])
     for endpoint in endpoints:
         api_interfaces: List[str] = endpoint.get('api_interfaces', [])
         if len(api_interfaces) == 0:
-            log(f"Error: Api Interfaces count is 0. Chain: {chain}, Key: {key}, Provider: {provider}, Api Interfaces: {api_interfaces}")
+            log("parse_accountinfo_spec", f"Error: Api Interfaces count is 0. Chain: {chain}, Key: {key}, Provider: {provider}, Api Interfaces: {api_interfaces}")
             return
         if chain not in result[key]:
             result[key][chain] = []
@@ -588,6 +593,10 @@ def fmt_unhealthy_error(msg):
 def parse_and_save_provider_health_status_from_request(data: Dict[str, Any], guid: str) -> List[Dict[str, Any]]:
     parsed_data: List[Dict[str, Any]] = []
 
+    if data is None:
+        log("parse_and_save_provider_health_status_from_request", "error - data is None")
+        return []
+    
     if 'providerData' not in data and 'unhealthyProviders' not in data and not 'latestBlocks' in data:
         log("parse_and_save_provider_health_status_from_request", "bad data:: Keys 'providerData' or 'unhealthyProviders' not found in data: " + safe_json_dump(data))
         return None

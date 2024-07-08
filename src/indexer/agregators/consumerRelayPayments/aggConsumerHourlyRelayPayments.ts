@@ -49,9 +49,9 @@ export async function aggConsumerHourlyRelayPayments(db: PostgresJsDatabase) {
 
     //
     const aggResults = await db.select({
-        consumer: sql<string>`COALESCE(${JsinfoSchema.relayPayments.consumer}, '')`,
-        datehour: sql<string>`CAST(DATE_TRUNC('hour', COALESCE(${JsinfoSchema.relayPayments.datetime}, CURRENT_TIMESTAMP)) AS TIMESTAMP) as datehour`,
-        specId: sql<string>`COALESCE(${JsinfoSchema.relayPayments.specId}, '')`,
+        consumer: sql<string>`${JsinfoSchema.relayPayments.consumer}`,
+        datehour: sql<string>`DATE_TRUNC('day', ${JsinfoSchema.relayPayments.datetime}) as datehour`,
+        specId: sql<string>`${JsinfoSchema.relayPayments.specId}`,
         cuSum: sql<number>`SUM(COALESCE(${JsinfoSchema.relayPayments.cu}, 0))`,
         relaySum: sql<number>`SUM(COALESCE(${JsinfoSchema.relayPayments.relays}, 0))`,
         rewardSum: sql<number>`SUM(COALESCE(${JsinfoSchema.relayPayments.pay}, 0))`,
@@ -80,8 +80,6 @@ export async function aggConsumerHourlyRelayPayments(db: PostgresJsDatabase) {
         logger.error("aggConsumerHourlyRelayPayments: no agg results found")
         return;
     }
-
-
 
     // Define the type for the elements in aggResults array
     type AggResult = {

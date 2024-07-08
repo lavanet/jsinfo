@@ -7,7 +7,6 @@ import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import * as JsinfoProviderAgrSchema from '../../schemas/jsinfoSchema/providerRelayPaymentsAgregation';
 import { sql, desc, gt, and, eq } from "drizzle-orm";
 import { ReplaceArchive } from '../../indexer/indexerUtils';
-import { JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '../queryConsts';
 import { GetAndValidateSpecIdFromRequest } from '../utils/queryUtils';
 
 export type SpecSpecsResponse = {
@@ -121,7 +120,7 @@ export async function SpecStakesPaginatedHandler(request: FastifyRequest, reply:
         ))
         .where(eq(JsinfoSchema.providerStakes.specId, spec))
         .orderBy(desc(JsinfoSchema.providerStakes.stake))
-        .offset(0).limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
+        .offset(0).limit(200);
 
     // Query for 30 days
     let stakesRes30Days = await QueryGetJsinfoReadDbInstance().select({
@@ -140,7 +139,7 @@ export async function SpecStakesPaginatedHandler(request: FastifyRequest, reply:
         .where(eq(JsinfoSchema.providerStakes.specId, spec))
         .groupBy(JsinfoSchema.providerStakes.provider, JsinfoSchema.providerStakes.specId, JsinfoSchema.providers.moniker, JsinfoSchema.providerStakes.stake)
         .orderBy(desc(JsinfoSchema.providerStakes.stake))
-        .offset(0).limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
+        .offset(0).limit(200);
 
     let stakesRes30DaysMap = new Map(stakesRes30Days.map(item => [item.provider, item]));
 
@@ -148,11 +147,13 @@ export async function SpecStakesPaginatedHandler(request: FastifyRequest, reply:
         let item30Days = stakesRes30DaysMap.get(item90Days.provider);
         return {
             ...item90Days,
-            cuSum30Days: item30Days ? item30Days.cuSum30Days : 0,
-            relaySum30Days: item30Days ? item30Days.relaySum30Days : 0,
+            relaySum90Days: item90Days.relaySum90Days || 0,
+            cuSum90Days: item90Days.cuSum90Days || 0,
+            cuSum30Days: item30Days ? item30Days.cuSum30Days || 0 : 0,
+            relaySum30Days: item30Days ? item30Days.relaySum30Days || 0 : 0,
             addonsAndExtensions: ReplaceArchive(item90Days.addonsAndExtensions),
         };
     }).sort((a, b) => b.cuSum90Days - a.cuSum90Days);
 
-    return combinedStakesRes;
+    return { data: combinedStakesRes };
 }

@@ -1,5 +1,7 @@
 // src/query/handlers/indexProvidersHandler.ts
 
+// curl http://localhost:8081/indexProviders | jq
+
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../queryDb';
 import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';

@@ -66,16 +66,17 @@ export async function ConsumerCahcedHandler(request: FastifyRequest, reply: Fast
     }
 
     let graphDataRet = await QueryGetJsinfoReadDbInstance().select({
-        date: sql<Date>`DATE(${JsinfoSchema.blocks.datetime})`,
+        date: JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.dateday,
         cuSum: sql<number>`SUM(${JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.cuSum})`,
         relaySum: sql<number>`SUM(${JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.relaySum})`,
         rewardSum: sql<number>`SUM(${JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.rewardSum})`
     }).from(JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments).
+        groupBy(JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.dateday).
         where(and(
-            gt(sql<Date>`DATE(${JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.dateday})`, sql<Date>`now() - interval '30 day'`),
+            gt(JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.dateday, sql<Date>`now() - interval '30 day'`),
             eq(JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.consumer, addr)
         )).
-        orderBy(sql<Date>`DATE(${JsinfoSchema.blocks.datetime})`)
+        orderBy(JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.dateday)
 
     const conflictsRet = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.conflictResponses).where(eq(JsinfoSchema.conflictResponses.consumer, addr)).
         orderBy(desc(JsinfoSchema.conflictResponses.id)).offset(0).limit(50)

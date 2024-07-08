@@ -1,4 +1,3 @@
-
 // src/query/handlers/specHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
@@ -58,7 +57,7 @@ export async function SpecPaginatedHandler(request: FastifyRequest, reply: Fasti
         relaySum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggAllTimeRelayPayments.relaySum})`,
         rewardSum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggAllTimeRelayPayments.rewardSum})`,
     }).from(JsinfoProviderAgrSchema.aggAllTimeRelayPayments)
-        .where(eq(JsinfoProviderAgrSchema.aggHourlyRelayPayments.specId, spec))
+        .where(eq(JsinfoProviderAgrSchema.aggAllTimeRelayPayments.specId, spec))
     if (cuRelayAndRewardsTotalRes.length == 1) {
         cuSum = cuRelayAndRewardsTotalRes[0].cuSum
         relaySum = cuRelayAndRewardsTotalRes[0].relaySum

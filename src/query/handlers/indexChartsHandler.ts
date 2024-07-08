@@ -4,7 +4,7 @@ import { FastifyReply, FastifyRequest, RouteShorthandOptions } from 'fastify';
 import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../queryDb';
 import * as JsinfoProviderAgrSchema from '../../schemas/jsinfoSchema/providerRelayPaymentsAgregation';
 import { sql, desc, gt, and, inArray, lt } from "drizzle-orm";
-import { FormatDateItems } from '../utils/queryDateUtils';
+import { DateToISOString, FormatDateItems } from '../utils/queryDateUtils';
 import { RequestHandlerBase } from '../classes/RequestHandlerBase';
 import { GetDataLength } from '../utils/queryUtils';
 
@@ -146,7 +146,7 @@ class IndexChartsData extends RequestHandlerBase<IndexChartResponse> {
                     inArray(JsinfoProviderAgrSchema.aggDailyRelayPayments.specId, topChains)
                 )
             ).
-            groupBy(sql`${JsinfoProviderAgrSchema.aggDailyRelayPayments.specId}`, JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday).
+            groupBy(JsinfoProviderAgrSchema.aggDailyRelayPayments.specId, JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday).
             orderBy(desc(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday));
 
         // Verify and format the data
@@ -179,12 +179,12 @@ class IndexChartsData extends RequestHandlerBase<IndexChartResponse> {
             qosAvailabilityAvg: sql<number>`SUM(COALESCE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.qosAvailabilityAvg}, 0)*COALESCE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum}, 0))/NULLIF(SUM(COALESCE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum}, 0)), 0)`,
             qosLatencyAvg: sql<number>`SUM(COALESCE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.qosLatencyAvg}, 0)*COALESCE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum}, 0))/NULLIF(SUM(COALESCE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum}, 0)), 0)`,
         }).from(JsinfoProviderAgrSchema.aggDailyRelayPayments).
+            orderBy(desc(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday)).
             where(and(
                 gt(sql<Date>`DATE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday})`, sql<Date>`${from}`),
                 lt(sql<Date>`DATE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday})`, sql<Date>`${to}`)
             )).
-            groupBy(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday).
-            orderBy(desc(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday));
+            groupBy(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday);
 
         // Verify and format the data
         monthlyData.forEach(item => {
@@ -192,7 +192,7 @@ class IndexChartsData extends RequestHandlerBase<IndexChartResponse> {
             item.qosAvailabilityAvg = Number(item.qosAvailabilityAvg);
             item.qosLatencyAvg = Number(item.qosLatencyAvg);
 
-            if (isNaN(Date.parse(item.date))) {
+            if (!item.date) {
                 throw new Error(`Data format does not match the QosQueryData interface. Item: ${JSON.stringify(item)}. Reason: item.date is not a valid date.`);
             } else if (isNaN(item.qosSyncAvg)) {
                 throw new Error(`Data format does not match the QosQueryData interface. Item: ${JSON.stringify(item)}. Reason: item.qosSyncAvg is not a number.`);
@@ -204,7 +204,7 @@ class IndexChartsData extends RequestHandlerBase<IndexChartResponse> {
 
             const qos = Math.cbrt(item.qosSyncAvg * item.qosAvailabilityAvg * item.qosLatencyAvg);
 
-            qosDataFormatted[item.date] = qos;
+            qosDataFormatted[DateToISOString(item.date)] = qos;
         });
 
         this.log(`getQosData:: Fetched data from: ${from.toLocaleDateString()} to: ${to.toLocaleDateString()}`);
@@ -215,10 +215,11 @@ class IndexChartsData extends RequestHandlerBase<IndexChartResponse> {
     private combineData(mainChartData: CuRelayQueryData[], qosDataFormatted: { [key: string]: number }): IndexChartResponse[] {
         // Group the mainChartData by date
         const groupedData: { [key: string]: CuRelayItem[] } = mainChartData.reduce((acc, item) => {
-            if (!acc[item.date!]) {
-                acc[item.date!] = [];
+            const dateKey = DateToISOString(item.date);
+            if (!acc[dateKey]) {
+                acc[dateKey] = [];
             }
-            acc[item.date!].push({
+            acc[dateKey].push({
                 chainId: item.chainId || '',
                 cuSum: item.cuSum,
                 relaySum: item.relaySum
@@ -244,7 +245,11 @@ class IndexChartsData extends RequestHandlerBase<IndexChartResponse> {
             return [];
         }
         const mainChartData = await this.getMainChartData(topChains, from, to);
+        console.log("Index Main Chart Data:", mainChartData);
+
         const qosData = await this.getQosData(from, to);
+        console.log("Index QoS Data:", qosData);
+
         const combinedData = this.combineData(mainChartData, qosData);
 
         return combinedData;

@@ -67,3 +67,11 @@ export function ParseDateToUtc(dt: string | number): Date {
     // Convert to UTC by creating a new Date object using the UTC values from the original date
     return new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), date.getHours(), date.getMinutes(), date.getSeconds()));
 }
+
+export function DateToISOString(date: Date | string | null): string {
+    const dateString = (date + "").toLowerCase();
+    if (!date || ["null", "0", "undefined", "nan", ""].includes(dateString)) {
+        throw new Error("Invalid date value: " + date);
+    }
+    return new Date(date).toISOString();
+}

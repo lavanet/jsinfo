@@ -5,7 +5,7 @@ import { QueryGetJsinfoReadDbInstance } from '../queryDb';
 import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import * as JsinfoProviderAgrSchema from '../../schemas/jsinfoSchema/providerRelayPaymentsAgregation';
 import { sql, desc, gt, and, lt, eq, inArray } from "drizzle-orm";
-import { FormatDateItems } from '../utils/queryDateUtils';
+import { DateToISOString, FormatDateItems } from '../utils/queryDateUtils';
 import { RequestHandlerBase } from '../classes/RequestHandlerBase';
 import { GetAndValidateSpecIdFromRequest, GetDataLength } from '../utils/queryUtils';
 
@@ -149,16 +149,16 @@ class SpecChartsData extends RequestHandlerBase<SpecChartResponse> {
             qosAvailabilityAvg: sql<number>`SUM(COALESCE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.qosAvailabilityAvg}, 0) * COALESCE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum}, 0)) / NULLIF(SUM(COALESCE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum}, 0)), 0)`,
             qosLatencyAvg: sql<number>`SUM(COALESCE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.qosLatencyAvg}, 0) * COALESCE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum}, 0)) / NULLIF(SUM(COALESCE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum}, 0)), 0)`,
             qosSyncAvg: sql<number>`SUM(COALESCE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.qosSyncAvg}, 0) * COALESCE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum}, 0)) / NULLIF(SUM(COALESCE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum}, 0)), 0)`,
-        }).from(JsinfoProviderAgrSchema.aggHourlyRelayPayments)
+        }).from(JsinfoProviderAgrSchema.aggDailyRelayPayments)
+            .groupBy(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday)
             .where(and(
                 and(
                     gt(sql<Date>`DATE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday})`, sql<Date>`${from}`),
                     lt(sql<Date>`DATE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday})`, sql<Date>`${to}`)
                 ),
-                eq(JsinfoProviderAgrSchema.aggHourlyRelayPayments.specId, this.spec)
+                eq(JsinfoProviderAgrSchema.aggDailyRelayPayments.specId, this.spec)
             ))
-            .groupBy(sql`mydate`)
-            .orderBy(sql`mydate DESC`);
+            .orderBy(desc(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday));
 
         // Verify and format the data
         monthlyData.forEach(item => {
@@ -179,7 +179,7 @@ class SpecChartsData extends RequestHandlerBase<SpecChartResponse> {
             const qos = Math.cbrt(item.qosSyncAvg * item.qosAvailabilityAvg * item.qosLatencyAvg);
 
             formatedData.push({
-                date: item.date,
+                date: DateToISOString(item.date),
                 qos: qos,
                 qosSyncAvg: item.qosSyncAvg,
                 qosAvailabilityAvg: item.qosAvailabilityAvg,
@@ -198,6 +198,7 @@ class SpecChartsData extends RequestHandlerBase<SpecChartResponse> {
             cuSum: sql<number>`SUM(COALESCE(NULLIF(${JsinfoProviderAgrSchema.aggDailyRelayPayments.cuSum}, 0), 0))`,
             relaySum: sql<number>`SUM(COALESCE(NULLIF(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum}, 0), 0))`,
         }).from(JsinfoProviderAgrSchema.aggDailyRelayPayments)
+            .groupBy(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday)
             .where(and(
                 and(
                     gt(sql<Date>`DATE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday})`, sql<Date>`${from}`),
@@ -208,7 +209,7 @@ class SpecChartsData extends RequestHandlerBase<SpecChartResponse> {
 
         allProvidersMonthlyData.forEach(item => {
             formatedData.push({
-                date: item.date!,
+                date: DateToISOString(item.date),
                 cus: item.cuSum,
                 relays: item.relaySum,
                 providerOrMoniker: "All Providers"
@@ -222,6 +223,7 @@ class SpecChartsData extends RequestHandlerBase<SpecChartResponse> {
             relaySum: sql<number>`SUM(COALESCE(NULLIF(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum}, 0), 0))`,
             provider: JsinfoProviderAgrSchema.aggDailyRelayPayments.provider
         }).from(JsinfoProviderAgrSchema.aggDailyRelayPayments)
+            .groupBy(JsinfoProviderAgrSchema.aggDailyRelayPayments.provider, JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday)
             .where(and(
                 and(
                     gt(sql<Date>`DATE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday})`, sql<Date>`${from}`),
@@ -237,7 +239,7 @@ class SpecChartsData extends RequestHandlerBase<SpecChartResponse> {
             let item_provider = item.provider!;
             let providerOrMoniker = top10Providers[item_provider] ? top10Providers[item_provider] : item.provider;
             formatedData.push({
-                date: item.date!,
+                date: DateToISOString(item.date),
                 cus: item.cuSum,
                 relays: item.relaySum,
                 providerOrMoniker: providerOrMoniker
@@ -250,10 +252,11 @@ class SpecChartsData extends RequestHandlerBase<SpecChartResponse> {
     private combineData(specMainChartData: SpecCuRelayData[], specQosData: SpecQosData[]): SpecChartResponse[] {
         // Group the specMainChartData by date
         const groupedData: { [key: string]: SpecChartCuRelay[] } = specMainChartData.reduce((acc, item) => {
-            if (!acc[item.date]) {
-                acc[item.date] = [];
+            const dateKey = DateToISOString(item.date);
+            if (!acc[dateKey]) {
+                acc[dateKey] = [];
             }
-            acc[item.date].push({
+            acc[dateKey].push({
                 provider: item.providerOrMoniker,
                 cus: item.cus,
                 relays: item.relays

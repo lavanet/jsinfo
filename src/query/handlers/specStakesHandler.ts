@@ -107,6 +107,10 @@ export async function SpecStakesPaginatedHandler(request: FastifyRequest, reply:
         cuSum90Days: sql<number>`SUM(${JsinfoProviderAgrSchema.aggDailyRelayPayments.cuSum})`,
         relaySum90Days: sql<number>`SUM(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum})`,
     }).from(JsinfoSchema.providerStakes)
+        .groupBy(JsinfoSchema.providerStakes.stake, JsinfoSchema.providerStakes.appliedHeight, JsinfoSchema.providerStakes.geolocation,
+            JsinfoSchema.providerStakes.addons, JsinfoSchema.providerStakes.extensions, JsinfoSchema.providerStakes.status,
+            JsinfoSchema.providerStakes.provider, JsinfoSchema.providerStakes.specId, JsinfoSchema.providers.moniker,
+            JsinfoSchema.providerStakes.blockId)
         .leftJoin(JsinfoSchema.providers, eq(JsinfoSchema.providerStakes.provider, JsinfoSchema.providers.address))
         .leftJoin(JsinfoProviderAgrSchema.aggDailyRelayPayments, and(
             eq(JsinfoSchema.providerStakes.provider, JsinfoProviderAgrSchema.aggDailyRelayPayments.provider),
@@ -116,7 +120,6 @@ export async function SpecStakesPaginatedHandler(request: FastifyRequest, reply:
             )
         ))
         .where(eq(JsinfoSchema.providerStakes.specId, spec))
-        .groupBy(JsinfoSchema.providerStakes.provider, JsinfoSchema.providerStakes.specId, JsinfoSchema.providers.moniker)
         .orderBy(desc(JsinfoSchema.providerStakes.stake))
         .offset(0).limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
 
@@ -135,7 +138,7 @@ export async function SpecStakesPaginatedHandler(request: FastifyRequest, reply:
             )
         ))
         .where(eq(JsinfoSchema.providerStakes.specId, spec))
-        .groupBy(JsinfoSchema.providerStakes.provider, JsinfoSchema.providerStakes.specId, JsinfoSchema.providers.moniker)
+        .groupBy(JsinfoSchema.providerStakes.provider, JsinfoSchema.providerStakes.specId, JsinfoSchema.providers.moniker, JsinfoSchema.providerStakes.stake)
         .orderBy(desc(JsinfoSchema.providerStakes.stake))
         .offset(0).limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
 

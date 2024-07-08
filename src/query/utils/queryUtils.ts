@@ -2,10 +2,9 @@
 
 import { FastifyReply, FastifyRequest } from "fastify";
 import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from "../queryDb";
-import * as JsinfoSchema from '../../schemas/jsinfoSchema';
+import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import { eq } from "drizzle-orm";
 import { WriteErrorToFastifyReply } from "./queryServerUtils";
-import { parseISO } from 'date-fns';
 
 export function CompareValues(aValue: string | number | null, bValue: string | number | null, direction: 'ascending' | 'descending') {
     // Check if direction is 'ascending' or 'descending'
@@ -35,10 +34,36 @@ export function CompareValues(aValue: string | number | null, bValue: string | n
     }
 }
 
-export const IsNotNullAndNotZero = (value: number | null) => value !== null && value !== 0;
-
 export function CSVEscape(str: string): string {
     return `"${str.replace(/"/g, '""')}"`;
+}
+
+let GetAndValidateConsumerAddressFromRequest_cache = {};
+
+export async function GetAndValidateConsumerAddressFromRequest(request: FastifyRequest, reply: FastifyReply): Promise<string> {
+    const { addr } = request.params as { addr: string };
+    if (addr.length != 44 || !addr.startsWith('lava@')) {
+        WriteErrorToFastifyReply(reply, 'Bad consumer address');
+        return '';
+    }
+
+    let res = GetAndValidateConsumerAddressFromRequest_cache[addr];
+    if (res) {
+        return addr;
+    }
+
+    await QueryCheckJsinfoReadDbInstance();
+
+    res = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.consumers).where(eq(JsinfoSchema.consumers.address, addr)).limit(1);
+
+    if (res.length != 1) {
+        WriteErrorToFastifyReply(reply, 'Consumer does not exist');
+        return '';
+    }
+
+    GetAndValidateConsumerAddressFromRequest_cache[addr] = true;
+
+    return addr;
 }
 
 let GetAndValidateProviderAddressFromRequest_cache = {};
@@ -99,21 +124,6 @@ export async function GetAndValidateSpecIdFromRequest(request: FastifyRequest, r
     return upSpecId;
 }
 
-export function GetNestedValue(obj: any, keyPath: string): string | number | null {
-    const keys = keyPath.split('.');
-    let value = obj;
-
-    for (let key of keys) {
-        if (value && value[key] !== undefined) {
-            value = value[key];
-        } else {
-            return null;
-        }
-    }
-
-    return value;
-}
-
 export function GetDataLengthForPrints(data: any): string {
     if (data == null) return '<null>';
     if (Array.isArray(data)) {
@@ -136,35 +146,4 @@ export function GetDataLength(data: any): number {
 
 export function GetTypeAsString(obj: any): string {
     return Object.prototype.toString.call(obj).replace(/^\[object\s|\]$/g, '');
-}
-
-export function SafeSlice<T>(data: T[], start: number, end: number, defaultSize: number): T[] {
-    if (start < 0 || end < 0) {
-        start = 0;
-        end = defaultSize;
-    }
-
-    if (start > data.length || end > data.length) {
-        start = Math.max(0, data.length - defaultSize);
-        end = data.length;
-    }
-
-    return data.slice(start, end);
-}
-
-export function ParseDateToUtc(dt: string | number): Date {
-    let date: Date;
-
-    if (typeof dt === 'number' || (typeof dt === 'string' && /^\d+$/.test(dt))) {
-        // Convert Unix timestamp to milliseconds and create a Date object
-        date = new Date(typeof dt === 'string' ? parseInt(dt, 10) * 1000 : dt * 1000);
-    } else if (typeof dt === 'string') {
-        // Parse ISO string to Date
-        date = parseISO(dt);
-    } else {
-        throw new Error('Unsupported date type');
-    }
-
-    // Convert to UTC by creating a new Date object using the UTC values from the original date
-    return new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), date.getHours(), date.getMinutes(), date.getSeconds()));
 }

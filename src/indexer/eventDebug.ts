@@ -3,7 +3,7 @@
 import { GetRpcBlock, GetRpcTxs, GetRpcBlockResultEvents } from "./lavaBlock";
 import { RpcConnection } from "../utils";
 import { ProcessOneEvent } from "./eventProcessor";
-import * as JsinfoSchema from '../schemas/jsinfoSchema';
+import * as JsinfoSchema from '../schemas/jsinfoSchema/jsinfoSchema';
 import { LavaBlock } from "./types";
 
 const EVENT_DEBUG_EXECUTE_PROCESS_ONE_EVENT = true;

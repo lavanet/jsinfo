@@ -2,9 +2,9 @@
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryCheckJsinfoReadDbInstance, GetLatestBlock, QueryGetJsinfoReadDbInstance } from '../queryDb';
-import * as JsinfoSchema from '../../schemas/jsinfoSchema';
-import { sql, desc, gt, and, inArray } from "drizzle-orm";
-import { FormatDates } from '../utils/queryDateUtils';
+import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
+import * as JsinfoProviderAgrSchema from '../../schemas/jsinfoSchema/providerRelayPaymentsAgregation';
+import { sql, desc, gt } from "drizzle-orm";
 import { logger } from '../../utils';
 
 export const IndexHandlerOpts: RouteShorthandOptions = {
@@ -42,46 +42,42 @@ export const IndexHandlerOpts: RouteShorthandOptions = {
 
 export async function IndexHandler(request: FastifyRequest, reply: FastifyReply) {
     await QueryCheckJsinfoReadDbInstance()
-    //
+
     const { latestHeight, latestDatetime } = await GetLatestBlock()
     logger.info(`IndexHandler:: Latest block: ${latestHeight}, ${latestDatetime}`)
 
-    //
     // Get total payments and more
     let cuSum = 0
     let relaySum = 0
     let rewardSum = 0
     let res = await QueryGetJsinfoReadDbInstance().select({
-        cuSum: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.cuSum})`,
-        relaySum: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.relaySum})`,
-        rewardSum: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.rewardSum})`
-    }).from(JsinfoSchema.aggHourlyrelayPayments)
+        cuSum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggAllTimeRelayPayments.cuSum})`,
+        relaySum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggAllTimeRelayPayments.relaySum})`,
+        rewardSum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggAllTimeRelayPayments.rewardSum})`
+    }).from(JsinfoProviderAgrSchema.aggAllTimeRelayPayments)
     if (res.length != 0) {
         cuSum = res[0].cuSum
         relaySum = res[0].relaySum
         rewardSum = res[0].rewardSum
     }
-    // logger.info(`Total payments: cuSum=${cuSum}, relaySum=${relaySum}, rewardSum=${rewardSum}`)
 
-    //
     // Get total provider stake
     let stakeSum = 0
     let stakeSumQueryRes = await QueryGetJsinfoReadDbInstance().select({
-        stakeSum: sql<number>`sum(${JsinfoSchema.providerStakes.stake})`,
+        stakeSum: sql<number>`SUM(${JsinfoSchema.providerStakes.stake})`,
     }).from(JsinfoSchema.providerStakes)
     if (stakeSumQueryRes.length != 0) {
         stakeSum = stakeSumQueryRes[0].stakeSum
     }
 
-    //
     // Get top chains
     let topSpecs = await QueryGetJsinfoReadDbInstance().select({
-        chainId: JsinfoSchema.aggHourlyrelayPayments.specId,
-        relaySum: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.relaySum})`,
-    }).from(JsinfoSchema.aggHourlyrelayPayments).
-        groupBy(sql`${JsinfoSchema.aggHourlyrelayPayments.specId}`).
-        where(gt(sql<Date>`DATE(${JsinfoSchema.aggHourlyrelayPayments.datehour})`, sql<Date>`now() - interval '30 day'`)).
-        orderBy(desc(sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.relaySum})`))
+        chainId: JsinfoProviderAgrSchema.aggDailyRelayPayments.specId,
+        relaySum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum}) as relaySum`,
+    }).from(JsinfoProviderAgrSchema.aggDailyRelayPayments).
+        groupBy(sql`${JsinfoProviderAgrSchema.aggDailyRelayPayments.specId}`).
+        where(gt(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday, sql<Date>`now() - interval '30 day'`)).
+        orderBy(sql`relaySum DESC`)
     let getChains: string[] = []
     topSpecs.map((chain) => {
         if (getChains.length < 8) {

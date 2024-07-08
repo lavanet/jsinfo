@@ -2,13 +2,12 @@
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryGetJsinfoReadDbInstance, QueryCheckJsinfoReadDbInstance } from '../queryDb';
-import * as JsinfoSchema from '../../schemas/jsinfoSchema';
-import { asc, desc, eq, gte, gt } from "drizzle-orm";
+import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
+import { asc, desc, eq, sql } from "drizzle-orm";
 import { Pagination, ParsePaginationFromString } from '../utils/queryPagination';
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '../queryConsts';
-import path from 'path';
-import { CSVEscape, CompareValues, GetDataLength, SafeSlice } from '../utils/queryUtils';
-import { CachedDiskDbDataFetcher } from '../classes/CachedDiskDbDataFetcher';
+import { CSVEscape } from '../utils/queryUtils';
+import { RequestHandlerBase } from '../classes/RequestHandlerBase';
 
 export interface EventsEventsResponse {
     id: number | null;
@@ -33,7 +32,8 @@ export interface EventsEventsResponse {
     tx: string | null;
     fulltext: string | null;
 }
-export const EventsEventsCachedHandlerOpts: RouteShorthandOptions = {
+
+export const EventsEventsPaginatedHandlerOpts: RouteShorthandOptions = {
     schema: {
         response: {
             200: {
@@ -73,8 +73,7 @@ export const EventsEventsCachedHandlerOpts: RouteShorthandOptions = {
         }
     }
 };
-
-class EventsEventsData extends CachedDiskDbDataFetcher<EventsEventsResponse> {
+class EventsEventsData extends RequestHandlerBase<EventsEventsResponse> {
 
     constructor() {
         super("EventsEventsData");
@@ -84,67 +83,11 @@ class EventsEventsData extends CachedDiskDbDataFetcher<EventsEventsResponse> {
         return EventsEventsData.GetInstanceBase();
     }
 
-    protected getCacheFilePathImpl(): string {
-        return path.join(this.cacheDir, 'EventsEventsHandlerData');
-    }
-
     protected getCSVFileNameImpl(): string {
         return `EventsData.csv`;
     }
 
-    protected isSinceDBFetchEnabled(): boolean {
-        return true;
-    }
-
-    protected sinceUniqueField(): string {
-        return "id";
-    }
-
-    protected async fetchDataFromDb(): Promise<EventsEventsResponse[]> {
-        await QueryCheckJsinfoReadDbInstance()
-
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-        const blockHeightQuery = await QueryGetJsinfoReadDbInstance()
-            .select()
-            .from(JsinfoSchema.blocks)
-            .where(gte(JsinfoSchema.blocks.datetime, thirtyDaysAgo))
-            .orderBy(asc(JsinfoSchema.blocks.datetime))
-            .limit(1);
-
-        const minBlockHeight = blockHeightQuery[0].height || 0;
-
-        const eventsRes = await QueryGetJsinfoReadDbInstance()
-            .select()
-            .from(JsinfoSchema.events)
-            .leftJoin(JsinfoSchema.blocks, eq(JsinfoSchema.events.blockId, JsinfoSchema.blocks.height))
-            .leftJoin(JsinfoSchema.providers, eq(JsinfoSchema.events.provider, JsinfoSchema.providers.address))
-            .where(gte(JsinfoSchema.events.blockId, minBlockHeight))
-            .orderBy(desc(JsinfoSchema.events.id))
-            .offset(0)
-            .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
-
-        if (GetDataLength(eventsRes) === 0) {
-            this.setDataIsEmpty();
-            return [];
-        }
-
-        const flattenedEvents = eventsRes.map(event => ({
-            ...event.events,
-            moniker: event.providers?.moniker !== undefined ? event.providers?.moniker : null,
-            datetime: event.blocks?.datetime?.toISOString() ?? null
-        }));
-
-        const highestId = eventsRes[0]?.events.id;
-        if (highestId !== undefined) {
-            this.setSince(highestId);
-        }
-
-        return flattenedEvents;
-    }
-
-    protected async fetchDataFromDbSinceFlow(since: number | string): Promise<EventsEventsResponse[]> {
+    protected async fetchAllRecords(): Promise<EventsEventsResponse[]> {
         await QueryCheckJsinfoReadDbInstance()
 
         const eventsRes = await QueryGetJsinfoReadDbInstance()
@@ -152,7 +95,6 @@ class EventsEventsData extends CachedDiskDbDataFetcher<EventsEventsResponse> {
             .from(JsinfoSchema.events)
             .leftJoin(JsinfoSchema.blocks, eq(JsinfoSchema.events.blockId, JsinfoSchema.blocks.height))
             .leftJoin(JsinfoSchema.providers, eq(JsinfoSchema.events.provider, JsinfoSchema.providers.address))
-            .where(gt(JsinfoSchema.events.id, Number(since)))
             .orderBy(desc(JsinfoSchema.events.id))
             .offset(0)
             .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
@@ -163,19 +105,26 @@ class EventsEventsData extends CachedDiskDbDataFetcher<EventsEventsResponse> {
             datetime: event.blocks?.datetime?.toISOString() ?? null
         }));
 
-        const highestId = eventsRes[0]?.events.id;
-        if (highestId !== undefined) {
-            this.setSince(highestId);
-        }
-
         return flattenedEvents;
     }
 
-    public async getPaginatedItemsImpl(
-        data: EventsEventsResponse[],
-        pagination: Pagination | null
-    ): Promise<EventsEventsResponse[] | null> {
-        const defaultSortKey = "datetime";
+    protected async fetchRecordCountFromDb(): Promise<number> {
+        await QueryCheckJsinfoReadDbInstance();
+
+        const countResult = await QueryGetJsinfoReadDbInstance()
+            .select({
+                count: sql<number>`COUNT(*)`
+            })
+            .from(JsinfoSchema.events)
+            .leftJoin(JsinfoSchema.blocks, eq(JsinfoSchema.events.blockId, JsinfoSchema.blocks.height))
+            .leftJoin(JsinfoSchema.providers, eq(JsinfoSchema.events.provider, JsinfoSchema.providers.address))
+            .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
+
+        return countResult[0].count;
+    }
+
+    public async fetchPaginatedRecords(pagination: Pagination | null): Promise<EventsEventsResponse[]> {
+        const defaultSortKey = "id";
 
         let finalPagination: Pagination;
 
@@ -192,50 +141,66 @@ class EventsEventsData extends CachedDiskDbDataFetcher<EventsEventsResponse> {
             finalPagination.sortKey = defaultSortKey;
         }
 
-        // Validate sortKey
-        const validKeys = [
-            "id",
-            "eventType",
-            "t1",
-            "t2",
-            "t3",
-            "b1",
-            "b2",
-            "b3",
-            "i1",
-            "i2",
-            "i3",
-            "r1",
-            "r2",
-            "r3",
-            "provider",
-            "moniker",
-            "consumer",
-            "blockId",
-            "datetime",
-            "tx",
-            "fulltext"
-        ];
+        const keyToColumnMap = {
+            id: JsinfoSchema.events.id,
+            eventType: JsinfoSchema.events.eventType,
+            t1: JsinfoSchema.events.t1,
+            t2: JsinfoSchema.events.t2,
+            t3: JsinfoSchema.events.t3,
+            b1: JsinfoSchema.events.b1,
+            b2: JsinfoSchema.events.b2,
+            b3: JsinfoSchema.events.b3,
+            i1: JsinfoSchema.events.i1,
+            i2: JsinfoSchema.events.i2,
+            i3: JsinfoSchema.events.i3,
+            r1: JsinfoSchema.events.r1,
+            r2: JsinfoSchema.events.r2,
+            r3: JsinfoSchema.events.r3,
+            provider: JsinfoSchema.events.provider,
+            moniker: JsinfoSchema.providers.moniker,
+            consumer: JsinfoSchema.events.consumer,
+            blockId: JsinfoSchema.events.blockId,
+            datetime: JsinfoSchema.blocks.datetime,
+            tx: JsinfoSchema.events.tx,
+            fulltext: JsinfoSchema.events.fulltext
+        };
+
+        const validKeys = Object.keys(keyToColumnMap);
+
         if (!validKeys.includes(finalPagination.sortKey)) {
             const trimmedSortKey = finalPagination.sortKey.substring(0, 500);
             throw new Error(`Invalid sort key: ${trimmedSortKey}`);
         }
 
-        // Apply sorting
-        data.sort((a, b) => {
-            const sortKey = finalPagination.sortKey as keyof EventsEventsResponse;
-            const aValue = a[sortKey];
-            const bValue = b[sortKey];
-            return CompareValues(aValue, bValue, finalPagination.direction);
-        });
+        await QueryCheckJsinfoReadDbInstance()
 
-        // Apply pagination
-        const start = (finalPagination.page - 1) * finalPagination.count;
-        const end = finalPagination.page * finalPagination.count;
-        return SafeSlice(data, start, end, JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE);
+        const sortColumn = keyToColumnMap[finalPagination.sortKey] || JsinfoSchema.events.id; // Default to id if not found
+
+        // Determine order direction
+        const orderFunction = finalPagination.direction === 'ascending' ? asc : desc;
+
+        // Calculate offset for pagination
+        const offset = (finalPagination.page - 1) * finalPagination.count;
+
+        const eventsRes = await QueryGetJsinfoReadDbInstance()
+            .select()
+            .from(JsinfoSchema.events)
+            .leftJoin(JsinfoSchema.blocks, eq(JsinfoSchema.events.blockId, JsinfoSchema.blocks.height))
+            .leftJoin(JsinfoSchema.providers, eq(JsinfoSchema.events.provider, JsinfoSchema.providers.address))
+            .orderBy(orderFunction(sortColumn))
+            .offset(offset)
+            .limit(finalPagination.count);
+
+        const flattenedEvents = eventsRes.map(event => ({
+            ...event.events,
+            moniker: event.providers?.moniker !== undefined ? event.providers?.moniker : null,
+            datetime: event.blocks?.datetime?.toISOString() ?? null
+        }));
+
+        return flattenedEvents;
     }
 
-    public async getCSVImpl(data: EventsEventsResponse[]): Promise<string> {
+    protected async convertRecordsToCsv(data: EventsEventsResponse[]): Promise<string> {
         const columns = [
             { key: "provider", name: "Provider" },
             { key: "moniker", name: "Moniker" },
@@ -273,14 +238,14 @@ class EventsEventsData extends CachedDiskDbDataFetcher<EventsEventsResponse> {
     }
 }
 
-export async function EventsEventsCachedHandler(request: FastifyRequest, reply: FastifyReply) {
-    return await EventsEventsData.GetInstance().getPaginatedItemsCachedHandler(request, reply)
+export async function EventsEventsPaginatedHandler(request: FastifyRequest, reply: FastifyReply) {
+    return await EventsEventsData.GetInstance().PaginatedRecordsRequestHandler(request, reply)
 }
 
-export async function EventsEventsItemCountRawHandler(request: FastifyRequest, reply: FastifyReply) {
-    return await EventsEventsData.GetInstance().getTotalItemCountRawHandler(request, reply)
+export async function EventsEventsItemCountPaginatiedHandler(request: FastifyRequest, reply: FastifyReply) {
+    return await EventsEventsData.GetInstance().getTotalItemCountPaginatiedHandler(request, reply)
 }
 
 export async function EventsEventsCSVRawHandler(request: FastifyRequest, reply: FastifyReply) {
-    return await EventsEventsData.GetInstance().getCSVRawHandler(request, reply)
+    return await EventsEventsData.GetInstance().CSVRequestHandler(request, reply)
 }

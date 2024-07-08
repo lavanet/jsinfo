@@ -3,13 +3,12 @@
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../queryDb';
-import * as JsinfoSchema from '../../schemas/jsinfoSchema';
-import { and, desc, eq, gt, gte } from "drizzle-orm";
+import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
+import { asc, desc, eq, gte, sql, and } from "drizzle-orm";
 import { Pagination, ParsePaginationFromString } from '../utils/queryPagination';
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '../queryConsts';
-import path from 'path';
-import { CSVEscape, CompareValues, GetAndValidateProviderAddressFromRequest, GetDataLength, GetNestedValue, SafeSlice } from '../utils/queryUtils';
-import { CachedDiskDbDataFetcher } from '../classes/CachedDiskDbDataFetcher';
+import { CSVEscape, GetAndValidateProviderAddressFromRequest } from '../utils/queryUtils';
+import { RequestHandlerBase } from '../classes/RequestHandlerBase';
 
 export type ProviderRewardsResponse = {
     relay_payments: {
@@ -33,7 +32,7 @@ export type ProviderRewardsResponse = {
     blocks: { datetime: Date | null; height: number | null } | null
 };
 
-export const ProviderRewardsCachedHandlerOpts: RouteShorthandOptions = {
+export const ProviderRewardsPaginatedHandlerOpts: RouteShorthandOptions = {
     schema: {
         response: {
             200: {
@@ -120,7 +119,7 @@ export const ProviderRewardsCachedHandlerOpts: RouteShorthandOptions = {
 };
 
 
-class ProviderRewardsData extends CachedDiskDbDataFetcher<ProviderRewardsResponse> {
+class ProviderRewardsData extends RequestHandlerBase<ProviderRewardsResponse> {
     private addr: string;
 
     constructor(addr: string) {
@@ -132,80 +131,51 @@ class ProviderRewardsData extends CachedDiskDbDataFetcher<ProviderRewardsRespons
         return ProviderRewardsData.GetInstanceBase(addr);
     }
 
-    protected getCacheFilePathImpl(): string {
-        return path.join(this.cacheDir, `ProviderRewardsData_${this.addr}`);
-    }
-
     protected getCSVFileNameImpl(): string {
         return `ProviderRewards_${this.addr}.csv`;
     }
 
-    protected isSinceDBFetchEnabled(): boolean {
-        return true;
-    }
-
-    protected sinceUniqueField(): string {
-        return "id";
-    }
-
-    protected async fetchDataFromDb(): Promise<ProviderRewardsResponse[]> {
+    protected async fetchAllRecords(): Promise<ProviderRewardsResponse[]> {
         await QueryCheckJsinfoReadDbInstance();
 
         let thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
+        console.log("dasd", this.addr);
+
         const paymentsRes = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.relayPayments).
             leftJoin(JsinfoSchema.blocks, eq(JsinfoSchema.relayPayments.blockId, JsinfoSchema.blocks.height)).
             where(
                 and(
-                    eq(JsinfoSchema.relayPayments.provider, this.addr),
+                    eq(JsinfoSchema.relayPayments.provider, this.addr), // this line is slow
                     gte(JsinfoSchema.relayPayments.datetime, thirtyDaysAgo)
                 )).
             orderBy(desc(JsinfoSchema.relayPayments.id)).
             offset(0).
             limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION)
 
-        if (GetDataLength(paymentsRes) === 0) {
-            this.setDataIsEmpty();
-            return [];
-        }
-
-        const highestId = paymentsRes[0]?.relay_payments.id;
-        if (highestId !== undefined) {
-            this.setSince(highestId);
-        }
+        console.log("dasd12121", paymentsRes);
 
         return paymentsRes;
     }
 
-    protected async fetchDataFromDbSinceFlow(since: number | string): Promise<ProviderRewardsResponse[]> {
+    protected async fetchRecordCountFromDb(): Promise<number> {
         await QueryCheckJsinfoReadDbInstance();
 
-        const paymentsRes = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.relayPayments).
-            leftJoin(JsinfoSchema.blocks, eq(JsinfoSchema.relayPayments.blockId, JsinfoSchema.blocks.height)).
-            where(
-                and(
-                    eq(JsinfoSchema.relayPayments.provider, this.addr),
-                    gt(JsinfoSchema.relayPayments.id, Number(since))
-                )).
-            orderBy(desc(JsinfoSchema.relayPayments.id)).
-            offset(0).
-            limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION)
+        const countResult = await QueryGetJsinfoReadDbInstance()
+            .select({
+                count: sql<number>`COUNT(*)`
+            })
+            .from(JsinfoSchema.relayPayments)
+            .leftJoin(JsinfoSchema.blocks, eq(JsinfoSchema.relayPayments.blockId, JsinfoSchema.blocks.height))
+            .where(eq(JsinfoSchema.relayPayments.provider, this.addr))
+            .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
 
-        const highestId = paymentsRes[0]?.relay_payments.id;
-        if (highestId !== undefined) {
-            this.setSince(highestId);
-        }
-
-        return paymentsRes;
+        return countResult[0].count;
     }
 
-    public async getPaginatedItemsImpl(
-        data: ProviderRewardsResponse[],
-        pagination: Pagination | null
-    ): Promise<ProviderRewardsResponse[] | null> {
+    public async fetchPaginatedRecords(pagination: Pagination | null): Promise<ProviderRewardsResponse[]> {
         const defaultSortKey = "relay_payments.id";
-
         let finalPagination: Pagination;
 
         if (pagination) {
@@ -216,33 +186,46 @@ class ProviderRewardsData extends CachedDiskDbDataFetcher<ProviderRewardsRespons
             );
         }
 
-        // If sortKey is null, set it to the defaultSortKey
         if (finalPagination.sortKey === null) {
             finalPagination.sortKey = defaultSortKey;
         }
 
-        // Validate sortKey
-        const validKeys = ["relay_payments.specId", "relay_payments.blockId", "blocks.datetime", "relay_payments.consumer", "relay_payments.relays", "relay_payments.cu", "relay_payments.qosSync", "relay_payments.qosSyncExc"];
-        if (!validKeys.includes(finalPagination.sortKey)) {
+        const keyToColumnMap = {
+            "relay_payments.id": JsinfoSchema.relayPayments.id,
+            "relay_payments.specId": JsinfoSchema.relayPayments.specId,
+            "relay_payments.blockId": JsinfoSchema.relayPayments.blockId,
+            "blocks.datetime": JsinfoSchema.blocks.datetime,
+            "relay_payments.consumer": JsinfoSchema.relayPayments.consumer,
+            "relay_payments.relays": JsinfoSchema.relayPayments.relays,
+            "relay_payments.cu": JsinfoSchema.relayPayments.cu,
+            "relay_payments.qosSync": JsinfoSchema.relayPayments.qosSync,
+            "relay_payments.qosSyncExc": JsinfoSchema.relayPayments.qosSyncExc
+        };
+
+        if (!Object.keys(keyToColumnMap).includes(finalPagination.sortKey)) {
             const trimmedSortKey = finalPagination.sortKey.substring(0, 500);
             throw new Error(`Invalid sort key: ${trimmedSortKey}`);
         }
 
-        // Apply sorting
-        data.sort((a, b) => {
-            const sortKey = finalPagination.sortKey as string;
-            const aValue = GetNestedValue(a, sortKey);
-            const bValue = GetNestedValue(b, sortKey);
-            return CompareValues(aValue, bValue, finalPagination.direction);
-        });
+        await QueryCheckJsinfoReadDbInstance();
 
-        // Apply pagination
-        const start = (finalPagination.page - 1) * finalPagination.count;
-        const end = finalPagination.page * finalPagination.count;
-        return SafeSlice(data, start, end, JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE);
+        const sortColumn = keyToColumnMap[finalPagination.sortKey];
+        const orderFunction = finalPagination.direction === 'ascending' ? asc : desc;
+
+        console.log("sortColu111mn: ", sortColumn);
+        const paymentsRes = await QueryGetJsinfoReadDbInstance()
+            .select()
+            .from(JsinfoSchema.relayPayments)
+            .leftJoin(JsinfoSchema.blocks, eq(JsinfoSchema.relayPayments.blockId, JsinfoSchema.blocks.height))
+            .orderBy(orderFunction(sortColumn))
+            .offset((finalPagination.page - 1) * finalPagination.count)
+            .limit(finalPagination.count);
+        console.log("sortCo222lumn: ", sortColumn);
+
+        return paymentsRes;
     }
 
-    public async getCSVImpl(data: ProviderRewardsResponse[]): Promise<string> {
+    protected async convertRecordsToCsv(data: ProviderRewardsResponse[]): Promise<string> {
         const columns = [
             { key: "relay_payments.specId", name: "Spec" },
             { key: "relay_payments.blockId", name: "Block" },
@@ -268,20 +251,20 @@ class ProviderRewardsData extends CachedDiskDbDataFetcher<ProviderRewardsRespons
     }
 }
 
-export async function ProviderRewardsCachedHandler(request: FastifyRequest, reply: FastifyReply) {
+export async function ProviderRewardsPaginatedHandler(request: FastifyRequest, reply: FastifyReply) {
     let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
     if (addr === '') {
         return null;
     }
-    return await ProviderRewardsData.GetInstance(addr).getPaginatedItemsCachedHandler(request, reply)
+    return await ProviderRewardsData.GetInstance(addr).PaginatedRecordsRequestHandler(request, reply)
 }
 
-export async function ProviderRewardsItemCountRawHandler(request: FastifyRequest, reply: FastifyReply) {
+export async function ProviderRewardsItemCountPaginatiedHandler(request: FastifyRequest, reply: FastifyReply) {
     let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
     if (addr === '') {
         return reply;
     }
-    return await ProviderRewardsData.GetInstance(addr).getTotalItemCountRawHandler(request, reply)
+    return await ProviderRewardsData.GetInstance(addr).getTotalItemCountPaginatiedHandler(request, reply)
 }
 
 export async function ProviderRewardsCSVRawHandler(request: FastifyRequest, reply: FastifyReply) {
@@ -289,5 +272,5 @@ export async function ProviderRewardsCSVRawHandler(request: FastifyRequest, repl
     if (addr === '') {
         return reply;
     }
-    return await ProviderRewardsData.GetInstance(addr).getCSVRawHandler(request, reply)
+    return await ProviderRewardsData.GetInstance(addr).CSVRequestHandler(request, reply)
 }

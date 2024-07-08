@@ -134,6 +134,20 @@
       "when": 1718755118266,
       "tag": "0018_petite_vindicator",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "5",
+      "when": 1720365329562,
+      "tag": "0019_wakeful_mystique",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "5",
+      "when": 1720445752667,
+      "tag": "0020_real_black_widow",
+      "breakpoints": true
     }
   ]
 }

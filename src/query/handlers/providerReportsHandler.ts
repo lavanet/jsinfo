@@ -3,13 +3,12 @@
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../queryDb';
-import * as JsinfoSchema from '../../schemas/jsinfoSchema';
-import { and, desc, eq, gt, gte } from "drizzle-orm";
+import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
+import { asc, desc, eq, gte, sql, and } from "drizzle-orm";
 import { Pagination, ParsePaginationFromString } from '../utils/queryPagination';
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '../queryConsts';
-import path from 'path';
-import { CSVEscape, CompareValues, GetAndValidateProviderAddressFromRequest, GetDataLength, GetNestedValue, SafeSlice } from '../utils/queryUtils';
-import { CachedDiskDbDataFetcher } from '../classes/CachedDiskDbDataFetcher';
+import { CSVEscape, GetAndValidateProviderAddressFromRequest } from '../utils/queryUtils';
+import { RequestHandlerBase } from '../classes/RequestHandlerBase';
 
 export type ProviderReportsResponse = {
     provider_reported: {
@@ -30,7 +29,7 @@ export type ProviderReportsResponse = {
     } | null;
 };
 
-export const ProviderReportsCachedHandlerOpts: RouteShorthandOptions = {
+export const ProviderReportsPaginatedHandlerOpts: RouteShorthandOptions = {
     schema: {
         response: {
             200: {
@@ -98,7 +97,7 @@ export const ProviderReportsCachedHandlerOpts: RouteShorthandOptions = {
     }
 };
 
-class ProviderReportsData extends CachedDiskDbDataFetcher<ProviderReportsResponse> {
+class ProviderReportsData extends RequestHandlerBase<ProviderReportsResponse> {
     private addr: string;
 
     constructor(addr: string) {
@@ -110,23 +109,11 @@ class ProviderReportsData extends CachedDiskDbDataFetcher<ProviderReportsRespons
         return ProviderReportsData.GetInstanceBase(addr);
     }
 
-    protected getCacheFilePathImpl(): string {
-        return path.join(this.cacheDir, `ProviderReportsData_${this.addr}`);
-    }
-
     protected getCSVFileNameImpl(): string {
         return `ProviderReports_${this.addr}.csv`;
     }
 
-    protected isSinceDBFetchEnabled(): boolean {
-        return true;
-    }
-
-    protected sinceUniqueField(): string {
-        return "id";
-    }
-
-    protected async fetchDataFromDb(): Promise<ProviderReportsResponse[]> {
+    protected async fetchAllRecords(): Promise<ProviderReportsResponse[]> {
         await QueryCheckJsinfoReadDbInstance();
 
         let thirtyDaysAgo = new Date();
@@ -137,55 +124,33 @@ class ProviderReportsData extends CachedDiskDbDataFetcher<ProviderReportsRespons
             where(
                 and(
                     eq(JsinfoSchema.providerReported.provider, this.addr),
-                    gte(JsinfoSchema.blocks['datetime'], thirtyDaysAgo)
+                    gte(JsinfoSchema.providerReported.datetime, thirtyDaysAgo)
                 )
             ).
             orderBy(desc(JsinfoSchema.providerReported.id)).
             offset(0).
             limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
 
-        if (GetDataLength(reportsRes) === 0) {
-            this.setDataIsEmpty();
-            return [];
-        }
-
-        const highestId = reportsRes[0]?.provider_reported.id;
-        if (highestId !== undefined) {
-            this.setSince(highestId);
-        }
-
         return reportsRes;
     }
 
-    protected async fetchDataFromDbSinceFlow(since: number | string): Promise<ProviderReportsResponse[]> {
-        await QueryCheckJsinfoReadDbInstance()
+    protected async fetchRecordCountFromDb(): Promise<number> {
+        await QueryCheckJsinfoReadDbInstance();
 
-        let reportsRes = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.providerReported).
-            leftJoin(JsinfoSchema.blocks, eq(JsinfoSchema.providerReported.blockId, JsinfoSchema.blocks.height)).
-            where(
-                and(
-                    eq(JsinfoSchema.providerReported.provider, this.addr),
-                    gt(JsinfoSchema.providerReported.id, Number(since))
-                )
-            ).
-            orderBy(desc(JsinfoSchema.providerReported.id)).
-            offset(0).
-            limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
+        const countResult = await QueryGetJsinfoReadDbInstance()
+            .select({
+                count: sql<number>`COUNT(*)`
+            })
+            .from(JsinfoSchema.providerReported)
+            .leftJoin(JsinfoSchema.blocks, eq(JsinfoSchema.providerReported.blockId, JsinfoSchema.blocks.height))
+            .where(eq(JsinfoSchema.providerReported.provider, this.addr))
+            .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
 
-        const highestId = reportsRes[0]?.provider_reported.id;
-        if (highestId !== undefined) {
-            this.setSince(highestId);
-        }
-
-        return reportsRes;
+        return countResult[0].count;
     }
 
-    public async getPaginatedItemsImpl(
-        data: ProviderReportsResponse[],
-        pagination: Pagination | null
-    ): Promise<ProviderReportsResponse[] | null> {
-        const defaultSortKey = "blocks.datetime";
-
+    public async fetchPaginatedRecords(pagination: Pagination | null): Promise<ProviderReportsResponse[]> {
+        const defaultSortKey = "provider_reported.id";
         let finalPagination: Pagination;
 
         if (pagination) {
@@ -196,33 +161,77 @@ class ProviderReportsData extends CachedDiskDbDataFetcher<ProviderReportsRespons
             );
         }
 
-        // If sortKey is null, set it to the defaultSortKey
         if (finalPagination.sortKey === null) {
             finalPagination.sortKey = defaultSortKey;
         }
 
-        // Validate sortKey
-        const validKeys = ["provider_reported.blockId", "blocks.datetime", "provider_reported.cu", "provider_reported.disconnections", "provider_reported.errors", "provider_reported.project"];
-        if (!validKeys.includes(finalPagination.sortKey)) {
+        const keyToColumnMap = {
+            "provider_reported.id": JsinfoSchema.providerReported.id,
+            "provider_reported.blockId": JsinfoSchema.providerReported.blockId,
+            "blocks.datetime": JsinfoSchema.blocks.datetime,
+            "provider_reported.cu": JsinfoSchema.providerReported.cu,
+            "provider_reported.disconnections": JsinfoSchema.providerReported.disconnections,
+            "provider_reported.errors": JsinfoSchema.providerReported.errors,
+            "provider_reported.project": JsinfoSchema.providerReported.project
+        };
+
+        if (!Object.keys(keyToColumnMap).includes(finalPagination.sortKey)) {
             const trimmedSortKey = finalPagination.sortKey.substring(0, 500);
             throw new Error(`Invalid sort key: ${trimmedSortKey}`);
         }
 
-        // Apply sorting
-        data.sort((a, b) => {
-            const sortKey = finalPagination.sortKey as string;
-            const aValue = GetNestedValue(a, sortKey);
-            const bValue = GetNestedValue(b, sortKey);
-            return CompareValues(aValue, bValue, finalPagination.direction);
-        });
+        await QueryCheckJsinfoReadDbInstance();
 
-        // Apply pagination
-        const start = (finalPagination.page - 1) * finalPagination.count;
-        const end = finalPagination.page * finalPagination.count;
-        return SafeSlice(data, start, end, JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE);
+        const sortColumn = keyToColumnMap[finalPagination.sortKey];
+        const orderFunction = finalPagination.direction === 'ascending' ? asc : desc;
+
+        const reportsRes = await QueryGetJsinfoReadDbInstance()
+            .select({
+                providerReported: {
+                    id: JsinfoSchema.providerReported.id,
+                    provider: JsinfoSchema.providerReported.provider,
+                    blockId: JsinfoSchema.providerReported.blockId,
+                    cu: JsinfoSchema.providerReported.cu,
+                    disconnections: JsinfoSchema.providerReported.disconnections,
+                    epoch: JsinfoSchema.providerReported.epoch,
+                    errors: JsinfoSchema.providerReported.errors,
+                    project: JsinfoSchema.providerReported.project,
+                    datetime: JsinfoSchema.providerReported.datetime,
+                    totalComplaintEpoch: JsinfoSchema.providerReported.totalComplaintEpoch,
+                    tx: JsinfoSchema.providerReported.tx
+                },
+                blocks: {
+                    height: JsinfoSchema.blocks.height,
+                    datetime: JsinfoSchema.blocks.datetime
+                }
+            })
+            .from(JsinfoSchema.providerReported)
+            .leftJoin(JsinfoSchema.blocks, eq(JsinfoSchema.providerReported.blockId, JsinfoSchema.blocks.height))
+            .orderBy(orderFunction(sortColumn))
+            .offset((finalPagination.page - 1) * finalPagination.count)
+            .limit(finalPagination.count);
+
+        return reportsRes.map(row => ({
+            provider_reported: {
+                provider: row.providerReported.provider,
+                blockId: row.providerReported.blockId,
+                cu: row.providerReported.cu,
+                disconnections: row.providerReported.disconnections,
+                epoch: row.providerReported.epoch,
+                errors: row.providerReported.errors,
+                project: row.providerReported.project,
+                datetime: row.blocks?.datetime ?? null,
+                totalComplaintEpoch: row.providerReported.totalComplaintEpoch,
+                tx: row.providerReported.tx
+            },
+            blocks: row.blocks ? {
+                height: row.blocks.height,
+                datetime: row.blocks.datetime
+            } : null
+        }));
     }
 
-    public async getCSVImpl(data: ProviderReportsResponse[]): Promise<string> {
+    protected async convertRecordsToCsv(data: ProviderReportsResponse[]): Promise<string> {
         const columns = [
             { key: "provider_reported.blockId", name: "Block" },
             { key: "blocks.datetime", name: "Time" },
@@ -246,20 +255,20 @@ class ProviderReportsData extends CachedDiskDbDataFetcher<ProviderReportsRespons
     }
 }
 
-export async function ProviderReportsCachedHandler(request: FastifyRequest, reply: FastifyReply) {
+export async function ProviderReportsPaginatedHandler(request: FastifyRequest, reply: FastifyReply) {
     let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
     if (addr === '') {
         return null;
     }
-    return await ProviderReportsData.GetInstance(addr).getPaginatedItemsCachedHandler(request, reply)
+    return await ProviderReportsData.GetInstance(addr).PaginatedRecordsRequestHandler(request, reply)
 }
 
-export async function ProviderReportsItemCountRawHandler(request: FastifyRequest, reply: FastifyReply) {
+export async function ProviderReportsItemCountPaginatiedHandler(request: FastifyRequest, reply: FastifyReply) {
     let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
     if (addr === '') {
         return null;
     }
-    return await ProviderReportsData.GetInstance(addr).getTotalItemCountRawHandler(request, reply)
+    return await ProviderReportsData.GetInstance(addr).getTotalItemCountPaginatiedHandler(request, reply)
 }
 
 export async function ProviderReportsCSVRawHandler(request: FastifyRequest, reply: FastifyReply) {
@@ -267,5 +276,5 @@ export async function ProviderReportsCSVRawHandler(request: FastifyRequest, repl
     if (addr === '') {
         return;
     }
-    return await ProviderReportsData.GetInstance(addr).getCSVRawHandler(request, reply)
+    return await ProviderReportsData.GetInstance(addr).CSVRequestHandler(request, reply)
 }

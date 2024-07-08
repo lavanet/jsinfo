@@ -1,7 +1,7 @@
 // jsinfo/src/indexer.ts
 
 import * as consts from './indexer/indexerConsts';
-import * as JsinfoSchema from "./schemas/jsinfoSchema";
+import * as JsinfoSchema from "./schemas/jsinfoSchema/jsinfoSchema";
 
 import { StargateClient } from "@cosmjs/stargate"
 import { Tendermint37Client } from "@cosmjs/tendermint-rpc";
@@ -14,7 +14,7 @@ import { LavaBlock } from './indexer/types'
 import { UpdateLatestBlockMeta } from './indexer/setLatest'
 import { DoInChunks, logger, BackoffRetry, ConnectToRpc, RpcConnection } from "./utils";
 import { MigrateDb, GetJsinfoDb } from "./dbUtils";
-import { updateAggHourlyPayments } from "./indexer/aggregate";
+import { aggProviderAndConsumerRelayPayments, aggProviderAndConsumerRelayPaymentsSync } from './indexer/agregators/aggProviderAndConsumerRelayPayments';
 
 let static_dbProviders: Map<string, JsinfoSchema.Provider> = new Map()
 let static_dbSpecs: Map<string, JsinfoSchema.Spec> = new Map()
@@ -206,7 +206,7 @@ const indexer = async (): Promise<void> => {
 
     const db = await migrateAndFetchDb();
     await updateBlockMetaInDb(db, rpcConnection);
-    await updateAggHourlyPaymentsCaller(db);
+    await aggProviderAndConsumerRelayPaymentsSync(db);
     await fillUpBackoffRetry(db, rpcConnection);
 }
 
@@ -262,18 +262,6 @@ const fillUpBackoffRetryWTimeout = (db: PostgresJsDatabase, rpcConnection: RpcCo
         fillUpBackoffRetry(db, rpcConnection);
         logger.info(`fillUpBackoffRetryWTimeout function finished at: ${new Date().toISOString()}`);
     }, consts.JSINFO_INDEXER_POLL_MS);
-}
-
-const updateAggHourlyPaymentsCaller = async (db: PostgresJsDatabase) => {
-    logger.info(`updateAggHourlyPaymentsCaller started at: ${new Date().toISOString()}`);
-    try {
-        const start = Date.now();
-        await updateAggHourlyPayments(db);
-        const executionTime = Date.now() - start;
-        logger.info(`Successfully executed db.updateAggHourlyPayments. Execution time: ${executionTime} ms`);
-    } catch (e) {
-        logger.error(`Failed to update aggregate hourly payments. Error: ${(e as Error).message}`);
-    }
 }
 
 // Global variable to store the start time
@@ -339,7 +327,7 @@ const fillUp = async (db: PostgresJsDatabase, rpcConnection: RpcConnection) => {
             } catch (e) {
                 logger.info(`UpdateLatestBlockMeta ${e}`);
             }
-            updateAggHourlyPaymentsCaller(db);
+            aggProviderAndConsumerRelayPayments(db);
         }
     }
     fillUpBackoffRetryWTimeout(db, rpcConnection)

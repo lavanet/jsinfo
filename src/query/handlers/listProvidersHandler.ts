@@ -5,7 +5,7 @@
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryCheckJsinfoReadDbInstance, GetLatestBlock, QueryGetJsinfoReadDbInstance } from '../queryDb';
-import * as JsinfoSchema from '../../schemas/jsinfoSchema';
+import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import { isNotNull, eq, and, notLike } from "drizzle-orm";
 
 export const ListProvidersRawHandlerOpts: RouteShorthandOptions = {

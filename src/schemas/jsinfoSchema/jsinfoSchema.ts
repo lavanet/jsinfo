@@ -3,7 +3,7 @@
 // Do not use 'drizzle-orm' date, it will cause bugs
 
 import { sql } from 'drizzle-orm'
-import { pgTable, index, text, integer, serial, bigint, real, uniqueIndex, primaryKey, timestamp, doublePrecision, varchar } from 'drizzle-orm/pg-core';
+import { pgTable, index, text, integer, serial, bigint, real, timestamp, varchar, uniqueIndex } from 'drizzle-orm/pg-core';
 
 export const blocks = pgTable('blocks', {
   height: integer('height').unique(),
@@ -65,9 +65,13 @@ export const providerStakes = pgTable('provider_stakes', {
   blockId: integer('block_id').references(() => blocks.height),
 }, (table) => {
   return {
-    pk: primaryKey(table.provider, table.specId),
+    providerStakesIdx: uniqueIndex("providerStakesIdx").on(
+      table.provider,
+      table.specId
+    ),
   };
 });
+
 export type ProviderStake = typeof providerStakes.$inferSelect
 export type InsertProviderStake = typeof providerStakes.$inferInsert
 
@@ -96,31 +100,11 @@ export const relayPayments = pgTable('relay_payments', {
     nameIdx: index("name_idx").on(table.specId),
     tsIdx: index("ts_idx").on(table.datetime),
     constumerIdx: index("consumer_idx").on(table.consumer),
+    providerIdx: index("relay_payments_provider_idx").on(table.provider),
   };
 });
 export type RelayPayment = typeof relayPayments.$inferSelect
 export type InsertRelayPayment = typeof relayPayments.$inferInsert
-
-export const aggHourlyrelayPayments = pgTable('agg_hourly_relay_payments', {
-  provider: text('provider').references(() => providers.address),
-  datehour: timestamp('datehour', { mode: "string" }),
-  specId: text('spec_id').references(() => specs.id),
-  cuSum: bigint('cusum', { mode: 'number' }),
-  relaySum: bigint('relaysum', { mode: 'number' }),
-  rewardSum: bigint('rewardsum', { mode: 'number' }),
-  qosSyncAvg: doublePrecision('qossyncavg'),
-  qosAvailabilityAvg: doublePrecision('qosavailabilityavg'),
-  qosLatencyAvg: doublePrecision('qoslatencyavg'),
-  qosSyncExcAvg: doublePrecision('qossyncexcavg'),
-  qosAvailabilityExcAvg: doublePrecision('qosavailabilityexcavg'),
-  qosLatencyExcAvg: doublePrecision('qoslatencyexcavg'),
-}, (table) => {
-  return {
-    aggHourlyIdx: uniqueIndex("aggHourlyIdx").on(table.datehour, table.specId, table.provider),
-  };
-});
-export type AggHorulyRelayPayment = typeof aggHourlyrelayPayments.$inferSelect
-export type InsertAggHourlyRelayPayment = typeof aggHourlyrelayPayments.$inferInsert
 
 export enum LavaProviderEventType {
   StakeNewProvider = 1,
@@ -175,7 +159,12 @@ export const events = pgTable('events', {
   tx: text('tx').references(() => txs.hash),
 
   fulltext: text('fulltext'),
+}, (table) => {
+  return {
+    providerIdx: index("events_provider_idx").on(table.provider),
+  };
 });
+
 export type Event = typeof events.$inferSelect
 export type InsertEvent = typeof events.$inferInsert
 
@@ -205,7 +194,12 @@ export const conflictVotes = pgTable('conflict_votes', {
   blockId: integer('block_id').references(() => blocks.height),
   provider: text('provider').references(() => providers.address),
   tx: text('tx').references(() => txs.hash),
+}, (table) => {
+  return {
+    providerIdx: index("conflict_votes_provider_idx").on(table.provider),
+  };
 });
+
 export type ConflictVote = typeof conflictVotes.$inferSelect
 export type InsertConflictVote = typeof conflictVotes.$inferInsert
 
@@ -233,6 +227,10 @@ export const providerReported = pgTable('provider_reported', {
   datetime: timestamp('datetime', { mode: "date" }),
   totalComplaintEpoch: integer('total_complaint_this_epoch'),
   tx: text('tx').references(() => txs.hash),
+}, (table) => {
+  return {
+    providerIdx: index("provider_reported_provider_idx").on(table.provider),
+  };
 });
 export type ProviderReported = typeof providerReported.$inferSelect
 export type InsertProviderReported = typeof providerReported.$inferInsert
@@ -245,6 +243,10 @@ export const providerLatestBlockReports = pgTable('provider_latest_block_reports
   timestamp: timestamp('timestamp').notNull(),
   chainId: text('chain_id').notNull(),
   chainBlockHeight: bigint('chain_block_height', { mode: 'number' }),
+}, (table) => {
+  return {
+    providerIdx: index("provider_latest_block_reports_provider_idx").on(table.provider),
+  };
 });
 
 export type ProviderLatestBlockReports = typeof providerLatestBlockReports.$inferSelect;
@@ -313,6 +315,10 @@ export const dualStackingDelegatorRewards = pgTable('dual_stacking_delegator_rew
   chainId: text('chain_id').notNull(),
   amount: bigint('amount', { mode: 'number' }).notNull(),
   denom: text('denom').notNull(),
+}, (table) => {
+  return {
+    providerIdx: index("dual_stacking_delegator_rewards_provider_idx").on(table.provider),
+  };
 });
 
 export type DualStackingDelegatorRewards = typeof dualStackingDelegatorRewards.$inferSelect;

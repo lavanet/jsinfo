@@ -1,13 +1,13 @@
-
 // src/query/handlers/specHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { GetLatestBlock, QueryGetJsinfoReadDbInstance } from '../queryDb';
-import * as JsinfoSchema from '../../schemas/jsinfoSchema';
+import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
+import * as JsinfoProviderAgrSchema from '../../schemas/jsinfoSchema/providerRelayPaymentsAgregation';
 import { sql, eq, count } from "drizzle-orm";
 import { GetAndValidateSpecIdFromRequest } from '../utils/queryUtils';
 
-export const SpecCachedHandlerOpts: RouteShorthandOptions = {
+export const SpecPaginatedHandlerOpts: RouteShorthandOptions = {
     schema: {
         response: {
             200: {
@@ -40,7 +40,7 @@ export const SpecCachedHandlerOpts: RouteShorthandOptions = {
     }
 }
 
-export async function SpecCachedHandler(request: FastifyRequest, reply: FastifyReply) {
+export async function SpecPaginatedHandler(request: FastifyRequest, reply: FastifyReply) {
 
     let spec = await GetAndValidateSpecIdFromRequest(request, reply);
     if (spec === '') {
@@ -53,10 +53,11 @@ export async function SpecCachedHandler(request: FastifyRequest, reply: FastifyR
     let relaySum = 0
     let rewardSum = 0
     const cuRelayAndRewardsTotalRes = await QueryGetJsinfoReadDbInstance().select({
-        cuSum: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.cuSum})`,
-        relaySum: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.relaySum})`,
-        rewardSum: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.rewardSum})`,
-    }).from(JsinfoSchema.aggHourlyrelayPayments).where(eq(JsinfoSchema.aggHourlyrelayPayments.specId, spec))
+        cuSum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggAllTimeRelayPayments.cuSum})`,
+        relaySum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggAllTimeRelayPayments.relaySum})`,
+        rewardSum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggAllTimeRelayPayments.rewardSum})`,
+    }).from(JsinfoProviderAgrSchema.aggAllTimeRelayPayments)
+        .where(eq(JsinfoProviderAgrSchema.aggAllTimeRelayPayments.specId, spec))
     if (cuRelayAndRewardsTotalRes.length == 1) {
         cuSum = cuRelayAndRewardsTotalRes[0].cuSum
         relaySum = cuRelayAndRewardsTotalRes[0].relaySum

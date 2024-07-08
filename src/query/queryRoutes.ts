@@ -1,6 +1,6 @@
 // jsinfo/src/query/queryRoutes.ts
 
-import { RegisterServerHandlerWithCache, GetServerInstance } from './queryServer';
+import { RegistePaginationServerHandler, GetServerInstance } from './queryServer';
 import * as consts from './queryConsts';
 
 // -- Server status ajax --
@@ -10,46 +10,46 @@ import { LatestRawHandler, LatestRawHandlerOpts } from './handlers/latestHandler
 import { ListProvidersRawHandlerOpts, ListProvidersRawHandler } from './handlers/listProvidersHandler';
 
 // -- Server meta ajax --
-import { ProvidersCachedHandler, ProvidersCachedHandlerOpts } from './handlers/providersHandler';
-import { SpecsCachedHandler, SpecsCachedHandlerOpts } from './handlers/specsHandler';
-import { ConsumersCachedHandler, ConsumersCachedHandlerOpts } from './handlers/consumersHandler';
+import { ProvidersPaginatedHandler, ProvidersPaginatedHandlerOpts } from './handlers/providersHandler';
+import { SpecsPaginatedHandler, SpecsPaginatedHandlerOpts } from './handlers/specsHandler';
+import { ConsumersPaginatedHandler, ConsumersPaginatedHandlerOpts } from './handlers/consumersHandler';
 
 // -- All pages ajax --
-import { CacheLinksCachedHandler, CacheLinksCachedHandlerOpts } from './handlers/cacheLinksHandler';
-import { AutoCompleteLinksCachedHandler, AutoCompleteLinksCachedHandlerOpts } from './handlers/autoCompleteLinksHandler';
+import { CacheLinksPaginatedHandler, CacheLinksPaginatedHandlerOpts } from './handlers/cacheLinksHandler';
+import { AutoCompleteLinksPaginatedHandler, AutoCompleteLinksPaginatedHandlerOpts } from './handlers/autoCompleteLinksHandler';
 
 // -- Index page ajax -- 
 import { IndexHandler, IndexHandlerOpts } from './handlers/indexHandler';
-import { IndexProvidersCachedHandler, IndexProvidersCachedHandlerOpts, IndexProvidersItemCountRawHandler, IndexProvidersCSVRawHandler } from './handlers/indexProvidersHandler';
+import { IndexProvidersPaginatedHandler, IndexProvidersPaginatedHandlerOpts, IndexProvidersItemCountPaginatiedHandler, IndexProvidersCSVRawHandler } from './handlers/indexProvidersHandler';
 import { IndexChartsRawHandler, IndexChartsRawHandlerOpts } from './handlers/indexChartsHandler';
 
 // -- Provider page ajax --
-import { ProviderCachedHandler, ProviderCachedHandlerOpts } from './handlers/providerHandler';
+import { ProviderPaginatedHandler, ProviderPaginatedHandlerOpts } from './handlers/providerHandler';
 
 import { ProviderChartsRawHandler, ProviderChartsRawHandlerOpts } from './handlers/providerChartsHandler';
 
-import { ProviderHealthCachedHandler, ProviderHealthCachedHandlerOpts, ProviderHealthItemCountRawHandler, ProviderHealthCSVRawHandler } from './handlers/providerHealthHandler';
-import { ProviderErrorsCachedHandler, ProviderErrorsCachedHandlerOpts, ProviderErrorsItemCountRawHandler, ProviderErrorsCSVRawHandler } from './handlers/providerErrorsHandler';
-import { ProviderStakesCachedHandlerOpts, ProviderStakesHandler, ProviderStakesItemCountRawHandler, ProviderStakesCSVRawHandler } from './handlers/providerStakesHandler';
-import { ProviderEventsCachedHandlerOpts, ProviderEventsCachedHandler, ProviderEventsItemCountRawHandler, ProviderEventsCSVRawHandler } from './handlers/providerEventsHandler';
-import { ProviderRewardsCachedHandlerOpts, ProviderRewardsCachedHandler, ProviderRewardsItemCountRawHandler, ProviderRewardsCSVRawHandler } from './handlers/providerRewardsHandler';
-import { ProviderReportsCachedHandlerOpts, ProviderReportsCachedHandler, ProviderReportsItemCountRawHandler, ProviderReportsCSVRawHandler } from './handlers/providerReportsHandler';
-import { ProviderDelegatorRewardsCachedHandlerOpts, ProviderDelegatorRewardsCachedHandler, ProviderDelegatorRewardsItemCountRawHandler, ProviderDelegatorRewardsCSVRawHandler } from './handlers/providerDelegatorRewardsHandler';
-import { ProviderBlockReportsCachedHandlerOpts, ProviderBlockReportsCachedHandler, ProviderBlockReportsItemCountRawHandler, ProviderBlockReportsCSVRawHandler } from './handlers/providerBlockReportsHandler';
-import { ProviderHealthLatestCachedHandler, ProviderHealthLatestCachedHandlerOpts } from './handlers/providerHealthLatestHandler';
+import { ProviderHealthPaginatedHandler, ProviderHealthPaginatedHandlerOpts, ProviderHealthItemCountPaginatiedHandler, ProviderHealthCSVRawHandler } from './handlers/providerHealthHandler';
+import { ProviderErrorsPaginatedHandler, ProviderErrorsPaginatedHandlerOpts, ProviderErrorsItemCountPaginatiedHandler, ProviderErrorsCSVRawHandler } from './handlers/providerErrorsHandler';
+import { ProviderStakesPaginatedHandlerOpts, ProviderStakesHandler, ProviderStakesItemCountPaginatiedHandler, ProviderStakesCSVRawHandler } from './handlers/providerStakesHandler';
+import { ProviderEventsPaginatedHandlerOpts, ProviderEventsPaginatedHandler, ProviderEventsItemCountPaginatiedHandler, ProviderEventsCSVRawHandler } from './handlers/providerEventsHandler';
+import { ProviderRewardsPaginatedHandlerOpts, ProviderRewardsPaginatedHandler, ProviderRewardsItemCountPaginatiedHandler, ProviderRewardsCSVRawHandler } from './handlers/providerRewardsHandler';
+import { ProviderReportsPaginatedHandlerOpts, ProviderReportsPaginatedHandler, ProviderReportsItemCountPaginatiedHandler, ProviderReportsCSVRawHandler } from './handlers/providerReportsHandler';
+import { ProviderDelegatorRewardsPaginatedHandlerOpts, ProviderDelegatorRewardsPaginatedHandler, ProviderDelegatorRewardsItemCountPaginatiedHandler, ProviderDelegatorRewardsCSVRawHandler } from './handlers/providerDelegatorRewardsHandler';
+import { ProviderBlockReportsPaginatedHandlerOpts, ProviderBlockReportsPaginatedHandler, ProviderBlockReportsItemCountPaginatiedHandler, ProviderBlockReportsCSVRawHandler } from './handlers/providerBlockReportsHandler';
+import { ProviderHealthLatestPaginatedHandler, ProviderHealthLatestPaginatedHandlerOpts } from './handlers/providerHealthLatestHandler';
 
 // -- Events page ajax -- 
-import { EventsEventsCachedHandlerOpts, EventsEventsCachedHandler, EventsEventsItemCountRawHandler, EventsEventsCSVRawHandler } from './handlers/eventsEventsHandler';
-import { EventsRewardsCachedHandlerOpts, EventsRewardsCachedHandler, EventsRewardsItemCountRawHandler, EventsRewardsCSVRawHandler } from './handlers/eventsRewardsHandler';
-import { EventsReportsCachedHandlerOpts, EventsReportsCachedHandler, EventsReportsItemCountRawHandler, EventsReportsCSVRawHandler } from './handlers/eventsReportsHandler';
+import { EventsEventsPaginatedHandlerOpts, EventsEventsPaginatedHandler, EventsEventsItemCountPaginatiedHandler, EventsEventsCSVRawHandler } from './handlers/eventsEventsHandler';
+import { EventsRewardsPaginatedHandlerOpts, EventsRewardsPaginatedHandler, EventsRewardsItemCountPaginatiedHandler, EventsRewardsCSVRawHandler } from './handlers/eventsRewardsHandler';
+import { EventsReportsPaginatedHandlerOpts, EventsReportsPaginatedHandler, EventsReportsItemCountPaginatiedHandler, EventsReportsCSVRawHandler } from './handlers/eventsReportsHandler';
 
 // -- Spec page ajax --
-import { SpecCachedHandler, SpecCachedHandlerOpts } from './handlers/specHandler';
+import { SpecPaginatedHandler, SpecPaginatedHandlerOpts } from './handlers/specHandler';
 import { SpecChartsRawHandler, SpecChartsRawHandlerOpts } from './handlers/specChartsHandler';
-import { SpecStakesCachedHandler, SpecStakesCachedHandlerOpts, SpecStakesItemCountRawHandler, SpecStakesCSVRawHandler } from './handlers/specStakesHandler';
+import { SpecStakesPaginatedHandler, SpecStakesPaginatedHandlerOpts } from './handlers/specStakesHandler';
 
 import { ConsumerCahcedHandler, ConsumerCahcedHandlerOpts } from './handlers/consumerHandler';
-import { EventsCachedHandler, EventsCachedHandlerOpts } from './handlers/eventsHandler';
+import { EventsPaginatedHandler, EventsPaginatedHandlerOpts } from './handlers/eventsHandler';
 
 // -- Internal data endpoints --
 import { LavapDualStackingDelegatorRewardsHandler, LavapDualStackingDelegatorRewardsOpts } from './handlers/lavapDualStackingDelegatorRewardsHandler';
@@ -62,33 +62,33 @@ GetServerInstance().get('/latest', LatestRawHandlerOpts, LatestRawHandler);
 RegisterServerHandlerWithCache('/listProviders', ListProvidersRawHandlerOpts, ListProvidersRawHandler);
 
 // -- Server meta ajax --
-RegisterServerHandlerWithCache('/providers', ProvidersCachedHandlerOpts, ProvidersCachedHandler);
-RegisterServerHandlerWithCache('/specs', SpecsCachedHandlerOpts, SpecsCachedHandler);
-RegisterServerHandlerWithCache('/consumers', ConsumersCachedHandlerOpts, ConsumersCachedHandler);
+RegistePaginationServerHandler('/providers', ProvidersPaginatedHandlerOpts, ProvidersPaginatedHandler);
+RegistePaginationServerHandler('/specs', SpecsPaginatedHandlerOpts, SpecsPaginatedHandler);
+RegistePaginationServerHandler('/consumers', ConsumersPaginatedHandlerOpts, ConsumersPaginatedHandler);
 
 // -- All pages ajax --
-RegisterServerHandlerWithCache('/cacheLinks', CacheLinksCachedHandlerOpts, CacheLinksCachedHandler);
-RegisterServerHandlerWithCache('/autoCompleteLinksHandler', AutoCompleteLinksCachedHandlerOpts, AutoCompleteLinksCachedHandler);
+RegistePaginationServerHandler('/cacheLinks', CacheLinksPaginatedHandlerOpts, CacheLinksPaginatedHandler);
+RegistePaginationServerHandler('/autoCompleteLinksHandler', AutoCompleteLinksPaginatedHandlerOpts, AutoCompleteLinksPaginatedHandler);
 
 // -- Index page ajax -- 
-RegisterServerHandlerWithCache('/index', IndexHandlerOpts, IndexHandler);
-RegisterServerHandlerWithCache('/indexProviders', IndexProvidersCachedHandlerOpts, IndexProvidersCachedHandler, IndexProvidersItemCountRawHandler);
+RegistePaginationServerHandler('/index', IndexHandlerOpts, IndexHandler);
+RegistePaginationServerHandler('/indexProviders', IndexProvidersPaginatedHandlerOpts, IndexProvidersPaginatedHandler, IndexProvidersItemCountPaginatiedHandler);
 GetServerInstance().get('/indexProvidersCsv', IndexProvidersCSVRawHandler);
 GetServerInstance().get('/indexCharts', IndexChartsRawHandlerOpts, IndexChartsRawHandler);
 
 // -- Provider page ajax --
-RegisterServerHandlerWithCache('/provider/:addr', ProviderCachedHandlerOpts, ProviderCachedHandler);
+RegistePaginationServerHandler('/provider/:addr', ProviderPaginatedHandlerOpts, ProviderPaginatedHandler);
 GetServerInstance().get('/providerCharts/:addr', ProviderChartsRawHandlerOpts, ProviderChartsRawHandler);
 
-RegisterServerHandlerWithCache('/providerHealth/:addr', ProviderHealthCachedHandlerOpts, ProviderHealthCachedHandler, ProviderHealthItemCountRawHandler);
-RegisterServerHandlerWithCache('/providerErrors/:addr', ProviderErrorsCachedHandlerOpts, ProviderErrorsCachedHandler, ProviderErrorsItemCountRawHandler);
-RegisterServerHandlerWithCache('/providerStakes/:addr', ProviderStakesCachedHandlerOpts, ProviderStakesHandler, ProviderStakesItemCountRawHandler);
-RegisterServerHandlerWithCache('/providerEvents/:addr', ProviderEventsCachedHandlerOpts, ProviderEventsCachedHandler, ProviderEventsItemCountRawHandler);
-RegisterServerHandlerWithCache('/providerRewards/:addr', ProviderRewardsCachedHandlerOpts, ProviderRewardsCachedHandler, ProviderRewardsItemCountRawHandler);
-RegisterServerHandlerWithCache('/providerReports/:addr', ProviderReportsCachedHandlerOpts, ProviderReportsCachedHandler, ProviderReportsItemCountRawHandler);
-RegisterServerHandlerWithCache('/providerDelegatorRewards/:addr', ProviderDelegatorRewardsCachedHandlerOpts, ProviderDelegatorRewardsCachedHandler, ProviderDelegatorRewardsItemCountRawHandler);
-RegisterServerHandlerWithCache('/providerBlockReports/:addr', ProviderBlockReportsCachedHandlerOpts, ProviderBlockReportsCachedHandler, ProviderBlockReportsItemCountRawHandler);
-RegisterServerHandlerWithCache('/providerLatestHealth/:addr', ProviderHealthLatestCachedHandlerOpts, ProviderHealthLatestCachedHandler);
+RegistePaginationServerHandler('/providerHealth/:addr', ProviderHealthPaginatedHandlerOpts, ProviderHealthPaginatedHandler, ProviderHealthItemCountPaginatiedHandler);
+RegistePaginationServerHandler('/providerErrors/:addr', ProviderErrorsPaginatedHandlerOpts, ProviderErrorsPaginatedHandler, ProviderErrorsItemCountPaginatiedHandler);
+RegistePaginationServerHandler('/providerStakes/:addr', ProviderStakesPaginatedHandlerOpts, ProviderStakesHandler, ProviderStakesItemCountPaginatiedHandler);
+RegistePaginationServerHandler('/providerEvents/:addr', ProviderEventsPaginatedHandlerOpts, ProviderEventsPaginatedHandler, ProviderEventsItemCountPaginatiedHandler);
+RegistePaginationServerHandler('/providerRewards/:addr', ProviderRewardsPaginatedHandlerOpts, ProviderRewardsPaginatedHandler, ProviderRewardsItemCountPaginatiedHandler);
+RegistePaginationServerHandler('/providerReports/:addr', ProviderReportsPaginatedHandlerOpts, ProviderReportsPaginatedHandler, ProviderReportsItemCountPaginatiedHandler);
+RegistePaginationServerHandler('/providerDelegatorRewards/:addr', ProviderDelegatorRewardsPaginatedHandlerOpts, ProviderDelegatorRewardsPaginatedHandler, ProviderDelegatorRewardsItemCountPaginatiedHandler);
+RegistePaginationServerHandler('/providerBlockReports/:addr', ProviderBlockReportsPaginatedHandlerOpts, ProviderBlockReportsPaginatedHandler, ProviderBlockReportsItemCountPaginatiedHandler);
+RegistePaginationServerHandler('/providerLatestHealth/:addr', ProviderHealthLatestPaginatedHandlerOpts, ProviderHealthLatestPaginatedHandler);
 
 GetServerInstance().get('/providerHealthCsv/:addr', ProviderHealthCSVRawHandler);
 GetServerInstance().get('/providerErrorsCsv/:addr', ProviderErrorsCSVRawHandler);
@@ -99,22 +99,21 @@ GetServerInstance().get('/providerReportsCsv/:addr', ProviderReportsCSVRawHandle
 GetServerInstance().get('/providerDelegatorRewardsCsv/:addr', ProviderDelegatorRewardsCSVRawHandler);
 GetServerInstance().get('/providerBlockReportsCsv/:addr', ProviderBlockReportsCSVRawHandler);
 
-RegisterServerHandlerWithCache('/consumer/:addr', ConsumerCahcedHandlerOpts, ConsumerCahcedHandler);
+RegistePaginationServerHandler('/consumer/:addr', ConsumerCahcedHandlerOpts, ConsumerCahcedHandler);
 
 // -- Events page ajax --
-RegisterServerHandlerWithCache('/events', EventsCachedHandlerOpts, EventsCachedHandler);
-RegisterServerHandlerWithCache('/eventsEvents', EventsEventsCachedHandlerOpts, EventsEventsCachedHandler, EventsEventsItemCountRawHandler);
-RegisterServerHandlerWithCache('/eventsRewards', EventsRewardsCachedHandlerOpts, EventsRewardsCachedHandler, EventsRewardsItemCountRawHandler);
-RegisterServerHandlerWithCache('/eventsReports', EventsReportsCachedHandlerOpts, EventsReportsCachedHandler, EventsReportsItemCountRawHandler);
+RegistePaginationServerHandler('/events', EventsPaginatedHandlerOpts, EventsPaginatedHandler);
+RegistePaginationServerHandler('/eventsEvents', EventsEventsPaginatedHandlerOpts, EventsEventsPaginatedHandler, EventsEventsItemCountPaginatiedHandler);
+RegistePaginationServerHandler('/eventsRewards', EventsRewardsPaginatedHandlerOpts, EventsRewardsPaginatedHandler, EventsRewardsItemCountPaginatiedHandler);
+RegistePaginationServerHandler('/eventsReports', EventsReportsPaginatedHandlerOpts, EventsReportsPaginatedHandler, EventsReportsItemCountPaginatiedHandler);
 
 GetServerInstance().get('/eventsEventsCsv', EventsEventsCSVRawHandler);
 GetServerInstance().get('/eventsRewardsCsv', EventsRewardsCSVRawHandler);
 GetServerInstance().get('/eventsReportsCsv', EventsReportsCSVRawHandler);
 
 // -- Spec page ajax --
-RegisterServerHandlerWithCache('/spec/:specId', SpecCachedHandlerOpts, SpecCachedHandler);
-RegisterServerHandlerWithCache('/specStakes/:specId', SpecStakesCachedHandlerOpts, SpecStakesCachedHandler, SpecStakesItemCountRawHandler);
-GetServerInstance().get('/specStakesCsv/:specId', SpecStakesCSVRawHandler);
+RegistePaginationServerHandler('/spec/:specId', SpecPaginatedHandlerOpts, SpecPaginatedHandler);
+GetServerInstance().get('/specStakes/:specId', SpecStakesPaginatedHandlerOpts, SpecStakesPaginatedHandler);
 GetServerInstance().get('/specCharts/:specId', SpecChartsRawHandlerOpts, SpecChartsRawHandler);
 
 // -- Internal data endpoints --

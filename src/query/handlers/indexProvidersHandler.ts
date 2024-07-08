@@ -1,9 +1,11 @@
 // src/query/handlers/indexProvidersHandler.ts
 
+// curl http://localhost:8081/indexProviders | jq
+
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../queryDb';
 import * as JsinfoSchema from '../../schemas/jsinfoSchema';
-import { sql, desc, inArray, not, eq } from "drizzle-orm";
+import { sql, desc, inArray, not, eq, isNull, and } from "drizzle-orm";
 import { Pagination, ParsePaginationFromString } from '../utils/queryPagination';
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE } from '../queryConsts';
 import path from 'path';
@@ -74,71 +76,32 @@ class IndexProvidersData extends CachedDiskDbDataFetcher<IndexProvidersResponse>
     protected async fetchDataFromDb(): Promise<IndexProvidersResponse[]> {
         await QueryCheckJsinfoReadDbInstance();
 
-        let res4 = await QueryGetJsinfoReadDbInstance().select({
-            address: JsinfoSchema.aggHourlyrelayPayments.provider,
-            rewardSum: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.rewardSum})`,
-        }).from(JsinfoSchema.aggHourlyrelayPayments).
-            groupBy(JsinfoSchema.aggHourlyrelayPayments.provider).
-            orderBy(desc(sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.rewardSum})`))
-
-        if (GetDataLength(res4) === 0) {
-            this.setDataIsEmpty();
-            return [];
-        }
-        let providersAddrs: string[] = []
-
-        res4.map((provider) => {
-            providersAddrs.push(provider.address!)
-        })
-
-        if (providersAddrs.length == 0) {
-            throw new Error('Providers do not exist');
-        }
-
-        // provider details
-        let res44 = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.providers).where(inArray(JsinfoSchema.providers.address, providersAddrs))
-
-        if (GetDataLength(res44) === 0) {
-            this.setDataIsEmpty();
-            return [];
-        }
-
-        let providerStakesRes = await QueryGetJsinfoReadDbInstance().select({
+        const res = await QueryGetJsinfoReadDbInstance().select({
             provider: JsinfoSchema.providerStakes.provider,
-            totalActiveServices: sql<number>`sum(case when ${JsinfoSchema.providerStakes.status} = ${JsinfoSchema.LavaProviderStakeStatus.Active} then 1 else 0 end)`,
-            totalServices: sql<number>`count(${JsinfoSchema.providerStakes.specId})`,
+            totalServices: sql<string>`concat(sum(case when ${JsinfoSchema.providerStakes.status} = ${JsinfoSchema.LavaProviderStakeStatus.Active} then 1 else 0 end), ' / ', count(${JsinfoSchema.providerStakes.specId}))`,
             totalStake: sql<number>`sum(${JsinfoSchema.providerStakes.stake})`,
+            rewardSum: sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.rewardSum})`,
+            moniker: JsinfoSchema.providers.moniker,
         }).from(JsinfoSchema.providerStakes)
-            .where(not(eq(JsinfoSchema.providerStakes.status, JsinfoSchema.LavaProviderStakeStatus.Frozen)))
-            .groupBy(JsinfoSchema.providerStakes.provider);
+            .leftJoin(JsinfoSchema.aggHourlyrelayPayments, eq(JsinfoSchema.providerStakes.provider, JsinfoSchema.aggHourlyrelayPayments.provider))
+            .leftJoin(JsinfoSchema.providers, eq(JsinfoSchema.providerStakes.provider, JsinfoSchema.providers.address))
+            .where(
+                and(
+                    not(eq(JsinfoSchema.providerStakes.status, JsinfoSchema.LavaProviderStakeStatus.Frozen)),
+                    not(isNull(JsinfoSchema.providerStakes.provider)),
+                    not(eq(JsinfoSchema.providerStakes.provider, ''))
+                )
+            )
+            .groupBy(JsinfoSchema.providerStakes.provider, JsinfoSchema.providers.moniker)
+            .orderBy(desc(sql<number>`sum(${JsinfoSchema.aggHourlyrelayPayments.rewardSum})`))
 
-        if (GetDataLength(providerStakesRes) === 0) {
-            this.setDataIsEmpty();
-            return [];
-        }
-
-        let providersDetails: IndexProvidersResponse[] = []
-        res4.forEach((provider) => {
-            let moniker = ''
-            let totalServices = '0'
-            let totalStake = 0;
-            let tmp1 = res44.find((el) => el.address == provider.address)
-            if (tmp1) {
-                moniker = tmp1.moniker!
-            }
-            let tmp2 = providerStakesRes.find((el) => el.provider == provider.address)
-            if (tmp2) {
-                totalServices = `${tmp2.totalActiveServices} / ${tmp2.totalServices}`
-                totalStake = tmp2.totalStake
-            }
-            providersDetails.push({
-                addr: provider.address!,
-                moniker: moniker,
-                rewardSum: provider.rewardSum,
-                totalServices: totalServices,
-                totalStake: totalStake,
-            })
-        })
+        const providersDetails: IndexProvidersResponse[] = res.map(provider => ({
+            addr: provider.provider || "",
+            moniker: provider.moniker || "",
+            rewardSum: provider.rewardSum || 0,
+            totalServices: provider.totalServices!,
+            totalStake: provider.totalStake,
+        }));
 
         return providersDetails;
     }

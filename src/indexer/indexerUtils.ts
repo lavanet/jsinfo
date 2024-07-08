@@ -21,7 +21,7 @@ export function ParseSizeToBytes(input) {
 }
 
 export function ReplaceArchive(str: string): string {
-    return str.replace(/(archive,)+archive/g, "archive");
+    return str.replace(/(archive,)+archive/g, "archive").replace(/archivearchive/g, "archive");
 }
 
 export function ToSignedIntOrMinusOne(input: bigint | number | string | Long | null): number {

@@ -1,15 +1,15 @@
 // src/indexer/agregators/aggProviderHourlyRelayPayments.ts
 
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { sql } from "drizzle-orm";
-import * as JsinfoSchema from "../../schemas/jsinfoSchema/jsinfoSchema";
-import * as JsinfoProviderAgrSchema from '../../schemas/jsinfoSchema/providerRelayPaymentsAgregation';
-import { DoInChunks, logger } from "../../utils";
+import { isNotNull, sql, and } from "drizzle-orm";
+import * as JsinfoSchema from "../../../schemas/jsinfoSchema/jsinfoSchema";
+import * as JsinfoProviderAgrSchema from '../../../schemas/jsinfoSchema/providerRelayPaymentsAgregation';
+import { DoInChunks, logger } from "../../../utils";
 
 export async function getProviderAggHourlyTimeSpan(db: PostgresJsDatabase): Promise<{ startTime: Date | null, endTime: Date | null }> {
     // Last relay payment time
     const lastRelayPayment = await db.select({
-        datehour: sql`DATE_TRUNC('day', MAX(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.datehour}))`,
+        datehour: sql<string>`DATE_TRUNC('hour', MAX(${JsinfoSchema.relayPayments.datetime}))`,
     }).from(JsinfoSchema.relayPayments)
         .then(rows => rows[0]?.datehour);
 
@@ -17,16 +17,16 @@ export async function getProviderAggHourlyTimeSpan(db: PostgresJsDatabase): Prom
         logger.error("getProviderAggHourlyTimeSpan: No relay payments found");
         return { startTime: null, endTime: null };
     }
-    const endTime = lastRelayPayment as Date;
+    const endTime = new Date(lastRelayPayment);
 
     // Last aggregated hour
     const lastAggHour = await db.select({
-        datehour: sql`MAX(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.datehour})`,
+        datehour: sql<string>`MAX(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.datehour})`,
     }).from(JsinfoProviderAgrSchema.aggHourlyRelayPayments)
         .then(rows => rows[0]?.datehour);
     let startTime: Date;
     if (lastAggHour) {
-        startTime = new Date(lastAggHour as string);
+        startTime = new Date(lastAggHour);
     } else {
         startTime = new Date("2000-01-01T00:00:00Z"); // Default start time if no data is found
     }
@@ -36,39 +36,42 @@ export async function getProviderAggHourlyTimeSpan(db: PostgresJsDatabase): Prom
 }
 
 export async function aggProviderHourlyRelayPayments(db: PostgresJsDatabase) {
-    let { startTime, endTime } = await getProviderAggHourlyTimeSpan(db)
+    let { startTime, endTime } = await getProviderAggHourlyTimeSpan(db);
     logger.info(`aggProviderHourlyRelayPayments: startTime ${startTime}, endTime ${endTime}`);
     if (startTime === null || endTime === null) {
-        logger.error("aggProviderHourlyRelayPayments: startTime === null || endTime === null")
-        return
+        logger.error(`aggProviderHourlyRelayPayments: startTime === null or endTime === null. Received startTime: ${startTime}, endTime: ${endTime}`);
+        return;
     }
     if (startTime > endTime) {
-        logger.error("aggProviderHourlyRelayPayments: startTime > endTime")
-        return
+        logger.error(`aggProviderHourlyRelayPayments: startTime > endTime. Received startTime: ${startTime}, endTime: ${endTime}`);
+        return;
     }
 
     //
     const aggResults = await db.select({
-        provider: sql`${JsinfoProviderAgrSchema.aggHourlyRelayPayments.provider}`,
-        datehour: sql`DATE_TRUNC('day', ${JsinfoProviderAgrSchema.aggHourlyRelayPayments.datehour}) as datehour`,
-        specId: sql`${JsinfoProviderAgrSchema.aggHourlyRelayPayments.specId}`,
-        cuSum: sql`SUM(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.cuSum})`,
-        relaySum: sql`SUM(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.relaySum})`,
-        rewardSum: sql`SUM(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.rewardSum})`,
-        qosSyncAvg: sql`SUM(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.qosSyncAvg} * ${JsinfoProviderAgrSchema.aggHourlyRelayPayments.relaySum}) / SUM(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.relaySum})`,
-        qosAvailabilityAvg: sql`SUM(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.qosAvailabilityAvg} * ${JsinfoProviderAgrSchema.aggHourlyRelayPayments.relaySum}) / SUM(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.relaySum})`,
-        qosLatencyAvg: sql`SUM(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.qosLatencyAvg} * ${JsinfoProviderAgrSchema.aggHourlyRelayPayments.relaySum}) / SUM(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.relaySum})`,
-        qosSyncExcAvg: sql`SUM(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.qosSyncExcAvg} * ${JsinfoProviderAgrSchema.aggHourlyRelayPayments.relaySum}) / SUM(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.relaySum})`,
-        qosAvailabilityExcAvg: sql`SUM(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.qosAvailabilityExcAvg} * ${JsinfoProviderAgrSchema.aggHourlyRelayPayments.relaySum}) / SUM(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.relaySum})`,
-        qosLatencyExcAvg: sql`SUM(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.qosLatencyExcAvg} * ${JsinfoProviderAgrSchema.aggHourlyRelayPayments.relaySum}) / SUM(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.relaySum})`,
-    }).from(JsinfoProviderAgrSchema.aggHourlyRelayPayments)
+        provider: sql<string>`${JsinfoSchema.relayPayments.provider}`,
+        datehour: sql<string>`DATE_TRUNC('hour', ${JsinfoSchema.relayPayments.datetime}) as datehour`,
+        specId: sql<string>`${JsinfoSchema.relayPayments.specId}`,
+        cuSum: sql<number>`SUM(${JsinfoSchema.relayPayments.cu})`,
+        relaySum: sql<number>`SUM(${JsinfoSchema.relayPayments.relays})`,
+        rewardSum: sql<number>`SUM(${JsinfoSchema.relayPayments.pay})`,
+        qosSyncAvg: sql<number>`SUM(${JsinfoSchema.relayPayments.qosSync} * ${JsinfoSchema.relayPayments.relays}) / SUM(${JsinfoSchema.relayPayments.relays})`,
+        qosAvailabilityAvg: sql<number>`SUM(${JsinfoSchema.relayPayments.qosAvailability} * ${JsinfoSchema.relayPayments.relays}) / SUM(${JsinfoSchema.relayPayments.relays})`,
+        qosLatencyAvg: sql<number>`SUM(${JsinfoSchema.relayPayments.qosLatency} * ${JsinfoSchema.relayPayments.relays}) / SUM(${JsinfoSchema.relayPayments.relays})`,
+        qosSyncExcAvg: sql<number>`SUM(${JsinfoSchema.relayPayments.qosSyncExc} * ${JsinfoSchema.relayPayments.relays}) / SUM(${JsinfoSchema.relayPayments.relays})`,
+        qosAvailabilityExcAvg: sql<number>`SUM(${JsinfoSchema.relayPayments.qosAvailabilityExc} * ${JsinfoSchema.relayPayments.relays}) / SUM(${JsinfoSchema.relayPayments.relays})`,
+        qosLatencyExcAvg: sql<number>`SUM(${JsinfoSchema.relayPayments.qosLatencyExc} * ${JsinfoSchema.relayPayments.relays}) / SUM(${JsinfoSchema.relayPayments.relays})`,
+    }).from(JsinfoSchema.relayPayments)
         .where(
-            sql`${JsinfoProviderAgrSchema.aggHourlyRelayPayments.datehour} >= ${startTime}`
+            and(
+                sql`${JsinfoSchema.relayPayments.datetime} >= ${startTime}`,
+                isNotNull(JsinfoSchema.relayPayments.provider)
+            )
         )
         .groupBy(
             sql`datehour`,
-            JsinfoProviderAgrSchema.aggHourlyRelayPayments.provider,
-            JsinfoProviderAgrSchema.aggHourlyRelayPayments.specId
+            JsinfoSchema.relayPayments.provider,
+            JsinfoSchema.relayPayments.specId
         )
         .orderBy(
             sql`datehour`,
@@ -82,10 +85,10 @@ export async function aggProviderHourlyRelayPayments(db: PostgresJsDatabase) {
     // Update first the latest aggregate hour rows inserting
     // Note: the latest aggregate hour rows are partial (until updated post their hour)
     const latestHourData = aggResults.filter(r =>
-        (new Date(r.datehour as string)).getTime() == startTime!.getTime()
+        (new Date(r.datehour)).getTime() == startTime!.getTime()
     );
     const remainingData = aggResults.filter(r =>
-        (new Date(r.datehour as string)).getTime() > startTime!.getTime()
+        (new Date(r.datehour)).getTime() > startTime!.getTime()
     );
     await db.transaction(async (tx) => {
         for (const row of latestHourData) {

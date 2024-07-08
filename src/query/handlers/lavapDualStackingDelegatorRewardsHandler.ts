@@ -1,7 +1,7 @@
 // src/query/handlers/lavapDualStackingDelegatorRewardsHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import * as JsinfoSchema from '../../schemas/jsinfoSchema';
+import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import { QueryCheckJsinfoDbInstance, QueryGetJsinfoDbInstance } from '../queryDb';
 import { eq, lt, and, desc } from "drizzle-orm";
 import { JSINFO_QUERY_PROVIDER_DUAL_STACKING_DELEGATOR_REWARDS_CUTOFF_DAYS } from '../queryConsts';

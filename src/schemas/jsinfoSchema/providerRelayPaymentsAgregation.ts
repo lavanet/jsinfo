@@ -37,7 +37,7 @@ export const aggDailyRelayPayments = pgTable(
   "agg_daily_relay_payments",
   {
     provider: text("provider").references(() => jsinfoSchema.providers.address),
-    datehour: timestamp("datehour", { mode: "string" }),
+    dateday: timestamp("dateday", { mode: "string" }),
     specId: text("spec_id").references(() => jsinfoSchema.specs.id),
     cuSum: bigint("cusum", { mode: "number" }),
     relaySum: bigint("relaysum", { mode: "number" }),
@@ -51,8 +51,8 @@ export const aggDailyRelayPayments = pgTable(
   },
   (table) => {
     return {
-      aggDailyIdx: uniqueIndex("aggHourlyIdx").on(
-        table.datehour,
+      aggDailyIdx: uniqueIndex("aggDailyIdx").on(
+        table.dateday,
         table.specId,
         table.provider
       ),
@@ -67,7 +67,6 @@ export const aggAllTimeRelayPayments = pgTable(
   "agg_alltime_relay_payments",
   {
     provider: text("provider").references(() => jsinfoSchema.providers.address),
-    datehour: timestamp("datehour", { mode: "string" }),
     specId: text("spec_id").references(() => jsinfoSchema.specs.id),
     cuSum: bigint("cusum", { mode: "number" }),
     relaySum: bigint("relaysum", { mode: "number" }),
@@ -82,7 +81,6 @@ export const aggAllTimeRelayPayments = pgTable(
   (table) => {
     return {
       aggAllTimeIdx: uniqueIndex("aggAllTimeIdx").on(
-        table.datehour,
         table.specId,
         table.provider
       ),

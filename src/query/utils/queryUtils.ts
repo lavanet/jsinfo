@@ -2,7 +2,7 @@
 
 import { FastifyReply, FastifyRequest } from "fastify";
 import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from "../queryDb";
-import * as JsinfoSchema from '../../schemas/jsinfoSchema';
+import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import { eq } from "drizzle-orm";
 import { WriteErrorToFastifyReply } from "./queryServerUtils";
 import { parseISO } from 'date-fns';

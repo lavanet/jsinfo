@@ -10,7 +10,7 @@ import {
   doublePrecision,
 } from "drizzle-orm/pg-core";
 
-export const aggConsumerHourlyrelayPayments = pgTable(
+export const aggConsumerHourlyRelayPayments = pgTable(
   "agg_consumer_hourly_relay_payments",
   {
     consumer: text("consumer").references(() => jsinfoSchema.consumers.address),
@@ -37,15 +37,15 @@ export const aggConsumerHourlyrelayPayments = pgTable(
   }
 );
 export type AggConsumerHorulyRelayPayment =
-  typeof aggConsumerHourlyrelayPayments.$inferSelect;
+  typeof aggConsumerHourlyRelayPayments.$inferSelect;
 export type InsertAggConsumerHorulyRelayPayment =
-  typeof aggConsumerHourlyrelayPayments.$inferInsert;
+  typeof aggConsumerHourlyRelayPayments.$inferInsert;
 
 export const aggConsumerDailyRelayPayments = pgTable(
   "agg_consumer_daily_relay_payments",
   {
     consumer: text("consumer").references(() => jsinfoSchema.consumers.address),
-    datehour: timestamp("datehour", { mode: "string" }),
+    dateday: timestamp("dateday", { mode: "string" }),
     specId: text("spec_id").references(() => jsinfoSchema.specs.id),
     cuSum: bigint("cusum", { mode: "number" }),
     relaySum: bigint("relaysum", { mode: "number" }),
@@ -59,8 +59,8 @@ export const aggConsumerDailyRelayPayments = pgTable(
   },
   (table) => {
     return {
-      aggConsumerDailyIdx: uniqueIndex("aggConsumerHourlyIdx").on(
-        table.datehour,
+      aggConsumerDailyIdx: uniqueIndex("aggConsumerDailyIdx").on(
+        table.dateday,
         table.specId,
         table.consumer
       ),
@@ -76,7 +76,6 @@ export const aggConsumerAllTimeRelayPayments = pgTable(
   "agg_consumer_alltime_relay_payments",
   {
     consumer: text("consumer").references(() => jsinfoSchema.consumers.address),
-    datehour: timestamp("datehour", { mode: "string" }),
     specId: text("spec_id").references(() => jsinfoSchema.specs.id),
     cuSum: bigint("cusum", { mode: "number" }),
     relaySum: bigint("relaysum", { mode: "number" }),
@@ -91,7 +90,6 @@ export const aggConsumerAllTimeRelayPayments = pgTable(
   (table) => {
     return {
       aggConsumerAllTimeIdx: uniqueIndex("aggConsumerAllTimeIdx").on(
-        table.datehour,
         table.specId,
         table.consumer
       ),

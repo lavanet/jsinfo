@@ -4,7 +4,7 @@ import { Event, Attribute } from "@cosmjs/stargate"
 import { JSINFO_INDEXER_EVENT_ATTRIBUTE_KEY_COUNT_MAX, JSINFO_INDEXER_EVENT_ATTRIBUTE_VALUE_MAX_LENGTH } from './indexerConsts';
 import { ParseEventError } from "./events/EventError";
 import { LavaBlock } from "./types";
-import * as JsinfoSchema from '../schemas/jsinfoSchema';
+import * as JsinfoSchema from '../schemas/jsinfoSchema/jsinfoSchema';
 
 export function EventExtractKeyFromAttribute(attr: Attribute): string {
     if (attr.key.length < 2) {

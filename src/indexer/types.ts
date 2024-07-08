@@ -1,4 +1,4 @@
-import * as JsinfoSchema from '../schemas/jsinfoSchema';
+import * as JsinfoSchema from '../schemas/jsinfoSchema/jsinfoSchema';
 
 export type LavaBlock = {
     height: number

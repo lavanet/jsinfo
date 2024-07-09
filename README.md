@@ -48,7 +48,7 @@ make run_docker_compose
 
 - QOS per chain per provider graph
 - Screen provider CU by subscription address
-- Move important events from generic events table to custom events table
+- Move important events from the generic events table to the custom events table
 - Add QoS Excellence
 
 ```

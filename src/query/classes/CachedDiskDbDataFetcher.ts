@@ -311,7 +311,7 @@ export class CachedDiskDbDataFetcher<T> {
     private async fetchAndCacheDataBg() {
         this.log('fetchAndCacheDataBg:: Called');
 
-        // data is about to be refetched - check if it's possible to get non empty data
+        // data is about to be refetched - check if it's possible to get non-empty data
         this.isDataEmpty = false;
 
         let data = await this.fetchDataBg();

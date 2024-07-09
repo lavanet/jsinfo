@@ -173,7 +173,7 @@ export const ProcessOneEvent = (
             ParseEventConflictVoteGotCommit(evt, height, txHash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
             break
 
-        // consumer sent 2 conflicting proofs, start conflict resolution
+        // consumer sent 2 conflicting proofs, start a conflict resolution
         // A new conflict has been opened, which involves all of the jury providers. It is now entering the commit stage
         case 'lava_response_conflict_detection':
             ParseEventResponseConflictDetection(evt, height, txHash, lavaBlock, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)

@@ -100,10 +100,11 @@ class ProviderDelegatorRewardsData extends RequestHandlerBase<DelegatorRewardRes
 
         // Set default pagination if not provided
         if (!pagination) {
-            pagination = ParsePaginationFromString("timestamp,descending,1," + JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE);
+            pagination = ParsePaginationFromString("id,descending,1," + JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE);
         }
 
         const keyToColumnMap = {
+            id: JsinfoSchema.dualStackingDelegatorRewards.id,
             timestamp: JsinfoSchema.dualStackingDelegatorRewards.timestamp,
             chain_id: JsinfoSchema.dualStackingDelegatorRewards.chainId,
             amount: sql<string>`(${JsinfoSchema.dualStackingDelegatorRewards.amount} || ' ' || ${JsinfoSchema.dualStackingDelegatorRewards.denom})`

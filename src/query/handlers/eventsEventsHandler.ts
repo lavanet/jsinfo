@@ -173,10 +173,8 @@ class EventsEventsData extends RequestHandlerBase<EventsEventsResponse> {
 
         const sortColumn = keyToColumnMap[finalPagination.sortKey] || JsinfoSchema.events.id; // Default to id if not found
 
-        // Determine order direction
         const orderFunction = finalPagination.direction === 'ascending' ? asc : desc;
 
-        // Calculate offset for pagination
         const offset = (finalPagination.page - 1) * finalPagination.count;
 
         const eventsRes = await QueryGetJsinfoReadDbInstance()

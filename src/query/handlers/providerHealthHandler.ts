@@ -148,7 +148,6 @@ class ProviderHealthData extends RequestHandlerBase<HealthReportEntry> {
         const sortColumn = keyToColumnMap[finalPagination.sortKey];
         const orderFunction = finalPagination.direction === 'ascending' ? asc : desc;
 
-        // Calculate offset for pagination
         const offset = (finalPagination.page - 1) * finalPagination.count;
 
         const additionalData = await QueryGetJsinfoReadDbInstance()

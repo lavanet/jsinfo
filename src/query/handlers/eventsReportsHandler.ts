@@ -102,7 +102,7 @@ class EventsReportsData extends RequestHandlerBase<EventsReportsResponse> {
     }
 
     public async fetchPaginatedRecords(pagination: Pagination | null): Promise<EventsReportsResponse[]> {
-        const defaultSortKey = "datetime";
+        const defaultSortKey = "id";
 
         let finalPagination: Pagination;
 
@@ -120,6 +120,7 @@ class EventsReportsData extends RequestHandlerBase<EventsReportsResponse> {
         }
 
         const keyToColumnMap = {
+            id: JsinfoSchema.providerReported.id,
             provider: JsinfoSchema.providerReported.provider,
             moniker: JsinfoSchema.providers.moniker,
             blockId: JsinfoSchema.providerReported.blockId,
@@ -145,7 +146,6 @@ class EventsReportsData extends RequestHandlerBase<EventsReportsResponse> {
         const sortColumn = keyToColumnMap[finalPagination.sortKey]; // Use mapped column name for sorting
         const orderFunction = finalPagination.direction === 'ascending' ? asc : desc;
 
-        // Calculate offset for pagination
         const offset = (finalPagination.page - 1) * finalPagination.count;
 
         const reportsRes = await QueryGetJsinfoReadDbInstance()

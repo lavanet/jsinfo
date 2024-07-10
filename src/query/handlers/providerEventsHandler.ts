@@ -141,15 +141,15 @@ class ProviderEventsData extends RequestHandlerBase<ProviderEventsResponse> {
         }
 
         // If sortKey is null, set it to the defaultSortKey
-        // if (finalPagination.sortKey === null) {
-        finalPagination.sortKey = defaultSortKey;
-        //}
+        if (finalPagination.sortKey === null) {
+            finalPagination.sortKey = defaultSortKey;
+        }
 
         const keyToColumnMap = {
             "events.id": JsinfoSchema.events.id,
             "events.eventType": JsinfoSchema.events.eventType,
             "blocks.height": JsinfoSchema.blocks.height,
-            "blocks.datetime": JsinfoSchema.blocks.datetime,
+            "blocks.datetime": JsinfoSchema.events.id, // ugly hack
             "events.b1": JsinfoSchema.events.b1,
             "events.b2": JsinfoSchema.events.b2,
             "events.b3": JsinfoSchema.events.b3,

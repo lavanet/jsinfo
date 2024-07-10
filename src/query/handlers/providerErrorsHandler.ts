@@ -98,7 +98,7 @@ class ProviderErrorsData extends RequestHandlerBase<ErrorsReportResponse> {
     public async fetchPaginatedRecords(pagination: Pagination | null): Promise<ErrorsReportResponse[]> {
         await QueryCheckRelaysReadDbInstance();
 
-        const defaultSortKey = "date";
+        const defaultSortKey = "id";
 
         if (!pagination) {
             pagination = {
@@ -110,6 +110,7 @@ class ProviderErrorsData extends RequestHandlerBase<ErrorsReportResponse> {
         }
 
         const keyToColumnMap = {
+            id: RelaysSchema.lavaReportError.id,
             date: RelaysSchema.lavaReportError.created_at,
             spec: RelaysSchema.lavaReportError.spec_id,
             error: RelaysSchema.lavaReportError.errors
@@ -118,7 +119,7 @@ class ProviderErrorsData extends RequestHandlerBase<ErrorsReportResponse> {
         const sortColumn = keyToColumnMap[pagination.sortKey || defaultSortKey] || keyToColumnMap[defaultSortKey];
         const orderFunction = pagination.direction === 'ascending' ? asc : desc;
 
-        const result = await QueryGetRelaysReadDbInstance()
+        const result1 = QueryGetRelaysReadDbInstance()
             .select({
                 id: RelaysSchema.lavaReportError.id,
                 created_at: RelaysSchema.lavaReportError.created_at,
@@ -131,6 +132,8 @@ class ProviderErrorsData extends RequestHandlerBase<ErrorsReportResponse> {
             .offset((pagination.page - 1) * pagination.count)
             .limit(pagination.count);
 
+        console.log("fetchPaginatedRecords", result1.toSQL());
+        const result = await result1;
         return result.map(row => ({
             id: row.id,
             date: row.created_at ? row.created_at.toISOString() : '',

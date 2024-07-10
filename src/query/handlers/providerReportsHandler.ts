@@ -159,14 +159,14 @@ class ProviderReportsData extends RequestHandlerBase<ProviderReportsResponse> {
             );
         }
 
-        // if (finalPagination.sortKey === null) {
-        finalPagination.sortKey = defaultSortKey;
-        //}
+        if (finalPagination.sortKey === null) {
+            finalPagination.sortKey = defaultSortKey;
+        }
 
         const keyToColumnMap = {
             "provider_reported.id": JsinfoSchema.providerReported.id,
             "provider_reported.blockId": JsinfoSchema.providerReported.blockId,
-            "blocks.datetime": JsinfoSchema.blocks.datetime,
+            "blocks.datetime": JsinfoSchema.providerReported.datetime, // this is faster
             "provider_reported.cu": JsinfoSchema.providerReported.cu,
             "provider_reported.disconnections": JsinfoSchema.providerReported.disconnections,
             "provider_reported.errors": JsinfoSchema.providerReported.errors,

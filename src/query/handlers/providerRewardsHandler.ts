@@ -184,15 +184,15 @@ class ProviderRewardsData extends RequestHandlerBase<ProviderRewardsResponse> {
             );
         }
 
-        //if (finalPagination.sortKey === null) {
-        finalPagination.sortKey = defaultSortKey;
-        //}
+        if (finalPagination.sortKey === null) {
+            finalPagination.sortKey = defaultSortKey;
+        }
 
         const keyToColumnMap = {
             "relay_payments.id": JsinfoSchema.relayPayments.id,
             "relay_payments.specId": JsinfoSchema.relayPayments.specId,
             "relay_payments.blockId": JsinfoSchema.relayPayments.blockId,
-            "blocks.datetime": JsinfoSchema.blocks.datetime,
+            "blocks.datetime": JsinfoSchema.relayPayments.datetime, // this is faster
             "relay_payments.consumer": JsinfoSchema.relayPayments.consumer,
             "relay_payments.relays": JsinfoSchema.relayPayments.relays,
             "relay_payments.cu": JsinfoSchema.relayPayments.cu,

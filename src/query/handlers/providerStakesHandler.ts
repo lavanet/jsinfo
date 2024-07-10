@@ -134,7 +134,6 @@ class ProviderStakesData extends RequestHandlerBase<JsinfoSchema.ProviderStake> 
         const sortColumn = keyToColumnMap[finalPagination.sortKey];
         const orderFunction = finalPagination.direction === 'ascending' ? asc : desc;
 
-        // Calculate offset for pagination
         const offset = (finalPagination.page - 1) * finalPagination.count;
 
         const stakesRes = await QueryGetJsinfoReadDbInstance()

@@ -1,6 +1,6 @@
 // src/query/classes/RequestHandlerBase.ts
 
-import { Pagination, ParsePaginationFromRequest } from "../utils/queryPagination";
+import { Pagination, ParsePaginationFromRequest, SerializePagination } from "../utils/queryPagination";
 import { FastifyReply, FastifyRequest } from "fastify";
 import { GetDataLength, GetDataLengthForPrints } from "../utils/queryUtils";
 import { subMonths, isAfter, isBefore, parseISO, startOfDay } from 'date-fns';
@@ -100,7 +100,7 @@ export class RequestHandlerBase<T> {
             const paginatedData = await this.fetchPaginatedRecords(pagination);
             this.log(`PaginatedRecordsRequestHandler:: Got paginated items. Length of paginatedData: ${GetDataLengthForPrints(paginatedData)}`);
             const endTime = Date.now(); // End time tracking
-            this.log(`PaginatedRecordsRequestHandler:: Execution time: ${endTime - startTime}ms`); // Log execution time
+            this.log(`PaginatedRecordsRequestHandler:: Execution time: ${endTime - startTime}ms for pagination: ${pagination ? SerializePagination(pagination) : "-"}`); // Log execution time
             return { data: paginatedData };
         } catch (error) {
             const endTime = Date.now(); // End time tracking in case of error

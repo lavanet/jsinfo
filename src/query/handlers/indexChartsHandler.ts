@@ -140,8 +140,8 @@ class IndexChartsData extends RequestHandlerBase<IndexChartResponse> {
             where(
                 and(
                     and(
-                        gt(sql<Date>`DATE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday})`, sql<Date>`${from}`),
-                        lt(sql<Date>`DATE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday})`, sql<Date>`${to}`)
+                        gt(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday, sql<Date>`${from}`),
+                        lt(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday, sql<Date>`${to}`)
                     ),
                     inArray(JsinfoProviderAgrSchema.aggDailyRelayPayments.specId, topChains)
                 )
@@ -181,8 +181,8 @@ class IndexChartsData extends RequestHandlerBase<IndexChartResponse> {
         }).from(JsinfoProviderAgrSchema.aggDailyRelayPayments).
             orderBy(desc(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday)).
             where(and(
-                gt(sql<Date>`DATE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday})`, sql<Date>`${from}`),
-                lt(sql<Date>`DATE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday})`, sql<Date>`${to}`)
+                gt(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday, sql<Date>`${from}`),
+                lt(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday, sql<Date>`${to}`)
             )).
             groupBy(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday);
 
@@ -245,10 +245,8 @@ class IndexChartsData extends RequestHandlerBase<IndexChartResponse> {
             return [];
         }
         const mainChartData = await this.getMainChartData(topChains, from, to);
-        console.log("Index Main Chart Data:", mainChartData);
 
         const qosData = await this.getQosData(from, to);
-        console.log("Index QoS Data:", qosData);
 
         const combinedData = this.combineData(mainChartData, qosData);
 

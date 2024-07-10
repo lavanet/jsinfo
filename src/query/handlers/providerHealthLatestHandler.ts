@@ -140,7 +140,7 @@ export async function ProviderHealthLatestPaginatedHandler(request: FastifyReque
     twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
 
     const healthRecords: HealthRecord[] = await QueryGetJsinfoReadDbInstance()
-        .select()
+        .selectDistinctOn([JsinfoSchema.providerHealth.timestamp, JsinfoSchema.providerHealth.spec, JsinfoSchema.providerHealth.geolocation, JsinfoSchema.providerHealth.provider, JsinfoSchema.providerHealth.interface])
         .from(JsinfoSchema.providerHealth)
         .where(
             and(

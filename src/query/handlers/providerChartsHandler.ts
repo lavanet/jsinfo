@@ -105,8 +105,8 @@ class ProviderChartsData extends RequestHandlerBase<ProviderChartResponse> {
         }).from(JsinfoProviderAgrSchema.aggDailyRelayPayments)
             .groupBy(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday)
             .where(and(
-                gt(sql<Date>`DATE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday})`, sql<Date>`${from}`),
-                lt(sql<Date>`DATE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday})`, sql<Date>`${to}`)
+                gt(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday, sql<Date>`${from}`),
+                lt(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday, sql<Date>`${to}`)
             ))
             .orderBy(desc(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday));
 

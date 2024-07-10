@@ -103,10 +103,9 @@ class ProviderBlockReportsData extends RequestHandlerBase<BlockReportsResponse> 
                 count: sql<number>`COUNT(*)`
             })
             .from(JsinfoSchema.providerLatestBlockReports)
-            .where(eq(JsinfoSchema.providerLatestBlockReports.provider, this.addr))
-            .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
+            .where(eq(JsinfoSchema.providerLatestBlockReports.provider, this.addr));
 
-        return countResult[0].count;
+        return Math.min(countResult[0].count || 0, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION - 1);
     }
 
     public async fetchPaginatedRecords(pagination: Pagination | null): Promise<BlockReportsResponse[]> {

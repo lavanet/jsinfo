@@ -79,12 +79,19 @@ class IndexProvidersData extends RequestHandlerBase<IndexProvidersResponse> {
             rewardSum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggAllTimeRelayPayments.rewardSum})`,
             moniker: JsinfoSchema.providers.moniker,
         }).from(JsinfoSchema.providerStakes)
-            .leftJoin(JsinfoProviderAgrSchema.aggAllTimeRelayPayments, eq(JsinfoSchema.providerStakes.provider, JsinfoProviderAgrSchema.aggAllTimeRelayPayments.provider))
+            .leftJoin(JsinfoProviderAgrSchema.aggAllTimeRelayPayments,
+                and(
+                    eq(JsinfoSchema.providerStakes.provider, JsinfoProviderAgrSchema.aggAllTimeRelayPayments.provider),
+                    eq(JsinfoSchema.providerStakes.specId, JsinfoProviderAgrSchema.aggAllTimeRelayPayments.specId)
+                )
+            )
             .leftJoin(JsinfoSchema.providers, eq(JsinfoSchema.providerStakes.provider, JsinfoSchema.providers.address))
             .where(
                 and(
-                    not(eq(JsinfoSchema.providerStakes.status, JsinfoSchema.LavaProviderStakeStatus.Frozen)),
-                    not(isNull(JsinfoSchema.providerStakes.provider)),
+                    and(
+                        not(eq(JsinfoSchema.providerStakes.status, JsinfoSchema.LavaProviderStakeStatus.Frozen)),
+                        not(isNull(JsinfoSchema.providerStakes.provider)),
+                    ),
                     not(eq(JsinfoSchema.providerStakes.provider, ''))
                 )
             )
@@ -110,17 +117,24 @@ class IndexProvidersData extends RequestHandlerBase<IndexProvidersResponse> {
                 count: sql<number>`COUNT(DISTINCT ${JsinfoSchema.providerStakes.provider})`
             })
             .from(JsinfoSchema.providerStakes)
-            .leftJoin(JsinfoProviderAgrSchema.aggAllTimeRelayPayments, eq(JsinfoSchema.providerStakes.provider, JsinfoProviderAgrSchema.aggAllTimeRelayPayments.provider))
+            .leftJoin(JsinfoProviderAgrSchema.aggAllTimeRelayPayments,
+                and(
+                    eq(JsinfoSchema.providerStakes.provider, JsinfoProviderAgrSchema.aggAllTimeRelayPayments.provider),
+                    eq(JsinfoSchema.providerStakes.specId, JsinfoProviderAgrSchema.aggAllTimeRelayPayments.specId)
+                )
+            )
             .leftJoin(JsinfoSchema.providers, eq(JsinfoSchema.providerStakes.provider, JsinfoSchema.providers.address))
             .where(
                 and(
-                    not(eq(JsinfoSchema.providerStakes.status, JsinfoSchema.LavaProviderStakeStatus.Frozen)),
-                    not(isNull(JsinfoSchema.providerStakes.provider)),
+                    and(
+                        not(eq(JsinfoSchema.providerStakes.status, JsinfoSchema.LavaProviderStakeStatus.Frozen)),
+                        not(isNull(JsinfoSchema.providerStakes.provider)),
+                    ),
                     not(eq(JsinfoSchema.providerStakes.provider, ''))
                 )
             );
 
-        return res[0].count ?? 0;
+        return res[0].count || 0;
     }
 
     public async fetchPaginatedRecords(pagination: Pagination | null): Promise<IndexProvidersResponse[]> {
@@ -145,9 +159,9 @@ class IndexProvidersData extends RequestHandlerBase<IndexProvidersResponse> {
         const keyToColumnMap = {
             addr: JsinfoSchema.providerStakes.provider,
             moniker: JsinfoSchema.providers.moniker,
-            rewardSum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggAllTimeRelayPayments.rewardSum})`,
-            totalServices: sql<string>`CONCAT(SUM(CASE WHEN ${JsinfoSchema.providerStakes.status} = ${JsinfoSchema.LavaProviderStakeStatus.Active} THEN 1 ELSE 0 END), ' / ', COUNT(${JsinfoSchema.providerStakes.specId}))`,
-            totalStake: sql<number>`SUM(${JsinfoSchema.providerStakes.stake})`
+            rewardSum: sql`rewardSum`,
+            totalServices: sql`totalServices`,
+            totalStake: sql`totalStake`
         };
 
         // Check if the sort key is in the map, throw an error if not
@@ -162,21 +176,28 @@ class IndexProvidersData extends RequestHandlerBase<IndexProvidersResponse> {
         const orderFunction = finalPagination.direction === 'ascending' ? asc : desc;
 
         // Execute the query with proper sorting, pagination using offset and limit
-        const data = await QueryGetJsinfoReadDbInstance()
+        const queryBuilder = QueryGetJsinfoReadDbInstance()
             .select({
                 provider: JsinfoSchema.providerStakes.provider,
                 moniker: JsinfoSchema.providers.moniker,
-                totalServices: sql<string>`CONCAT(SUM(CASE WHEN ${JsinfoSchema.providerStakes.status} = ${JsinfoSchema.LavaProviderStakeStatus.Active} THEN 1 ELSE 0 END), ' / ', COUNT(${JsinfoSchema.providerStakes.specId}))`,
-                totalStake: sql<number>`SUM(${JsinfoSchema.providerStakes.stake})`,
-                rewardSum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggAllTimeRelayPayments.rewardSum})`,
+                totalServices: sql<string>`CONCAT(SUM(CASE WHEN ${JsinfoSchema.providerStakes.status} = ${JsinfoSchema.LavaProviderStakeStatus.Active} THEN 1 ELSE 0 END), ' / ', COUNT(${JsinfoSchema.providerStakes.specId})) as totalServices`,
+                totalStake: sql<number>`COALESCE(SUM(${JsinfoSchema.providerStakes.stake}), 0) as totalStake`,
+                rewardSum: sql<number>`COALESCE(SUM(${JsinfoProviderAgrSchema.aggAllTimeRelayPayments.rewardSum}), 0) as rewardSum`,
             })
             .from(JsinfoSchema.providerStakes)
-            .leftJoin(JsinfoProviderAgrSchema.aggAllTimeRelayPayments, eq(JsinfoSchema.providerStakes.provider, JsinfoProviderAgrSchema.aggAllTimeRelayPayments.provider))
+            .leftJoin(JsinfoProviderAgrSchema.aggAllTimeRelayPayments,
+                and(
+                    eq(JsinfoSchema.providerStakes.provider, JsinfoProviderAgrSchema.aggAllTimeRelayPayments.provider),
+                    eq(JsinfoSchema.providerStakes.specId, JsinfoProviderAgrSchema.aggAllTimeRelayPayments.specId)
+                )
+            )
             .leftJoin(JsinfoSchema.providers, eq(JsinfoSchema.providerStakes.provider, JsinfoSchema.providers.address))
             .where(
                 and(
-                    not(eq(JsinfoSchema.providerStakes.status, JsinfoSchema.LavaProviderStakeStatus.Frozen)),
-                    not(isNull(JsinfoSchema.providerStakes.provider)),
+                    and(
+                        not(eq(JsinfoSchema.providerStakes.status, JsinfoSchema.LavaProviderStakeStatus.Frozen)),
+                        not(isNull(JsinfoSchema.providerStakes.provider)),
+                    ),
                     not(eq(JsinfoSchema.providerStakes.provider, ''))
                 )
             )
@@ -184,6 +205,11 @@ class IndexProvidersData extends RequestHandlerBase<IndexProvidersResponse> {
             .orderBy(orderFunction(sortColumn))
             .offset((finalPagination.page - 1) * finalPagination.count)
             .limit(finalPagination.count);
+
+        // Hypothetical method to convert the query to a string
+        console.log(JSON.stringify(queryBuilder.toSQL()));
+        let data = await queryBuilder;
+        console.log("res", data)
 
         return data.map(item => ({
             addr: item.provider || "",

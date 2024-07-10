@@ -142,11 +142,9 @@ class ProviderReportsData extends RequestHandlerBase<ProviderReportsResponse> {
                 count: sql<number>`COUNT(*)`
             })
             .from(JsinfoSchema.providerReported)
-            .leftJoin(JsinfoSchema.blocks, eq(JsinfoSchema.providerReported.blockId, JsinfoSchema.blocks.height))
-            .where(eq(JsinfoSchema.providerReported.provider, this.addr))
-            .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
+            .where(eq(JsinfoSchema.providerReported.provider, this.addr));
 
-        return countResult[0].count;
+        return Math.min(countResult[0].count || 0, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION - 1);
     }
 
     public async fetchPaginatedRecords(pagination: Pagination | null): Promise<ProviderReportsResponse[]> {
@@ -161,9 +159,9 @@ class ProviderReportsData extends RequestHandlerBase<ProviderReportsResponse> {
             );
         }
 
-        if (finalPagination.sortKey === null) {
-            finalPagination.sortKey = defaultSortKey;
-        }
+        // if (finalPagination.sortKey === null) {
+        finalPagination.sortKey = defaultSortKey;
+        //}
 
         const keyToColumnMap = {
             "provider_reported.id": JsinfoSchema.providerReported.id,

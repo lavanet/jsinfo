@@ -116,11 +116,8 @@ class EventsEventsData extends RequestHandlerBase<EventsEventsResponse> {
                 count: sql<number>`COUNT(*)`
             })
             .from(JsinfoSchema.events)
-            .leftJoin(JsinfoSchema.blocks, eq(JsinfoSchema.events.blockId, JsinfoSchema.blocks.height))
-            .leftJoin(JsinfoSchema.providers, eq(JsinfoSchema.events.provider, JsinfoSchema.providers.address))
-            .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
 
-        return countResult[0].count;
+        return Math.min(countResult[0].count || 0, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION - 1);
     }
 
     public async fetchPaginatedRecords(pagination: Pagination | null): Promise<EventsEventsResponse[]> {

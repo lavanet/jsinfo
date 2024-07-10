@@ -167,11 +167,9 @@ class ProviderRewardsData extends RequestHandlerBase<ProviderRewardsResponse> {
                 count: sql<number>`COUNT(*)`
             })
             .from(JsinfoSchema.relayPayments)
-            .leftJoin(JsinfoSchema.blocks, eq(JsinfoSchema.relayPayments.blockId, JsinfoSchema.blocks.height))
-            .where(eq(JsinfoSchema.relayPayments.provider, this.addr))
-            .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
+            .where(eq(JsinfoSchema.relayPayments.provider, this.addr));
 
-        return countResult[0].count;
+        return Math.min(countResult[0].count || 0, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION - 1);
     }
 
     public async fetchPaginatedRecords(pagination: Pagination | null): Promise<ProviderRewardsResponse[]> {
@@ -186,9 +184,9 @@ class ProviderRewardsData extends RequestHandlerBase<ProviderRewardsResponse> {
             );
         }
 
-        if (finalPagination.sortKey === null) {
-            finalPagination.sortKey = defaultSortKey;
-        }
+        //if (finalPagination.sortKey === null) {
+        finalPagination.sortKey = defaultSortKey;
+        //}
 
         const keyToColumnMap = {
             "relay_payments.id": JsinfoSchema.relayPayments.id,

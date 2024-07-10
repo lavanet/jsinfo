@@ -146,7 +146,7 @@ export class RequestHandlerBase<T> {
     public async getTotalItemCountPaginatiedHandler(request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> {
         try {
             const itemCount = await this.fetchRecordCountFromDb();
-            reply.send({ itemCount: GetDataLength(itemCount) });
+            reply.send({ itemCount: itemCount });
             return reply;
         } catch (error) {
             const err = error as Error;

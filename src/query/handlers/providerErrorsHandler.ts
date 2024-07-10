@@ -90,10 +90,9 @@ class ProviderErrorsData extends RequestHandlerBase<ErrorsReportResponse> {
                 count: sql<number>`COUNT(*)`
             })
             .from(RelaysSchema.lavaReportError)
-            .where(eq(RelaysSchema.lavaReportError.provider, this.addr))
-            .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
+            .where(eq(RelaysSchema.lavaReportError.provider, this.addr));
 
-        return countResult[0].count;
+        return Math.min(countResult[0].count || 0, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION - 1);
     }
 
     public async fetchPaginatedRecords(pagination: Pagination | null): Promise<ErrorsReportResponse[]> {
@@ -142,7 +141,7 @@ class ProviderErrorsData extends RequestHandlerBase<ErrorsReportResponse> {
 
 
     protected async convertRecordsToCsv(data: ErrorsReportResponse[]): Promise<string> {
-        let csv = 'date,spec,error\n';
+        let csv = 'date,chain,error\n';
         data.forEach((item: ErrorsReportResponse) => {
             csv += `${item.date},${CSVEscape(item.spec)},${CSVEscape(item.error)}\n`;
         });

@@ -90,10 +90,9 @@ class ProviderDelegatorRewardsData extends RequestHandlerBase<DelegatorRewardRes
                 count: sql<number>`COUNT(*)`
             })
             .from(JsinfoSchema.dualStackingDelegatorRewards)
-            .where(eq(JsinfoSchema.dualStackingDelegatorRewards.provider, this.addr))
-            .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
+            .where(eq(JsinfoSchema.dualStackingDelegatorRewards.provider, this.addr));
 
-        return countResult[0].count;
+        return Math.min(countResult[0].count || 0, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION - 1);
     }
 
     public async fetchPaginatedRecords(pagination: Pagination | null): Promise<DelegatorRewardResponse[]> {
@@ -138,7 +137,7 @@ class ProviderDelegatorRewardsData extends RequestHandlerBase<DelegatorRewardRes
 
 
     protected async convertRecordsToCsv(data: DelegatorRewardResponse[]): Promise<string> {
-        let csv = 'time,chainId,amount\n';
+        let csv = 'time,chain,amount\n';
         data.forEach((item: DelegatorRewardResponse) => {
             csv += `${item.timestamp},${item.chainId},${item.amount}\n`;
         });

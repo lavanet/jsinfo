@@ -46,7 +46,6 @@ export async function ConsumerCahcedHandler(request: FastifyRequest, reply: Fast
 
     let addr = await GetAndValidateConsumerAddressFromRequest(request, reply);
     if (addr === '') {
-        console.log("Address is empty, returning reply");
         return reply;
     }
 

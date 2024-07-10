@@ -4,7 +4,7 @@
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../queryDb';
 import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
-import { eq, desc, asc } from "drizzle-orm";
+import { eq, desc, asc, sql } from "drizzle-orm";
 import { Pagination, ParsePaginationFromString } from '../utils/queryPagination';
 import { CSVEscape, GetAndValidateProviderAddressFromRequest } from '../utils/queryUtils';
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '../queryConsts';
@@ -99,6 +99,17 @@ class ProviderHealthData extends RequestHandlerBase<HealthReportEntry> {
         return healthReportEntries;
     }
 
+    protected async fetchRecordCountFromDb(): Promise<number> {
+        await QueryCheckJsinfoReadDbInstance();
+
+        const countResult = await QueryGetJsinfoReadDbInstance()
+            .select({
+                count: sql<number>`COUNT(*)`
+            })
+            .from(JsinfoSchema.providerHealth);
+
+        return Math.min(countResult[0].count || 0, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION - 1);
+    }
 
     public async fetchPaginatedRecords(pagination: Pagination | null): Promise<HealthReportEntry[]> {
         const defaultSortKey = "id";
@@ -166,7 +177,7 @@ class ProviderHealthData extends RequestHandlerBase<HealthReportEntry> {
     }
 
     protected async convertRecordsToCsv(data: HealthReportEntry[]): Promise<string> {
-        let csv = 'time,spec,interface,status,region,message\n';
+        let csv = 'time,chain,interface,status,region,message\n';
         data.forEach((item: HealthReportEntry) => {
             csv += `${item.timestamp},${CSVEscape(item.spec)},${CSVEscape(item.interface || "")},${CSVEscape(item.status)},${CSVEscape(item.message || "")}\n`;
         });

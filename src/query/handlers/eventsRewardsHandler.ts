@@ -108,10 +108,8 @@ class EventsRewardsData extends RequestHandlerBase<EventsRewardsResponse> {
                 count: sql<number>`COUNT(*)`
             })
             .from(JsinfoSchema.relayPayments)
-            .leftJoin(JsinfoSchema.providers, eq(JsinfoSchema.relayPayments.provider, JsinfoSchema.providers.address))
-            .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
 
-        return countResult[0].count || 0;
+        return Math.min(countResult[0].count || 0, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION - 1);
     }
 
     public async fetchPaginatedRecords(pagination: Pagination | null): Promise<EventsRewardsResponse[]> {

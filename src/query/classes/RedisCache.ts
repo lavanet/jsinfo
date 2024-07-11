@@ -34,10 +34,14 @@ class RedisCacheClass {
     }
 
     private async reconnect() {
-        this.log('Attempting to reconnect to Redis...');
-        this.initializeClient();
-        if (this.client) {
-            await this.client.connect();
+        try {
+            this.log('Attempting to reconnect to Redis...');
+            this.initializeClient();
+            if (this.client) {
+                await this.client.connect();
+            }
+        } catch (error) {
+            this.logError(`Reddis reconnect failed`, error);
         }
     }
 

@@ -141,7 +141,7 @@ class ProviderRewardsData extends RequestHandlerBase<ProviderRewardsResponse> {
         let thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-        console.log("dasd", this.addr);
+        // console.log("dasd", this.addr);
 
         const paymentsRes = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.relayPayments).
             leftJoin(JsinfoSchema.blocks, eq(JsinfoSchema.relayPayments.blockId, JsinfoSchema.blocks.height)).
@@ -154,7 +154,7 @@ class ProviderRewardsData extends RequestHandlerBase<ProviderRewardsResponse> {
             offset(0).
             limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION)
 
-        console.log("dasd12121", paymentsRes);
+        // console.log("dasd12121", paymentsRes);
 
         return paymentsRes;
     }

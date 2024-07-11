@@ -6,6 +6,7 @@ class RedisCacheClass {
     private client: RedisClientType | null = null;
     private keyPrefix: string;
     private debugLogs: boolean;
+    private redisUrl: string | null | undefined = null;
 
     constructor(keyPrefix: string, debugLogs: boolean = false) {
         this.keyPrefix = keyPrefix;
@@ -14,14 +15,19 @@ class RedisCacheClass {
     }
 
     private initializeClient() {
-        const redisUrl = process.env.JSINFO_QUERY_REDDIS_CACHE;
-        if (!redisUrl) {
+        this.redisUrl = process.env.JSINFO_QUERY_REDDIS_CACHE;
+        if (!this.redisUrl) {
             this.log('JSINFO_QUERY_REDDIS_CACHE environment variable is not set.');
             return;
         }
+        this.connect();
+    }
 
+    private async connect() {
+        if (!this.redisUrl) return;
+        this.log('Attempting to reconnect to Redis...');
         this.client = createClient({
-            url: redisUrl,
+            url: this.redisUrl,
             socket: {
                 connectTimeout: 5000, // Timeout for connecting to Redis in milliseconds
             },
@@ -35,11 +41,7 @@ class RedisCacheClass {
 
     private async reconnect() {
         try {
-            this.log('Attempting to reconnect to Redis...');
-            this.initializeClient();
-            if (this.client) {
-                await this.client.connect();
-            }
+            this.connect();
         } catch (error) {
             this.logError(`Reddis reconnect failed`, error);
         }

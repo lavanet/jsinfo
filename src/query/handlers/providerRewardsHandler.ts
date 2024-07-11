@@ -131,7 +131,7 @@ class ProviderRewardsData extends RequestHandlerBase<ProviderRewardsResponse> {
         return ProviderRewardsData.GetInstanceBase(addr);
     }
 
-    protected getCSVFileNameImpl(): string {
+    protected getCSVFileName(): string {
         return `ProviderRewards_${this.addr}.csv`;
     }
 
@@ -210,7 +210,6 @@ class ProviderRewardsData extends RequestHandlerBase<ProviderRewardsResponse> {
         const sortColumn = keyToColumnMap[finalPagination.sortKey];
         const orderFunction = finalPagination.direction === 'ascending' ? asc : desc;
 
-        console.log("sortColu111mn: ", sortColumn);
         const paymentsRes = await QueryGetJsinfoReadDbInstance()
             .select()
             .from(JsinfoSchema.relayPayments)
@@ -218,7 +217,6 @@ class ProviderRewardsData extends RequestHandlerBase<ProviderRewardsResponse> {
             .orderBy(orderFunction(sortColumn))
             .offset((finalPagination.page - 1) * finalPagination.count)
             .limit(finalPagination.count);
-        console.log("sortCo222lumn: ", sortColumn);
 
         return paymentsRes;
     }
@@ -262,7 +260,7 @@ export async function ProviderRewardsItemCountPaginatiedHandler(request: Fastify
     if (addr === '') {
         return reply;
     }
-    return await ProviderRewardsData.GetInstance(addr).getTotalItemCountPaginatiedHandler(request, reply)
+    return await ProviderRewardsData.GetInstance(addr).getTotalItemCountPaginatedHandler(request, reply)
 }
 
 export async function ProviderRewardsCSVRawHandler(request: FastifyRequest, reply: FastifyReply) {

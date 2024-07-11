@@ -69,8 +69,12 @@ class ProviderHealthData extends RequestHandlerBase<HealthReportEntry> {
         return ProviderHealthData.GetInstanceBase(addr);
     }
 
-    protected getCSVFileNameImpl(): string {
+    protected getCSVFileName(): string {
         return `ProviderHealth_${this.addr}.csv`;
+    }
+
+    protected getTTL(key: string): number {
+        return 120;
     }
 
     protected async fetchAllRecords(): Promise<HealthReportEntry[]> {
@@ -236,7 +240,7 @@ export async function ProviderHealthItemCountPaginatiedHandler(request: FastifyR
     if (addr === '') {
         return reply;
     }
-    return await ProviderHealthData.GetInstance(addr).getTotalItemCountPaginatiedHandler(request, reply)
+    return await ProviderHealthData.GetInstance(addr).getTotalItemCountPaginatedHandler(request, reply)
 }
 
 export async function ProviderHealthCSVRawHandler(request: FastifyRequest, reply: FastifyReply) {

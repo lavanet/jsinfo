@@ -61,7 +61,7 @@ class ProviderErrorsData extends RequestHandlerBase<ErrorsReportResponse> {
         return ProviderErrorsData.GetInstanceBase(addr);
     }
 
-    protected getCSVFileNameImpl(): string {
+    protected getCSVFileName(): string {
         return `ProviderErrors_${this.addr}.csv`;
     }
 
@@ -132,7 +132,7 @@ class ProviderErrorsData extends RequestHandlerBase<ErrorsReportResponse> {
             .offset((pagination.page - 1) * pagination.count)
             .limit(pagination.count);
 
-        console.log("fetchPaginatedRecords", result1.toSQL());
+        // console.log("fetchPaginatedRecords", result1.toSQL());
         const result = await result1;
         return result.map(row => ({
             id: row.id,
@@ -165,7 +165,7 @@ export async function ProviderErrorsItemCountPaginatiedHandler(request: FastifyR
     if (addr === '') {
         return null;
     }
-    return await ProviderErrorsData.GetInstance(addr).getTotalItemCountPaginatiedHandler(request, reply)
+    return await ProviderErrorsData.GetInstance(addr).getTotalItemCountPaginatedHandler(request, reply)
 }
 
 export async function ProviderErrorsCSVRawHandler(request: FastifyRequest, reply: FastifyReply) {

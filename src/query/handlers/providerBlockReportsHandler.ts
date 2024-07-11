@@ -72,7 +72,7 @@ class ProviderBlockReportsData extends RequestHandlerBase<BlockReportsResponse> 
         return ProviderBlockReportsData.GetInstanceBase(addr);
     }
 
-    protected getCSVFileNameImpl(): string {
+    protected getCSVFileName(): string {
         return `ProviderBlockReports_${this.addr}.csv`;
     }
 
@@ -185,7 +185,7 @@ export async function ProviderBlockReportsItemCountPaginatiedHandler(request: Fa
     if (addr === '') {
         return reply;
     }
-    return await ProviderBlockReportsData.GetInstance(addr).getTotalItemCountPaginatiedHandler(request, reply)
+    return await ProviderBlockReportsData.GetInstance(addr).getTotalItemCountPaginatedHandler(request, reply)
 }
 
 export async function ProviderBlockReportsCSVRawHandler(request: FastifyRequest, reply: FastifyReply) {

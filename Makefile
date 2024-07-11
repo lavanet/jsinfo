@@ -53,3 +53,10 @@ query_test_lavap_prodiver_error_parsing:
 
 scripts_local_startQueryProviderDualStackingDelegatorRewardsContainer:
 	QUERY_PROVIDER_DUAL_STACKING_DELEGATOR_REWARDS_CONTAINER_DEBUG=true bash scripts/startQueryProviderDualStackingDelegatorRewardsContainer.sh
+
+reddis_run:
+	docker run -d --name redis-stack -p 6379:6379 -p 8001:8001 -e REDIS_ARGS="--requirepass mypassword" redis/redis-stack:latest
+
+reddis_connect:
+	docker exec -it redis-stack redis-cli
+

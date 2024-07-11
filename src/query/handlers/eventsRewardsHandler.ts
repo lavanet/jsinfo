@@ -77,7 +77,7 @@ class EventsRewardsData extends RequestHandlerBase<EventsRewardsResponse> {
         return EventsRewardsData.GetInstanceBase();
     }
 
-    protected getCSVFileNameImpl(): string {
+    protected getCSVFileName(): string {
         return `EventsRewards.csv`;
     }
 
@@ -215,7 +215,7 @@ export async function EventsRewardsPaginatedHandler(request: FastifyRequest, rep
 }
 
 export async function EventsRewardsItemCountPaginatiedHandler(request: FastifyRequest, reply: FastifyReply) {
-    return await EventsRewardsData.GetInstance().getTotalItemCountPaginatiedHandler(request, reply)
+    return await EventsRewardsData.GetInstance().getTotalItemCountPaginatedHandler(request, reply)
 }
 
 export async function EventsRewardsCSVRawHandler(request: FastifyRequest, reply: FastifyReply) {

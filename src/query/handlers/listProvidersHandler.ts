@@ -193,7 +193,7 @@ export async function ListProvidersRawHandler(request: FastifyRequest, reply: Fa
             });
         }
         return acc;
-    }, []);
+    }, []).sort((a, b) => a.provider.localeCompare(b.provider));
 
     const { latestHeight, latestDatetime } = await GetLatestBlock()
 

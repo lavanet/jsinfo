@@ -70,7 +70,7 @@ class ProviderStakesData extends RequestHandlerBase<JsinfoSchema.ProviderStake> 
         return ProviderStakesData.GetInstanceBase(addr);
     }
 
-    protected getCSVFileNameImpl(): string {
+    protected getCSVFileName(): string {
         return `ProviderStakes_${this.addr}.csv`;
     }
 
@@ -190,7 +190,7 @@ export async function ProviderStakesItemCountPaginatiedHandler(request: FastifyR
     if (addr === '') {
         return reply;
     }
-    return await ProviderStakesData.GetInstance(addr).getTotalItemCountPaginatiedHandler(request, reply)
+    return await ProviderStakesData.GetInstance(addr).getTotalItemCountPaginatedHandler(request, reply)
 }
 
 export async function ProviderStakesCSVRawHandler(request: FastifyRequest, reply: FastifyReply) {

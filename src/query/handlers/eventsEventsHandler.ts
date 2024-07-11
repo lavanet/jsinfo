@@ -83,7 +83,7 @@ class EventsEventsData extends RequestHandlerBase<EventsEventsResponse> {
         return EventsEventsData.GetInstanceBase();
     }
 
-    protected getCSVFileNameImpl(): string {
+    protected getCSVFileName(): string {
         return `EventsData.csv`;
     }
 
@@ -238,7 +238,7 @@ export async function EventsEventsPaginatedHandler(request: FastifyRequest, repl
 }
 
 export async function EventsEventsItemCountPaginatiedHandler(request: FastifyRequest, reply: FastifyReply) {
-    return await EventsEventsData.GetInstance().getTotalItemCountPaginatiedHandler(request, reply)
+    return await EventsEventsData.GetInstance().getTotalItemCountPaginatedHandler(request, reply)
 }
 
 export async function EventsEventsCSVRawHandler(request: FastifyRequest, reply: FastifyReply) {

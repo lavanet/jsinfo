@@ -65,7 +65,7 @@ class IndexProvidersData extends RequestHandlerBase<IndexProvidersResponse> {
         return IndexProvidersData.GetInstanceBase();
     }
 
-    protected getCSVFileNameImpl(): string {
+    protected getCSVFileName(): string {
         return `LavaTopProviders.csv`;
     }
 
@@ -207,9 +207,9 @@ class IndexProvidersData extends RequestHandlerBase<IndexProvidersResponse> {
             .limit(finalPagination.count);
 
         // Hypothetical method to convert the query to a string
-        console.log(JSON.stringify(queryBuilder.toSQL()));
+        // console.log(JSON.stringify(queryBuilder.toSQL()));
         let data = await queryBuilder;
-        console.log("res", data)
+        // console.log("res", data)
 
         return data.map(item => ({
             addr: item.provider || "",
@@ -248,7 +248,7 @@ export async function IndexProvidersPaginatedHandler(request: FastifyRequest, re
 }
 
 export async function IndexProvidersItemCountPaginatiedHandler(request: FastifyRequest, reply: FastifyReply) {
-    return await IndexProvidersData.GetInstance().getTotalItemCountPaginatiedHandler(request, reply)
+    return await IndexProvidersData.GetInstance().getTotalItemCountPaginatedHandler(request, reply)
 }
 
 export async function IndexProvidersCSVRawHandler(request: FastifyRequest, reply: FastifyReply) {

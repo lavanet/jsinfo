@@ -1,6 +1,6 @@
 // jsinfo/src/query/queryRoutes.ts
 
-import { RegistePaginationServerHandler, GetServerInstance } from './queryServer';
+import { RegisterPaginationServerHandler, RegisterRedisBackedHandler, GetServerInstance } from './queryServer';
 import * as consts from './queryConsts';
 
 // -- Server status ajax --
@@ -59,36 +59,36 @@ import { LavapDualStackingDelegatorRewardsHandler, LavapDualStackingDelegatorRew
 GetServerInstance().get('/latest', LatestRawHandlerOpts, LatestRawHandler);
 
 // -- list all providers and monikers endpoint ---
-RegistePaginationServerHandler('/listProviders', ListProvidersRawHandlerOpts, ListProvidersRawHandler);
+RegisterRedisBackedHandler('/listProviders', ListProvidersRawHandlerOpts, ListProvidersRawHandler, { cache_ttl: 10 * 60 });
 
 // -- Server meta ajax --
-RegistePaginationServerHandler('/providers', ProvidersPaginatedHandlerOpts, ProvidersPaginatedHandler);
-RegistePaginationServerHandler('/specs', SpecsPaginatedHandlerOpts, SpecsPaginatedHandler);
-RegistePaginationServerHandler('/consumers', ConsumersPaginatedHandlerOpts, ConsumersPaginatedHandler);
+RegisterRedisBackedHandler('/providers', ProvidersPaginatedHandlerOpts, ProvidersPaginatedHandler, { cache_ttl: 30 });
+RegisterRedisBackedHandler('/specs', SpecsPaginatedHandlerOpts, SpecsPaginatedHandler, { cache_ttl: 30 });
+RegisterRedisBackedHandler('/consumers', ConsumersPaginatedHandlerOpts, ConsumersPaginatedHandler, { cache_ttl: 30 });
 
 // -- All pages ajax --
-RegistePaginationServerHandler('/cacheLinks', CacheLinksPaginatedHandlerOpts, CacheLinksPaginatedHandler);
-RegistePaginationServerHandler('/autoCompleteLinksHandler', AutoCompleteLinksPaginatedHandlerOpts, AutoCompleteLinksPaginatedHandler);
+RegisterRedisBackedHandler('/cacheLinks', CacheLinksPaginatedHandlerOpts, CacheLinksPaginatedHandler, { cache_ttl: 60 * 60 });
+RegisterRedisBackedHandler('/autoCompleteLinksHandler', AutoCompleteLinksPaginatedHandlerOpts, AutoCompleteLinksPaginatedHandler, { cache_ttl: 10 * 60 });
 
 // -- Index page ajax -- 
-RegistePaginationServerHandler('/index', IndexHandlerOpts, IndexHandler);
-RegistePaginationServerHandler('/indexProviders', IndexProvidersPaginatedHandlerOpts, IndexProvidersPaginatedHandler, IndexProvidersItemCountPaginatiedHandler);
+RegisterRedisBackedHandler('/index', IndexHandlerOpts, IndexHandler, { cache_ttl: 10 });
+RegisterPaginationServerHandler('/indexProviders', IndexProvidersPaginatedHandlerOpts, IndexProvidersPaginatedHandler, IndexProvidersItemCountPaginatiedHandler);
 GetServerInstance().get('/indexProvidersCsv', IndexProvidersCSVRawHandler);
 GetServerInstance().get('/indexCharts', IndexChartsRawHandlerOpts, IndexChartsRawHandler);
 
 // -- Provider page ajax --
-RegistePaginationServerHandler('/provider/:addr', ProviderPaginatedHandlerOpts, ProviderPaginatedHandler);
+RegisterRedisBackedHandler('/provider/:addr', ProviderPaginatedHandlerOpts, ProviderPaginatedHandler);
 GetServerInstance().get('/providerCharts/:addr', ProviderChartsRawHandlerOpts, ProviderChartsRawHandler);
 
-RegistePaginationServerHandler('/providerHealth/:addr', ProviderHealthPaginatedHandlerOpts, ProviderHealthPaginatedHandler, ProviderHealthItemCountPaginatiedHandler);
-RegistePaginationServerHandler('/providerErrors/:addr', ProviderErrorsPaginatedHandlerOpts, ProviderErrorsPaginatedHandler, ProviderErrorsItemCountPaginatiedHandler);
-RegistePaginationServerHandler('/providerStakes/:addr', ProviderStakesPaginatedHandlerOpts, ProviderStakesHandler, ProviderStakesItemCountPaginatiedHandler);
-RegistePaginationServerHandler('/providerEvents/:addr', ProviderEventsPaginatedHandlerOpts, ProviderEventsPaginatedHandler, ProviderEventsItemCountPaginatiedHandler);
-RegistePaginationServerHandler('/providerRewards/:addr', ProviderRewardsPaginatedHandlerOpts, ProviderRewardsPaginatedHandler, ProviderRewardsItemCountPaginatiedHandler);
-RegistePaginationServerHandler('/providerReports/:addr', ProviderReportsPaginatedHandlerOpts, ProviderReportsPaginatedHandler, ProviderReportsItemCountPaginatiedHandler);
-RegistePaginationServerHandler('/providerDelegatorRewards/:addr', ProviderDelegatorRewardsPaginatedHandlerOpts, ProviderDelegatorRewardsPaginatedHandler, ProviderDelegatorRewardsItemCountPaginatiedHandler);
-RegistePaginationServerHandler('/providerBlockReports/:addr', ProviderBlockReportsPaginatedHandlerOpts, ProviderBlockReportsPaginatedHandler, ProviderBlockReportsItemCountPaginatiedHandler);
-RegistePaginationServerHandler('/providerLatestHealth/:addr', ProviderHealthLatestPaginatedHandlerOpts, ProviderHealthLatestPaginatedHandler);
+RegisterPaginationServerHandler('/providerHealth/:addr', ProviderHealthPaginatedHandlerOpts, ProviderHealthPaginatedHandler, ProviderHealthItemCountPaginatiedHandler);
+RegisterPaginationServerHandler('/providerErrors/:addr', ProviderErrorsPaginatedHandlerOpts, ProviderErrorsPaginatedHandler, ProviderErrorsItemCountPaginatiedHandler);
+RegisterPaginationServerHandler('/providerStakes/:addr', ProviderStakesPaginatedHandlerOpts, ProviderStakesHandler, ProviderStakesItemCountPaginatiedHandler);
+RegisterPaginationServerHandler('/providerEvents/:addr', ProviderEventsPaginatedHandlerOpts, ProviderEventsPaginatedHandler, ProviderEventsItemCountPaginatiedHandler);
+RegisterPaginationServerHandler('/providerRewards/:addr', ProviderRewardsPaginatedHandlerOpts, ProviderRewardsPaginatedHandler, ProviderRewardsItemCountPaginatiedHandler);
+RegisterPaginationServerHandler('/providerReports/:addr', ProviderReportsPaginatedHandlerOpts, ProviderReportsPaginatedHandler, ProviderReportsItemCountPaginatiedHandler);
+RegisterPaginationServerHandler('/providerDelegatorRewards/:addr', ProviderDelegatorRewardsPaginatedHandlerOpts, ProviderDelegatorRewardsPaginatedHandler, ProviderDelegatorRewardsItemCountPaginatiedHandler);
+RegisterPaginationServerHandler('/providerBlockReports/:addr', ProviderBlockReportsPaginatedHandlerOpts, ProviderBlockReportsPaginatedHandler, ProviderBlockReportsItemCountPaginatiedHandler);
+RegisterRedisBackedHandler('/providerLatestHealth/:addr', ProviderHealthLatestPaginatedHandlerOpts, ProviderHealthLatestPaginatedHandler, { cache_ttl: 2 * 60 });
 
 GetServerInstance().get('/providerHealthCsv/:addr', ProviderHealthCSVRawHandler);
 GetServerInstance().get('/providerErrorsCsv/:addr', ProviderErrorsCSVRawHandler);
@@ -99,20 +99,20 @@ GetServerInstance().get('/providerReportsCsv/:addr', ProviderReportsCSVRawHandle
 GetServerInstance().get('/providerDelegatorRewardsCsv/:addr', ProviderDelegatorRewardsCSVRawHandler);
 GetServerInstance().get('/providerBlockReportsCsv/:addr', ProviderBlockReportsCSVRawHandler);
 
-RegistePaginationServerHandler('/consumer/:addr', ConsumerCahcedHandlerOpts, ConsumerCahcedHandler);
+RegisterRedisBackedHandler('/consumer/:addr', ConsumerCahcedHandlerOpts, ConsumerCahcedHandler);
 
 // -- Events page ajax --
-RegistePaginationServerHandler('/events', EventsPaginatedHandlerOpts, EventsPaginatedHandler);
-RegistePaginationServerHandler('/eventsEvents', EventsEventsPaginatedHandlerOpts, EventsEventsPaginatedHandler, EventsEventsItemCountPaginatiedHandler);
-RegistePaginationServerHandler('/eventsRewards', EventsRewardsPaginatedHandlerOpts, EventsRewardsPaginatedHandler, EventsRewardsItemCountPaginatiedHandler);
-RegistePaginationServerHandler('/eventsReports', EventsReportsPaginatedHandlerOpts, EventsReportsPaginatedHandler, EventsReportsItemCountPaginatiedHandler);
+RegisterRedisBackedHandler('/events', EventsPaginatedHandlerOpts, EventsPaginatedHandler, { cache_ttl: 30 });
+RegisterPaginationServerHandler('/eventsEvents', EventsEventsPaginatedHandlerOpts, EventsEventsPaginatedHandler, EventsEventsItemCountPaginatiedHandler);
+RegisterPaginationServerHandler('/eventsRewards', EventsRewardsPaginatedHandlerOpts, EventsRewardsPaginatedHandler, EventsRewardsItemCountPaginatiedHandler);
+RegisterPaginationServerHandler('/eventsReports', EventsReportsPaginatedHandlerOpts, EventsReportsPaginatedHandler, EventsReportsItemCountPaginatiedHandler);
 
 GetServerInstance().get('/eventsEventsCsv', EventsEventsCSVRawHandler);
 GetServerInstance().get('/eventsRewardsCsv', EventsRewardsCSVRawHandler);
 GetServerInstance().get('/eventsReportsCsv', EventsReportsCSVRawHandler);
 
 // -- Spec page ajax --
-RegistePaginationServerHandler('/spec/:specId', SpecPaginatedHandlerOpts, SpecPaginatedHandler);
+RegisterPaginationServerHandler('/spec/:specId', SpecPaginatedHandlerOpts, SpecPaginatedHandler);
 GetServerInstance().get('/specStakes/:specId', SpecStakesPaginatedHandlerOpts, SpecStakesPaginatedHandler);
 GetServerInstance().get('/specCharts/:specId', SpecChartsRawHandlerOpts, SpecChartsRawHandler);
 

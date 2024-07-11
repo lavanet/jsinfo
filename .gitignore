@@ -57,3 +57,5 @@ package-lock.json
 
 stdout.txt
 yarn.lock
+
+query.log

@@ -6,12 +6,14 @@ import { GetDataLength, GetDataLengthForPrints } from "../utils/queryUtils";
 import { subMonths, isAfter, isBefore, parseISO, startOfDay } from 'date-fns';
 import { WriteErrorToFastifyReply } from '../utils/queryServerUtils';
 import { JSINFO_REQUEST_HANDLER_BASE_DEBUG } from '../queryConsts';
+import { RedisCache } from './RedisCache';
 
 export class RequestHandlerBase<T> {
     protected className: string;
     protected csvFileName: string = "";
     protected data: T[] | null = null;
     protected debug: boolean = JSINFO_REQUEST_HANDLER_BASE_DEBUG;
+    protected dataKey: string = "";
 
     private static instances: Map<string, RequestHandlerBase<any>> = new Map();
 
@@ -27,6 +29,7 @@ export class RequestHandlerBase<T> {
         if (!instance) {
             instance = new this(...args);
             RequestHandlerBase.instances.set(key, instance);
+            instance.dataKey = key;
         }
         return instance as InstanceType<C>;
     }
@@ -39,7 +42,7 @@ export class RequestHandlerBase<T> {
         if (!type.name || type.name === 'RequestHandlerBase') {
             throw new Error(`Type name must not be empty or equal to "RequestHandlerBase". className: ${type.name}`);
         }
-        return JSON.stringify({ type: type.name, args });
+        return `${type.name}-${args ? "-" : JSON.stringify(args) || "-"}`;
     }
 
     constructor(className: string) {
@@ -55,19 +58,19 @@ export class RequestHandlerBase<T> {
         }
     }
 
-    protected getCacheFilePathImpl(): string {
-        throw new Error("Method 'getCacheFilePathImpl' must be implemented.");
-    }
-
-    protected getCSVFileNameImpl(): string {
-        throw new Error("Method 'getCSVFileNameImpl' must be implemented.");
+    protected getTTL(key: string): number {
+        return 30;
     }
 
     protected getCSVFileName(): string {
+        throw new Error("Method 'getCSVFileName' must be implemented.");
+    }
+
+    protected getCSVFileNameCached(): string {
         if (this.csvFileName === "") {
-            this.csvFileName = this.getCSVFileNameImpl();
+            this.csvFileName = this.getCSVFileName();
             if (this.csvFileName === "") {
-                throw new Error("Method 'getCSVFileNameImpl' must return a valid file name.");
+                throw new Error("Method 'getCSVFileName' must return a valid file name.");
             }
         }
         return this.csvFileName;
@@ -94,25 +97,43 @@ export class RequestHandlerBase<T> {
     }
 
     public async PaginatedRecordsRequestHandler(request: FastifyRequest, reply: FastifyReply): Promise<{ data: T[] } | null> {
-        const startTime = Date.now(); // Start time tracking
+        const startTime = Date.now();
+
         try {
             const pagination = ParsePaginationFromRequest(request);
+
+            const key = `${this.dataKey}|${pagination ? SerializePagination(pagination) : "-"}`;
+
+            const redisVal = await RedisCache.getArray(key);
+            if (redisVal) {
+                this.logExecutionTime("PaginatedRecordsRequestHandler", startTime, `Cache hit: key: ${key}`);
+                return { data: redisVal as T[] };
+            }
+
             const paginatedData = await this.fetchPaginatedRecords(pagination);
-            this.log(`PaginatedRecordsRequestHandler:: Got paginated items. Length of paginatedData: ${GetDataLengthForPrints(paginatedData)}`);
-            const endTime = Date.now(); // End time tracking
-            this.log(`PaginatedRecordsRequestHandler:: Execution time: ${endTime - startTime}ms for pagination: ${pagination ? SerializePagination(pagination) : "-"}`); // Log execution time
+            this.logExecutionTime("PaginatedRecordsRequestHandler", startTime, `PaginatedRecordsRequestHandler Cache miss: key: ${key}. paginated items length: ${GetDataLengthForPrints(paginatedData)}`);
+            await RedisCache.setArray(key, paginatedData, this.getTTL(key));
+
             return { data: paginatedData };
         } catch (error) {
-            const endTime = Date.now(); // End time tracking in case of error
-            this.log(`PaginatedRecordsRequestHandler:: Execution time: ${endTime - startTime}ms`); // Log execution time even if there's an error
-            const err = error as Error;
-            WriteErrorToFastifyReply(reply, err.message);
-            this.log(`PaginatedRecordsRequestHandler:: Error occurred: ${err.message}`);
+            this.handleError("PaginatedRecordsRequestHandler", reply, error);
             return null;
         }
     }
 
+    private logExecutionTime(source: string, startTime: number, message: string) {
+        const endTime = Date.now();
+        this.log(`${source}:: Execution time: ${endTime - startTime}ms ${message}`);
+    }
+
+    private handleError(source: string, reply: FastifyReply, error: unknown) {
+        const err = error as Error;
+        WriteErrorToFastifyReply(reply, err.message);
+        this.log(`${source}:: Error: ${err.message}`);
+    }
+
     public async DateRangeRequestHandler(request: FastifyRequest, reply: FastifyReply): Promise<{ data: T[] } | null> {
+        const startTime = Date.now(); // Start time for execution time logging
         try {
             const query = request.query as { [key: string]: string };
             let from = 'f' in query ? parseISO(query.f) : subMonths(new Date(), 3);
@@ -132,50 +153,76 @@ export class RequestHandlerBase<T> {
             if (isAfter(to, startOfDay(new Date()))) {
                 throw new Error("To date cannot be in the future.");
             }
+            const key = `${this.dataKey}|${from.toISOString()}|${to.toISOString()}`;
+            const redisVal = await RedisCache.getArray(key);
+            if (redisVal) {
+                this.logExecutionTime("DateRangeRequestHandler", startTime, `(cache hit): ${key}`);
+                return { data: redisVal as T[] };
+            }
 
             const filteredData = await this.fetchDateRangeRecords(from, to);
-
+            this.logExecutionTime("DateRangeRequestHandler", startTime, `DateRangeRequestHandler (cache miss): ${key}`);
+            await RedisCache.setArray(key, filteredData, this.getTTL(key));
             return { data: filteredData };
         } catch (error) {
-            const err = error as Error;
-            WriteErrorToFastifyReply(reply, err.message);
+            this.handleError("DateRangeRequestHandler", reply, error);
             return null;
         }
     }
 
-    public async getTotalItemCountPaginatiedHandler(request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> {
+    public async getTotalItemCountPaginatedHandler(request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> {
+        const startTime = Date.now();
+        const key = `${this.dataKey}|itemCount`;
         try {
-            const itemCount = await this.fetchRecordCountFromDb();
-            reply.send({ itemCount: itemCount });
+            const itemCountRedis = await RedisCache.get(key);
+            if (itemCountRedis) {
+                this.logExecutionTime("getTotalItemCountPaginatedHandler", startTime, "Fetched item count from cache");
+                reply.send({ itemCount: parseInt(itemCountRedis) });
+            } else {
+                const itemCount = await this.fetchRecordCountFromDb();
+                await RedisCache.set(key, itemCount.toString(), this.getTTL(key));
+                this.logExecutionTime("getTotalItemCountPaginatedHandler", startTime, "Fetched item count from DB and cached");
+                reply.send({ itemCount: itemCount });
+            }
             return reply;
         } catch (error) {
-            const err = error as Error;
-            WriteErrorToFastifyReply(reply, err.message);
+            this.handleError("getTotalItemCountPaginatedHandler", reply, error);
             return reply;
         }
     }
 
     public async CSVRequestHandler(request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> {
+        const startTime = Date.now();
+        const cacheKey = `${this.dataKey}|csvData`;
         try {
-            const data = await this.fetchAllRecords();
-            if (GetDataLength(data) == 0) {
-                reply.send("Data is unavailable now");
-                return reply;
-            }
+            const csvRedis = await RedisCache.get(cacheKey);
+            if (csvRedis) {
+                this.logExecutionTime("CSVRequestHandler", startTime, "CSV data fetched from cache");
+                reply.header('Content-Type', 'text/csv');
+                reply.header('Content-Disposition', `attachment; filename="${this.getCSVFileNameCached()}"`);
+                reply.send(csvRedis);
+            } else {
+                const data = await this.fetchAllRecords();
+                if (GetDataLength(data) == 0) {
+                    reply.send("Data is unavailable now");
+                    return reply;
+                }
 
-            let csv = await this.convertRecordsToCsv(data);
-            if (csv == null) {
-                reply.send("Data is not available in CSV format");
-                return reply;
-            }
+                const csv = await this.convertRecordsToCsv(data);
+                if (csv == null) {
+                    reply.send("Data is not available in CSV format");
+                    return reply;
+                }
 
-            reply.header('Content-Type', 'text/csv');
-            reply.header('Content-Disposition', `attachment; filename="${this.getCSVFileName()}"`);
-            reply.send(csv);
+                await RedisCache.set(cacheKey, csv);
+                this.logExecutionTime("CSVRequestHandler", startTime, "CSV data prepared and cached");
+                reply.header('Content-Type', 'text/csv');
+                reply.header('Content-Disposition', `attachment; filename="${this.getCSVFileNameCached()}"`);
+                reply.send(csv);
+            }
             return reply;
         } catch (error) {
-            const err = error as Error;
-            WriteErrorToFastifyReply(reply, err.message);
+            this.handleError("CSVRequestHandler", reply, error);
             return reply;
         }
     }

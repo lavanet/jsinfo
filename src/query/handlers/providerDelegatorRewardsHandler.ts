@@ -55,7 +55,7 @@ class ProviderDelegatorRewardsData extends RequestHandlerBase<DelegatorRewardRes
         return ProviderDelegatorRewardsData.GetInstanceBase(addr);
     }
 
-    protected getCSVFileNameImpl(): string {
+    protected getCSVFileName(): string {
         return `ProviderDelegatorRewards_${this.addr}.csv`;
     }
 
@@ -159,7 +159,7 @@ export async function ProviderDelegatorRewardsItemCountPaginatiedHandler(request
     if (addr === '') {
         return reply;
     }
-    return await ProviderDelegatorRewardsData.GetInstance(addr).getTotalItemCountPaginatiedHandler(request, reply)
+    return await ProviderDelegatorRewardsData.GetInstance(addr).getTotalItemCountPaginatedHandler(request, reply)
 }
 
 export async function ProviderDelegatorRewardsCSVRawHandler(request: FastifyRequest, reply: FastifyReply) {

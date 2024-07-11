@@ -3,7 +3,7 @@
 import { FastifyReply, FastifyRequest, RouteShorthandOptions } from 'fastify';
 import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../queryDb';
 import * as JsinfoProviderAgrSchema from '../../schemas/jsinfoSchema/providerRelayPaymentsAgregation';
-import { sql, gt, and, lt, desc } from "drizzle-orm";
+import { sql, gt, and, lt, desc, eq } from "drizzle-orm";
 import { DateToISOString, FormatDateItems } from '../utils/queryDateUtils';
 import { RequestHandlerBase } from '../classes/RequestHandlerBase';
 import { GetAndValidateProviderAddressFromRequest, GetDataLength } from '../utils/queryUtils';
@@ -105,9 +105,11 @@ class ProviderChartsData extends RequestHandlerBase<ProviderChartResponse> {
         }).from(JsinfoProviderAgrSchema.aggDailyRelayPayments)
             .groupBy(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday)
             .where(and(
-                gt(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday, sql<Date>`${from}`),
-                lt(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday, sql<Date>`${to}`)
-            ))
+                eq(JsinfoProviderAgrSchema.aggDailyRelayPayments.provider, this.provider),
+                and(
+                    gt(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday, sql<Date>`${from}`),
+                    lt(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday, sql<Date>`${to}`)
+                )))
             .orderBy(desc(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday));
 
         monthlyData.forEach(item => {
@@ -150,8 +152,11 @@ class ProviderChartsData extends RequestHandlerBase<ProviderChartResponse> {
         }).from(JsinfoProviderAgrSchema.aggDailyRelayPayments)
             .groupBy(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday, JsinfoProviderAgrSchema.aggDailyRelayPayments.specId)
             .where(and(
-                gt(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday, sql<Date>`${from}`),
-                lt(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday, sql<Date>`${to}`)
+                eq(JsinfoProviderAgrSchema.aggDailyRelayPayments.provider, this.provider),
+                and(
+                    gt(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday, sql<Date>`${from}`),
+                    lt(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday, sql<Date>`${to}`)
+                )
             ))
             .orderBy(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday);
 

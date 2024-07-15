@@ -74,10 +74,10 @@ class IndexProvidersData extends RequestHandlerBase<IndexProvidersResponse> {
 
         const res = await QueryGetJsinfoReadDbInstance().select({
             provider: JsinfoSchema.providerStakes.provider,
-            totalServices: sql<string>`CONCAT(SUM(CASE WHEN ${JsinfoSchema.providerStakes.status} = ${JsinfoSchema.LavaProviderStakeStatus.Active} THEN 1 ELSE 0 END), ' / ', COUNT(${JsinfoSchema.providerStakes.specId}))`,
-            totalStake: sql<number>`SUM(${JsinfoSchema.providerStakes.stake})`,
-            rewardSum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggAllTimeRelayPayments.rewardSum})`,
             moniker: JsinfoSchema.providers.moniker,
+            totalServices: sql<string>`CONCAT(SUM(CASE WHEN ${JsinfoSchema.providerStakes.status} = ${JsinfoSchema.LavaProviderStakeStatus.Active} THEN 1 ELSE 0 END), ' / ', COUNT(${JsinfoSchema.providerStakes.specId})) as totalServices`,
+            totalStake: sql<number>`COALESCE(SUM(${JsinfoSchema.providerStakes.stake}), 0) as totalStake`,
+            rewardSum: sql<number>`COALESCE(SUM(${JsinfoProviderAgrSchema.aggAllTimeRelayPayments.rewardSum}), 0) as rewardSum`,
         }).from(JsinfoSchema.providerStakes)
             .leftJoin(JsinfoProviderAgrSchema.aggAllTimeRelayPayments,
                 and(
@@ -96,7 +96,7 @@ class IndexProvidersData extends RequestHandlerBase<IndexProvidersResponse> {
                 )
             )
             .groupBy(JsinfoSchema.providerStakes.provider, JsinfoSchema.providers.moniker)
-            .orderBy(desc(JsinfoProviderAgrSchema.aggAllTimeRelayPayments.rewardSum))
+            .orderBy(sql`rewardSum DESC`)
 
         const providersDetails: IndexProvidersResponse[] = res.map(provider => ({
             addr: provider.provider || "",

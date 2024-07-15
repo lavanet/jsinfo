@@ -244,10 +244,9 @@ class IndexChartsData extends RequestHandlerBase<IndexChartResponse> {
         if (GetDataLength(topChains) === 0) {
             return [];
         }
+
         const mainChartData = await this.getMainChartData(topChains, from, to);
-
         const qosData = await this.getQosData(from, to);
-
         const combinedData = this.combineData(mainChartData, qosData);
 
         return combinedData;

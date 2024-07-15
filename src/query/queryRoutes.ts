@@ -51,6 +51,8 @@ import { SpecStakesPaginatedHandler, SpecStakesPaginatedHandlerOpts } from './ha
 import { ConsumerCahcedHandler, ConsumerCahcedHandlerOpts } from './handlers/consumerHandler';
 import { EventsPaginatedHandler, EventsPaginatedHandlerOpts } from './handlers/eventsHandler';
 
+import { SpecProviderHealthHandler, SpecProviderHealthHandlerOpts } from './handlers/specProviderHealthHandler';
+
 // -- Internal data endpoints --
 import { LavapDualStackingDelegatorRewardsHandler, LavapDualStackingDelegatorRewardsOpts } from './handlers/lavapDualStackingDelegatorRewardsHandler';
 
@@ -115,6 +117,8 @@ GetServerInstance().get('/eventsReportsCsv', EventsReportsCSVRawHandler);
 RegisterPaginationServerHandler('/spec/:specId', SpecPaginatedHandlerOpts, SpecPaginatedHandler);
 GetServerInstance().get('/specStakes/:specId', SpecStakesPaginatedHandlerOpts, SpecStakesPaginatedHandler);
 GetServerInstance().get('/specCharts/:specId', SpecChartsRawHandlerOpts, SpecChartsRawHandler);
+
+RegisterRedisBackedHandler('/specProviderHealth/:specId/:addr', SpecProviderHealthHandlerOpts, SpecProviderHealthHandler, { cache_ttl: 3 * 60 });
 
 // -- Internal data endpoints --
 if (consts.JSINFO_QUERY_LAVAP_DUAL_STACKING_DELEGATOR_REWARDS_ENDPOINT_ENABLED) {

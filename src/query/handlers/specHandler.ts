@@ -4,7 +4,7 @@ import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { GetLatestBlock, QueryGetJsinfoReadDbInstance } from '../queryDb';
 import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import * as JsinfoProviderAgrSchema from '../../schemas/jsinfoSchema/providerRelayPaymentsAgregation';
-import { sql, eq, count } from "drizzle-orm";
+import { sql, eq, count, and, gte } from "drizzle-orm";
 import { GetAndValidateSpecIdFromRequest } from '../utils/queryUtils';
 
 export const SpecPaginatedHandlerOpts: RouteShorthandOptions = {
@@ -33,6 +33,17 @@ export const SpecPaginatedHandlerOpts: RouteShorthandOptions = {
                     },
                     providerCount: {
                         type: 'number'
+                    },
+                    endpointHealth: {
+                        type: 'object',
+                        properties: {
+                            healthy: {
+                                type: 'number'
+                            },
+                            unhealthy: {
+                                type: 'number'
+                            }
+                        }
                     },
                 }
             }
@@ -69,6 +80,30 @@ export async function SpecPaginatedHandler(request: FastifyRequest, reply: Fasti
     }).from(JsinfoSchema.providerStakes)
         .where(eq(JsinfoSchema.providerStakes.specId, spec));
 
+    const twoDaysAgo = new Date();
+    twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
+
+    const healthRecords = await QueryGetJsinfoReadDbInstance()
+        .selectDistinctOn([JsinfoSchema.providerHealth.provider, JsinfoSchema.providerHealth.spec, JsinfoSchema.providerHealth.interface])
+        .from(JsinfoSchema.providerHealth)
+        .where(
+            and(
+                eq(JsinfoSchema.providerHealth.spec, spec),
+                gte(JsinfoSchema.providerHealth.timestamp, twoDaysAgo)
+            )
+        )
+        .limit(1000);
+
+    const healthStatusCounts = { healthy: 0, unhealthy: 0 };
+
+    healthRecords.forEach(({ status }) => {
+        if (status === 'healthy') {
+            healthStatusCounts.healthy += 1;
+        } else {
+            healthStatusCounts.unhealthy += 1;
+        }
+    });
+
     return {
         height: latestHeight,
         datetime: latestDatetime,
@@ -76,6 +111,7 @@ export async function SpecPaginatedHandler(request: FastifyRequest, reply: Fasti
         cuSum: cuSum,
         relaySum: relaySum,
         rewardSum: rewardSum,
-        providerCount: providerCount[0].count
+        providerCount: providerCount[0].count,
+        endpointHealth: healthStatusCounts
     }
 }

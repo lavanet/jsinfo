@@ -86,7 +86,10 @@ export async function IndexHandler(request: FastifyRequest, reply: FastifyReply)
     })
 
     if (getChains.length === 0 || topSpecs.length === 0) {
-        console.log('IndexHandler empty data for topSpecs:: getChains:', getChains, 'topSpecs:', topSpecs);
+        topSpecs = await QueryGetJsinfoReadDbInstance().select({
+            chainId: JsinfoSchema.specs.id,
+            relaySum: sql<number>`0`,
+        }).from(JsinfoSchema.specs)
     }
 
     return {

@@ -59,3 +59,7 @@ stdout.txt
 yarn.lock
 
 query.log
+
+# python - Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]

@@ -324,3 +324,38 @@ export const dualStackingDelegatorRewards = pgTable('dual_stacking_delegator_rew
 export type DualStackingDelegatorRewards = typeof dualStackingDelegatorRewards.$inferSelect;
 export type InsertDualStackingDelegatorRewards = typeof dualStackingDelegatorRewards.$inferInsert;
 
+export const providerSpecMoniker = pgTable('provider_spec_moniker', {
+  id: serial('id').primaryKey(),
+  provider: text('provider').notNull().references(() => providers.address),
+  moniker: text('moniker'),
+  specId: text('spec').references(() => specs.id),
+  createdAt: timestamp("createdat").defaultNow().notNull(),
+  updatedAt: timestamp('updatedat').default(sql`CURRENT_TIMESTAMP(3)`),
+}, (table) => {
+  return {
+    psmIdx: uniqueIndex("psmidx").on(
+      table.provider,
+      table.specId
+    )
+  };
+});
+
+export type ProviderSpecMoniker = typeof providerSpecMoniker.$inferSelect;
+export type InsertProviderSpecMoniker = typeof providerSpecMoniker.$inferInsert;
+
+export const consumerSubscriptionList = pgTable('consumer_subscription_list', {
+  id: serial('id').primaryKey(),
+  consumer: text('consumer').notNull().references(() => consumers.address),
+  plan: text('plan'),
+  fulltext: text('fulltext'),
+  createdAt: timestamp("createdat").defaultNow().notNull(),
+}, (table) => {
+  return {
+    cslIdx: index("cslidx").on(
+      table.consumer,
+    )
+  };
+});
+
+export type ConsumerSubscriptionList = typeof consumerSubscriptionList.$inferSelect;
+export type InsertConsumerSubscriptionList = typeof consumerSubscriptionList.$inferInsert;

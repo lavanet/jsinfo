@@ -33,9 +33,11 @@ def parse_dotenv_for_var(var_name):
                         return value
             log("parse_dotenv_for_var", f"{var_name} not found in .env file")
         else:
-            error("parse_dotenv_for_var", f".env file not found in both {current_dir} and {parent_dir}")
+            pass
+            # error("parse_dotenv_for_var", f".env file not found in both {current_dir} and {parent_dir}")
     except Exception as e:
-        error("parse_dotenv_for_var", f"Error parsing .env file: {str(e)}")
+        # error("parse_dotenv_for_var", f"Error parsing .env file: {str(e)}")
+        pass
     return None
 
 def log(function: str, content: str) -> None:

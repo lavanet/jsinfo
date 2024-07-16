@@ -58,15 +58,15 @@ def db_worker_work():
 
     item = None
     if db_queue_condition.acquire(timeout=30):
-        # log("db_worker_work", "Acquired queue condition lock")
+        log("db_worker_work", "Acquired queue condition lock")
         try:
             try:
                 item = db_task_queue.get_nowait()
             except queue.Empty:
-                # log("db_worker_work", "Queue is empty")
+                log("db_worker_work", "Queue is empty")
                 pass
         finally:
-            # log("db_worker_work", "Released queue condition lock")
+            log("db_worker_work", "Released queue condition lock")
             db_queue_condition.release()
 
     if item is None:

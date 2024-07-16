@@ -93,21 +93,24 @@ class RequestHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
 def find_pid_by_port(port):
-    """Find the PID of the process listening on the given port."""
+    """Find the PID of the process listening on the given port. Return None if multiple PIDs are found."""
     command = f"lsof -ti:{port}"
     try:
-        pid = subprocess.check_output(command, shell=True).decode('utf-8').strip()
-        return pid
+        output = subprocess.check_output(command, shell=True).decode('utf-8').strip()
+        pids = output.split('\n')
+        if len(pids) > 1:
+            return None
+        return pids[0]
     except subprocess.CalledProcessError:
         return None
-
+    
 def kill_process_by_pid(pid):
     """Kill the process by PID."""
     try:
         os.kill(int(pid), signal.SIGKILL)
-        print(f"Process {pid} has been killed.")
+        print(f"Process {pid} has been killed for listening on the webserver port")
     except Exception as e:
-        print(f"Failed to kill process {pid}: {e}")
+        pass
 
 def run_server_thread() -> None:
     try:

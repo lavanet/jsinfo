@@ -66,7 +66,7 @@ def db_worker_work():
                 log("db_worker_work", "Queue is empty")
                 pass
         finally:
-            log("db_worker_work", "Released queue condition lock")
+            # log("db_worker_work", "Released queue condition lock")
             db_queue_condition.release()
 
     if item is None:

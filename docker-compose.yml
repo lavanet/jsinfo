@@ -1,19 +1,24 @@
 services:
+
+  postgres-jsinfo:
+    image: postgres:latest
+    environment:
+      POSTGRES_DB: jsinfo
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+
+  postgres-relays:
+    image: postgres:latest
+    environment:
+      POSTGRES_DB: relays
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+
   indexer:
     image: bun-docker
     env_file:
       - dockercompose.env
     entrypoint: ./scripts/startIndexerContainer.sh
-    volumes:
-      - ../static/cache:/static/cache
-
-  query_populate:
-    image: bun-docker
-    ports:
-      - "8081:8081"
-    env_file:
-      - dockercompose.env
-    entrypoint: ./scripts/startQueryPopulateContainer.sh
     volumes:
       - ../static/cache:/static/cache
 

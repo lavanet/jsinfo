@@ -6,6 +6,7 @@ import { Tendermint37Client } from "@cosmjs/tendermint-rpc";
 import * as lavajs from '@lavanet/lavajs';
 import axios from 'axios';
 
+
 export function GetEnvVar(key: string, alt?: string): string {
     const value = process.env[key];
     if (!value) {
@@ -146,3 +147,11 @@ export async function DoInChunks(sz: number, arr: any[], cb: (arr: any[]) => Pro
     }
     return;
 }
+
+
+export const establishRpcConnection = async (rpc: string): Promise<RpcConnection> => {
+    logger.info('Establishing RPC connection...');
+    const rpcConnection: RpcConnection = await BackoffRetry<RpcConnection>("ConnectToRpc", () => ConnectToRpc(rpc));
+    logger.info('RPC connection established.', rpcConnection);
+    return rpcConnection;
+};

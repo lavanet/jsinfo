@@ -2,6 +2,9 @@
 
 import { GetEnvVar } from '../utils';
 
+export const JSINFO_QUERY_LAVA_CHAIN_ID: string = GetEnvVar("JSINFO_QUERY_LAVA_CHAIN_ID", "lava-testnet-2");
+export const JSINFO_QUERY_LAVA_RPC: string = GetEnvVar("JSINFO_QUERY_LAVA_RPC", "https://public-rpc.lavanet.xyz/");
+
 export const JSINFO_QUERY_IS_DEBUG_MODE: boolean = GetEnvVar("JSINFO_QUERY_IS_DEBUG_MODE", "false").toLowerCase() === "true";
 export const JSINFO_QUERY_CACHE_POPULTAE_MODE: boolean = GetEnvVar("JSINFO_QUERY_CACHE_POPULTAE_MODE", "false").toLowerCase() === "true";
 export const JSINFO_QUERY_FASITY_PRINT_LOGS: boolean = GetEnvVar("JSINFO_QUERY_FASITY_PRINT_LOGS", "false").toLowerCase() === "true";

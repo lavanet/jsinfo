@@ -15,6 +15,7 @@ import { UpdateLatestBlockMeta } from './indexer/setLatest'
 import { DoInChunks, logger, BackoffRetry, ConnectToRpc, RpcConnection } from "./utils";
 import { MigrateDb, GetJsinfoDb } from "./dbUtils";
 import { aggProviderAndConsumerRelayPayments, aggProviderAndConsumerRelayPaymentsSync } from './indexer/agregators/aggProviderAndConsumerRelayPayments';
+import { establishRpcConnection } from "./utils";
 
 let static_dbProviders: Map<string, JsinfoSchema.Provider> = new Map()
 let static_dbSpecs: Map<string, JsinfoSchema.Spec> = new Map()
@@ -197,7 +198,7 @@ const indexer = async (): Promise<void> => {
         }
     }
 
-    const rpcConnection = await establishRpcConnection();
+    const rpcConnection = await establishRpcConnection(consts.JSINFO_INDEXER_LAVA_RPC);
 
     if (consts.JSINFO_INDEXER_DEBUG_DUMP_EVENTS) {
         await EventDebug(rpcConnection);
@@ -208,13 +209,6 @@ const indexer = async (): Promise<void> => {
     await updateBlockMetaInDb(db, rpcConnection);
     await aggProviderAndConsumerRelayPaymentsSync(db);
     await fillUpBackoffRetry(db, rpcConnection);
-}
-
-const establishRpcConnection = async (): Promise<RpcConnection> => {
-    logger.info('Establishing RPC connection...');
-    const rpcConnection: RpcConnection = await BackoffRetry<RpcConnection>("ConnectToRpc", () => ConnectToRpc(consts.JSINFO_INDEXER_LAVA_RPC));
-    logger.info('RPC connection established.', rpcConnection);
-    return rpcConnection;
 }
 
 const migrateAndFetchDb = async (): Promise<PostgresJsDatabase> => {

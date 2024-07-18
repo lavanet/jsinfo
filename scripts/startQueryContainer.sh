@@ -1,7 +1,6 @@
 #!/bin/sh
 
 # jsinfo/scripts/startQueryContainer.sh
-
 echo "Starting query - webserver container at $(date)"
 
 # Set traps and unlimited core dump size

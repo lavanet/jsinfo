@@ -3,10 +3,11 @@
 import { Pagination, ParsePaginationFromRequest, SerializePagination } from "../utils/queryPagination";
 import { FastifyReply, FastifyRequest } from "fastify";
 import { GetDataLength, GetDataLengthForPrints } from "../utils/queryUtils";
-import { subMonths, isAfter, isBefore, parseISO, startOfDay } from 'date-fns';
+import { subMonths, isAfter, isBefore, parseISO, startOfDay, differenceInCalendarDays } from 'date-fns';
 import { WriteErrorToFastifyReply } from '../utils/queryServerUtils';
 import { JSINFO_REQUEST_HANDLER_BASE_DEBUG } from '../queryConsts';
 import { RedisCache } from './RedisCache';
+import { ParseDateToUtc } from "../utils/queryDateUtils";
 export class RequestHandlerBase<T> {
     protected className: string;
     protected csvFileName: string = "";
@@ -135,11 +136,11 @@ export class RequestHandlerBase<T> {
     }
 
     public async DateRangeRequestHandler(request: FastifyRequest, reply: FastifyReply): Promise<{ data: T[] } | null> {
-        const startTime = Date.now(); // Start time for execution time logging
+        const startTime = Date.now();
         try {
             const query = request.query as { [key: string]: string };
-            let from = 'f' in query ? parseISO(query.f) : subMonths(new Date(), 3);
-            let to = 't' in query ? parseISO(query.t) : new Date();
+            let from = 'f' in query ? ParseDateToUtc(query.f) : subMonths(new Date(), 3);
+            let to = 't' in query ? ParseDateToUtc(query.t) : new Date();
 
             if (isAfter(from, to)) {
                 [from, to] = [to, from];
@@ -153,8 +154,13 @@ export class RequestHandlerBase<T> {
             }
 
             if (isAfter(to, startOfDay(new Date()))) {
-                throw new Error("To date cannot be in the future.");
+                if (differenceInCalendarDays(to, new Date()) > 1) {
+                    throw new Error("To date cannot be in the future.");
+                } else {
+                    to = new Date();
+                }
             }
+
             const key = `${this.dataKey}|${from.toISOString()}|${to.toISOString()}`;
             const redisVal = await RedisCache.getArray(key);
             if (redisVal) {

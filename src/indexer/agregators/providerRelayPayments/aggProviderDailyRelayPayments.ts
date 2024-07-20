@@ -4,6 +4,7 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { isNotNull, sql, and } from "drizzle-orm";
 import * as JsinfoProviderAgrSchema from '../../../schemas/jsinfoSchema/providerRelayPaymentsAgregation';
 import { DoInChunks, logger } from "../../../utils";
+import { PgColumn } from 'drizzle-orm/pg-core';
 
 export async function getProviderAggDailyTimeSpan(db: PostgresJsDatabase): Promise<{ startTime: Date | null, endTime: Date | null }> {
     // Last relay payment time
@@ -27,7 +28,7 @@ export async function getProviderAggDailyTimeSpan(db: PostgresJsDatabase): Promi
     if (lastAggDay) {
         startTime = new Date(lastAggDay);
     } else {
-        startTime = new Date("2000-01-01T00:00:00Z"); // Default start time if no data is found
+        startTime = new Date("2000-01-01T00:00:00Z");
     }
 
     logger.info(`getProviderAggDailyTimeSpan: startTime ${startTime}, endTime ${endTime}`);
@@ -46,20 +47,21 @@ export async function aggProviderDailyRelayPayments(db: PostgresJsDatabase) {
         return;
     }
 
-    //
+    const qosMetricWeightedAvg = (metric: PgColumn) => sql<number>`SUM(${metric} * ${JsinfoProviderAgrSchema.aggHourlyRelayPayments.relaySum}) / SUM(CASE WHEN ${metric} IS NOT NULL THEN ${JsinfoProviderAgrSchema.aggHourlyRelayPayments.relaySum} ELSE 0 END)`;
+
     const aggResults = await db.select({
         provider: sql<string>`${JsinfoProviderAgrSchema.aggHourlyRelayPayments.provider}`,
         dateday: sql<string>`DATE_TRUNC('day', ${JsinfoProviderAgrSchema.aggHourlyRelayPayments.datehour}) as dateday`,
         specId: sql<string>`${JsinfoProviderAgrSchema.aggHourlyRelayPayments.specId}`,
-        cuSum: sql<number>`SUM(COALESCE(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.cuSum}, 0))`,
-        relaySum: sql<number>`SUM(COALESCE(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.relaySum}, 0))`,
-        rewardSum: sql<number>`SUM(COALESCE(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.rewardSum}, 0))`,
-        qosSyncAvg: sql<number>`SUM(COALESCE(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.qosSyncAvg}, 0) * COALESCE(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.relaySum}, 0)) / NULLIF(SUM(COALESCE(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.relaySum}, 0)), 0)`,
-        qosAvailabilityAvg: sql<number>`SUM(COALESCE(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.qosAvailabilityAvg}, 0) * COALESCE(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.relaySum}, 0)) / NULLIF(SUM(COALESCE(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.relaySum}, 0)), 0)`,
-        qosLatencyAvg: sql<number>`SUM(COALESCE(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.qosLatencyAvg}, 0) * COALESCE(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.relaySum}, 0)) / NULLIF(SUM(COALESCE(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.relaySum}, 0)), 0)`,
-        qosSyncExcAvg: sql<number>`SUM(COALESCE(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.qosSyncExcAvg}, 0) * COALESCE(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.relaySum}, 0)) / NULLIF(SUM(COALESCE(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.relaySum}, 0)), 0)`,
-        qosAvailabilityExcAvg: sql<number>`SUM(COALESCE(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.qosAvailabilityExcAvg}, 0) * COALESCE(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.relaySum}, 0)) / NULLIF(SUM(COALESCE(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.relaySum}, 0)), 0)`,
-        qosLatencyExcAvg: sql<number>`SUM(COALESCE(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.qosLatencyExcAvg}, 0) * COALESCE(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.relaySum}, 0)) / NULLIF(SUM(COALESCE(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.relaySum}, 0)), 0)`,
+        cuSum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.cuSum})`,
+        relaySum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.relaySum})`,
+        rewardSum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.rewardSum})`,
+        qosSyncAvg: qosMetricWeightedAvg(JsinfoProviderAgrSchema.aggHourlyRelayPayments.qosSyncAvg),
+        qosAvailabilityAvg: qosMetricWeightedAvg(JsinfoProviderAgrSchema.aggHourlyRelayPayments.qosAvailabilityAvg),
+        qosLatencyAvg: qosMetricWeightedAvg(JsinfoProviderAgrSchema.aggHourlyRelayPayments.qosLatencyAvg),
+        qosSyncExcAvg: qosMetricWeightedAvg(JsinfoProviderAgrSchema.aggHourlyRelayPayments.qosSyncExcAvg),
+        qosAvailabilityExcAvg: qosMetricWeightedAvg(JsinfoProviderAgrSchema.aggHourlyRelayPayments.qosAvailabilityExcAvg),
+        qosLatencyExcAvg: qosMetricWeightedAvg(JsinfoProviderAgrSchema.aggHourlyRelayPayments.qosLatencyExcAvg),
     }).from(JsinfoProviderAgrSchema.aggHourlyRelayPayments)
         .where(
             and(

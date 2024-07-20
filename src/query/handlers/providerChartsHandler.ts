@@ -7,6 +7,7 @@ import { sql, gt, and, lt, desc, eq } from "drizzle-orm";
 import { DateToISOString, FormatDateItems } from '../utils/queryDateUtils';
 import { RequestHandlerBase } from '../classes/RequestHandlerBase';
 import { GetAndValidateProviderAddressFromRequest, GetDataLength } from '../utils/queryUtils';
+import { PgColumn } from 'drizzle-orm/pg-core';
 
 type ProviderChartCuRelay = {
     specId: string;
@@ -97,11 +98,13 @@ class ProviderChartsData extends RequestHandlerBase<ProviderChartResponse> {
     private async getProviderQosData(from: Date, to: Date): Promise<ProviderQosData[]> {
         const formatedData: ProviderQosData[] = [];
 
+        const qosMetricWeightedAvg = (metric: PgColumn) => sql<number>`SUM(${metric} * ${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum}) / SUM(CASE WHEN ${metric} IS NOT NULL THEN ${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum} ELSE 0 END)`;
+
         let monthlyData: ProviderQosQueryData[] = await QueryGetJsinfoReadDbInstance().select({
             date: JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday,
-            qosSyncAvg: sql<number>`SUM(COALESCE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.qosSyncAvg}, 0)*COALESCE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum}, 0))/NULLIF(SUM(COALESCE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum}, 0)), 0)`,
-            qosAvailabilityAvg: sql<number>`SUM(COALESCE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.qosAvailabilityAvg}, 0)*COALESCE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum}, 0))/NULLIF(SUM(COALESCE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum}, 0)), 0)`,
-            qosLatencyAvg: sql<number>`SUM(COALESCE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.qosLatencyAvg}, 0)*COALESCE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum}, 0))/NULLIF(SUM(COALESCE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum}, 0)), 0)`,
+            qosSyncAvg: qosMetricWeightedAvg(JsinfoProviderAgrSchema.aggDailyRelayPayments.qosSyncAvg),
+            qosAvailabilityAvg: qosMetricWeightedAvg(JsinfoProviderAgrSchema.aggDailyRelayPayments.qosAvailabilityAvg),
+            qosLatencyAvg: qosMetricWeightedAvg(JsinfoProviderAgrSchema.aggDailyRelayPayments.qosLatencyAvg),
         }).from(JsinfoProviderAgrSchema.aggDailyRelayPayments)
             .groupBy(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday)
             .where(and(

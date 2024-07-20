@@ -5,6 +5,7 @@ import { isNotNull, sql, and } from "drizzle-orm";
 import * as JsinfoSchema from "../../../schemas/jsinfoSchema/jsinfoSchema";
 import * as JsinfoConsumerAgrSchema from '../../../schemas/jsinfoSchema/consumerRelayPaymentsAgregation';
 import { DoInChunks, logger } from "../../../utils";
+import { PgColumn } from 'drizzle-orm/pg-core';
 
 export async function getConsumerAggHourlyTimeSpan(db: PostgresJsDatabase): Promise<{ startTime: Date | null, endTime: Date | null }> {
     // Last relay payment time
@@ -28,7 +29,7 @@ export async function getConsumerAggHourlyTimeSpan(db: PostgresJsDatabase): Prom
     if (lastAggHour) {
         startTime = new Date(lastAggHour);
     } else {
-        startTime = new Date("2000-01-01T00:00:00Z"); // Default start time if no data is found
+        startTime = new Date("2000-01-01T00:00:00Z");
     }
 
     logger.info(`getConsumerAggHourlyTimeSpan: startTime ${startTime}, endTime ${endTime}`);
@@ -47,20 +48,21 @@ export async function aggConsumerHourlyRelayPayments(db: PostgresJsDatabase) {
         return;
     }
 
-    //
+    const qosMetricWeightedAvg = (metric: PgColumn) => sql<number>`SUM(${metric} * ${JsinfoSchema.relayPayments.relays}) / SUM(CASE WHEN ${metric} IS NOT NULL THEN ${JsinfoSchema.relayPayments.relays} ELSE 0 END)`;
+
     const aggResults = await db.select({
         consumer: sql<string>`${JsinfoSchema.relayPayments.consumer}`,
         datehour: sql<string>`DATE_TRUNC('day', ${JsinfoSchema.relayPayments.datetime}) as datehour`,
         specId: sql<string>`${JsinfoSchema.relayPayments.specId}`,
-        cuSum: sql<number>`SUM(COALESCE(${JsinfoSchema.relayPayments.cu}, 0))`,
-        relaySum: sql<number>`SUM(COALESCE(${JsinfoSchema.relayPayments.relays}, 0))`,
-        rewardSum: sql<number>`SUM(COALESCE(${JsinfoSchema.relayPayments.pay}, 0))`,
-        qosSyncAvg: sql<number>`SUM(COALESCE(${JsinfoSchema.relayPayments.qosSync}, 0) * COALESCE(${JsinfoSchema.relayPayments.relays}, 0)) / NULLIF(SUM(COALESCE(${JsinfoSchema.relayPayments.relays}, 0)), 0)`,
-        qosAvailabilityAvg: sql<number>`SUM(COALESCE(${JsinfoSchema.relayPayments.qosAvailability}, 0) * COALESCE(${JsinfoSchema.relayPayments.relays}, 0)) / NULLIF(SUM(COALESCE(${JsinfoSchema.relayPayments.relays}, 0)), 0)`,
-        qosLatencyAvg: sql<number>`SUM(COALESCE(${JsinfoSchema.relayPayments.qosLatency}, 0) * COALESCE(${JsinfoSchema.relayPayments.relays}, 0)) / NULLIF(SUM(COALESCE(${JsinfoSchema.relayPayments.relays}, 0)), 0)`,
-        qosSyncExcAvg: sql<number>`SUM(COALESCE(${JsinfoSchema.relayPayments.qosSyncExc}, 0) * COALESCE(${JsinfoSchema.relayPayments.relays}, 0)) / NULLIF(SUM(COALESCE(${JsinfoSchema.relayPayments.relays}, 0)), 0)`,
-        qosAvailabilityExcAvg: sql<number>`SUM(COALESCE(${JsinfoSchema.relayPayments.qosAvailabilityExc}, 0) * COALESCE(${JsinfoSchema.relayPayments.relays}, 0)) / NULLIF(SUM(COALESCE(${JsinfoSchema.relayPayments.relays}, 0)), 0)`,
-        qosLatencyExcAvg: sql<number>`SUM(COALESCE(${JsinfoSchema.relayPayments.qosLatencyExc}, 0) * COALESCE(${JsinfoSchema.relayPayments.relays}, 0)) / NULLIF(SUM(COALESCE(${JsinfoSchema.relayPayments.relays}, 0)), 0)`,
+        cuSum: sql<number>`SUM(${JsinfoSchema.relayPayments.cu})`,
+        relaySum: sql<number>`SUM(${JsinfoSchema.relayPayments.relays})`,
+        rewardSum: sql<number>`SUM(${JsinfoSchema.relayPayments.pay})`,
+        qosSyncAvg: qosMetricWeightedAvg(JsinfoSchema.relayPayments.qosSync),
+        qosAvailabilityAvg: qosMetricWeightedAvg(JsinfoSchema.relayPayments.qosAvailability),
+        qosLatencyAvg: qosMetricWeightedAvg(JsinfoSchema.relayPayments.qosLatency),
+        qosSyncExcAvg: qosMetricWeightedAvg(JsinfoSchema.relayPayments.qosSyncExc),
+        qosAvailabilityExcAvg: qosMetricWeightedAvg(JsinfoSchema.relayPayments.qosAvailabilityExc),
+        qosLatencyExcAvg: qosMetricWeightedAvg(JsinfoSchema.relayPayments.qosLatencyExc),
     }).from(JsinfoSchema.relayPayments)
         .where(
             and(

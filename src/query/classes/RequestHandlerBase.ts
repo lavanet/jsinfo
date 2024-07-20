@@ -7,7 +7,6 @@ import { subMonths, isAfter, isBefore, parseISO, startOfDay } from 'date-fns';
 import { WriteErrorToFastifyReply } from '../utils/queryServerUtils';
 import { JSINFO_REQUEST_HANDLER_BASE_DEBUG } from '../queryConsts';
 import { RedisCache } from './RedisCache';
-
 export class RequestHandlerBase<T> {
     protected className: string;
     protected csvFileName: string = "";
@@ -25,12 +24,15 @@ export class RequestHandlerBase<T> {
         });
 
         const key = RequestHandlerBase.generateKeyFromTypeAndArgs(this, args);
+
         let instance = RequestHandlerBase.instances.get(key);
+
         if (!instance) {
             instance = new this(...args);
             RequestHandlerBase.instances.set(key, instance);
             instance.dataKey = key;
         }
+
         return instance as InstanceType<C>;
     }
 
@@ -42,7 +44,7 @@ export class RequestHandlerBase<T> {
         if (!type.name || type.name === 'RequestHandlerBase') {
             throw new Error(`Type name must not be empty or equal to "RequestHandlerBase". className: ${type.name}`);
         }
-        return `${type.name}-${args ? "-" : JSON.stringify(args) || "-"}`;
+        return `${type.name}-${args ? JSON.stringify(args) : "-"}`;
     }
 
     constructor(className: string) {

@@ -10,6 +10,7 @@ import { CSVEscape, GetAndValidateProviderAddressFromRequest } from '../utils/qu
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '../queryConsts';
 import { RequestHandlerBase } from '../classes/RequestHandlerBase';
 import { ParseDateToUtc } from '../utils/queryDateUtils';
+
 export interface HealthReportEntry {
     message: string | null;
     block: number | null;
@@ -36,6 +37,7 @@ export const ProviderHealthPaginatedHandlerOpts: RouteShorthandOptions = {
                             type: 'object',
                             properties: {
                                 id: { type: 'string' },
+                                provider: { type: 'string' },
                                 timestamp: { type: 'string' },
                                 spec: { type: 'string' },
                                 interface: { type: 'string' },
@@ -88,6 +90,7 @@ class ProviderHealthData extends RequestHandlerBase<HealthReportEntry> {
 
         const healthReportEntries: HealthReportEntry[] = data.map(item => ({
             id: item.id,
+            provider: item.provider,
             timestamp: item.timestamp,
             spec: item.spec,
             interface: item.interface,
@@ -97,7 +100,6 @@ class ProviderHealthData extends RequestHandlerBase<HealthReportEntry> {
             block: null,
             latency: null,
             blocksaway: null,
-            provider: null
         }));
 
         return healthReportEntries;
@@ -164,6 +166,7 @@ class ProviderHealthData extends RequestHandlerBase<HealthReportEntry> {
 
         const healthReportEntries: HealthReportEntry[] = additionalData.map(item => ({
             id: item.id,
+            provider: item.provider,
             timestamp: item.timestamp,
             spec: item.spec,
             interface: item.interface,
@@ -173,7 +176,6 @@ class ProviderHealthData extends RequestHandlerBase<HealthReportEntry> {
             block: null,
             latency: null,
             blocksaway: null,
-            provider: null
         }));
 
         return healthReportEntries;

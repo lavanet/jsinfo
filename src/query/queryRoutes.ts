@@ -6,6 +6,9 @@ import * as consts from './queryConsts';
 // -- Server status ajax --
 import { LatestRawHandler, LatestRawHandlerOpts } from './handlers/latestHandler';
 
+// -- Server supply ajax --
+import { TotalSupplyRawHandler, TotalSupplyRawHandlerOpts, CirculatingSupplyRawHandler, CirculatingSupplyRawHandlerOpts } from './handlers/supplyHandler';
+
 // -- list all providers and monikers endpoint ---
 import { ListProvidersRawHandlerOpts, ListProvidersRawHandler } from './handlers/listProvidersHandler';
 
@@ -59,6 +62,10 @@ import { LavapDualStackingDelegatorRewardsHandler, LavapDualStackingDelegatorRew
 
 // -- Server status ajax --
 GetServerInstance().get('/latest', LatestRawHandlerOpts, LatestRawHandler);
+
+// -- Server supply ajax --
+GetServerInstance().get('/supply/total', TotalSupplyRawHandlerOpts, TotalSupplyRawHandler);
+GetServerInstance().get('/supply/circulating', CirculatingSupplyRawHandlerOpts, CirculatingSupplyRawHandler);
 
 // -- list all providers and monikers endpoint ---
 RegisterRedisBackedHandler('/listProviders', ListProvidersRawHandlerOpts, ListProvidersRawHandler, { cache_ttl: 10 * 60 });

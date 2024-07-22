@@ -196,7 +196,7 @@ export function EventProcessAttributes(
         error = "dbEventFulltextStringifyError"
     }
 
-    if (dbEvent) dbEvent.timestamp = lavaBlock.datetime;
+    if (dbEvent) dbEvent.timestamp = new Date(lavaBlock.datetime);
 
     if (!error) return true;
 

@@ -168,15 +168,7 @@ export async function ListProvidersRawHandler(request: FastifyRequest, reply: Fa
         provider: JsinfoSchema.providerStakes.provider,
         specId: JsinfoSchema.providerStakes.specId,
     }).from(JsinfoSchema.providerStakes)
-        .where(
-            and(
-                and(
-                    notLike(JsinfoSchema.providers.moniker, 'testnet-lava-%'),
-                    isNotNull(JsinfoSchema.providers.address)
-                ),
-                eq(JsinfoSchema.providerStakes.status, JsinfoSchema.LavaProviderStakeStatus.Active)
-            )
-        );
+        .where(eq(JsinfoSchema.providerStakes.status, JsinfoSchema.LavaProviderStakeStatus.Active));
 
     const providers = stakesRes.reduce<ProviderEntry[]>((acc, stake) => {
         const providerEntry = acc.find(entry => entry.provider === stake.provider);

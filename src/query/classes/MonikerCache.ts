@@ -102,10 +102,12 @@ class ProviderSpecMonikerCache {
             return result;
         }
 
-        const result = Object.entries(monikerToSpecIds)
-            .map(([moniker, specIds]) => `${moniker} (${specIds.join(', ')})`)
-            .slice(0, 10)
-            .join("\n");
+        const entries = Object.entries(monikerToSpecIds)
+            .map(([moniker, specIds]) => `${moniker} (${specIds.join(', ')})`);
+
+        const result = entries.length > 5
+            ? entries.slice(0, 5).join("\n") + "\n..."
+            : entries.join("\n");
 
         this.monikerFullDescriptionCache.set(lavaid, result);
         return result;

@@ -35,7 +35,7 @@ def main(lava_id = None) -> None:
 
     threads = []
     for batch_idx, batch in enumerate(batches):
-        batch_thread = threading.Thread(target=accountinfo_process_batch, args=(batch,), name="batch_thread%02d" % batch_idx)
+        batch_thread = threading.Thread(target=accountinfo_process_batch, args=(batch_idx, batch,), name="batch_thread%02d" % batch_idx)
         batch_thread.start()
         threads.append(batch_thread)
 

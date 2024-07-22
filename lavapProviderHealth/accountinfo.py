@@ -5,7 +5,7 @@ from typing import Dict, List, Optional, Any
 from dbworker import db_add_accountinfo_data, db_add_provider_health_data, db_worker_work_provider_spec_moniker
 from command import run_accountinfo_command, run_health_command
 from utils import log, error, parse_date_to_utc, safe_json_dump, safe_json_load, trim_and_limit_json_dict_size
-from env import HEALTH_RESULTS_GUID, HPLAWNS_FILENAME, HPLAWNS_QUERY_INTERVAL, PROVIDERS_URL
+from env import AIPB_FILENAME, HEALTH_RESULTS_GUID, HPLAWNS_FILENAME, HPLAWNS_QUERY_INTERVAL, PROVIDERS_URL
 
 def haplawns_read_addresses_from_file() -> Dict[str, str]:
     if os.path.exists(HPLAWNS_FILENAME):
@@ -132,16 +132,39 @@ def process_provider_spec_moniker(data):
             }
             db_worker_work_provider_spec_moniker(trim_and_limit_json_dict_size(provider_data))
 
-def accountinfo_process_batch(batch):
+def get_last_processed_address(batch_id):
+    filename = AIPB_FILENAME.replace("__PH_BATCHID_PH__", str(batch_id))
+    try:
+        with open(filename, 'r') as file:
+            return file.read().strip()
+    except FileNotFoundError:
+        return None
+
+def set_last_processed_address(batch_id, address):
+    filename = AIPB_FILENAME.replace("__PH_BATCHID_PH__", str(batch_id))
+    with open(filename, 'w') as file:
+        file.write(address)
+
+def accountinfo_process_batch(batch_idx, batch):
+    last_processed_address = get_last_processed_address(batch_idx)
+    should_start_processing_from_address = last_processed_address != None and last_processed_address in batch
+    if not should_start_processing_from_address:
+        log("accountinfo_process_batch", "No last processed address found in batch, processing from beginning")
     while True:
         log("accountinfo_process_batch", "Starting new loop")
         for address in batch:
-            if not address:
-                continue
+            if should_start_processing_from_address:
+                if address != last_processed_address:
+                    continue
+                else:
+                    log("accountinfo_process_batch", f"Found last processed address {last_processed_address}, resuming from next")
+            should_start_processing_from_address = False
             try:
                 log("accountinfo_process_batch", f"Processing address: {address}")
                 accountinfo_process_lavaid(address)
                 log("accountinfo_process_batch", f"Successfully processed address: {address}")
+                set_last_processed_address(batch_idx, address)
             except Exception as e:
                 error("accountinfo_process_batch", f"Error processing address: {address}. Error: {str(e)}\nStack Trace: {traceback.format_exc()}")
         log("accountinfo_process_batch", "Finished loop")
+        should_start_processing_from_address = False        

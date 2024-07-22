@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import sys, os, threading, time, random
-from env import BATCH_AMOUNT, CD_ON_START
+from env import BATCH_AMOUNT, CD_ON_START, GEO_LOCATION
 from accountinfo import accountinfo_process_batch, accountinfo_process_lavaid, get_provider_addresses_from_jsinfoapi
 from dbworker import start_db_worker
 from subscriptionlist import start_subscriptionlist_index
@@ -27,7 +27,10 @@ def main(lava_id = None) -> None:
     
     start_threads()
 
+    # reverse this list if GEO_LOCATION is EU
     addresses = get_provider_addresses_from_jsinfoapi()
+    if GEO_LOCATION == "EU":
+        addresses.reverse()
 
     batch_size = len(addresses) // BATCH_AMOUNT
 

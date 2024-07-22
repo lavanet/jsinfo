@@ -160,6 +160,7 @@ function processStakeEntry(
         addons: addons,
         extensions: extensions,
         status: status,
+        // self stake (provider self delegation) - how much the provider staked by himself
         stake: parseInt(providerStake.stake.amount),
         appliedHeight: ToSignedIntOrMinusOne(appliedHeight),
     } as JsinfoSchema.ProviderStake)
@@ -181,8 +182,127 @@ async function getLatestProvidersAndSpecsAndStakes(
         await Promise.all(specs.chainInfoList.map(async (spec) => {
             GetOrSetSpec(dbSpecs, null, spec.chainID)
 
+            /*
+            providers with stake {
+  stakeEntry: [
+    {
+      stake: {
+        denom: "ulava",
+        amount: "85714285714",
+      },
+      address: "lava@1ttcekv34zhw79h3j88zw7zpg9ggxpp5muwckgn",
+      stakeAppliedBlock: 298353n,
+      endpoints: [
+        {
+          iPPORT: "provider2-cos4.providers-us.lava-cybertron.xyz:443",
+          geolocation: 1,
+          addons: [],
+          apiInterfaces: [ "tendermintrpc", "rest", "grpc" ],
+          extensions: [],
+        }
+      ],
+      geolocation: 1,
+      chain: "COS4",
+      moniker: "",
+      delegateTotal: {
+        denom: "ulava",
+        amount: "0",
+      },
+      delegateLimit: {
+        denom: "ulava",
+        amount: "0",
+      },
+      delegateCommission: 100n,
+      lastChange: 0n,
+      blockReport: {
+        epoch: 1785960n,
+        latestBlock: 7005057n,
+      },
+      vault: "lava@1ttcekv34zhw79h3j88zw7zpg9ggxpp5muwckgn",
+      description: {
+        moniker: "",
+        identity: "",
+        website: "",
+        securityContact: "",
+        details: "",
+      },
+      jails: 0n,
+      jailEndTime: 0n,
+    }, {
+      stake: {
+        denom: "ulava",
+        amount: "423076923077",
+      },
+      address: "lava@1y6vnu44t284spmlu8v5d0k82axmdqkc6dwg3fl",
+      stakeAppliedBlock: 298351n,
+      endpoints: [
+        {
+          iPPORT: "provider2-cos4.providers-eu.lava-cybertron.xyz:443",
+          geolocation: 2,
+          addons: [],
+          apiInterfaces: [ "tendermintrpc", "rest", "grpc" ],
+          extensions: [],
+        }
+      ],
+      geolocation: 2,
+      chain: "COS4",
+      moniker: "",
+      delegateTotal: {
+        denom: "ulava",
+        amount: "0",
+      },
+      delegateLimit: {
+        denom: "ulava",
+        amount: "0",
+      },
+      delegateCommission: 100n,
+      lastChange: 0n,
+      blockReport: {
+        epoch: 1633800n,
+        latestBlock: 6737769n,
+      },
+      vault: "lava@1y6vnu44t284spmlu8v5d0k82axmdqkc6dwg3fl",
+      description: {
+        moniker: "",
+        identity: "",
+        website: "",
+        securityContact: "",
+        details: "",
+      },
+      jails: 0n,
+      jailEndTime: 0n,
+    }
+  ],
+}
+  */
+            // delegate commision = provider takes fees from the rewards . got 1000 lava , his stake 100 , and he get 900 from other providers
+            // provider does first dip of 100 stake - this only in the provider
+
+            // Stake = providerStake.stake.amount (tooltip self stake)
+            // Delegation limit =       delegateLimit: {
+            //         denom: "ulava",
+            //             amount: "0",
+            //   },
+            // Delegations =
+            // Effective Stake =
+
+            // all of these under the provider and then on the main page with total
+
+            // new table
+
+            // min(delegate total, delegate limit)
+            // if delegate limit > delegate total : then : total stake = stake + delegate total
+            // if delegate limit < delegate total : then : total stake = stake + delegate limit
+
+            // Delegations : - 4 columns of stake
+            // In provider rename = rename Stakes to Attributes
+            // In spec page call Stakes - Relays
+
             let providers = await lavaClient.pairing.providers({ chainID: spec.chainID, showFrozen: true })
+            console.log("providers with stake", providers)
             providers.stakeEntry.forEach((stake) => {
+                // self stake (provider self delegation) - how much the provider staked by himself
+                // stake: parseInt(providerStake.stake.amount),
                 processStakeEntry(height, dbProviders, dbStakes, stake, false)
             })
         }))

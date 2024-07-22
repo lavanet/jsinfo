@@ -16,16 +16,17 @@ def start_threads():
 def main(lava_id = None) -> None:
     os.chdir(os.path.expanduser(CD_ON_START))
 
-    start_threads()
-
     if lava_id:
         start_db_worker()
         start_http_server()
         log("main - one provider mode", f"Processing address: {lava_id}")
         accountinfo_process_lavaid(lava_id)
-        log("main - one provider mode", f"Successfully processed address: {lava_id}")
+        log("main - one provider mode", f"Successfully processed address: {lava_id}, sleeping 2min before exit")
+        time.sleep(120)
         exit_script()
     
+    start_threads()
+
     addresses = get_provider_addresses_from_jsinfoapi()
 
     batch_size = len(addresses) // BATCH_AMOUNT

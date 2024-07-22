@@ -6,8 +6,13 @@ from utils import get_env_var, log, parse_dotenv_for_var
 POSTGRES_URL = os.environ.get('JSINFO_HEALTHPROBEJOB_POSTGRESQL_URL', 'postgres://jsinfo:secret@localhost:5432/jsinfo')
 PROVIDERS_URL: str = get_env_var('JSINFO_HEALTHPROBEJOB_PROVIDERS_URL', "https://jsinfo.lavanet.xyz/providers")
 NODE_URL: str = get_env_var('JSINFO_HEALTHPROBEJOB_NODE_URL', "https://public-rpc.lavanet.xyz:443")
+
 HPLAWNS_FILENAME: str = get_env_var('JSINFO_HEALTHPROBEJOB_HPLAWNS_FILENAME', os.path.expanduser("~/tmp/health_probe_lava_addresses_with_no_specs.json"))
 HPLAWNS_FILENAME = os.path.abspath(HPLAWNS_FILENAME)
+directory = os.path.dirname(HPLAWNS_FILENAME)
+if not os.path.exists(directory):
+    os.makedirs(directory)
+
 HPLAWNS_QUERY_INTERVAL = relativedelta(days=int(get_env_var('JSINFO_HEALTHPROBEJOB_HPLAWNS_QUERY_INTERVAL', 1)))
 DEBUG_PRINT_ACCOUNT_INFO_STDOUT: bool = get_env_var('JSINFO_HEALTHPROBEJOB_DEBUG_PRINT_ACCOUNT_INFO_STDOUT', 'False') == 'True'
 HTTP_SERVER_ADDRESS: tuple[str, int] = tuple(json.loads(get_env_var('JSINFO_HEALTHPROBEJOB_HTTP_SERVER_ADDRESS', json.dumps(('127.0.0.1', 6500)))))

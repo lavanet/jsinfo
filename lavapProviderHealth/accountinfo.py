@@ -4,7 +4,7 @@ import traceback
 from typing import Dict, List, Optional, Any
 from dbworker import db_add_accountinfo_data, db_add_provider_health_data, db_worker_work_provider_spec_moniker
 from command import run_accountinfo_command, run_health_command
-from utils import log, error, parse_date_to_utc, safe_json_dump, safe_json_load
+from utils import log, error, parse_date_to_utc, safe_json_dump, safe_json_load, trim_and_limit_json_dict_size
 from env import HEALTH_RESULTS_GUID, HPLAWNS_FILENAME, HPLAWNS_QUERY_INTERVAL, PROVIDERS_URL
 
 def haplawns_read_addresses_from_file() -> Dict[str, str]:
@@ -130,7 +130,7 @@ def process_provider_spec_moniker(data):
                 'moniker': item['moniker'],
                 'spec': item['chain'] 
             }
-            db_worker_work_provider_spec_moniker(provider_data)
+            db_worker_work_provider_spec_moniker(trim_and_limit_json_dict_size(provider_data))
 
 def accountinfo_process_batch(batch):
     while True:

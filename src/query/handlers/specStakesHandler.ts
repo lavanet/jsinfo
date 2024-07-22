@@ -8,6 +8,7 @@ import * as JsinfoProviderAgrSchema from '../../schemas/jsinfoSchema/providerRel
 import { sql, desc, gt, and, eq } from "drizzle-orm";
 import { ReplaceArchive } from '../../indexer/indexerUtils';
 import { GetAndValidateSpecIdFromRequest } from '../utils/queryUtils';
+import { MonikerCache } from '../classes/MonikerCache';
 
 export type SpecSpecsResponse = {
     stake: number | null;
@@ -17,6 +18,7 @@ export type SpecSpecsResponse = {
     status: number | null;
     provider: string | null;
     moniker: string | null;
+    monikerfull: string | null;
     blockId: number | null;
     cuSum90Days: number;
     cuSum30Days: number;
@@ -54,6 +56,9 @@ export const SpecStakesPaginatedHandlerOpts: RouteShorthandOptions = {
                                     type: ['string', 'null']
                                 },
                                 moniker: {
+                                    type: ['string', 'null']
+                                },
+                                monikerfull: {
                                     type: ['string', 'null']
                                 },
                                 blockId: {
@@ -101,16 +106,14 @@ export async function SpecStakesPaginatedHandler(request: FastifyRequest, reply:
     END)`,
         status: JsinfoSchema.providerStakes.status,
         provider: JsinfoSchema.providerStakes.provider,
-        moniker: JsinfoSchema.providers.moniker,
         blockId: JsinfoSchema.providerStakes.blockId,
         cuSum90Days: sql<number>`SUM(${JsinfoProviderAgrSchema.aggDailyRelayPayments.cuSum})`,
         relaySum90Days: sql<number>`SUM(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum})`,
     }).from(JsinfoSchema.providerStakes)
         .groupBy(JsinfoSchema.providerStakes.stake, JsinfoSchema.providerStakes.appliedHeight, JsinfoSchema.providerStakes.geolocation,
             JsinfoSchema.providerStakes.addons, JsinfoSchema.providerStakes.extensions, JsinfoSchema.providerStakes.status,
-            JsinfoSchema.providerStakes.provider, JsinfoSchema.providerStakes.specId, JsinfoSchema.providers.moniker,
+            JsinfoSchema.providerStakes.provider, JsinfoSchema.providerStakes.specId,
             JsinfoSchema.providerStakes.blockId)
-        .leftJoin(JsinfoSchema.providers, eq(JsinfoSchema.providerStakes.provider, JsinfoSchema.providers.address))
         .leftJoin(JsinfoProviderAgrSchema.aggDailyRelayPayments, and(
             eq(JsinfoSchema.providerStakes.provider, JsinfoProviderAgrSchema.aggDailyRelayPayments.provider),
             and(
@@ -128,7 +131,6 @@ export async function SpecStakesPaginatedHandler(request: FastifyRequest, reply:
         cuSum30Days: sql<number>`SUM(${JsinfoProviderAgrSchema.aggDailyRelayPayments.cuSum})`,
         relaySum30Days: sql<number>`SUM(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum})`,
     }).from(JsinfoSchema.providerStakes)
-        .leftJoin(JsinfoSchema.providers, eq(JsinfoSchema.providerStakes.provider, JsinfoSchema.providers.address))
         .leftJoin(JsinfoProviderAgrSchema.aggDailyRelayPayments, and(
             eq(JsinfoSchema.providerStakes.provider, JsinfoProviderAgrSchema.aggDailyRelayPayments.provider),
             and(
@@ -137,7 +139,7 @@ export async function SpecStakesPaginatedHandler(request: FastifyRequest, reply:
             )
         ))
         .where(eq(JsinfoSchema.providerStakes.specId, spec))
-        .groupBy(JsinfoSchema.providerStakes.provider, JsinfoSchema.providerStakes.specId, JsinfoSchema.providers.moniker, JsinfoSchema.providerStakes.stake)
+        .groupBy(JsinfoSchema.providerStakes.provider, JsinfoSchema.providerStakes.specId, JsinfoSchema.providerStakes.stake)
         .orderBy(desc(JsinfoSchema.providerStakes.stake))
         .offset(0).limit(200);
 
@@ -147,6 +149,8 @@ export async function SpecStakesPaginatedHandler(request: FastifyRequest, reply:
         let item30Days = stakesRes30DaysMap.get(item90Days.provider);
         return {
             ...item90Days,
+            moniker: MonikerCache.GetMonikerForProvider(item90Days.provider),
+            monikerfull: MonikerCache.GetMonikerFullDescription(item90Days.provider),
             relaySum90Days: item90Days.relaySum90Days || 0,
             cuSum90Days: item90Days.cuSum90Days || 0,
             cuSum30Days: item30Days ? item30Days.cuSum30Days || 0 : 0,

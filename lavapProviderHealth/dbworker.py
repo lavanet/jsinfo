@@ -93,6 +93,18 @@ def db_worker_work():
 # );
 def db_worker_work_accountinfo(data):
     log("db_worker_work_accountinfo", f"Processing item: {data}")
+
+    if data['provider_id'] not in verified_providers:
+        ret = db_execute_operation_nolog("""
+            INSERT INTO providers (address, moniker)
+            VALUES (%s, %s)
+            ON CONFLICT (address) DO NOTHING
+        """, (data['provider_id'], ''))
+        if ret is False:
+            error("db_worker_work_provider_spec_moniker", "Error ensuring provider exists")
+            return
+        verified_providers.add(data['provider_id'])
+    
     ret = db_execute_operation_nolog("""
         SELECT data, timestamp FROM provider_accountinfo WHERE provider = %s ORDER BY timestamp DESC LIMIT 1
     """, (data['provider_id'],))
@@ -124,12 +136,26 @@ def db_worker_work_accountinfo(data):
         log("db_worker_work_accountinfo", "New record inserted because no existing data was found")
 
 verified_specs = set()
+verified_providers = set()
 
 def db_worker_work_provider_spec_moniker(data):
     if not all(key in data for key in ['provider', 'moniker', 'spec']):
         log("db_worker_work_provider_spec_moniker", "Invalid data format")
         return
     log("db_worker_work_provider_spec_moniker", f"Processing item: {data}")
+
+    # Ensure provider exists in providers table
+    if data['provider'] not in verified_providers:
+        ret = db_execute_operation_nolog("""
+            INSERT INTO providers (address, moniker)
+            VALUES (%s, %s)
+            ON CONFLICT (address) DO UPDATE
+            SET moniker = EXCLUDED.moniker
+        """, (data['provider'], data['moniker']))
+        if ret is False:
+            error("db_worker_work_provider_spec_moniker", "Error ensuring provider exists")
+            return
+        verified_providers.add(data['provider'])
 
     # Ensure spec exists in specs table
     if data['spec'] not in verified_specs:

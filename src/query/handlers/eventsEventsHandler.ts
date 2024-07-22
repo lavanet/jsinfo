@@ -8,6 +8,7 @@ import { Pagination, ParsePaginationFromString } from '../utils/queryPagination'
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '../queryConsts';
 import { CSVEscape } from '../utils/queryUtils';
 import { RequestHandlerBase } from '../classes/RequestHandlerBase';
+import { MonikerCache } from '../classes/MonikerCache';
 
 export interface EventsEventsResponse {
     id: number | null;
@@ -26,6 +27,7 @@ export interface EventsEventsResponse {
     r3: number | null;
     provider: string | null;
     moniker: string | null;
+    monikerfull: string | null;
     consumer: string | null;
     blockId: number | null;
     datetime: string | null;
@@ -60,6 +62,7 @@ export const EventsEventsPaginatedHandlerOpts: RouteShorthandOptions = {
                                 r3: { type: ['number', 'null'] },
                                 provider: { type: ['string', 'null'] },
                                 moniker: { type: ['string', 'null'] },
+                                monikerfull: { type: ['string', 'null'] },
                                 consumer: { type: ['string', 'null'] },
                                 blockId: { type: ['number', 'null'] },
                                 datetime: { type: ['string', 'null'] },
@@ -94,14 +97,14 @@ class EventsEventsData extends RequestHandlerBase<EventsEventsResponse> {
             .select()
             .from(JsinfoSchema.events)
             .leftJoin(JsinfoSchema.blocks, eq(JsinfoSchema.events.blockId, JsinfoSchema.blocks.height))
-            .leftJoin(JsinfoSchema.providers, eq(JsinfoSchema.events.provider, JsinfoSchema.providers.address))
             .orderBy(desc(JsinfoSchema.events.id))
             .offset(0)
             .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
 
         const flattenedEvents = eventsRes.map(event => ({
             ...event.events,
-            moniker: event.providers?.moniker !== undefined ? event.providers?.moniker : null,
+            moniker: MonikerCache.GetMonikerForProvider(event.events.provider),
+            monikerfull: MonikerCache.GetMonikerFullDescription(event.events.provider),
             datetime: event.blocks?.datetime?.toISOString() ?? null
         }));
 
@@ -177,18 +180,30 @@ class EventsEventsData extends RequestHandlerBase<EventsEventsResponse> {
 
         const offset = (finalPagination.page - 1) * finalPagination.count;
 
-        const eventsRes = await QueryGetJsinfoReadDbInstance()
-            .select()
-            .from(JsinfoSchema.events)
-            .leftJoin(JsinfoSchema.blocks, eq(JsinfoSchema.events.blockId, JsinfoSchema.blocks.height))
-            .leftJoin(JsinfoSchema.providers, eq(JsinfoSchema.events.provider, JsinfoSchema.providers.address))
-            .orderBy(orderFunction(sortColumn))
-            .offset(offset)
-            .limit(finalPagination.count);
+        let eventsRes: any | null = null;
+        if (sortColumn == JsinfoSchema.providers.moniker) {
+            eventsRes = await QueryGetJsinfoReadDbInstance()
+                .select()
+                .from(JsinfoSchema.events)
+                .leftJoin(JsinfoSchema.blocks, eq(JsinfoSchema.events.blockId, JsinfoSchema.blocks.height))
+                .leftJoin(JsinfoSchema.providers, eq(JsinfoSchema.events.provider, JsinfoSchema.providers.address))
+                .orderBy(orderFunction(sortColumn))
+                .offset(offset)
+                .limit(finalPagination.count);
+        } else {
+            eventsRes = await QueryGetJsinfoReadDbInstance()
+                .select()
+                .from(JsinfoSchema.events)
+                .leftJoin(JsinfoSchema.blocks, eq(JsinfoSchema.events.blockId, JsinfoSchema.blocks.height))
+                .orderBy(orderFunction(sortColumn))
+                .offset(offset)
+                .limit(finalPagination.count);
+        }
 
         const flattenedEvents = eventsRes.map(event => ({
             ...event.events,
-            moniker: event.providers?.moniker !== undefined ? event.providers?.moniker : null,
+            moniker: MonikerCache.GetMonikerForProvider(event.events.provider),
+            monikerfull: MonikerCache.GetMonikerFullDescription(event.events.provider),
             datetime: event.blocks?.datetime?.toISOString() ?? null
         }));
 

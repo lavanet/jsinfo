@@ -8,6 +8,7 @@ import { Pagination, ParsePaginationFromString } from '../utils/queryPagination'
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '../queryConsts';
 import { CSVEscape } from '../utils/queryUtils';
 import { RequestHandlerBase } from '../classes/RequestHandlerBase';
+import { MonikerCache } from '../classes/MonikerCache';
 
 export interface EventsRewardsResponse {
     id: number | null;
@@ -23,6 +24,7 @@ export interface EventsRewardsResponse {
     qosLatencyExc: number | null;
     provider: string | null;
     moniker: string | null;
+    monikerfull: string | null;
     specId: string | null;
     blockId: number | null;
     consumer: string | null;
@@ -53,6 +55,7 @@ export const EventsRewardsPaginatedHandlerOpts: RouteShorthandOptions = {
                                 qosLatencyExc: { type: ['number', 'null'] },
                                 provider: { type: ['string', 'null'] },
                                 moniker: { type: ['string', 'null'] },
+                                monikerfull: { type: ['string', 'null'] },
                                 specId: { type: ['string', 'null'] },
                                 blockId: { type: ['number', 'null'] },
                                 consumer: { type: ['string', 'null'] },
@@ -87,14 +90,14 @@ class EventsRewardsData extends RequestHandlerBase<EventsRewardsResponse> {
         const paymentsRes = await QueryGetJsinfoReadDbInstance()
             .select()
             .from(JsinfoSchema.relayPayments)
-            .leftJoin(JsinfoSchema.providers, eq(JsinfoSchema.relayPayments.provider, JsinfoSchema.providers.address))
             .orderBy(desc(JsinfoSchema.relayPayments.id))
             .offset(0)
             .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
 
         const flattenedRes = paymentsRes.map(data => ({
-            ...data.relay_payments,
-            moniker: data.providers?.moniker !== undefined ? data.providers?.moniker : null,
+            ...data,
+            moniker: MonikerCache.GetMonikerForProvider(data.provider),
+            monikerfull: MonikerCache.GetMonikerFullDescription(data.provider),
         }));
 
         return flattenedRes;
@@ -161,17 +164,35 @@ class EventsRewardsData extends RequestHandlerBase<EventsRewardsResponse> {
 
         const offset = (finalPagination.page - 1) * finalPagination.count;
 
+        if (sortColumn == JsinfoSchema.providers.moniker) {
+            const paymentsRes = await QueryGetJsinfoReadDbInstance()
+                .select()
+                .from(JsinfoSchema.relayPayments)
+                .leftJoin(JsinfoSchema.providers, eq(JsinfoSchema.relayPayments.provider, JsinfoSchema.providers.address))
+                .orderBy(orderFunction(sortColumn))
+                .offset(offset)
+                .limit(finalPagination.count);
+
+            const flattenedRewards = paymentsRes.map(data => ({
+                ...data.relay_payments,
+                moniker: MonikerCache.GetMonikerForProvider(data.relay_payments.provider),
+                monikerfull: MonikerCache.GetMonikerFullDescription(data.relay_payments.provider),
+            }));
+
+            return flattenedRewards;
+        }
+
         const paymentsRes = await QueryGetJsinfoReadDbInstance()
             .select()
             .from(JsinfoSchema.relayPayments)
-            .leftJoin(JsinfoSchema.providers, eq(JsinfoSchema.relayPayments.provider, JsinfoSchema.providers.address))
             .orderBy(orderFunction(sortColumn))
             .offset(offset)
             .limit(finalPagination.count);
 
         const flattenedRewards = paymentsRes.map(data => ({
-            ...data.relay_payments,
-            moniker: data.providers?.moniker !== undefined ? data.providers?.moniker : null,
+            ...data,
+            moniker: MonikerCache.GetMonikerForProvider(data.provider),
+            monikerfull: MonikerCache.GetMonikerFullDescription(data.provider),
         }));
 
         return flattenedRewards;

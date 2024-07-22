@@ -8,6 +8,7 @@ import { sql, desc, gt, and, lt, eq, inArray } from "drizzle-orm";
 import { DateToISOString, FormatDateItems } from '../utils/queryDateUtils';
 import { RequestHandlerBase } from '../classes/RequestHandlerBase';
 import { GetAndValidateSpecIdFromRequest, GetDataLength } from '../utils/queryUtils';
+import { MonikerCache } from '../classes/MonikerCache';
 import { PgColumn } from 'drizzle-orm/pg-core';
 
 type SpecChartCuRelay = {
@@ -118,18 +119,9 @@ class SpecChartsData extends RequestHandlerBase<SpecChartResponse> {
             }
         });
 
-        let providerAddresses = top10Providers.map(item => item.provider).filter(Boolean) as string[];
-
-        // Second query to get monikers for the top 10 providers
-        let monikers = await QueryGetJsinfoReadDbInstance().select({
-            provider: JsinfoSchema.providers.address,
-            moniker: JsinfoSchema.providers.moniker,
-        }).from(JsinfoSchema.providers)
-            .where(inArray(JsinfoSchema.providers.address, providerAddresses));
-
-        // Combine the results
+        // Populate monikers
         let result = top10Providers.reduce((acc, item) => {
-            let moniker = monikers.find(m => m.provider === item.provider)?.moniker;
+            let moniker = MonikerCache.GetMonikerForProvider(item.provider);
             return {
                 ...acc,
                 [item.provider!]: moniker || item.provider, // Fallback to provider if moniker is not found

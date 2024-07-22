@@ -96,9 +96,15 @@ class ProviderSpecMonikerCache {
             return acc;
         }, {} as { [moniker: string]: string[] });
 
+        if (Object.keys(monikerToSpecIds).length === 1) {
+            const result = monikerToSpecIds[0][0];
+            this.monikerFullDescriptionCache.set(lavaid, result);
+            return result;
+        }
+
         const result = Object.entries(monikerToSpecIds)
             .map(([moniker, specIds]) => `${moniker} (${specIds.join(', ')})`)
-            .join(", ");
+            .join("\n");
 
         this.monikerFullDescriptionCache.set(lavaid, result);
         return result;

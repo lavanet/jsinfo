@@ -27,7 +27,6 @@ def main(lava_id = None) -> None:
     
     start_threads()
 
-    # reverse this list if GEO_LOCATION is EU
     addresses = get_provider_addresses_from_jsinfoapi()
     if GEO_LOCATION == "EU":
         addresses.reverse()

@@ -159,6 +159,8 @@ export const events = pgTable('events', {
   tx: text('tx').references(() => txs.hash),
 
   fulltext: text('fulltext'),
+  timestamp: timestamp("timestamp")
+
 }, (table) => {
   return {
     providerIdx: index("events_provider_idx").on(table.provider),

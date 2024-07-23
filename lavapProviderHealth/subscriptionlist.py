@@ -1,7 +1,7 @@
 import threading, time, traceback
 from dbworker import  db_add_subscription_list_data
 from command import run_subscription_list_command
-from utils import log, error
+from utils import log, error, trim_and_limit_json_dict_size
 
 """
 lavad q subscription list --node https://public-rpc.lavanet.xyz:443 --output json | jq
@@ -45,7 +45,7 @@ def subscriptionlist_index() -> None:
     subs_info_list = subs_list_output.get('subs_info', [])
     
     for subs_info in subs_info_list:
-        db_add_subscription_list_data(subs_info)
+        db_add_subscription_list_data(trim_and_limit_json_dict_size(subs_info))
         # log('subscriptionlist_index', f'Processed subscription data for consumer: {subs_info.get("consumer")}')
 
 def subscriptionlist_index_runner():

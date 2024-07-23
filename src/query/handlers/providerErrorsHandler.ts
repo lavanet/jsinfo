@@ -119,7 +119,7 @@ class ProviderErrorsData extends RequestHandlerBase<ErrorsReportResponse> {
         const sortColumn = keyToColumnMap[pagination.sortKey || defaultSortKey] || keyToColumnMap[defaultSortKey];
         const orderFunction = pagination.direction === 'ascending' ? asc : desc;
 
-        const result1 = QueryGetRelaysReadDbInstance()
+        const result = await QueryGetRelaysReadDbInstance()
             .select({
                 id: RelaysSchema.lavaReportError.id,
                 created_at: RelaysSchema.lavaReportError.created_at,
@@ -132,8 +132,6 @@ class ProviderErrorsData extends RequestHandlerBase<ErrorsReportResponse> {
             .offset((pagination.page - 1) * pagination.count)
             .limit(pagination.count);
 
-        // console.log("fetchPaginatedRecords", result1.toSQL());
-        const result = await result1;
         return result.map(row => ({
             id: row.id,
             date: row.created_at ? row.created_at.toISOString() : '',

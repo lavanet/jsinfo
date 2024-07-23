@@ -129,14 +129,14 @@ export async function GetPostgresUrl(): Promise<string> {
     return cachedPostgresUrl!;
 }
 
-export async function DoInChunks(sz: number, arr: any[], cb: (arr: any[]) => Promise<any>) {
+export async function DoInChunks(size: number, arr: any[], callback: (arr: any[]) => Promise<any>) {
     while (arr.length != 0) {
-        const tmpArr = arr.splice(0, sz);
+        const tmpArr = arr.splice(0, size);
         try {
-            await cb(tmpArr);
+            await callback(tmpArr);
         } catch (error) {
             console.error(`Error processing chunk: ${JSON.stringify(tmpArr)}`);
-            console.error(`Callback function: ${cb.toString()}`);
+            console.error(`Callback function: ${callback.toString()}`);
             if (error instanceof Error) {
                 console.error(`Error message: ${error.message}`);
                 console.error(`Stack Trace: ${error.stack}`);

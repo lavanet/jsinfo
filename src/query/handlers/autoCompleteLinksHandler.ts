@@ -4,6 +4,7 @@ import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../queryDb';
 import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import { isNotNull } from 'drizzle-orm';
+import { MonikerCache } from '../classes/MonikerCache';
 
 export const AutoCompleteLinksPaginatedHandlerOpts: RouteShorthandOptions = {
     schema: {
@@ -47,7 +48,7 @@ export async function AutoCompleteLinksPaginatedHandler(request: FastifyRequest,
             name: provider.address,
             type: 'provider',
             link: `${baseUrl}/${provider.address}`,
-            moniker: provider.moniker
+            moniker: MonikerCache.GetMonikerForProvider(provider.address)
         }))
     );
     const consumerItems = consumers.flatMap(consumer =>
@@ -56,7 +57,7 @@ export async function AutoCompleteLinksPaginatedHandler(request: FastifyRequest,
             name: consumer.address,
             type: 'consumer',
             link: `${baseUrl}/${consumer.address}`,
-            moniker: ''
+            moniker: MonikerCache.GetMonikerForProvider(consumer.address)
         }))
     );
     const specItems = specs.flatMap(spec =>

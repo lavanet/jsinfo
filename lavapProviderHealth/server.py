@@ -81,12 +81,14 @@ class RequestHandler(BaseHTTPRequestHandler):
         post_data: bytes = self.rfile.read(content_length)
         data: Optional[Dict[str, Any]] = safe_json_load(post_data.decode('utf-8'))
 
-        if data != None:
-            guid: Optional[str] = data.get('resultsGUID',"")
+        if data is not None:
+            guid: Optional[str] = data.get('resultsGUID', "")
             if guid.strip() == "":
                 log("http_server_post", "Missing 'resultsGUID' in the received data")
+                print("Missing 'resultsGUID' in the received data")
             else:
                 parse_and_save_provider_health_status_from_request(data, guid)
+                print(f"Processing data for GUID: {guid}")
 
         # Send a 200 OK response
         self.send_response(200)

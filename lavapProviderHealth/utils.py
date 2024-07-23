@@ -159,3 +159,13 @@ def convert_dict_to_dbjson(data):
     elif type(data) != str:
         return safe_json_dump(data, slim=True)
     return data
+
+def trim_and_limit_json_dict_size(json_dict):
+    trimmed_json_dict = {}
+    for key, value in json_dict.items():
+        if len(trimmed_json_dict) >= 100:
+            break
+        trimmed_key = key[:0x100]
+        trimmed_value = str(value)[:0x1000]
+        trimmed_json_dict[trimmed_key] = trimmed_value
+    return trimmed_json_dict

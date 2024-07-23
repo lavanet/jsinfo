@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import sys, os, threading, time, random
-from env import BATCH_AMOUNT, CD_ON_START
+from env import BATCH_AMOUNT, CD_ON_START, GEO_LOCATION
 from accountinfo import accountinfo_process_batch, accountinfo_process_lavaid, get_provider_addresses_from_jsinfoapi
 from dbworker import start_db_worker
 from subscriptionlist import start_subscriptionlist_index
@@ -16,17 +16,20 @@ def start_threads():
 def main(lava_id = None) -> None:
     os.chdir(os.path.expanduser(CD_ON_START))
 
-    start_threads()
-
     if lava_id:
         start_db_worker()
         start_http_server()
         log("main - one provider mode", f"Processing address: {lava_id}")
         accountinfo_process_lavaid(lava_id)
-        log("main - one provider mode", f"Successfully processed address: {lava_id}")
+        log("main - one provider mode", f"Successfully processed address: {lava_id}, sleeping 2min before exit")
+        time.sleep(120)
         exit_script()
     
+    start_threads()
+
     addresses = get_provider_addresses_from_jsinfoapi()
+    if GEO_LOCATION == "EU":
+        addresses.reverse()
 
     batch_size = len(addresses) // BATCH_AMOUNT
 
@@ -34,7 +37,7 @@ def main(lava_id = None) -> None:
 
     threads = []
     for batch_idx, batch in enumerate(batches):
-        batch_thread = threading.Thread(target=accountinfo_process_batch, args=(batch,), name="batch_thread%02d" % batch_idx)
+        batch_thread = threading.Thread(target=accountinfo_process_batch, args=(batch_idx, batch,), name="batch_thread%02d" % batch_idx)
         batch_thread.start()
         threads.append(batch_thread)
 

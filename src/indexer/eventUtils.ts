@@ -196,6 +196,8 @@ export function EventProcessAttributes(
         error = "dbEventFulltextStringifyError"
     }
 
+    if (dbEvent) dbEvent.timestamp = new Date(lavaBlock.datetime);
+
     if (!error) return true;
 
     if (dbEvent && !dbEvent.fulltext) {
@@ -207,12 +209,12 @@ export function EventProcessAttributes(
     }
 
     console.warn(`
-    EventProcessAttributes processAttribute error.
-    Caller: ${caller}
-    ${(error + "").substring(0, 0x1000)}
-    Height: ${height.toString().substring(0, 0x1000)}
-    TxHash: ${txHash?.substring(0, 0x1000)}
-    Event: ${JSON.stringify(evt).substring(0, 0x1000)}
+        EventProcessAttributes processAttribute error.
+        Caller: ${caller}
+        ${(error + "").substring(0, 0x1000)}
+        Height: ${height.toString().substring(0, 0x1000)}
+        TxHash: ${txHash?.substring(0, 0x1000)}
+        Event: ${JSON.stringify(evt).substring(0, 0x1000)}
     `);
 
     ParseEventError(evt, height, txHash, lavaBlock, error, caller);

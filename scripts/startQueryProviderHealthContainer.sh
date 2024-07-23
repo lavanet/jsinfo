@@ -18,7 +18,6 @@ while true; do
     echo "QueryPod $(date) probe1 :: Starting 'python3 lavapProviderHealth/run.py'..."
     timeout 2h python3 -u lavapProviderHealth/run.py 2>&1 || true
     echo "QueryPod $(date) probe1 :: 'python3 lavapProviderHealth/run.py' stopped, restarting..."
-    sleep 60
 done &
 
 # Wait for all child processes to finish

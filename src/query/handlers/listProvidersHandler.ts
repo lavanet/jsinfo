@@ -6,7 +6,8 @@
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryCheckJsinfoReadDbInstance, GetLatestBlock, QueryGetJsinfoReadDbInstance } from '../queryDb';
 import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
-import { isNotNull, eq, and, notLike } from "drizzle-orm";
+import { eq } from "drizzle-orm";
+import { MonikerCache } from '../classes/MonikerCache';
 
 export const ListProvidersRawHandlerOpts: RouteShorthandOptions = {
     schema: {
@@ -32,7 +33,8 @@ export const ListProvidersRawHandlerOpts: RouteShorthandOptions = {
                                                 properties: {
                                                     chain: { type: 'string' },
                                                     spec: { type: 'string' },
-                                                    moniker: { type: 'string' }
+                                                    moniker: { type: 'string' },
+                                                    monikerfull: { type: 'string' }
                                                 },
                                                 required: ['spec', 'moniker']
                                             }
@@ -56,6 +58,7 @@ interface ProviderEntry {
         chain: string;
         spec: string | null;
         moniker: string | null;
+        monikerfull: string | null;
     }[];
 }
 
@@ -164,25 +167,16 @@ export async function ListProvidersRawHandler(request: FastifyRequest, reply: Fa
     const stakesRes = await QueryGetJsinfoReadDbInstance().select({
         provider: JsinfoSchema.providerStakes.provider,
         specId: JsinfoSchema.providerStakes.specId,
-        moniker: JsinfoSchema.providers.moniker,
     }).from(JsinfoSchema.providerStakes)
-        .leftJoin(JsinfoSchema.providers, eq(JsinfoSchema.providerStakes.provider, JsinfoSchema.providers.address))
-        .where(
-            and(
-                and(
-                    notLike(JsinfoSchema.providers.moniker, 'testnet-lava-%'),
-                    isNotNull(JsinfoSchema.providers.address)
-                ),
-                eq(JsinfoSchema.providerStakes.status, JsinfoSchema.LavaProviderStakeStatus.Active)
-            )
-        );
+        .where(eq(JsinfoSchema.providerStakes.status, JsinfoSchema.LavaProviderStakeStatus.Active));
 
     const providers = stakesRes.reduce<ProviderEntry[]>((acc, stake) => {
         const providerEntry = acc.find(entry => entry.provider === stake.provider);
         const specEntry = {
             chain: chainMapping[stake.specId!] || "",
             spec: stake.specId,
-            moniker: stake.moniker,
+            moniker: MonikerCache.GetMonikerForProvider(stake.provider),
+            monikerfull: MonikerCache.GetMonikerFullDescription(stake.provider),
         };
         if (providerEntry) {
             providerEntry.specs.push(specEntry);

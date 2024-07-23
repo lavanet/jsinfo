@@ -1,11 +1,8 @@
-// src/query/handlers/TotalSupplyRawHandler.ts
-// src/query/handlers/CirculatingSupplyRawHandler.ts
+// src/query/handlers/supplyHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryCheckJsinfoReadDbInstance } from '../queryDb';
 import { JSINFO_QUERY_LAVA_CHAIN_ID } from '../queryConsts';
-
-
 
 export const TotalSupplyRawHandlerOpts: RouteShorthandOptions = {
     schema: {

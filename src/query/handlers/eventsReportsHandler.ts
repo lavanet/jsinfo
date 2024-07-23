@@ -8,10 +8,12 @@ import { Pagination, ParsePaginationFromString } from '../utils/queryPagination'
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '../queryConsts';
 import { CSVEscape } from '../utils/queryUtils';
 import { RequestHandlerBase } from '../classes/RequestHandlerBase';
+import { MonikerCache } from '../classes/MonikerCache';
 
 export interface EventsReportsResponse {
     provider: string | null;
     moniker: string | null;
+    monikerfull: string | null;
     blockId: number | null;
     cu: number | null;
     disconnections: number | null;
@@ -36,6 +38,7 @@ export const EventsReportsPaginatedHandlerOpts: RouteShorthandOptions = {
                             properties: {
                                 provider: { type: ['string', 'null'] },
                                 moniker: { type: ['string', 'null'] },
+                                monikerfull: { type: ['string', 'null'] },
                                 blockId: { type: ['number', 'null'] },
                                 cu: { type: ['number', 'null'] },
                                 disconnections: { type: ['number', 'null'] },
@@ -75,15 +78,15 @@ class EventsReportsData extends RequestHandlerBase<EventsReportsResponse> {
         const reportsRes = await QueryGetJsinfoReadDbInstance()
             .select()
             .from(JsinfoSchema.providerReported)
-            .leftJoin(JsinfoSchema.providers, eq(JsinfoSchema.providerReported.provider, JsinfoSchema.providers.address))
             .orderBy(desc(JsinfoSchema.providerReported.id))
             .offset(0)
             .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
 
         const flattenedEvents = reportsRes.map(data => ({
-            ...data.provider_reported,
-            moniker: data.providers?.moniker !== undefined ? data.providers?.moniker : null,
-            datetime: data.provider_reported.datetime?.toISOString() ?? null
+            ...data,
+            moniker: MonikerCache.GetMonikerForProvider(data.provider),
+            monikerfull: MonikerCache.GetMonikerFullDescription(data.provider),
+            datetime: data.datetime?.toISOString() ?? null
         }));
 
         return flattenedEvents;
@@ -148,18 +151,37 @@ class EventsReportsData extends RequestHandlerBase<EventsReportsResponse> {
 
         const offset = (finalPagination.page - 1) * finalPagination.count;
 
+        if (sortColumn == JsinfoSchema.providers.moniker) {
+            const reportsRes = await QueryGetJsinfoReadDbInstance()
+                .select()
+                .from(JsinfoSchema.providerReported)
+                .leftJoin(JsinfoSchema.providers, eq(JsinfoSchema.providerReported.provider, JsinfoSchema.providers.address))
+                .orderBy(orderFunction(sortColumn))
+                .offset(offset)
+                .limit(finalPagination.count);
+
+            const flattenedReports = reportsRes.map(data => ({
+                ...data.provider_reported,
+                moniker: MonikerCache.GetMonikerForProvider(data.provider_reported.provider),
+                monikerfull: MonikerCache.GetMonikerFullDescription(data.provider_reported.provider),
+                datetime: data.provider_reported.datetime?.toISOString() ?? null
+            }));
+
+            return flattenedReports;
+        }
+
         const reportsRes = await QueryGetJsinfoReadDbInstance()
             .select()
             .from(JsinfoSchema.providerReported)
-            .leftJoin(JsinfoSchema.providers, eq(JsinfoSchema.providerReported.provider, JsinfoSchema.providers.address))
             .orderBy(orderFunction(sortColumn))
             .offset(offset)
             .limit(finalPagination.count);
 
         const flattenedReports = reportsRes.map(data => ({
-            ...data.provider_reported,
-            moniker: data.providers?.moniker !== undefined ? data.providers?.moniker : null,
-            datetime: data.provider_reported.datetime?.toISOString() ?? null
+            ...data,
+            moniker: MonikerCache.GetMonikerForProvider(data.provider),
+            monikerfull: MonikerCache.GetMonikerFullDescription(data.provider),
+            datetime: data.datetime?.toISOString() ?? null
         }));
 
         return flattenedReports;

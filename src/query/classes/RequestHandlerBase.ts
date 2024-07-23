@@ -56,9 +56,8 @@ export class RequestHandlerBase<T> {
     }
 
     protected log(message: string) {
-        if (this.debug) {
-            console.log(`[${new Date().toISOString()}] [${this.className}] ${message}`);
-        }
+        if (!this.debug) return;
+        console.log(`[${new Date().toISOString()}] [${this.className}] ${message}`);
     }
 
     protected getTTL(key: string): number {

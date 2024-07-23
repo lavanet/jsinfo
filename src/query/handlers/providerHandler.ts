@@ -9,6 +9,7 @@ import * as JsinfoProviderAgrSchema from '../../schemas/jsinfoSchema/providerRel
 import { sql, desc, and, eq } from "drizzle-orm";
 import { GetAndValidateProviderAddressFromRequest } from '../utils/queryUtils';
 import { WriteErrorToFastifyReply } from '../utils/queryServerUtils';
+import { MonikerCache } from '../classes/MonikerCache';
 
 export const ProviderPaginatedHandlerOpts: RouteShorthandOptions = {
     schema: {
@@ -22,10 +23,13 @@ export const ProviderPaginatedHandlerOpts: RouteShorthandOptions = {
                     datetime: {
                         type: 'number'
                     },
-                    addr: {
+                    provider: {
                         type: 'string'
                     },
                     moniker: {
+                        type: 'string'
+                    },
+                    monikerfull: {
                         type: 'string'
                     },
                     cuSum: {
@@ -70,13 +74,6 @@ export async function ProviderPaginatedHandler(request: FastifyRequest, reply: F
         return;
     }
 
-    const res = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.providers).where(eq(JsinfoSchema.providers.address, addr)).limit(1)
-    if (res.length != 1) {
-        WriteErrorToFastifyReply(reply, 'Provider does not exist')
-        return reply;
-    }
-
-    const provider = res[0]
     const { latestHeight, latestDatetime } = await GetLatestBlock()
 
     //
@@ -106,28 +103,28 @@ export async function ProviderPaginatedHandler(request: FastifyRequest, reply: F
         stakeSum += stake.stake!
     })
 
-    const claimedRewards = await QueryGetJsinfoReadDbInstance().select()
-        .from(JsinfoSchema.events)
-        .where(
-            and(
-                eq(JsinfoSchema.events.provider, addr),
-                eq(JsinfoSchema.events.eventType, JsinfoSchema.LavaProviderEventType.DelegateToProvider)
-            )
-        )
+    // const claimedRewards = await QueryGetJsinfoReadDbInstance().select()
+    //     .from(JsinfoSchema.events)
+    //     .where(
+    //         and(
+    //             eq(JsinfoSchema.events.provider, addr),
+    //             eq(JsinfoSchema.events.eventType, JsinfoSchema.LavaProviderEventType.DelegateToProvider)
+    //         )
+    //     )
 
-    let claimedRewardsSum = 0;
+    // let claimedRewardsSum = 0;
 
-    for (let i = 0; i < claimedRewards.length; i++) {
-        const reward = claimedRewards[i];
+    // for (let i = 0; i < claimedRewards.length; i++) {
+    //     const reward = claimedRewards[i];
 
-        if (reward.b1 !== null && reward.b1 !== 0) {
-            claimedRewardsSum += reward.b1;
-        } else if (reward.t3 !== null && reward.t3.toLowerCase().endsWith('ulava')) {
-            claimedRewardsSum += Number(reward.t3.slice(0, -5));
-        }
-    }
+    //     if (reward.b1 !== null && reward.b1 !== 0) {
+    //         claimedRewardsSum += reward.b1;
+    //     } else if (reward.t3 !== null && reward.t3.toLowerCase().endsWith('ulava')) {
+    //         claimedRewardsSum += Number(reward.t3.slice(0, -5));
+    //     }
+    // }
 
-    let claimedRewardsSumULava = claimedRewardsSum ? claimedRewardsSum + ' ulava' : 0;
+    // let claimedRewardsSumULava = claimedRewardsSum ? claimedRewardsSum + ' ulava' : 0;
 
     const claimableRewards = await QueryGetJsinfoReadDbInstance().select()
         .from(JsinfoSchema.dualStackingDelegatorRewards)
@@ -161,16 +158,19 @@ export async function ProviderPaginatedHandler(request: FastifyRequest, reply: F
 
     const claimableRewardsULava = totalSum ? totalSum + ' ulava' : 0;
 
+    /* claimedRewards: claimedRewardsSumULava, */
+
     return {
         height: latestHeight,
         datetime: latestDatetime,
-        addr: provider.address,
-        moniker: provider.moniker,
+        provider: addr,
+        moniker: MonikerCache.GetMonikerForProvider(addr),
+        monikerfull: MonikerCache.GetMonikerFullDescription(addr),
         cuSum: cuSum,
         relaySum: relaySum,
         rewardSum: rewardSum,
         stakeSum: stakeSum,
-        claimedRewards: claimedRewardsSumULava,
+        claimedRewards: 0,
         claimableRewards: claimableRewardsULava,
     }
 }

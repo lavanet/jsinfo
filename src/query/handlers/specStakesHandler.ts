@@ -9,12 +9,18 @@ import { sql, desc, gt, and, eq } from "drizzle-orm";
 import { ReplaceArchive } from '../../indexer/indexerUtils';
 import { GetAndValidateSpecIdFromRequest } from '../utils/queryUtils';
 import { MonikerCache } from '../classes/MonikerCache';
+import { BigIntIsZero } from '../../utils';
 
 export type SpecSpecsResponse = {
-    stake: number | null;
+    stake: string;
+    delegateLimit: string;
+    delegateTotal: string;
+    delegateCommission: string;
+    totalStake: string;
     appliedHeight: number | null;
     geolocation: number | null;
-    addonsAndExtensions: string;
+    addons: string;
+    extensions: string;
     status: number | null;
     provider: string | null;
     moniker: string | null;
@@ -38,7 +44,19 @@ export const SpecStakesPaginatedHandlerOpts: RouteShorthandOptions = {
                             type: 'object',
                             properties: {
                                 stake: {
-                                    type: ['number', 'null']
+                                    type: ['string', 'null']
+                                },
+                                delegateLimit: {
+                                    type: ['string', 'null']
+                                },
+                                delegateTotal: {
+                                    type: ['string', 'null']
+                                },
+                                delegateCommission: {
+                                    type: ['string', 'null']
+                                },
+                                totalStake: {
+                                    type: ['string', 'null']
                                 },
                                 appliedHeight: {
                                     type: ['number', 'null']
@@ -46,7 +64,10 @@ export const SpecStakesPaginatedHandlerOpts: RouteShorthandOptions = {
                                 geolocation: {
                                     type: ['number', 'null']
                                 },
-                                addonsAndExtensions: {
+                                addons: {
+                                    type: 'string'
+                                },
+                                extensions: {
                                     type: 'string'
                                 },
                                 status: {
@@ -93,40 +114,44 @@ export async function SpecStakesPaginatedHandler(request: FastifyRequest, reply:
 
     await QueryCheckJsinfoReadDbInstance();
 
-    // Query for 90 days
-    let stakesRes90Days = await QueryGetJsinfoReadDbInstance().select({
+    let stakesRes = await QueryGetJsinfoReadDbInstance().select({
         stake: JsinfoSchema.providerStakes.stake,
+        delegateLimit: JsinfoSchema.providerStakes.delegateLimit,
+        delegateTotal: JsinfoSchema.providerStakes.delegateTotal,
+        delegateCommission: JsinfoSchema.providerStakes.delegateCommission,
+        totalStake: sql<bigint>`(${JsinfoSchema.providerStakes.stake} + LEAST(${JsinfoSchema.providerStakes.delegateTotal}, ${JsinfoSchema.providerStakes.delegateLimit})) as totalStake`,
         appliedHeight: JsinfoSchema.providerStakes.appliedHeight,
         geolocation: JsinfoSchema.providerStakes.geolocation,
-        addonsAndExtensions: sql<string>`TRIM(TRAILING ', ' FROM CASE 
-        WHEN COALESCE(${JsinfoSchema.providerStakes.addons}, '') = '' AND COALESCE(${JsinfoSchema.providerStakes.extensions}, '') = '' THEN '-' 
-        WHEN COALESCE(${JsinfoSchema.providerStakes.addons}, '') = '' THEN 'extensions: ' || ${JsinfoSchema.providerStakes.extensions}
-        WHEN COALESCE(${JsinfoSchema.providerStakes.extensions}, '') = '' THEN 'addons: ' || ${JsinfoSchema.providerStakes.addons}
-        ELSE 'addons: ' || ${JsinfoSchema.providerStakes.addons} || ', extensions: ' || ${JsinfoSchema.providerStakes.extensions} 
-    END)`,
+        addons: sql<string>`COALESCE(${JsinfoSchema.providerStakes.addons}, '')`,
+        extensions: sql<string>`COALESCE(${JsinfoSchema.providerStakes.extensions}, '')`,
         status: JsinfoSchema.providerStakes.status,
         provider: JsinfoSchema.providerStakes.provider,
         blockId: JsinfoSchema.providerStakes.blockId,
-        cuSum90Days: sql<number>`SUM(${JsinfoProviderAgrSchema.aggDailyRelayPayments.cuSum})`,
-        relaySum90Days: sql<number>`SUM(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum})`,
     }).from(JsinfoSchema.providerStakes)
-        .groupBy(JsinfoSchema.providerStakes.stake, JsinfoSchema.providerStakes.appliedHeight, JsinfoSchema.providerStakes.geolocation,
-            JsinfoSchema.providerStakes.addons, JsinfoSchema.providerStakes.extensions, JsinfoSchema.providerStakes.status,
-            JsinfoSchema.providerStakes.provider, JsinfoSchema.providerStakes.specId,
-            JsinfoSchema.providerStakes.blockId)
-        .leftJoin(JsinfoProviderAgrSchema.aggDailyRelayPayments, and(
-            eq(JsinfoSchema.providerStakes.provider, JsinfoProviderAgrSchema.aggDailyRelayPayments.provider),
-            and(
-                eq(JsinfoSchema.providerStakes.specId, JsinfoProviderAgrSchema.aggDailyRelayPayments.specId),
-                gt(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday, sql<Date>`now() - interval '90 day'`)
-            )
-        ))
         .where(eq(JsinfoSchema.providerStakes.specId, spec))
         .orderBy(desc(JsinfoSchema.providerStakes.stake))
         .offset(0).limit(200);
 
+    let aggRes90Days = await QueryGetJsinfoReadDbInstance().select({
+        provider: JsinfoSchema.providerStakes.provider,
+        cuSum90Days: sql<number>`SUM(${JsinfoProviderAgrSchema.aggDailyRelayPayments.cuSum})`,
+        relaySum90Days: sql<number>`SUM(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum})`,
+    }).from(JsinfoSchema.providerStakes)
+        .leftJoin(JsinfoProviderAgrSchema.aggDailyRelayPayments, and(
+            eq(JsinfoSchema.providerStakes.provider, JsinfoProviderAgrSchema.aggDailyRelayPayments.provider),
+            and(
+                eq(JsinfoSchema.providerStakes.specId, JsinfoProviderAgrSchema.aggDailyRelayPayments.specId),
+                gt(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday, sql<Date>`now() - interval '30 day'`)
+            )
+        ))
+        .where(eq(JsinfoSchema.providerStakes.specId, spec))
+        .groupBy(JsinfoSchema.providerStakes.provider, JsinfoSchema.providerStakes.specId)
+        .offset(0).limit(200);
+
+    let aggRes90DaysMap = new Map(aggRes90Days.map(item => [item.provider, item]));
+
     // Query for 30 days
-    let stakesRes30Days = await QueryGetJsinfoReadDbInstance().select({
+    let aggRes30Days = await QueryGetJsinfoReadDbInstance().select({
         provider: JsinfoSchema.providerStakes.provider,
         cuSum30Days: sql<number>`SUM(${JsinfoProviderAgrSchema.aggDailyRelayPayments.cuSum})`,
         relaySum30Days: sql<number>`SUM(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum})`,
@@ -139,23 +164,30 @@ export async function SpecStakesPaginatedHandler(request: FastifyRequest, reply:
             )
         ))
         .where(eq(JsinfoSchema.providerStakes.specId, spec))
-        .groupBy(JsinfoSchema.providerStakes.provider, JsinfoSchema.providerStakes.specId, JsinfoSchema.providerStakes.stake)
-        .orderBy(desc(JsinfoSchema.providerStakes.stake))
+        .groupBy(JsinfoSchema.providerStakes.provider, JsinfoSchema.providerStakes.specId)
         .offset(0).limit(200);
 
-    let stakesRes30DaysMap = new Map(stakesRes30Days.map(item => [item.provider, item]));
+    let aggRes30DaysMap = new Map(aggRes30Days.map(item => [item.provider, item]));
 
-    let combinedStakesRes: SpecSpecsResponse[] = stakesRes90Days.map((item90Days) => {
-        let item30Days = stakesRes30DaysMap.get(item90Days.provider);
+    // Combine results
+    let combinedStakesRes: SpecSpecsResponse[] = stakesRes.map((itemStakesRes) => {
+        let item90Days = aggRes90DaysMap.get(itemStakesRes.provider);
+        let item30Days = aggRes30DaysMap.get(itemStakesRes.provider);
         return {
-            ...item90Days,
-            moniker: MonikerCache.GetMonikerForProvider(item90Days.provider),
-            monikerfull: MonikerCache.GetMonikerFullDescription(item90Days.provider),
-            relaySum90Days: item90Days.relaySum90Days || 0,
-            cuSum90Days: item90Days.cuSum90Days || 0,
+            ...itemStakesRes,
+            stake: BigIntIsZero(itemStakesRes.stake) ? "0" : itemStakesRes.stake?.toString() ?? "0",
+            delegateLimit: BigIntIsZero(itemStakesRes.delegateLimit) ? "0" : itemStakesRes.delegateLimit?.toString() ?? "0",
+            delegateTotal: BigIntIsZero(itemStakesRes.delegateTotal) ? "0" : itemStakesRes.delegateTotal?.toString() ?? "0",
+            delegateCommission: BigIntIsZero(itemStakesRes.delegateCommission) ? "0" : itemStakesRes.delegateCommission?.toString() ?? "0",
+            totalStake: BigIntIsZero(itemStakesRes.totalStake) ? "0" : itemStakesRes.totalStake?.toString() ?? "0",
+            addons: itemStakesRes.addons,
+            extensions: ReplaceArchive(itemStakesRes.extensions),
+            moniker: MonikerCache.GetMonikerForProvider(itemStakesRes.provider),
+            monikerfull: MonikerCache.GetMonikerFullDescription(itemStakesRes.provider),
             cuSum30Days: item30Days ? item30Days.cuSum30Days || 0 : 0,
             relaySum30Days: item30Days ? item30Days.relaySum30Days || 0 : 0,
-            addonsAndExtensions: ReplaceArchive(item90Days.addonsAndExtensions),
+            cuSum90Days: item90Days ? item90Days.cuSum90Days || 0 : 0,
+            relaySum90Days: item90Days ? item90Days.relaySum90Days || 0 : 0,
         };
     }).sort((a, b) => b.cuSum90Days - a.cuSum90Days);
 

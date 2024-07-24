@@ -5,7 +5,7 @@ import { QueryCheckJsinfoReadDbInstance, GetLatestBlock, QueryGetJsinfoReadDbIns
 import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import * as JsinfoProviderAgrSchema from '../../schemas/jsinfoSchema/providerRelayPaymentsAgregation';
 import { sql, desc, gt } from "drizzle-orm";
-import { logger } from '../../utils';
+import { logger, MinBigInt } from '../../utils';
 
 export const IndexHandlerOpts: RouteShorthandOptions = {
     schema: {
@@ -62,13 +62,11 @@ export async function IndexHandler(request: FastifyRequest, reply: FastifyReply)
     }
 
     // Get total provider stake
-    let stakeSum = 0
-    let stakeSumQueryRes = await QueryGetJsinfoReadDbInstance().select({
-        stakeSum: sql<number>`SUM(${JsinfoSchema.providerStakes.stake})`,
-    }).from(JsinfoSchema.providerStakes)
-    if (stakeSumQueryRes.length != 0) {
-        stakeSum = stakeSumQueryRes[0].stakeSum
-    }
+    let stakesRes = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.providerStakes).orderBy(desc(JsinfoSchema.providerStakes.stake));
+    let stakeSum = 0n;
+    stakesRes.forEach((stake) => {
+        stakeSum += stake.stake! + MinBigInt(stake.delegateTotal, stake.delegateLimit);
+    });
 
     // Get top chains
     let topSpecs = await QueryGetJsinfoReadDbInstance().select({
@@ -98,7 +96,7 @@ export async function IndexHandler(request: FastifyRequest, reply: FastifyReply)
         cuSum: cuSum,
         relaySum: relaySum,
         rewardSum: rewardSum,
-        stakeSum: stakeSum,
+        stakeSum: stakeSum.toString(),
         allSpecs: topSpecs,
     }
 }

@@ -146,3 +146,13 @@ export async function DoInChunks(size: number, arr: any[], callback: (arr: any[]
     }
     return;
 }
+
+export function MinBigInt(a: bigint | null, b: bigint | null): bigint {
+    let aValue = a ?? 0n;
+    let bValue = b ?? 0n;
+    return aValue < bValue ? aValue : bValue;
+}
+
+export function BigIntIsZero(value: bigint | null): boolean {
+    return value === null ? false : value === 0n;
+}

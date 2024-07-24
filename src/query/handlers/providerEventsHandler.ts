@@ -174,6 +174,7 @@ class ProviderEventsData extends RequestHandlerBase<ProviderEventsResponse> {
         const eventsRes = await QueryGetJsinfoReadDbInstance()
             .select()
             .from(JsinfoSchema.events)
+            .where(eq(JsinfoSchema.events.provider, this.addr))
             .leftJoin(JsinfoSchema.blocks, eq(JsinfoSchema.events.blockId, JsinfoSchema.blocks.height))
             .orderBy(orderFunction(sortColumn))
             .offset((finalPagination.page - 1) * finalPagination.count)

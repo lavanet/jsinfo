@@ -10,6 +10,23 @@ import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_
 import { CSVEscape, GetAndValidateProviderAddressFromRequest } from '../utils/queryUtils';
 import { ReplaceArchive } from '../../indexer/indexerUtils';
 import { RequestHandlerBase } from '../classes/RequestHandlerBase';
+import { BigIntIsZero } from '../../utils';
+
+type ProviderStakesResponse = {
+    stake: string;
+    delegateLimit: string;
+    delegateTotal: string;
+    delegateCommission: string;
+    totalStake: string;
+    appliedHeight: number | null;
+    geolocation: number | null;
+    addons: string | null;
+    extensions: string | null;
+    status: number | null;
+    provider: string | null;
+    specId: string | null;
+    blockId: number | null;
+};
 
 export const ProviderStakesPaginatedHandlerOpts: RouteShorthandOptions = {
     schema: {
@@ -23,7 +40,19 @@ export const ProviderStakesPaginatedHandlerOpts: RouteShorthandOptions = {
                             type: 'object',
                             properties: {
                                 stake: {
-                                    type: 'number'
+                                    type: ['string', 'null']
+                                },
+                                delegateLimit: {
+                                    type: ['string', 'null']
+                                },
+                                delegateTotal: {
+                                    type: ['string', 'null']
+                                },
+                                delegateCommission: {
+                                    type: ['string', 'null']
+                                },
+                                totalStake: {
+                                    type: ['string', 'null']
                                 },
                                 appliedHeight: {
                                     type: 'number'
@@ -58,7 +87,7 @@ export const ProviderStakesPaginatedHandlerOpts: RouteShorthandOptions = {
     }
 };
 
-class ProviderStakesData extends RequestHandlerBase<JsinfoSchema.ProviderStake> {
+class ProviderStakesData extends RequestHandlerBase<ProviderStakesResponse> {
     private addr: string;
 
     constructor(addr: string) {
@@ -74,20 +103,39 @@ class ProviderStakesData extends RequestHandlerBase<JsinfoSchema.ProviderStake> 
         return `ProviderStakes_${this.addr}.csv`;
     }
 
-    protected async fetchAllRecords(): Promise<JsinfoSchema.ProviderStake[]> {
+    protected async fetchAllRecords(): Promise<ProviderStakesResponse[]> {
         await QueryCheckJsinfoReadDbInstance();
 
-        let stakesRes = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.providerStakes).
+        let stakesRes = await QueryGetJsinfoReadDbInstance().select({
+            stake: JsinfoSchema.providerStakes.stake,
+            delegateLimit: JsinfoSchema.providerStakes.delegateLimit,
+            delegateTotal: JsinfoSchema.providerStakes.delegateTotal,
+            delegateCommission: JsinfoSchema.providerStakes.delegateCommission,
+            appliedHeight: JsinfoSchema.providerStakes.appliedHeight,
+            geolocation: JsinfoSchema.providerStakes.geolocation,
+            addons: JsinfoSchema.providerStakes.addons,
+            extensions: JsinfoSchema.providerStakes.extensions,
+            status: JsinfoSchema.providerStakes.status,
+            provider: JsinfoSchema.providerStakes.provider,
+            specId: JsinfoSchema.providerStakes.specId,
+            blockId: JsinfoSchema.providerStakes.blockId,
+            totalStake: sql<bigint>`(${JsinfoSchema.providerStakes.stake} + LEAST(${JsinfoSchema.providerStakes.delegateTotal}, ${JsinfoSchema.providerStakes.delegateLimit})) as totalStake`,
+        }).from(JsinfoSchema.providerStakes).
             where(eq(JsinfoSchema.providerStakes.provider, this.addr)).orderBy(desc(JsinfoSchema.providerStakes.stake)).
             offset(0).limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
 
-        stakesRes = stakesRes.map(item => {
-            item.extensions = item.extensions ? ReplaceArchive(item.extensions || '') : "-";
-            item.addons = item.addons ? item.addons : "-";
-            return item;
-        });
+        const processedRes = stakesRes.map(item => ({
+            ...item,
+            stake: BigIntIsZero(item.stake) ? "0" : item.stake?.toString() ?? "0",
+            delegateLimit: BigIntIsZero(item.delegateLimit) ? "0" : item.delegateLimit?.toString() ?? "0",
+            delegateTotal: BigIntIsZero(item.delegateTotal) ? "0" : item.delegateTotal?.toString() ?? "0",
+            delegateCommission: BigIntIsZero(item.delegateCommission) ? "0" : item.delegateCommission?.toString() ?? "0",
+            totalStake: BigIntIsZero(item.totalStake) ? "0" : item.totalStake?.toString() ?? "0",
+            extensions: item.extensions ? ReplaceArchive(item.extensions || '') : "-",
+            addons: item.addons ? item.addons : "-"
+        }));
 
-        return stakesRes;
+        return processedRes;
     }
 
     protected async fetchRecordCountFromDb(): Promise<number> {
@@ -103,7 +151,7 @@ class ProviderStakesData extends RequestHandlerBase<JsinfoSchema.ProviderStake> 
         return Math.min(countResult[0].count || 0, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION - 1);
     }
 
-    public async fetchPaginatedRecords(pagination: Pagination | null): Promise<JsinfoSchema.ProviderStake[]> {
+    public async fetchPaginatedRecords(pagination: Pagination | null): Promise<ProviderStakesResponse[]> {
         const defaultSortKey = "specId";
         const defaultPagination = ParsePaginationFromString(
             `${defaultSortKey},descending,1,${JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE}`
@@ -121,7 +169,11 @@ class ProviderStakesData extends RequestHandlerBase<JsinfoSchema.ProviderStake> 
             geolocation: JsinfoSchema.providerStakes.geolocation,
             addons: JsinfoSchema.providerStakes.addons,
             extensions: JsinfoSchema.providerStakes.extensions,
-            stake: JsinfoSchema.providerStakes.stake
+            stake: JsinfoSchema.providerStakes.stake,
+            delegateLimit: JsinfoSchema.providerStakes.delegateLimit,
+            delegateTotal: JsinfoSchema.providerStakes.delegateTotal,
+            delegateCommission: JsinfoSchema.providerStakes.delegateCommission,
+            totalStake: sql`totalStake`
         };
 
         if (!Object.keys(keyToColumnMap).includes(finalPagination.sortKey)) {
@@ -137,30 +189,53 @@ class ProviderStakesData extends RequestHandlerBase<JsinfoSchema.ProviderStake> 
         const offset = (finalPagination.page - 1) * finalPagination.count;
 
         const stakesRes = await QueryGetJsinfoReadDbInstance()
-            .select()
+            .select({
+                stake: JsinfoSchema.providerStakes.stake,
+                delegateLimit: JsinfoSchema.providerStakes.delegateLimit,
+                delegateTotal: JsinfoSchema.providerStakes.delegateTotal,
+                delegateCommission: JsinfoSchema.providerStakes.delegateCommission,
+                appliedHeight: JsinfoSchema.providerStakes.appliedHeight,
+                geolocation: JsinfoSchema.providerStakes.geolocation,
+                addons: JsinfoSchema.providerStakes.addons,
+                extensions: JsinfoSchema.providerStakes.extensions,
+                status: JsinfoSchema.providerStakes.status,
+                provider: JsinfoSchema.providerStakes.provider,
+                specId: JsinfoSchema.providerStakes.specId,
+                blockId: JsinfoSchema.providerStakes.blockId,
+                totalStake: sql<bigint>`(COALESCE(${JsinfoSchema.providerStakes.stake}, 0) + LEAST(COALESCE(${JsinfoSchema.providerStakes.delegateTotal}, 0), COALESCE(${JsinfoSchema.providerStakes.delegateLimit}, 0))) as totalStake`,
+            })
             .from(JsinfoSchema.providerStakes)
             .where(eq(JsinfoSchema.providerStakes.provider, this.addr))
             .orderBy(orderFunction(sortColumn))
             .offset(offset)
             .limit(finalPagination.count);
 
-        const processedRes = stakesRes.map(item => {
-            item.extensions = item.extensions ? ReplaceArchive(item.extensions || '') : "-";
-            item.addons = item.addons ? item.addons : "-";
-            return item;
-        });
+        const processedRes = stakesRes.map(item => ({
+            ...item,
+            stake: BigIntIsZero(item.stake) ? "0" : item.stake?.toString() ?? "0",
+            delegateLimit: BigIntIsZero(item.delegateLimit) ? "0" : item.delegateLimit?.toString() ?? "0",
+            delegateTotal: BigIntIsZero(item.delegateTotal) ? "0" : item.delegateTotal?.toString() ?? "0",
+            delegateCommission: BigIntIsZero(item.delegateCommission) ? "0" : item.delegateCommission?.toString() ?? "0",
+            totalStake: BigIntIsZero(item.totalStake) ? "0" : item.totalStake?.toString() ?? "0",
+            extensions: item.extensions ? ReplaceArchive(item.extensions || '') : "-",
+            addons: item.addons ? item.addons : "-"
+        }));
 
         return processedRes;
     }
 
-    protected async convertRecordsToCsv(data: JsinfoSchema.ProviderStake[]): Promise<string> {
+    protected async convertRecordsToCsv(data: ProviderStakesResponse[]): Promise<string> {
         const columns = [
             { key: "specId", name: "Spec" },
             { key: "status", name: "Status" },
             { key: "geolocation", name: "Geolocation" },
             { key: "addons", name: "Addons" },
             { key: "extensions", name: "Extensions" },
-            { key: "stake", name: "Stake" },
+            { key: "stake", name: "Self Stake" },
+            { key: "totalStake", name: "Total Stake" },
+            { key: "delegateLimit", name: "Delegate Limit" },
+            { key: "delegateTotal", name: "Delegate Total" },
+            { key: "delegateCommission", name: "Delegate Commission" },
         ];
 
         let csv = columns.map(column => CSVEscape(column.name)).join(',') + '\n';

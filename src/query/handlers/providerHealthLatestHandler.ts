@@ -10,6 +10,7 @@ import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import { GetAndValidateProviderAddressFromRequest } from '../utils/queryUtils';
 import { WriteErrorToFastifyReply } from '../utils/queryServerUtils';
 import { ParseDateToUtc } from '../utils/queryDateUtils';
+import { logger } from '../../utils';
 
 type HealthRecord = {
     id: number;
@@ -122,7 +123,7 @@ const ParseMessageFromHealthV2 = (data: any | null): string => {
 
         return "";
     } catch (e) {
-        console.error('ParseMessageFromHealthV2 - failed parsing data:', e);
+        logger.error('ParseMessageFromHealthV2 - failed parsing data:', e);
         return "";
     }
 }

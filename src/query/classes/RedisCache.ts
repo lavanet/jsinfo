@@ -1,6 +1,7 @@
 // src/query/classes/RedisCache.ts
 
 import { createClient, RedisClientType } from 'redis';
+import { logger } from '../../utils';
 
 class RedisCacheClass {
     private client: RedisClientType | null = null;
@@ -116,11 +117,11 @@ class RedisCacheClass {
 
     private log(message: string) {
         if (!this.debugLogs) return;
-        console.log(`[${new Date().toISOString()}] ${message}`);
+        logger.info(`RedisCache: ${message}`);
     }
 
     private logError(message: string, error: any) {
-        console.error(`[${new Date().toISOString()}] ${message}`, error);
+        logger.error(`RedisCache: ${message}`, error);
     }
 }
 

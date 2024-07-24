@@ -6,6 +6,7 @@ import { QueryCheckJsinfoDbInstance, QueryGetJsinfoDbInstance } from '../queryDb
 import { eq, lt, and, desc } from "drizzle-orm";
 import { JSINFO_QUERY_PROVIDER_DUAL_STACKING_DELEGATOR_REWARDS_CUTOFF_DAYS } from '../queryConsts';
 import { WriteErrorToFastifyReply } from '../utils/queryServerUtils';
+import { logger } from '../../utils';
 
 type RewardInput = {
     provider: string;
@@ -88,7 +89,7 @@ export async function LavapDualStackingDelegatorRewardsHandler(request: FastifyR
 
     // If insertData is empty, print raw data to console and return
     if (insertData.length === 0) {
-        console.log(`[${new Date().toISOString()}] LavapDualStackingDelegatorRewardsHandler: Provider: ${provider}. Raw data:`, request.body);
+        logger.info(`LavapDualStackingDelegatorRewardsHandler: Provider: ${provider}. Raw data:`, request.body);
         reply.code(200).send({ status: 'success', message: 'No data to process.' });
         return;
     }
@@ -128,14 +129,14 @@ export async function LavapDualStackingDelegatorRewardsHandler(request: FastifyR
                     const result = await tx.insert(JsinfoSchema.dualStackingDelegatorRewards).values(data)
                         .returning({ chain: JsinfoSchema.dualStackingDelegatorRewards.chainId });
 
-                    console.log(`[${new Date().toISOString()}] LavapDualStackingDelegatorRewardsHandler: Provider: ${data.provider}. Inserted 1 reward entry. chains: ${JSON.stringify(result)}`);
+                    logger.info(`LavapDualStackingDelegatorRewardsHandler: Provider: ${data.provider}. Inserted 1 reward entry. chains: ${JSON.stringify(result)}`);
                 }
             }
         });
 
         reply.code(200).send({ status: 'success', message: 'Rewards processed successfully.' });
     } catch (error) {
-        console.error(`[${new Date().toISOString()}] LavapDualStackingDelegatorRewardsHandler: Provider: ${provider}. Failed to process rewards:`, error);
+        logger.error(`LavapDualStackingDelegatorRewardsHandler: Provider: ${provider}. Failed to process rewards:`, error);
         reply.code(500).send({ status: 'error', message: 'Failed to process rewards.' });
     }
 }

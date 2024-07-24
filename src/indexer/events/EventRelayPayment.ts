@@ -1,7 +1,7 @@
+import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import { Event } from "@cosmjs/stargate"
 import { LavaBlock } from "../types";
-import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
-import { GetOrSetConsumer, GetOrSetProvider, GetOrSetSpec, SetTx } from "../setLatest";
+import { GetOrSetConsumer, GetOrSetProvider, GetOrSetSpec, SetTx } from "../blockchainEntities/blockchainEntitiesGettersAndSetters";
 import { EventParseUlava, EventProcessAttributes, EventParseProviderAddress, EventParseInt, EventParseFloat } from "../eventUtils";
 
 // 2024May31:
@@ -192,10 +192,9 @@ export const ParseEventRelayPayment = (
   height: number,
   txHash: string | null,
   lavaBlock: LavaBlock,
-  static_dbProviders: Map<string, JsinfoSchema.Provider>,
-  static_dbSpecs: Map<string, JsinfoSchema.Spec>,
-  static_dbPlans: Map<string, JsinfoSchema.Plan>,
-  static_dbStakes: Map<string, JsinfoSchema.ProviderStake[]>,
+  blockchainEntitiesProviders: Map<string, JsinfoSchema.Provider>,
+  blockchainEntitiesSpecs: Map<string, JsinfoSchema.Spec>,
+  blockchainEntitiesStakes: Map<string, JsinfoSchema.ProviderStake[]>,
 ) => {
   const dbEvent: JsinfoSchema.InsertRelayPayment = {
     tx: txHash,
@@ -294,8 +293,8 @@ export const ParseEventRelayPayment = (
   })) return;
 
   SetTx(lavaBlock.dbTxs, txHash, height)
-  GetOrSetProvider(lavaBlock.dbProviders, static_dbProviders, dbEvent.provider!, '')
-  GetOrSetSpec(lavaBlock.dbSpecs, static_dbSpecs, dbEvent.specId!)
+  GetOrSetProvider(lavaBlock.dbProviders, blockchainEntitiesProviders, dbEvent.provider!, '')
+  GetOrSetSpec(lavaBlock.dbSpecs, blockchainEntitiesSpecs, dbEvent.specId!)
   GetOrSetConsumer(lavaBlock.dbConsumers, dbEvent.consumer!)
   lavaBlock.dbPayments.push(dbEvent)
 }

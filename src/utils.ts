@@ -121,7 +121,7 @@ export async function GetPostgresUrl(): Promise<string> {
         try {
             cachedPostgresUrl = GetEnvVar("POSTGRESQL_URL");
         } catch (error) {
-            console.error("Missing env var for POSTGRESQL_URL or JSINFO_POSTGRESQL_URL");
+            logger.error("Missing env var for POSTGRESQL_URL or JSINFO_POSTGRESQL_URL");
             await Sleep(60000); // Sleep for one minute
             process.exit(1);
         }
@@ -135,14 +135,24 @@ export async function DoInChunks(size: number, arr: any[], callback: (arr: any[]
         try {
             await callback(tmpArr);
         } catch (error) {
-            console.error(`Error processing chunk: ${JSON.stringify(tmpArr)}`);
-            console.error(`Callback function: ${callback.toString()}`);
+            logger.error(`Error processing chunk: ${JSON.stringify(tmpArr)}`);
+            logger.error(`Callback function: ${callback.toString()}`);
             if (error instanceof Error) {
-                console.error(`Error message: ${error.message}`);
-                console.error(`Stack Trace: ${error.stack}`);
+                logger.error(`Error message: ${error.message}`);
+                logger.error(`Stack Trace: ${error.stack}`);
             }
             throw error;
         }
     }
     return;
+}
+
+export function MinBigInt(a: bigint | null, b: bigint | null): bigint {
+    let aValue = a ?? 0n;
+    let bValue = b ?? 0n;
+    return aValue < bValue ? aValue : bValue;
+}
+
+export function BigIntIsZero(value: bigint | null): boolean {
+    return value === null ? false : value === 0n;
 }

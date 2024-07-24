@@ -59,6 +59,7 @@ stdout.txt
 yarn.lock
 
 query.log
+out.txt
 
 __pycache__/
 *.py[cod]

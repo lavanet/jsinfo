@@ -8,8 +8,8 @@ import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import * as JsinfoProviderAgrSchema from '../../schemas/jsinfoSchema/providerRelayPaymentsAgregation';
 import { sql, desc, and, eq } from "drizzle-orm";
 import { GetAndValidateProviderAddressFromRequest } from '../utils/queryUtils';
-import { WriteErrorToFastifyReply } from '../utils/queryServerUtils';
 import { MonikerCache } from '../classes/MonikerCache';
+import { MinBigInt } from '../../utils';
 
 export const ProviderPaginatedHandlerOpts: RouteShorthandOptions = {
     schema: {
@@ -42,7 +42,7 @@ export const ProviderPaginatedHandlerOpts: RouteShorthandOptions = {
                         type: 'number'
                     },
                     stakeSum: {
-                        type: 'number',
+                        type: 'string',
                     },
                     events: {
                         type: 'array',
@@ -94,13 +94,12 @@ export async function ProviderPaginatedHandler(request: FastifyRequest, reply: F
         rewardSum = cuRelayAndRewardsTotalRes[0].rewardSum
     }
 
-    //
     // Get stakes
     let stakesRes = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.providerStakes).
         where(eq(JsinfoSchema.providerStakes.provider, addr)).orderBy(desc(JsinfoSchema.providerStakes.stake))
-    let stakeSum = 0
+    let stakeSum = 0n
     stakesRes.forEach((stake) => {
-        stakeSum += stake.stake!
+        stakeSum += stake.stake! + MinBigInt(stake.delegateTotal, stake.delegateLimit)
     })
 
     // const claimedRewards = await QueryGetJsinfoReadDbInstance().select()
@@ -169,7 +168,7 @@ export async function ProviderPaginatedHandler(request: FastifyRequest, reply: F
         cuSum: cuSum,
         relaySum: relaySum,
         rewardSum: rewardSum,
-        stakeSum: stakeSum,
+        stakeSum: stakeSum.toString(),
         claimedRewards: 0,
         claimableRewards: claimableRewardsULava,
     }

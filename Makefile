@@ -60,3 +60,5 @@ reddis_run:
 reddis_connect:
 	docker exec -it redis-stack redis-cli
 
+psql_start:
+	brew services start postgresql; brew services list

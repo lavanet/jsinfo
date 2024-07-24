@@ -183,6 +183,9 @@ class ProviderReportsData extends RequestHandlerBase<ProviderReportsResponse> {
         const sortColumn = keyToColumnMap[finalPagination.sortKey];
         const orderFunction = finalPagination.direction === 'ascending' ? asc : desc;
 
+        let thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
         const reportsRes = await QueryGetJsinfoReadDbInstance()
             .select({
                 providerReported: {
@@ -204,6 +207,12 @@ class ProviderReportsData extends RequestHandlerBase<ProviderReportsResponse> {
                 }
             })
             .from(JsinfoSchema.providerReported)
+            .where(
+                and(
+                    eq(JsinfoSchema.providerReported.provider, this.addr),
+                    gte(JsinfoSchema.providerReported.datetime, thirtyDaysAgo)
+                )
+            )
             .leftJoin(JsinfoSchema.blocks, eq(JsinfoSchema.providerReported.blockId, JsinfoSchema.blocks.height))
             .orderBy(orderFunction(sortColumn))
             .offset((finalPagination.page - 1) * finalPagination.count)

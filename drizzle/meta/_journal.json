@@ -169,6 +169,13 @@
       "when": 1721232198834,
       "tag": "0023_mature_patriot",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "5",
+      "when": 1721770866109,
+      "tag": "0024_flippant_hobgoblin",
+      "breakpoints": true
     }
   ]
 }

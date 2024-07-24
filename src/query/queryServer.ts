@@ -1,11 +1,17 @@
 // ./src/query/server.ts
 
-import Fastify, { FastifyBaseLogger, FastifyInstance, RouteShorthandOptions, FastifyRequest, FastifyReply } from 'fastify'
+// External libraries
+import Fastify, { FastifyBaseLogger, FastifyInstance, RouteShorthandOptions, FastifyRequest, FastifyReply } from 'fastify';
 import fastifyCors from '@fastify/cors';
 import pino from 'pino';
+
+// Local utilities and constants
 import { JSINFO_QUERY_HIGH_POST_BODY_LIMIT, JSINFO_QUERY_FASITY_PRINT_LOGS } from './queryConsts';
 import { AddErrorResponseToFastifyServerOpts, ItemCountOpts, WriteErrorToFastifyReply } from './utils/queryServerUtils';
 import { validatePaginationString } from './utils/queryPagination';
+import { logger } from '../utils';
+
+// Local classes
 import { RedisCache } from './classes/RedisCache';
 
 const FastifyLogger: FastifyBaseLogger = pino({
@@ -33,7 +39,7 @@ function handleRequestWithPagination(
 
         if (query.pagination && typeof query.pagination === 'string') {
             if (!validatePaginationString(query.pagination)) {
-                console.log('Failed to parse pagination:', query.pagination);
+                logger.info('Failed to parse pagination:', query.pagination);
                 WriteErrorToFastifyReply(reply, 'Bad pagination argument');
                 return reply;
             }
@@ -54,12 +60,12 @@ export function RegisterPaginationServerHandler(
     handler: (request: FastifyRequest, reply: FastifyReply) => Promise<any>,
     ItemCountPaginatiedHandler?: (request: FastifyRequest, reply: FastifyReply) => Promise<any>
 ) {
-    console.log("Registering paginated handler for path: " + path);
+    logger.info("Registering paginated handler for path: " + path);
     opts = AddErrorResponseToFastifyServerOpts(opts);
     server.get(path, opts, handleRequestWithPagination(handler));
 
     if (ItemCountPaginatiedHandler) {
-        console.log("Registering item count handler for path: " + "/item-count" + path);
+        logger.info("Registering item count handler for path: " + "/item-count" + path);
         server.get("/item-count" + path, ItemCountOpts, ItemCountPaginatiedHandler);
     }
 }
@@ -97,7 +103,7 @@ export function RegisterRedisBackedHandler(
     handler: (request: FastifyRequest, reply: FastifyReply) => Promise<any>,
     options: { cache_ttl?: number } = {}
 ) {
-    console.log("Registering reddis handler for path: " + path);
+    logger.info("Registering reddis handler for path: " + path);
     opts = AddErrorResponseToFastifyServerOpts(opts);
     server.get(path, opts, handleRequestWithRedisCache(handler, options?.cache_ttl));
 }

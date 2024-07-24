@@ -8,6 +8,7 @@ import { WriteErrorToFastifyReply } from '../utils/queryServerUtils';
 import { JSINFO_REQUEST_HANDLER_BASE_DEBUG } from '../queryConsts';
 import { RedisCache } from './RedisCache';
 import { ParseDateToUtc } from "../utils/queryDateUtils";
+import { logger } from "../../utils";
 export class RequestHandlerBase<T> {
     protected className: string;
     protected csvFileName: string = "";
@@ -57,7 +58,7 @@ export class RequestHandlerBase<T> {
 
     protected log(message: string) {
         if (!this.debug) return;
-        console.log(`[${new Date().toISOString()}] [${this.className}] ${message}`);
+        logger.info(`RequestHandler [${this.className}] ${message}`);
     }
 
     protected getTTL(key: string): number {

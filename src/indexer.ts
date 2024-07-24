@@ -15,6 +15,7 @@ import { SyncBlockchainEntities } from './indexer/blockchainEntities/blockchainE
 import { DoInChunks, logger, BackoffRetry, ConnectToRpc, RpcConnection } from "./utils";
 import { MigrateDb, GetJsinfoDb } from "./dbUtils";
 import { aggProviderAndConsumerRelayPayments, aggProviderAndConsumerRelayPaymentsSync } from './indexer/agregators/aggProviderAndConsumerRelayPayments';
+import { SaveTokenSupplyToDB } from './indexer/supply/syncSupply';
 
 let blockchainEntitiesProviders: Map<string, JsinfoSchema.Provider> = new Map()
 let blockchainEntitiesSpecs: Map<string, JsinfoSchema.Spec> = new Map()
@@ -199,6 +200,9 @@ const indexer = async (): Promise<void> => {
     logger.info('Done syncBlockchainEntitiesInDb');
     await aggProviderAndConsumerRelayPaymentsSync(db);
     logger.info('Done aggProviderAndConsumerRelayPaymentsSync');
+    await SaveTokenSupplyToDB(db, rpcConnection.lavajsClient);
+    logger.info('Done SaveTokenSupplyToDB');
+
     await fillUpBackoffRetry(db, rpcConnection);
     logger.info('Done fillUpBackoffRetry');
 }
@@ -331,6 +335,8 @@ const fillUp = async (db: PostgresJsDatabase, rpcConnection: RpcConnection) => {
             logger.info('fillUp: Aggregated provider and consumer relay payments');
         }
     }
+
+    await SaveTokenSupplyToDB(db, rpcConnection.lavajsClient);
 
     fillUpBackoffRetryWTimeout(db, rpcConnection);
     logger.info('fillUp: process completed');

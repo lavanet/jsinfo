@@ -40,8 +40,8 @@ make run_query
 ### Docker
 
 ```bash
-make build_bun_docker
-make run_docker_compose
+make docker_build
+make docker_compose
 ```
 
 ### Todo

@@ -31,11 +31,22 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Create a trigger to use the function
-CREATE TRIGGER update_provider_spec_moniker_updatedat BEFORE UPDATE
-ON "provider_spec_moniker" FOR EACH ROW
-EXECUTE FUNCTION update_updatedat_column();
-
+-- Create a trigger to use the functionDO $$
+DO $$
+BEGIN
+    -- Check if the trigger does not exist before attempting to create it
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_trigger
+        WHERE tgname = 'update_provider_spec_moniker_updatedat'
+        AND tgenabled = 'O' -- 'O' means the trigger is enabled
+        AND tgrelid = 'provider_spec_moniker'::regclass
+    ) THEN
+        -- Trigger does not exist, so create it
+        EXECUTE 'CREATE TRIGGER update_provider_spec_moniker_updatedat BEFORE UPDATE ON "provider_spec_moniker" FOR EACH ROW EXECUTE FUNCTION update_updatedat_column();';
+    END IF;
+END
+$$ LANGUAGE plpgsql;
 
 -- INSERT INTO "provider_spec_moniker" ("provider", "moniker", "spec")
 -- VALUES ('lava@1l0gcpxw6zrhsxjv68rzvscvcx4p9f07y7974r5', '', 'ARB1');

@@ -49,7 +49,11 @@ export async function SupplyRawHandler(request: FastifyRequest, reply: FastifyRe
 
     const getSupplyData = (key) => {
         const data = supplyData.get(key);
-        return data ? data : { amount: "-", timestamp: "-", denom: "ulava" };
+        if (data) {
+            data.denom = "ulava";
+            return data;
+        }
+        return { amount: "-", timestamp: "-", denom: "-" };
     };
 
     return {

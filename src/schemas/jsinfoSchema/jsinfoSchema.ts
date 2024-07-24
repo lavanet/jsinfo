@@ -365,3 +365,18 @@ export const consumerSubscriptionList = pgTable('consumer_subscription_list', {
 
 export type ConsumerSubscriptionList = typeof consumerSubscriptionList.$inferSelect;
 export type InsertConsumerSubscriptionList = typeof consumerSubscriptionList.$inferInsert;
+
+export const supply = pgTable('supply', {
+  key: text('key').notNull().primaryKey(),
+  amount: bigint('amount', { mode: 'bigint' }).notNull(),
+  timestamp: timestamp('timestamp', { mode: "date" }).notNull(),
+}, (table) => {
+  return {
+    supplyIdx: index("supplyIdx").on(
+      table.key,
+    )
+  };
+});
+
+export type Supply = typeof supply.$inferSelect;
+export type InsertSupply = typeof supply.$inferInsert;

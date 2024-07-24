@@ -1,4 +1,4 @@
-.PHONY: bun_create_migrations docker_build docker_sh docker_compose docker_compose_query_populate docker_compose_query docker_compose_indexer indexer indexer_debug_events query query_nodemon query_populate_mode query_no_cache run_lavapProviderHealth query_test_health_handeler query_teset_lavap_prodiver_error_parsing scripts_local_startQueryProviderDualStackingDelegatorRewardsContainer
+.PHONY: bun_create_migrations docker_build docker_sh docker_compose docker_compose_query_populate docker_compose_query docker_compose_indexer indexer indexer_debug_events query query_nodemon query_populate_mode query_no_cache run_lavapProviderHealth query_test_health_handeler query_teset_lavap_prodiver_error_parsing scripts_local_startQueryProviderDualStackingDelegatorRewardsContainer reddis_run reddis_connect macos_psql_start
 
 bun_create_migrations:
 	bun run generate
@@ -60,5 +60,7 @@ reddis_run:
 reddis_connect:
 	docker exec -it redis-stack redis-cli
 
-psql_start:
+macos_psql_start:
 	brew services start postgresql; brew services list
+
+	

@@ -7,7 +7,7 @@ import * as consts from './queryConsts';
 import { LatestRawHandler, LatestRawHandlerOpts } from './handlers/latestHandler';
 
 // -- Server supply ajax --
-import { TotalSupplyRawHandler, TotalSupplyRawHandlerOpts, CirculatingSupplyRawHandler, CirculatingSupplyRawHandlerOpts } from './handlers/supplyHandler';
+import { SupplyRawHandler, SupplyRawHandlerOpts } from './handlers/supplyHandler';
 
 // -- list all providers and monikers endpoint ---
 import { ListProvidersRawHandlerOpts, ListProvidersRawHandler } from './handlers/listProvidersHandler';
@@ -59,13 +59,11 @@ import { SpecProviderHealthHandler, SpecProviderHealthHandlerOpts } from './hand
 // -- Internal data endpoints --
 import { LavapDualStackingDelegatorRewardsHandler, LavapDualStackingDelegatorRewardsOpts } from './handlers/lavapDualStackingDelegatorRewardsHandler';
 
-
 // -- Server status ajax --
 GetServerInstance().get('/latest', LatestRawHandlerOpts, LatestRawHandler);
 
 // -- Server supply ajax --
-GetServerInstance().get('/supply/total', TotalSupplyRawHandlerOpts, TotalSupplyRawHandler);
-GetServerInstance().get('/supply/circulating', CirculatingSupplyRawHandlerOpts, CirculatingSupplyRawHandler);
+RegisterRedisBackedHandler('/supply', SupplyRawHandlerOpts, SupplyRawHandler, { cache_ttl: 60 });
 
 // -- list all providers and monikers endpoint ---
 RegisterRedisBackedHandler('/listProviders', ListProvidersRawHandlerOpts, ListProvidersRawHandler, { cache_ttl: 10 * 60 });

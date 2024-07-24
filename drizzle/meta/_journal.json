@@ -176,6 +176,20 @@
       "when": 1721770866109,
       "tag": "0024_flippant_hobgoblin",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "5",
+      "when": 1721832719483,
+      "tag": "0025_fearless_penance",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "5",
+      "when": 1721832857355,
+      "tag": "0026_brief_leo",
+      "breakpoints": true
     }
   ]
 }

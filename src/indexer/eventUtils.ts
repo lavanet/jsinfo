@@ -5,6 +5,7 @@ import { JSINFO_INDEXER_EVENT_ATTRIBUTE_KEY_COUNT_MAX, JSINFO_INDEXER_EVENT_ATTR
 import { ParseEventError } from "./events/EventError";
 import { LavaBlock } from "./types";
 import * as JsinfoSchema from '../schemas/jsinfoSchema/jsinfoSchema';
+import { logger } from "../utils";
 
 export function EventExtractKeyFromAttribute(attr: Attribute): string {
     if (attr.key.length < 2) {
@@ -21,7 +22,7 @@ export function EventExtractKeyFromAttribute(attr: Attribute): string {
 // Test 1: Key length is less than 2
 try {
     EventExtractKeyFromAttribute({ key: 'a', value: "" });
-    console.error('EventExtractKeyFromAttribute Test 1 failed: Expected an error for key length less than 2');
+    logger.error('EventExtractKeyFromAttribute Test 1 failed: Expected an error for key length less than 2');
 } catch (error) {
 }
 
@@ -29,11 +30,11 @@ try {
 try {
     const result = EventExtractKeyFromAttribute({ key: 'testKey', value: "" });
     if (result !== 'testKey') {
-        console.error('EventExtractKeyFromAttribute Test 2 failed: Expected "testKey", got', result);
+        logger.error('EventExtractKeyFromAttribute Test 2 failed: Expected "testKey", got', result);
     } else {
     }
 } catch (error) {
-    console.error('EventExtractKeyFromAttribute Test 2 failed with error:', error);
+    logger.error('EventExtractKeyFromAttribute Test 2 failed with error:', error);
     throw "EventExtractKeyFromAttribute Test 2 failed";
 }
 
@@ -41,11 +42,11 @@ try {
 try {
     const result = EventExtractKeyFromAttribute({ key: 'test.key', value: "" });
     if (result !== 'test') {
-        console.error('EventExtractKeyFromAttribute Test 3 failed: Expected "test", got', result);
+        logger.error('EventExtractKeyFromAttribute Test 3 failed: Expected "test", got', result);
     } else {
     }
 } catch (error) {
-    console.error('EventExtractKeyFromAttribute Test 3 failed with error:', error);
+    logger.error('EventExtractKeyFromAttribute Test 3 failed with error:', error);
     throw "EventExtractKeyFromAttribute Test 3 failed";
 }
 

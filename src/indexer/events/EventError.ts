@@ -1,8 +1,7 @@
+import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import { Event } from "@cosmjs/stargate"
 import { LavaBlock } from "../types";
-import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
-import { EventProcessAttributes } from "../eventUtils";
-import { SetTx } from "../setLatest";
+import { SetTx } from "../blockchainEntities/blockchainEntitiesGettersAndSetters";
 
 export const ParseEventError = (
     evt: Event,

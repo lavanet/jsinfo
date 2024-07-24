@@ -17,7 +17,7 @@ export async function GetPostgresUrl(): Promise<string> {
         try {
             cachedPostgresUrl = GetEnvVar("POSTGRESQL_URL");
         } catch (error) {
-            console.error("Missing env var for POSTGRESQL_URL or JSINFO_POSTGRESQL_URL");
+            logger.error("Missing env var for POSTGRESQL_URL or JSINFO_POSTGRESQL_URL");
             await Sleep(60000); // Sleep for one minute
             process.exit(1);
         }
@@ -37,7 +37,7 @@ export async function GetReadPostgresUrl(): Promise<string> {
         try {
             cachedReadPostgresUrl = GetEnvVar("READ_POSTGRESQL_URL");
         } catch (error) {
-            console.error("Missing env var for JSINFO_READ_POSTGRESQL_URL or READ_POSTGRESQL_URL");
+            logger.error("Missing env var for JSINFO_READ_POSTGRESQL_URL or READ_POSTGRESQL_URL");
             await Sleep(60000); // Sleep for one minute
             process.exit(1);
         }
@@ -54,7 +54,7 @@ export async function GetRelaysReadPostgresUrl(): Promise<string> {
     try {
         cachedRelaysReadPostgresUrl = GetEnvVar("RELAYS_READ_POSTGRESQL_URL");
     } catch (error) {
-        console.error("Missing env var for RELAYS_READ_POSTGRESQL_URL or RELAYS_READ_POSTGRESQL_URL");
+        logger.error("Missing env var for RELAYS_READ_POSTGRESQL_URL or RELAYS_READ_POSTGRESQL_URL");
         await Sleep(60000); // Sleep for one minute
         process.exit(1);
     }

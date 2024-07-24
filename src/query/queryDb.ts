@@ -22,7 +22,7 @@ export async function QueryCheckJsinfoDbInstance() {
 }
 
 export async function QueryInitJsinfoDbInstance() {
-    console.log('Starting queryserver - connecting to jsinfo db')
+    logger.info('Starting queryserver - connecting to jsinfo db')
     db = db || await GetJsinfoDb();
 }
 
@@ -45,7 +45,7 @@ export async function QueryCheckJsinfoReadDbInstance() {
 
 export async function QueryInitJsinfoReadDbInstance() {
     if (JSINFO_NO_READ_DB) return QueryInitJsinfoDbInstance();
-    console.log('Starting queryserver - connecting to readDb')
+    logger.info('Starting queryserver - connecting to readDb')
     readDb = readDb || await GetJsinfoReadDb();
 }
 
@@ -67,7 +67,7 @@ export async function QueryCheckRelaysReadDbInstance() {
 }
 
 export async function QueryInitRelaysReadDbInstance() {
-    console.log('Starting queryserver - connecting to relaysReadDb')
+    logger.info('Starting queryserver - connecting to relaysReadDb')
     relaysReadDb = relaysReadDb || await GetRelaysReadDb();
 }
 

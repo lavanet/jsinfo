@@ -1,14 +1,12 @@
 // src/indexer/lavaBlock.ts
 
 import * as JsinfoSchema from '../schemas/jsinfoSchema/jsinfoSchema';
-
 import { StargateClient, IndexedTx, Block, Event } from "@cosmjs/stargate"
 import { Tendermint37Client } from "@cosmjs/tendermint-rpc";
-
 import { ProcessOneEvent } from './eventProcessor';
 import { LavaBlock } from './types';
-
 import LavaBlockCache from './lavaBlockCache';
+import { logger } from '../utils';
 
 const cache = new LavaBlockCache();
 
@@ -57,34 +55,32 @@ export const GetOneLavaBlock = async (
     height: number,
     client: StargateClient,
     clientTm: Tendermint37Client,
-    static_dbProviders: Map<string, JsinfoSchema.Provider>,
-    static_dbSpecs: Map<string, JsinfoSchema.Spec>,
-    static_dbPlans: Map<string, JsinfoSchema.Plan>,
-    static_dbStakes: Map<string, JsinfoSchema.ProviderStake[]>,
+    blockchainEntitiesProviders: Map<string, JsinfoSchema.Provider>,
+    blockchainEntitiesSpecs: Map<string, JsinfoSchema.Spec>,
+    blockchainEntitiesStakes: Map<string, JsinfoSchema.ProviderStake[]>,
 ): Promise<LavaBlock> => {
 
     const startTimeBlock = Date.now();
     const block = await GetRpcBlock(height, client);
     const endTimeBlock = Date.now();
     if (endTimeBlock - startTimeBlock > 30000) {
-        console.log('GetRpcBlock took', endTimeBlock - startTimeBlock, 'milliseconds. It returned', block, 'items at block height', height);
+        logger.info('GetRpcBlock took', endTimeBlock - startTimeBlock, 'milliseconds. It returned', block, 'items at block height', height);
     }
 
     const startTimeTxs = Date.now();
     const txs = await GetRpcTxs(height, client, block);
     const endTimeTxs = Date.now();
     if (endTimeTxs - startTimeTxs > 30000) {
-        console.log('GetRpcTxs took', endTimeTxs - startTimeTxs, 'milliseconds. It returned', txs.length, 'items at block height', height);
+        logger.info('GetRpcTxs took', endTimeTxs - startTimeTxs, 'milliseconds. It returned', txs.length, 'items at block height', height);
     }
 
     const startTimeEvts = Date.now();
     const evts = await GetRpcBlockResultEvents(height, clientTm);
     const endTimeEvts = Date.now();
     if (endTimeEvts - startTimeEvts > 30000) {
-        console.log('GetRpcBlockResultEvents took', endTimeEvts - startTimeEvts, 'milliseconds. It returned', evts.length, 'items at block height', height);
+        logger.info('GetRpcBlockResultEvents took', endTimeEvts - startTimeEvts, 'milliseconds. It returned', evts.length, 'items at block height', height);
     }
 
-    //
     // Block object to return
     const lavaBlock: LavaBlock = {
         height: height,
@@ -104,10 +100,9 @@ export const GetOneLavaBlock = async (
         dbProviderLatestBlockReports: [],
     }
 
-    //
     // Loop over txs in block
     txs.forEach((tx) => {
-        //
+
         // Pass on failed txs
         if (tx.code != 0) {
             return;
@@ -118,21 +113,20 @@ export const GetOneLavaBlock = async (
             lavaBlock,
             height,
             tx.hash,
-            static_dbProviders,
-            static_dbSpecs,
-            static_dbPlans,
-            static_dbStakes
+            blockchainEntitiesProviders,
+            blockchainEntitiesSpecs,
+            blockchainEntitiesStakes
         ))
     });
+
     evts.forEach((evt) => ProcessOneEvent(
         evt,
         lavaBlock,
         height,
         null,
-        static_dbProviders,
-        static_dbSpecs,
-        static_dbPlans,
-        static_dbStakes
+        blockchainEntitiesProviders,
+        blockchainEntitiesSpecs,
+        blockchainEntitiesStakes
     ))
 
     return lavaBlock;

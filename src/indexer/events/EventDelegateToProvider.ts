@@ -1,8 +1,8 @@
+import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import { Event } from "@cosmjs/stargate"
 import { LavaBlock } from "../types";
-import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
-import { GetOrSetProvider, SetTx } from "../setLatest";
-import { EventParseUlava, EventProcessAttributes, EventParseProviderAddress } from "../eventUtils";
+import { GetOrSetProvider, SetTx } from "../blockchainEntities/blockchainEntitiesGettersAndSetters";
+import { EventProcessAttributes, EventParseProviderAddress } from "../eventUtils";
 
 /*
 https://github.com/lavanet/lava/blob/0c0e4429d9ba5acf6c95d12e3cd130d0a05e6cfc/x/dualstaking/keeper/msg_server_delegate.go#L72
@@ -98,10 +98,9 @@ export const ParseEventDelegateToProvider = (
   height: number,
   txHash: string | null,
   lavaBlock: LavaBlock,
-  static_dbProviders: Map<string, JsinfoSchema.Provider>,
-  static_dbSpecs: Map<string, JsinfoSchema.Spec>,
-  static_dbPlans: Map<string, JsinfoSchema.Plan>,
-  static_dbStakes: Map<string, JsinfoSchema.ProviderStake[]>,
+  blockchainEntitiesProviders: Map<string, JsinfoSchema.Provider>,
+  blockchainEntitiesSpecs: Map<string, JsinfoSchema.Spec>,
+  blockchainEntitiesStakes: Map<string, JsinfoSchema.ProviderStake[]>,
 ) => {
   let delegator: string | null = null;
   let provider: string | null = null;
@@ -149,7 +148,7 @@ export const ParseEventDelegateToProvider = (
         delegator,
       t1: provider ? `provider: ${provider}` : null,
     };
-    GetOrSetProvider(lavaBlock.dbProviders, static_dbProviders, delegatorEvent.provider!, '')
+    GetOrSetProvider(lavaBlock.dbProviders, blockchainEntitiesProviders, delegatorEvent.provider!, '')
     lavaBlock.dbEvents.push(delegatorEvent);
   }
 
@@ -157,6 +156,6 @@ export const ParseEventDelegateToProvider = (
   dbEvent.t1 = delegator ? `delegator: ${delegator}` : null
 
   SetTx(lavaBlock.dbTxs, txHash, height)
-  GetOrSetProvider(lavaBlock.dbProviders, static_dbProviders, dbEvent.provider!, '')
+  GetOrSetProvider(lavaBlock.dbProviders, blockchainEntitiesProviders, dbEvent.provider!, '')
   lavaBlock.dbEvents.push(dbEvent)
 }

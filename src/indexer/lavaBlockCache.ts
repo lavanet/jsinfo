@@ -2,6 +2,7 @@ import { existsSync, readFileSync, writeFileSync, unlinkSync, readdirSync, statS
 import * as path from 'path'; // Import path for using path.join
 import * as pako from 'pako';
 import { JSINFO_INDEXER_CACHE_PATH, JSINFO_INDEXER_CACHE_USE_READ, JSINFO_INDEXER_CACHE_USE_SAVE, JSINFO_INDEXER_CACHE_USE_PAKO_COMPRESSION, JSINFO_INDEXER_CACHE_MAX_SIZE } from './indexerConsts';
+import { logger } from '../utils';
 
 class LavaBlockCache {
     private cacheSize: number = 0;
@@ -44,7 +45,7 @@ class LavaBlockCache {
                 }
                 return JSON.parse(data.toString());
             } catch (error) {
-                console.error("Failed to read or parse cache file", error);
+                logger.error("Failed to read or parse cache file", error);
             }
         }
         const data = await generator();
@@ -53,8 +54,10 @@ class LavaBlockCache {
             let writtenData = Buffer.from(stringifiedData, 'utf-8');
             if (JSINFO_INDEXER_CACHE_USE_PAKO_COMPRESSION) {
                 writtenData = this.compress(stringifiedData);
+                writeFileSync(filePath, new Uint8Array(writtenData));
+            } else {
+                writeFileSync(filePath, stringifiedData);
             }
-            writeFileSync(filePath, writtenData);
             const dataSize = writtenData.length;
             this.cacheSize += dataSize;
             this.fileSizes.set(fileName, dataSize);

@@ -11,15 +11,15 @@ import { PromisePool } from '@supercharge/promise-pool'
 import { GetOneLavaBlock } from './indexer/lavaBlock'
 import { EventDebug } from './indexer/eventDebug'
 import { LavaBlock } from './indexer/types'
-import { UpdateLatestBlockMeta } from './indexer/setLatest'
+import { SyncBlockchainEntities } from './indexer/blockchainEntities/blockchainEntitiesSync'
 import { DoInChunks, logger, BackoffRetry, ConnectToRpc, RpcConnection } from "./utils";
 import { MigrateDb, GetJsinfoDb } from "./dbUtils";
 import { aggProviderAndConsumerRelayPayments, aggProviderAndConsumerRelayPaymentsSync } from './indexer/agregators/aggProviderAndConsumerRelayPayments';
 
-let static_dbProviders: Map<string, JsinfoSchema.Provider> = new Map()
-let static_dbSpecs: Map<string, JsinfoSchema.Spec> = new Map()
-let static_dbPlans: Map<string, JsinfoSchema.Plan> = new Map()
-let static_dbStakes: Map<string, JsinfoSchema.ProviderStake[]> = new Map()
+let blockchainEntitiesProviders: Map<string, JsinfoSchema.Provider> = new Map()
+let blockchainEntitiesSpecs: Map<string, JsinfoSchema.Spec> = new Map()
+let blockchainEntitiesStakes: Map<string, JsinfoSchema.ProviderStake[]> = new Map()
+
 const globakWorkList: number[] = []
 
 async function isBlockInDb(
@@ -28,12 +28,8 @@ async function isBlockInDb(
 ): Promise<boolean> {
     // Is in DB already?
     const dbBlock = await db.select().from(JsinfoSchema.blocks).where(eq(JsinfoSchema.blocks.height, height));
-    if (dbBlock.length != 0) {
-        return true
-    }
-    return false
+    return dbBlock.length != 0;
 }
-
 
 async function InsertBlock(
     block: LavaBlock,
@@ -72,16 +68,17 @@ async function InsertBlock(
         })
         logger.debug(`Inserted providers for block height: ${block.height}`);
 
-        const arrPlans = Array.from(block.dbPlans.values())
-        // logger.debug(`Inserting ${arrPlans.length} plans for block height: ${block.height}`);
-        await DoInChunks(consts.JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, arrPlans, async (arr: any) => {
-            await tx.insert(JsinfoSchema.plans)
-                .values(arr)
-                .onConflictDoNothing();
-        })
-        //logger.debug(`Inserted plans for block height: ${block.height}`);
+        // const arrPlans = Array.from(block.dbPlans.values())
+        // // logger.debug(`Inserting ${arrPlans.length} plans for block height: ${block.height}`);
+        // await DoInChunks(consts.JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, arrPlans, async (arr: any) => {
+        //     await tx.insert(JsinfoSchema.plans)
+        //         .values(arr)
+        //         .onConflictDoNothing();
+        // })
+        // //logger.debug(`Inserted plans for block height: ${block.height}`);
 
         const arrConsumers = Array.from(block.dbConsumers.values())
+
         // logger.debug(`Inserting ${arrConsumers.length} consumers for block height: ${block.height}`);
         await DoInChunks(consts.JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, arrConsumers, async (arr: any) => {
             await tx.insert(JsinfoSchema.consumers)
@@ -128,47 +125,39 @@ const doBatch = async (
     dbHeight: number,
     latestHeight: number,
 ) => {
-    logger.info(`doBatch:: Starting doBatch with dbHeight: ${dbHeight}, latestHeight: ${latestHeight}`);
+    logger.info(`doBatch: Starting doBatch with dbHeight: ${dbHeight}, latestHeight: ${latestHeight}`);
 
     const blockList = [...globakWorkList]
-    logger.info(`doBatch:: Initial blockList length: ${blockList.length}`);
+    logger.info(`doBatch: Initial blockList length: ${blockList.length}`);
     globakWorkList.length = 0
 
-    const blockType = consts.JSINFO_INDEXER_BLOCK_TYPE || 'both';
-
     for (let i = dbHeight + 1; i <= latestHeight; i++) {
-        if (blockType === 'even' && i % 2 === 0) {
-            blockList.push(i);
-        } else if (blockType === 'odd' && i % 2 !== 0) {
-            blockList.push(i);
-        } else if (blockType === 'both') {
-            blockList.push(i);
-        }
+        blockList.push(i);
     }
 
     const org_len = blockList.length
-    logger.info(`doBatch:: Updated blockList length: ${org_len}`);
+    logger.info(`doBatch: Updated blockList length: ${org_len}`);
     while (blockList.length > 0) {
         let start = performance.now();
 
         const tmpList = blockList.splice(0, consts.JSINFO_INDEXER_BATCH_SIZE);
-        logger.info(`doBatch:: Processing batch of size: ${tmpList.length}`);
+        logger.info(`doBatch: Processing batch of size: ${tmpList.length}`);
         const { results, errors } = await PromisePool
             .withConcurrency(consts.JSINFO_INDEXER_N_WORKERS)
             .for(tmpList)
             .process(async (height) => {
                 if (await isBlockInDb(db, height)) {
-                    logger.info(`doBatch:: Block ${height} already in DB, skipping`);
+                    logger.info(`doBatch: Block ${height} already in DB, skipping`);
                     return
                 }
 
                 let block: null | LavaBlock = null;
-                block = await GetOneLavaBlock(height, client, clientTm, static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes)
+                block = await GetOneLavaBlock(height, client, clientTm, blockchainEntitiesProviders, blockchainEntitiesSpecs, blockchainEntitiesStakes)
                 if (block != null) {
                     await InsertBlock(block, db)
-                    logger.info(`doBatch:: Inserted block ${height} into DB`);
+                    logger.info(`doBatch: Inserted block ${height} into DB`);
                 } else {
-                    logger.info(`doBatch:: Failed getting block ${height}`);
+                    logger.info(`doBatch: Failed getting block ${height}`);
                 }
             })
 
@@ -182,10 +171,10 @@ const doBatch = async (
             `);
         errors.forEach((err) => {
             globakWorkList.push(err.item)
-            logger.info(`doBatch:: Added block ${err.item} to globakWorkList due to error`);
+            logger.info(`doBatch: Added block ${err.item} to globakWorkList due to error`);
         })
     }
-    logger.info(`doBatch:: Finished doBatch with dbHeight: ${dbHeight}, latestHeight: ${latestHeight}`);
+    logger.info(`doBatch: Finished doBatch with dbHeight: ${dbHeight}, latestHeight: ${latestHeight}`);
 }
 
 const indexer = async (): Promise<void> => {
@@ -205,9 +194,13 @@ const indexer = async (): Promise<void> => {
     }
 
     const db = await migrateAndFetchDb();
-    await updateBlockMetaInDb(db, rpcConnection);
+    logger.info('Done migrateAndFetchDb');
+    await syncBlockchainEntitiesInDb(db, rpcConnection);
+    logger.info('Done syncBlockchainEntitiesInDb');
     await aggProviderAndConsumerRelayPaymentsSync(db);
+    logger.info('Done aggProviderAndConsumerRelayPaymentsSync');
     await fillUpBackoffRetry(db, rpcConnection);
+    logger.info('Done fillUpBackoffRetry');
 }
 
 const establishRpcConnection = async (): Promise<RpcConnection> => {
@@ -228,19 +221,18 @@ const migrateAndFetchDb = async (): Promise<PostgresJsDatabase> => {
     return db;
 }
 
-const updateBlockMetaInDb = async (db: PostgresJsDatabase, rpcConnection: RpcConnection) => {
-    logger.info('Updating block meta...');
-    await UpdateLatestBlockMeta(
+const syncBlockchainEntitiesInDb = async (db: PostgresJsDatabase, rpcConnection: RpcConnection) => {
+    logger.info('syncing blockchain entities in db...');
+    await SyncBlockchainEntities(
         db,
         rpcConnection.lavajsClient,
         rpcConnection.height,
         false,
-        static_dbProviders,
-        static_dbSpecs,
-        static_dbPlans,
-        static_dbStakes
+        blockchainEntitiesProviders,
+        blockchainEntitiesSpecs,
+        blockchainEntitiesStakes
     );
-    logger.info('Block meta updated.');
+    logger.info('Blockchain entities synced in db.');
 }
 
 const fillUpBackoffRetry = async (db: PostgresJsDatabase, rpcConnection: RpcConnection) => {
@@ -248,7 +240,7 @@ const fillUpBackoffRetry = async (db: PostgresJsDatabase, rpcConnection: RpcConn
     try {
         await BackoffRetry<void>("fillUp", async () => { await fillUp(db, rpcConnection); });
     } catch (e) {
-        logger.info('fillUpBackoffRetry error', e)
+        logger.error('fillUpBackoffRetry error', e)
         fillUpBackoffRetryWTimeout(db, rpcConnection)
         return
     }
@@ -267,6 +259,7 @@ const fillUpBackoffRetryWTimeout = (db: PostgresJsDatabase, rpcConnection: RpcCo
 let fullUpStartTime: number | null = null;
 
 const fillUp = async (db: PostgresJsDatabase, rpcConnection: RpcConnection) => {
+
     // Set the start time on the first call
     if (fullUpStartTime === null) {
         fullUpStartTime = Date.now();
@@ -274,7 +267,7 @@ const fillUp = async (db: PostgresJsDatabase, rpcConnection: RpcConnection) => {
 
     // Check if JSINFO_INDEXER_GRACEFULL_EXIT_AFTER_X_HOURS has passed
     if (Date.now() - fullUpStartTime > consts.JSINFO_INDEXER_GRACEFULL_EXIT_AFTER_X_HOURS * 60 * 60 * 1000) {
-        console.log('JSINFO_INDEXER_GRACEFULL_EXIT_AFTER_X_HOURS has passed. Exiting process.', consts.JSINFO_INDEXER_GRACEFULL_EXIT_AFTER_X_HOURS);
+        logger.info('fillUp: JSINFO_INDEXER_GRACEFULL_EXIT_AFTER_X_HOURS has passed. Exiting process.');
         process.exit();
     }
 
@@ -283,53 +276,64 @@ const fillUp = async (db: PostgresJsDatabase, rpcConnection: RpcConnection) => {
         latestHeight = await BackoffRetry<number>("getHeight", async () => {
             return await rpcConnection.client.getHeight();
         });
+        logger.info(`fillUp: Successfully retrieved latest blockchain height: ${latestHeight}`);
     } catch (e) {
-        logger.info(`client.getHeight ${e}`);
-        fillUpBackoffRetryWTimeout(db, rpcConnection)
-        return
+        logger.error(`fillUp: Error in client.getHeight: ${e}`);
+        fillUpBackoffRetryWTimeout(db, rpcConnection);
+        return;
     }
 
-    let dbHeight = consts.JSINFO_INDEXER_START_BLOCK
-    let latestDbBlock
+    let dbHeight = consts.JSINFO_INDEXER_START_BLOCK;
+    let latestDbBlock;
     try {
-        latestDbBlock = await db.select().from(JsinfoSchema.blocks).orderBy(desc(JsinfoSchema.blocks.height)).limit(1)
+        latestDbBlock = await db.select().from(JsinfoSchema.blocks).orderBy(desc(JsinfoSchema.blocks.height)).limit(1);
+        logger.info('fillUp: Successfully retrieved latest DB block');
     } catch (e) {
-        logger.info(`failed getting latestDbBlock ${e}`);
-        logger.info('restarting db connection')
-        db = await GetJsinfoDb()
-        fillUpBackoffRetryWTimeout(db, rpcConnection)
-        return
+        logger.error(`fillUp: Error in getting latestDbBlock: ${e}`);
+        logger.error('fillUp: Restarting DB connection');
+        db = await GetJsinfoDb();
+        fillUpBackoffRetryWTimeout(db, rpcConnection);
+        return;
     }
+
     if (latestDbBlock.length != 0) {
-        const tHeight = latestDbBlock[0].height
+        const tHeight = latestDbBlock[0].height;
         if (tHeight != null) {
-            dbHeight = tHeight
+            dbHeight = tHeight;
+            logger.info(`fillUp: DB height set to latest DB block height: ${dbHeight}`);
         }
     }
 
+    await doBatch(db, rpcConnection.client, rpcConnection.clientTm, dbHeight, latestHeight);
+
     if (latestHeight > dbHeight) {
-        logger.info(`db height ${dbHeight}, blockchain height ${latestHeight}`);
-        await doBatch(db, rpcConnection.client, rpcConnection.clientTm, dbHeight, latestHeight)
+        logger.info(`fillUp: Starting batch process for DB height ${dbHeight} and blockchain height ${latestHeight}`);
+        await doBatch(db, rpcConnection.client, rpcConnection.clientTm, dbHeight, latestHeight);
+        logger.info('fillUp: Batch process completed');
 
         if (latestHeight - dbHeight == 1) {
+            logger.info('fillUp: Attempting to sync blockchain entities');
             try {
-                await UpdateLatestBlockMeta(
+                await SyncBlockchainEntities(
                     db,
                     rpcConnection.lavajsClient,
                     rpcConnection.height,
                     true,
-                    static_dbProviders,
-                    static_dbSpecs,
-                    static_dbPlans,
-                    static_dbStakes
-                )
+                    blockchainEntitiesProviders,
+                    blockchainEntitiesSpecs,
+                    blockchainEntitiesStakes
+                );
+                logger.info('fillUp: Successfully synced blockchain entities');
             } catch (e) {
-                logger.info(`UpdateLatestBlockMeta ${e}`);
+                logger.info(`fillUp: Error in SyncBlockchainEntities: ${e}`);
             }
             aggProviderAndConsumerRelayPayments(db);
+            logger.info('fillUp: Aggregated provider and consumer relay payments');
         }
     }
-    fillUpBackoffRetryWTimeout(db, rpcConnection)
+
+    fillUpBackoffRetryWTimeout(db, rpcConnection);
+    logger.info('fillUp: process completed');
 }
 
 try {

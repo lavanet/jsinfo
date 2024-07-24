@@ -1,7 +1,7 @@
 // src/indexer/eventDebug.ts
 
 import { GetRpcBlock, GetRpcTxs, GetRpcBlockResultEvents } from "./lavaBlock";
-import { RpcConnection } from "../utils";
+import { logger, RpcConnection } from "../utils";
 import { ProcessOneEvent } from "./eventProcessor";
 import * as JsinfoSchema from '../schemas/jsinfoSchema/jsinfoSchema';
 import { LavaBlock } from "./types";
@@ -13,14 +13,14 @@ const EVENT_DEBUG_SHOULD_PRINT_EVENT = (eventType: string) => {
 };
 
 export const processEvent = (evt: any, height: number, lavaBlock: LavaBlock, source: string,
-    static_dbProviders: Map<string, JsinfoSchema.Provider>, static_dbSpecs: Map<string, JsinfoSchema.Spec>,
-    static_dbPlans: Map<string, JsinfoSchema.Plan>, static_dbStakes: Map<string, JsinfoSchema.ProviderStake[]>) => {
+    blockchainEntitiesProviders: Map<string, JsinfoSchema.Provider>, blockchainEntitiesSpecs: Map<string, JsinfoSchema.Spec>,
+    blockchainEntitiesStakes: Map<string, JsinfoSchema.ProviderStake[]>) => {
     if (EVENT_DEBUG_SHOULD_PRINT_EVENT(evt.type)) {
-        console.log('EventDebug event', height, 'Source:', source, "type:", evt.type, "\n", evt);
+        logger.info('EventDebug event', height, 'Source:', source, "type:", evt.type, "\n", evt);
     }
 
     if (EVENT_DEBUG_EXECUTE_PROCESS_ONE_EVENT) {
-        ProcessOneEvent(evt, lavaBlock, height, "0xEventDebugHash", static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes);
+        ProcessOneEvent(evt, lavaBlock, height, "0xEventDebugHash", blockchainEntitiesProviders, blockchainEntitiesSpecs, blockchainEntitiesStakes);
     }
 }
 
@@ -30,10 +30,9 @@ export const EventDebugProcessBlock = async (startHeight: number, rpcConnection:
         const block = await GetRpcBlock(height, rpcConnection.client);
         const txs = await GetRpcTxs(height, rpcConnection.client, block);
 
-        let static_dbProviders: Map<string, JsinfoSchema.Provider> = new Map();
-        let static_dbSpecs: Map<string, JsinfoSchema.Spec> = new Map();
-        let static_dbPlans: Map<string, JsinfoSchema.Plan> = new Map();
-        let static_dbStakes: Map<string, JsinfoSchema.ProviderStake[]> = new Map();
+        let blockchainEntitiesProviders: Map<string, JsinfoSchema.Provider> = new Map();
+        let blockchainEntitiesSpecs: Map<string, JsinfoSchema.Spec> = new Map();
+        let blockchainEntitiesStakes: Map<string, JsinfoSchema.ProviderStake[]> = new Map();
 
         const lavaBlock: LavaBlock = {
             height: height,
@@ -60,15 +59,15 @@ export const EventDebugProcessBlock = async (startHeight: number, rpcConnection:
 
             tx.events.forEach((evt) => {
                 // if (EVENT_DEBUG_SHOULD_PRINT_EVENT(evt.type)) {
-                //     console.log('EventDebug txs event', height, evt.type, "\ntx:", tx);
+                //     logger.info('EventDebug txs event', height, evt.type, "\ntx:", tx);
                 // }
-                processEvent(evt, height, lavaBlock, 'Tx events', static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes);
+                processEvent(evt, height, lavaBlock, 'Tx events', blockchainEntitiesProviders, blockchainEntitiesSpecs, blockchainEntitiesStakes);
             });
         });
 
         const evts = await GetRpcBlockResultEvents(height, rpcConnection.clientTm);
         evts.forEach((evt) => {
-            processEvent(evt, height, lavaBlock, 'Block events', static_dbProviders, static_dbSpecs, static_dbPlans, static_dbStakes);
+            processEvent(evt, height, lavaBlock, 'Block events', blockchainEntitiesProviders, blockchainEntitiesSpecs, blockchainEntitiesStakes);
         });
     }
 }

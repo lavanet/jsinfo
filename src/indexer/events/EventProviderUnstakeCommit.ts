@@ -1,7 +1,7 @@
+import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import { Event } from "@cosmjs/stargate"
 import { LavaBlock } from "../types";
-import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
-import { GetOrSetProvider, SetTx } from "../setLatest";
+import { GetOrSetProvider, SetTx } from "../blockchainEntities/blockchainEntitiesGettersAndSetters";
 import { EventProcessAttributes, EventParseProviderAddress, EventParseInt } from "../eventUtils";
 
 /*
@@ -71,10 +71,9 @@ export const ParseEventProviderUnstakeCommit = (
   height: number,
   txHash: string | null,
   lavaBlock: LavaBlock,
-  static_dbProviders: Map<string, JsinfoSchema.Provider>,
-  static_dbSpecs: Map<string, JsinfoSchema.Spec>,
-  static_dbPlans: Map<string, JsinfoSchema.Plan>,
-  static_dbStakes: Map<string, JsinfoSchema.ProviderStake[]>,
+  blockchainEntitiesProviders: Map<string, JsinfoSchema.Provider>,
+  blockchainEntitiesSpecs: Map<string, JsinfoSchema.Spec>,
+  blockchainEntitiesStakes: Map<string, JsinfoSchema.ProviderStake[]>,
 ) => {
   const dbEvent: JsinfoSchema.InsertEvent = {
     tx: txHash,
@@ -115,6 +114,6 @@ export const ParseEventProviderUnstakeCommit = (
   if (!dbEvent.provider) return;
 
   SetTx(lavaBlock.dbTxs, txHash, height)
-  GetOrSetProvider(lavaBlock.dbProviders, static_dbProviders, dbEvent.provider!, '')
+  GetOrSetProvider(lavaBlock.dbProviders, blockchainEntitiesProviders, dbEvent.provider!, '')
   lavaBlock.dbEvents.push(dbEvent)
 }

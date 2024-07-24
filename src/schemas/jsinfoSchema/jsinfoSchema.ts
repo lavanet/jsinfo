@@ -53,7 +53,11 @@ export enum LavaProviderStakeStatus {
   Inactive,
 }
 export const providerStakes = pgTable('provider_stakes', {
-  stake: bigint('stake', { mode: 'number' }),
+  stake: bigint('stake', { mode: 'bigint' }),
+  delegateLimit: bigint('delegate_limit', { mode: 'bigint' }),
+  delegateTotal: bigint('delegate_total', { mode: 'bigint' }),
+  delegateCommission: bigint('delegate_commission', { mode: 'bigint' }),
+
   appliedHeight: integer('applied_height'),
   geolocation: integer('geolocation'),
   addons: text('addons'),

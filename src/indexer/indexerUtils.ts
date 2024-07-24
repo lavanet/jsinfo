@@ -46,3 +46,25 @@ export function ToSignedIntOrMinusOne(input: bigint | number | string | Long | n
     }
     return num >= 0 ? num : -num;
 }
+
+export function ToSignedBigIntOrMinusOne(input: bigint | number | string | Long | null): bigint {
+    if (input === null) return BigInt(0);
+    let num: bigint;
+    if (["9223372036854776000", "2147483647", "-1"].some(maxValue => (input + "").includes(maxValue))) {
+        return BigInt(-1);
+    }
+    if (Long.isLong(input)) {
+        num = BigInt(input.toSigned().toString());
+    } else if (typeof input === 'bigint') {
+        num = input;
+    } else if (typeof input === 'string') {
+        num = BigInt(input);
+    } else {
+        num = BigInt(input);
+    }
+    return num >= BigInt(0) ? num : -num;
+}
+
+export function AppendUniqueItems(currentItems: string[], itemsToAdd: string[]): string[] {
+    return Array.from(new Set([...currentItems, ...itemsToAdd]));
+}

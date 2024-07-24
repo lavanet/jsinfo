@@ -1,8 +1,8 @@
 
+import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import { Event } from "@cosmjs/stargate"
 import { LavaBlock } from "../types";
-import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
-import { GetOrSetProvider, SetTx } from "../setLatest";
+import { GetOrSetProvider, SetTx } from "../blockchainEntities/blockchainEntitiesGettersAndSetters";
 import { EventParseUlava, EventProcessAttributes, EventParseProviderAddress } from "../eventUtils";
 
 /*
@@ -50,10 +50,9 @@ export const ParseEventUbondFromProvider = (
   height: number,
   txHash: string | null,
   lavaBlock: LavaBlock,
-  static_dbProviders: Map<string, JsinfoSchema.Provider>,
-  static_dbSpecs: Map<string, JsinfoSchema.Spec>,
-  static_dbPlans: Map<string, JsinfoSchema.Plan>,
-  static_dbStakes: Map<string, JsinfoSchema.ProviderStake[]>,
+  blockchainEntitiesProviders: Map<string, JsinfoSchema.Provider>,
+  blockchainEntitiesSpecs: Map<string, JsinfoSchema.Spec>,
+  blockchainEntitiesStakes: Map<string, JsinfoSchema.ProviderStake[]>,
 ) => {
   let delegator: string | null = null;
   let provider: string | null = null;
@@ -98,7 +97,7 @@ export const ParseEventUbondFromProvider = (
         delegator,
       t1: provider ? `provider: ${provider}` : null,
     };
-    GetOrSetProvider(lavaBlock.dbProviders, static_dbProviders, delegatorEvent.provider!, '')
+    GetOrSetProvider(lavaBlock.dbProviders, blockchainEntitiesProviders, delegatorEvent.provider!, '')
     lavaBlock.dbEvents.push(delegatorEvent);
   }
 
@@ -106,6 +105,6 @@ export const ParseEventUbondFromProvider = (
   dbEvent.t1 = delegator ? `delegator: ${delegator}` : null
 
   SetTx(lavaBlock.dbTxs, txHash, height)
-  GetOrSetProvider(lavaBlock.dbProviders, static_dbProviders, dbEvent.provider!, '')
+  GetOrSetProvider(lavaBlock.dbProviders, blockchainEntitiesProviders, dbEvent.provider!, '')
   lavaBlock.dbEvents.push(dbEvent)
 }

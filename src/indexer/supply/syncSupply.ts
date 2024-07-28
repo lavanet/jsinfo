@@ -27,10 +27,9 @@ function parsePeriodicVestingAccount(nowSeconds: number, account: any): bigint {
 
     account.vestingPeriods.forEach((vestingPeriod: any) => {
         const current = startTime + parseInt(vestingPeriod.length);
-        if (current < nowSeconds) {
-            return;
+        if (current >= nowSeconds) {
+            totalAmount += BigInt(vestingPeriod.amount[0].amount);
         }
-        totalAmount += BigInt(vestingPeriod.amount[0].amount);
     });
 
     return totalAmount;
@@ -41,7 +40,12 @@ function parseContinuousVestingAccount(nowSeconds: number, account: any): bigint
     const startTime = BigInt(parseInt(account.startTime));
     const endTime = BigInt(parseInt(account.baseVestingAccount.endTime));
     const nowBigInt = BigInt(nowSeconds);
-    return (((endTime - nowBigInt) * totalAmount) / (endTime - startTime)) / 1000000n;
+
+    if (nowBigInt < startTime) {
+        return totalAmount;
+    }
+
+    return (((endTime - nowBigInt) * totalAmount) / (endTime - startTime));
 }
 
 async function getLockedTokens(now: number, client: LavaClient): Promise<bigint> {

@@ -63,8 +63,8 @@ import { LavapDualStackingDelegatorRewardsHandler, LavapDualStackingDelegatorRew
 GetServerInstance().get('/latest', LatestRawHandlerOpts, LatestRawHandler);
 
 // -- Server supply ajax --
-RegisterRedisBackedHandler('/supply/total', SupplyRawHandlerOpts, TotalSupplyRawHandler, { cache_ttl: 60 });
-RegisterRedisBackedHandler('/supply/circulating', SupplyRawHandlerOpts, CirculatingSupplyRawHandler, { cache_ttl: 60 });
+RegisterRedisBackedHandler('/supply/total', SupplyRawHandlerOpts, TotalSupplyRawHandler, { cache_ttl: 60, is_text: true });
+RegisterRedisBackedHandler('/supply/circulating', SupplyRawHandlerOpts, CirculatingSupplyRawHandler, { cache_ttl: 60, is_text: true });
 
 // -- list all providers and monikers endpoint ---
 RegisterRedisBackedHandler('/listProviders', ListProvidersRawHandlerOpts, ListProvidersRawHandler, { cache_ttl: 10 * 60 });

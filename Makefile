@@ -48,6 +48,9 @@ query_port8090:
 query_test_lavap_prodiver_error_parsing:
 	bun run ./src/query/utils/lavapProvidersErrorParser.test.ts 
 
+query_endpoints_tests:
+	./tests/query_endpoints/tests.sh
+	
 run_lavapProviderHealth:
 	cd lavapProviderHealth && python run.py
 

@@ -19,7 +19,7 @@ type IndexProvidersResponse = {
     monikerfull: string,
     rewardSum: number,
     totalServices: string,
-    totalStake: number,
+    totalStake: string,
 };
 
 export const IndexProvidersPaginatedHandlerOpts: RouteShorthandOptions = {
@@ -49,7 +49,7 @@ export const IndexProvidersPaginatedHandlerOpts: RouteShorthandOptions = {
                                     type: 'string'
                                 },
                                 totalStake: {
-                                    type: ['number', 'string']
+                                    type: ['null', 'string']
                                 }
                             }
                         }
@@ -80,7 +80,7 @@ class IndexProvidersData extends RequestHandlerBase<IndexProvidersResponse> {
         const res = await QueryGetJsinfoReadDbInstance().select({
             provider: JsinfoSchema.providerStakes.provider,
             totalServices: sql<string>`CONCAT(SUM(CASE WHEN ${JsinfoSchema.providerStakes.status} = ${JsinfoSchema.LavaProviderStakeStatus.Active} THEN 1 ELSE 0 END), ' / ', COUNT(${JsinfoSchema.providerStakes.specId})) as totalServices`,
-            totalStake: sql<number>`COALESCE(SUM(${JsinfoSchema.providerStakes.stake}), 0) as totalStake`,
+            totalStake: sql<bigint>`(${JsinfoSchema.providerStakes.stake} + LEAST(${JsinfoSchema.providerStakes.delegateTotal}, ${JsinfoSchema.providerStakes.delegateLimit})) as totalStake`,
             rewardSum: sql<number>`COALESCE(SUM(${JsinfoProviderAgrSchema.aggAllTimeRelayPayments.rewardSum}), 0) as rewardSum`,
         }).from(JsinfoSchema.providerStakes)
             .leftJoin(JsinfoProviderAgrSchema.aggAllTimeRelayPayments,
@@ -107,7 +107,7 @@ class IndexProvidersData extends RequestHandlerBase<IndexProvidersResponse> {
             monikerfull: MonikerCache.GetMonikerFullDescription(provider.provider),
             rewardSum: provider.rewardSum,
             totalServices: provider.totalServices || "",
-            totalStake: provider.totalStake,
+            totalStake: provider.totalStake.toString(),
         }));
 
         return providersDetails;
@@ -185,7 +185,7 @@ class IndexProvidersData extends RequestHandlerBase<IndexProvidersResponse> {
                     provider: JsinfoSchema.providerStakes.provider,
                     moniker: JsinfoSchema.providers.moniker,
                     totalServices: sql<string>`CONCAT(SUM(CASE WHEN ${JsinfoSchema.providerStakes.status} = ${JsinfoSchema.LavaProviderStakeStatus.Active} THEN 1 ELSE 0 END), ' / ', COUNT(${JsinfoSchema.providerStakes.specId})) as totalServices`,
-                    totalStake: sql<number>`COALESCE(SUM(${JsinfoSchema.providerStakes.stake}), 0) as totalStake`,
+                    totalStake: sql<bigint>`(${JsinfoSchema.providerStakes.stake} + LEAST(${JsinfoSchema.providerStakes.delegateTotal}, ${JsinfoSchema.providerStakes.delegateLimit})) as totalStake`,
                     rewardSum: sql<number>`COALESCE(SUM(${JsinfoProviderAgrSchema.aggAllTimeRelayPayments.rewardSum}), 0) as rewardSum`,
                 })
                 .from(JsinfoSchema.providerStakes)
@@ -216,7 +216,7 @@ class IndexProvidersData extends RequestHandlerBase<IndexProvidersResponse> {
                 monikerfull: MonikerCache.GetMonikerFullDescription(item.provider),
                 rewardSum: item.rewardSum || 0,
                 totalServices: item.totalServices,
-                totalStake: item.totalStake
+                totalStake: item.totalStake.toString()
             }));
         }
 
@@ -224,7 +224,7 @@ class IndexProvidersData extends RequestHandlerBase<IndexProvidersResponse> {
             .select({
                 provider: JsinfoSchema.providerStakes.provider,
                 totalServices: sql<string>`CONCAT(SUM(CASE WHEN ${JsinfoSchema.providerStakes.status} = ${JsinfoSchema.LavaProviderStakeStatus.Active} THEN 1 ELSE 0 END), ' / ', COUNT(${JsinfoSchema.providerStakes.specId})) as totalServices`,
-                totalStake: sql<number>`COALESCE(SUM(${JsinfoSchema.providerStakes.stake}), 0) as totalStake`,
+                totalStake: sql<bigint>`(${JsinfoSchema.providerStakes.stake} + LEAST(${JsinfoSchema.providerStakes.delegateTotal}, ${JsinfoSchema.providerStakes.delegateLimit})) as totalStake`,
                 rewardSum: sql<number>`COALESCE(SUM(${JsinfoProviderAgrSchema.aggAllTimeRelayPayments.rewardSum}), 0) as rewardSum`,
             })
             .from(JsinfoSchema.providerStakes)
@@ -254,7 +254,7 @@ class IndexProvidersData extends RequestHandlerBase<IndexProvidersResponse> {
             monikerfull: MonikerCache.GetMonikerFullDescription(item.provider),
             rewardSum: item.rewardSum || 0,
             totalServices: item.totalServices,
-            totalStake: item.totalStake
+            totalStake: item.totalStake.toString()
         }));
     }
 

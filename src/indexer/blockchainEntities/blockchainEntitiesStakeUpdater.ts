@@ -129,7 +129,7 @@ jailEndTime: 0n,
 function processStakeEntry(
     height: number,
     dbProviders: Map<string, JsinfoSchema.Provider>,
-    dbStakes: Map<string, JsinfoSchema.ProviderStake[]>,
+    dbStakes: Map<string, JsinfoSchema.InsertProviderStake[]>,
     providerStake: StakeEntry,
     isUnstaking: boolean,
 ) {
@@ -151,7 +151,8 @@ function processStakeEntry(
     let addonsStr = addons.join(',');
     let extensionsStr = extensions.join(',');
 
-    let stakeArr: JsinfoSchema.ProviderStake[] = dbStakes.get(providerStake.address)!
+    let stakeArr: JsinfoSchema.InsertProviderStake[] = dbStakes.get(providerStake.address)!
+
 
     // status
     const appliedHeight = ToSignedIntOrMinusOne(providerStake.stakeAppliedBlock)
@@ -162,7 +163,7 @@ function processStakeEntry(
         status = JsinfoSchema.LavaProviderStakeStatus.Frozen
     }
 
-    stakeArr.push({
+    let data: JsinfoSchema.InsertProviderStake = {
         provider: providerStake.address,
         blockId: height,
         specId: providerStake.chain,
@@ -175,7 +176,9 @@ function processStakeEntry(
         delegateTotal: ToSignedBigIntOrMinusOne(providerStake.delegateTotal.amount),
         delegateCommission: ToSignedBigIntOrMinusOne(providerStake.delegateCommission),
         appliedHeight: ToSignedIntOrMinusOne(appliedHeight),
-    } as JsinfoSchema.ProviderStake)
+    }
+
+    stakeArr.push(data)
 }
 
 export async function UpdateStakeInformation(
@@ -183,7 +186,7 @@ export async function UpdateStakeInformation(
     height: number,
     dbProviders: Map<string, JsinfoSchema.Provider>,
     dbSpecs: Map<string, JsinfoSchema.Spec>,
-    dbStakes: Map<string, JsinfoSchema.ProviderStake[]>,
+    dbStakes: Map<string, JsinfoSchema.InsertProviderStake[]>,
 ) {
     const startTime = Date.now();
     try {
@@ -214,7 +217,7 @@ async function processRegularStakes(
     height: number,
     dbProviders: Map<string, JsinfoSchema.Provider>,
     dbSpecs: Map<string, JsinfoSchema.Spec>,
-    dbStakes: Map<string, JsinfoSchema.ProviderStake[]>,
+    dbStakes: Map<string, JsinfoSchema.InsertProviderStake[]>,
 ) {
     let specs = await lavaClient.spec.showAllChains();
     await Promise.all(specs.chainInfoList.map(async (spec) => {
@@ -230,7 +233,7 @@ async function processUnstakingStakes(
     lavaClient: any,
     height: number,
     dbProviders: Map<string, JsinfoSchema.Provider>,
-    dbStakes: Map<string, JsinfoSchema.ProviderStake[]>,
+    dbStakes: Map<string, JsinfoSchema.InsertProviderStake[]>,
 ) {
     let unstaking;
     try {

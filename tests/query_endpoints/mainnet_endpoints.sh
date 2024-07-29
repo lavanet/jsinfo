@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# http://jsinfo.lava-cybertron.xyz/supply/circulating
+# http://jsinfo.lava-cybertron.xyz/supply/total
+# https://jsinfo.lava-cybertron.xyz/listProviders
+
 # Endpoint URLs
 PROVIDERS_URL="http://localhost:8081/listProviders"
 TOTAL_SUPPLY_URL="http://localhost:8081/supply/total"

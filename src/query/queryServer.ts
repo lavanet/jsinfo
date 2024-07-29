@@ -73,6 +73,7 @@ export function RegisterPaginationServerHandler(
 function handleRequestWithRedisCache(
     handler: (request: FastifyRequest, reply: FastifyReply) => Promise<any>,
     cache_ttl?: number | null,
+    is_text: boolean = false,
 ): (request: FastifyRequest, reply: FastifyReply) => Promise<any> {
     return async (request: FastifyRequest, reply: FastifyReply) => {
         const cacheKey = `url:${request.url.split('?')[0].substring(1)}`; // Use the path and query for the cache key
@@ -92,7 +93,13 @@ function handleRequestWithRedisCache(
         // Cache the new response
         await RedisCache.set(cacheKey, JSON.stringify(handlerData), cache_ttl || 30);
 
-        reply.send(handlerData);
+        let data = handlerData;
+        if (is_text) {
+            reply.type('text/plain');
+            data = data.toString();
+        }
+
+        reply.send(data);
         return reply;
     };
 }
@@ -101,11 +108,11 @@ export function RegisterRedisBackedHandler(
     path: string,
     opts: RouteShorthandOptions,
     handler: (request: FastifyRequest, reply: FastifyReply) => Promise<any>,
-    options: { cache_ttl?: number } = {}
+    options: { cache_ttl?: number, is_text?: boolean } = {}
 ) {
     logger.info("Registering reddis handler for path: " + path);
     opts = AddErrorResponseToFastifyServerOpts(opts);
-    server.get(path, opts, handleRequestWithRedisCache(handler, options?.cache_ttl));
+    server.get(path, opts, handleRequestWithRedisCache(handler, options?.cache_ttl, options?.is_text));
 }
 
 export function GetServerInstance() {

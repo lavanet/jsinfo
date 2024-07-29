@@ -15,7 +15,7 @@ export const ParseDistributionPoolsRefill = (
   lavaBlock: LavaBlock,
   blockchainEntitiesProviders: Map<string, JsinfoSchema.Provider>,
   blockchainEntitiesSpecs: Map<string, JsinfoSchema.Spec>,
-  blockchainEntitiesStakes: Map<string, JsinfoSchema.ProviderStake[]>,
+  blockchainEntitiesStakes: Map<string, JsinfoSchema.InsertProviderStake[]>,
 ) => {
 
   const dbEvent: JsinfoSchema.InsertEvent = {

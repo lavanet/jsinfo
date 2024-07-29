@@ -1,9 +1,9 @@
 // src/query/handlers/HealthRawHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import fetch from 'node-fetch'; // Ensure you have node-fetch installed or use a compatible fetch API
+import fetch from 'node-fetch';
 import { QueryCheckJsinfoReadDbInstance } from '../queryDb';
-import { JSINFO_QUERY_PORT, JSINFO_QUERY_HOST } from '../queryConsts'; // Adjust the import path as necessary
+import { JSINFO_QUERY_PORT, JSINFO_QUERY_HOST } from '../queryConsts';
 
 const JSINFO_BASE_URL = `http://${JSINFO_QUERY_HOST}:${JSINFO_QUERY_PORT}`;
 

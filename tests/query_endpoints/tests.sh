@@ -32,6 +32,15 @@ esac
 echo "Mode: $1"
 echo "SERVER_ADDRESS set to $SERVER_ADDRESS"
 
+# Perform a health check by browsing to SERVER_ADDRESS/health and assert the response
+HEALTH_CHECK_RESPONSE=$(curl -s "${SERVER_ADDRESS}/health")
+if echo "$HEALTH_CHECK_RESPONSE" | grep -q '"health":"ok"'; then
+  echo "Health check passed."
+else
+  echo "Health check failed: $HEALTH_CHECK_RESPONSE"
+  exit 1
+fi
+
 # Define an array of commands to execute
 commands=(
   "./mainnet_endpoints.sh"

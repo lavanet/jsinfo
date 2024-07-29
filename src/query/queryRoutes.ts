@@ -5,6 +5,7 @@ import * as consts from './queryConsts';
 
 // -- Server status ajax --
 import { LatestRawHandler, LatestRawHandlerOpts } from './handlers/latestHandler';
+import { HealthRawHandler, HealthRawHandlerOpts } from './handlers/healthHandler';
 
 // -- Server supply ajax --
 import { SupplyRawHandlerOpts, TotalSupplyRawHandler, CirculatingSupplyRawHandler } from './handlers/supplyHandler';
@@ -61,6 +62,7 @@ import { LavapDualStackingDelegatorRewardsHandler, LavapDualStackingDelegatorRew
 
 // -- Server status ajax --
 GetServerInstance().get('/latest', LatestRawHandlerOpts, LatestRawHandler);
+GetServerInstance().get('/health', HealthRawHandlerOpts, HealthRawHandler);
 
 // -- Server supply ajax --
 RegisterRedisBackedHandler('/supply/total', SupplyRawHandlerOpts, TotalSupplyRawHandler, { cache_ttl: 60, is_text: true });

@@ -57,6 +57,9 @@ query_endpoints_tests_staging:
 query_endpoints_tests_testnet:
 	./tests/query_endpoints/tests.sh testnet
 
+query_endpoints_tests_mainnet:
+	./tests/query_endpoints/tests.sh mainnet
+
 run_lavapProviderHealth:
 	cd lavapProviderHealth && python run.py
 

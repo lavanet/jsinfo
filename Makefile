@@ -1,4 +1,4 @@
-.PHONY: bun_create_migrations docker_build docker_sh docker_compose docker_compose_query_populate docker_compose_query docker_compose_indexer indexer indexer_debug_events query query_nodemon query_populate_mode query_no_cache run_lavapProviderHealth query_test_health_handeler query_teset_lavap_prodiver_error_parsing scripts_local_startQueryProviderDualStackingDelegatorRewardsContainer reddis_run reddis_connect macos_psql_start
+.PHONY: bun_create_migrations docker_build docker_sh docker_compose docker_compose_query_populate docker_compose_query docker_compose_indexer indexer indexer_debug_events query query_nodemon query_populate_mode query_no_cache run_lavapProviderHealth query_test_health_handeler query_teset_lavap_prodiver_error_parsing scripts_local_startQueryProviderDualStackingDelegatorRewardsContainer reddis_run reddis_connect macos_psql_start macos_query_port_pid
 
 bun_create_migrations:
 	bun run generate
@@ -45,11 +45,11 @@ query_no_nodemon:
 query_port8090:
 	JSINFO_QUERY_PORT=8090 make query
 
-run_lavapProviderHealth:
-	cd lavapProviderHealth && python run.py
-
 query_test_lavap_prodiver_error_parsing:
 	bun run ./src/query/utils/lavapProvidersErrorParser.test.ts 
+
+run_lavapProviderHealth:
+	cd lavapProviderHealth && python run.py
 
 scripts_local_startQueryProviderDualStackingDelegatorRewardsContainer:
 	QUERY_PROVIDER_DUAL_STACKING_DELEGATOR_REWARDS_CONTAINER_DEBUG=true bash scripts/startQueryProviderDualStackingDelegatorRewardsContainer.sh
@@ -63,4 +63,5 @@ reddis_connect:
 macos_psql_start:
 	brew services start postgresql; brew services list
 
-	
+macos_query_port_pid:
+	lsof -i tcp:8081 -sTCP:LISTEN

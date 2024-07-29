@@ -5,7 +5,6 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { ne } from "drizzle-orm";
 import { DoInChunks } from "../../utils";
 import { JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE } from '../indexerConsts';
-import { ToSignedIntOrMinusOne } from '../indexerUtils';
 import { LavaClient } from '../types';
 import { UpdateStakeInformation } from './blockchainEntitiesStakeUpdater';
 
@@ -32,17 +31,20 @@ export async function SyncBlockchainEntities(
     db: PostgresJsDatabase,
     client: LavaClient,
     height: number,
-    withStakes: boolean,
     blockchainEntitiesProviders: Map<string, JsinfoSchema.Provider>,
     blockchainEntitiesSpecs: Map<string, JsinfoSchema.Spec>,
     blockchainEntitiesStakes: Map<string, JsinfoSchema.InsertProviderStake[]>
 ) {
+    console.log("SyncBlockchainEntities: Starting SyncBlockchainEntities at height", height);
+    const startTime = Date.now();
+
     await UpdateStakeInformation(client, height, blockchainEntitiesProviders, blockchainEntitiesSpecs, blockchainEntitiesStakes)
     // await getLatestPlans(client, blockchainEntitiesPlans)
 
     await db.transaction(async (tx) => {
         // Insert all specs
         const arrSpecs = Array.from(blockchainEntitiesSpecs.values())
+        console.log("SyncBlockchainEntities: Inserting", arrSpecs.length, "specs");
         await DoInChunks(JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, arrSpecs, async (arr: any) => {
             await tx.insert(JsinfoSchema.specs)
                 .values(arr)
@@ -51,6 +53,7 @@ export async function SyncBlockchainEntities(
 
         // Find / create all providers
         const arrProviders = Array.from(blockchainEntitiesProviders.values())
+        console.log("SyncBlockchainEntities: Processing", arrProviders.length, "providers");
         await DoInChunks(JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, arrProviders, async (arr: any) => {
             return arr.map(async (provider: any) => {
                 return await tx.insert(JsinfoSchema.providers)
@@ -66,28 +69,12 @@ export async function SyncBlockchainEntities(
             })
         })
 
-        // // Find our create all plans
-        // const arrPlans = Array.from(blockchainEntitiesPlans.values())
-        // if (arrPlans.length > 0) {
-        //     await Promise.all(arrPlans.map(async (plan: any) => {
-        //         return await tx.insert(JsinfoSchema.plans)
-        //             .values(arrPlans)
-        //             .onConflictDoUpdate({
-        //                 target: [JsinfoSchema.plans.id],
-        //                 set: {
-        //                     desc: plan.desc,
-        //                     price: plan.price,
-        //                 }
-        //             });
-        //     }))
-        // }
-
-        if (!withStakes) return;
-
         // Insert all stakes
+        console.log("SyncBlockchainEntities: Inserting stakes");
         await Promise.all(Array.from(blockchainEntitiesStakes.values()).map(async (stakes) => {
             return stakes.map(async (stake) => {
                 if (stake.specId == null || stake.specId == "") return;
+                // console.log("SyncBlockchainEntities: Inserting stake for provider", stake.provider, "and specId", stake.specId);
                 return await tx.insert(JsinfoSchema.providerStakes)
                     .values(stake)
                     .onConflictDoUpdate(
@@ -111,10 +98,14 @@ export async function SyncBlockchainEntities(
         }))
 
         // Update old stakes
+        console.log("SyncBlockchainEntities: Updating old stakes to inactive status");
         await tx.update(JsinfoSchema.providerStakes)
             .set({
                 status: JsinfoSchema.LavaProviderStakeStatus.Inactive
             })
             .where(ne(JsinfoSchema.providerStakes.blockId, height))
+
+        const endTime = Date.now();
+        console.log("SyncBlockchainEntities: SyncBlockchainEntities completed in", (endTime - startTime) / 1000, "seconds with stakes");
     })
 }

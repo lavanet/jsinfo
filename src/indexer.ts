@@ -231,7 +231,6 @@ const syncBlockchainEntitiesInDb = async (db: PostgresJsDatabase, rpcConnection:
         db,
         rpcConnection.lavajsClient,
         rpcConnection.height,
-        false,
         static_blockchainEntitiesProviders,
         static_blockchainEntitiesSpecs,
         static_blockchainEntitiesStakes
@@ -322,7 +321,6 @@ const fillUp = async (db: PostgresJsDatabase, rpcConnection: RpcConnection) => {
                     db,
                     rpcConnection.lavajsClient,
                     rpcConnection.height,
-                    true,
                     static_blockchainEntitiesProviders,
                     static_blockchainEntitiesSpecs,
                     static_blockchainEntitiesStakes

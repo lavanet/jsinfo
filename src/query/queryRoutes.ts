@@ -62,7 +62,7 @@ import { LavapDualStackingDelegatorRewardsHandler, LavapDualStackingDelegatorRew
 
 // -- Server status ajax --
 GetServerInstance().get('/latest', LatestRawHandlerOpts, LatestRawHandler);
-GetServerInstance().get('/health', HealthRawHandlerOpts, HealthRawHandler);
+// GetServerInstance().get('/health', HealthRawHandlerOpts, HealthRawHandler);
 
 // -- Server supply ajax --
 RegisterRedisBackedHandler('/supply/total', SupplyRawHandlerOpts, TotalSupplyRawHandler, { cache_ttl: 60, is_text: true });

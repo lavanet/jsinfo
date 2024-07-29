@@ -35,7 +35,7 @@ export async function SyncBlockchainEntities(
     withStakes: boolean,
     blockchainEntitiesProviders: Map<string, JsinfoSchema.Provider>,
     blockchainEntitiesSpecs: Map<string, JsinfoSchema.Spec>,
-    blockchainEntitiesStakes: Map<string, JsinfoSchema.ProviderStake[]>
+    blockchainEntitiesStakes: Map<string, JsinfoSchema.InsertProviderStake[]>
 ) {
     await UpdateStakeInformation(client, height, blockchainEntitiesProviders, blockchainEntitiesSpecs, blockchainEntitiesStakes)
     // await getLatestPlans(client, blockchainEntitiesPlans)
@@ -95,12 +95,15 @@ export async function SyncBlockchainEntities(
                             target: [JsinfoSchema.providerStakes.provider, JsinfoSchema.providerStakes.specId],
                             set: {
                                 stake: stake.stake,
-                                appliedHeight: ToSignedIntOrMinusOne(stake.appliedHeight),
+                                appliedHeight: stake.appliedHeight,
                                 blockId: height,
-                                geolocation: ToSignedIntOrMinusOne(stake.geolocation),
+                                geolocation: stake.geolocation,
                                 addons: stake.addons,
                                 extensions: stake.extensions,
                                 status: stake.status,
+                                delegateCommission: stake.delegateCommission,
+                                delegateLimit: stake.delegateLimit,
+                                delegateTotal: stake.delegateTotal,
                             },
                         }
                     );

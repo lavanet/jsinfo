@@ -57,7 +57,7 @@ export const GetOneLavaBlock = async (
     clientTm: Tendermint37Client,
     blockchainEntitiesProviders: Map<string, JsinfoSchema.Provider>,
     blockchainEntitiesSpecs: Map<string, JsinfoSchema.Spec>,
-    blockchainEntitiesStakes: Map<string, JsinfoSchema.ProviderStake[]>,
+    blockchainEntitiesStakes: Map<string, JsinfoSchema.InsertProviderStake[]>,
 ): Promise<LavaBlock> => {
 
     const startTimeBlock = Date.now();

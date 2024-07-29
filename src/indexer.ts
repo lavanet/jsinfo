@@ -17,9 +17,9 @@ import { MigrateDb, GetJsinfoDb } from "./dbUtils";
 import { aggProviderAndConsumerRelayPayments, aggProviderAndConsumerRelayPaymentsSync } from './indexer/agregators/aggProviderAndConsumerRelayPayments';
 import { SaveTokenSupplyToDB } from './indexer/supply/syncSupply';
 
-let blockchainEntitiesProviders: Map<string, JsinfoSchema.Provider> = new Map()
-let blockchainEntitiesSpecs: Map<string, JsinfoSchema.Spec> = new Map()
-let blockchainEntitiesStakes: Map<string, JsinfoSchema.ProviderStake[]> = new Map()
+let static_blockchainEntitiesProviders: Map<string, JsinfoSchema.Provider> = new Map()
+let static_blockchainEntitiesSpecs: Map<string, JsinfoSchema.Spec> = new Map()
+let static_blockchainEntitiesStakes: Map<string, JsinfoSchema.InsertProviderStake[]> = new Map()
 
 const globakWorkList: number[] = []
 
@@ -153,7 +153,7 @@ const doBatch = async (
                 }
 
                 let block: null | LavaBlock = null;
-                block = await GetOneLavaBlock(height, client, clientTm, blockchainEntitiesProviders, blockchainEntitiesSpecs, blockchainEntitiesStakes)
+                block = await GetOneLavaBlock(height, client, clientTm, static_blockchainEntitiesProviders, static_blockchainEntitiesSpecs, static_blockchainEntitiesStakes)
                 if (block != null) {
                     await InsertBlock(block, db)
                     logger.info(`doBatch: Inserted block ${height} into DB`);
@@ -232,9 +232,9 @@ const syncBlockchainEntitiesInDb = async (db: PostgresJsDatabase, rpcConnection:
         rpcConnection.lavajsClient,
         rpcConnection.height,
         false,
-        blockchainEntitiesProviders,
-        blockchainEntitiesSpecs,
-        blockchainEntitiesStakes
+        static_blockchainEntitiesProviders,
+        static_blockchainEntitiesSpecs,
+        static_blockchainEntitiesStakes
     );
     logger.info('Blockchain entities synced in db.');
 }
@@ -323,9 +323,9 @@ const fillUp = async (db: PostgresJsDatabase, rpcConnection: RpcConnection) => {
                     rpcConnection.lavajsClient,
                     rpcConnection.height,
                     true,
-                    blockchainEntitiesProviders,
-                    blockchainEntitiesSpecs,
-                    blockchainEntitiesStakes
+                    static_blockchainEntitiesProviders,
+                    static_blockchainEntitiesSpecs,
+                    static_blockchainEntitiesStakes
                 );
                 logger.info('fillUp: Successfully synced blockchain entities');
             } catch (e) {

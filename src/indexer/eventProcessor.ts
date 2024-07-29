@@ -56,7 +56,7 @@ export const ProcessOneEvent = (
     txHash: string | null,
     blockchainEntitiesProviders: Map<string, JsinfoSchema.Provider>,
     blockchainEntitiesSpecs: Map<string, JsinfoSchema.Spec>,
-    blockchainEntitiesStakes: Map<string, JsinfoSchema.ProviderStake[]>,
+    blockchainEntitiesStakes: Map<string, JsinfoSchema.InsertProviderStake[]>,
 ) => {
 
     if (height > Number.MAX_SAFE_INTEGER) {

@@ -14,7 +14,7 @@ const EVENT_DEBUG_SHOULD_PRINT_EVENT = (eventType: string) => {
 
 export const processEvent = (evt: any, height: number, lavaBlock: LavaBlock, source: string,
     blockchainEntitiesProviders: Map<string, JsinfoSchema.Provider>, blockchainEntitiesSpecs: Map<string, JsinfoSchema.Spec>,
-    blockchainEntitiesStakes: Map<string, JsinfoSchema.ProviderStake[]>) => {
+    blockchainEntitiesStakes: Map<string, JsinfoSchema.InsertProviderStake[]>) => {
     if (EVENT_DEBUG_SHOULD_PRINT_EVENT(evt.type)) {
         logger.info('EventDebug event', height, 'Source:', source, "type:", evt.type, "\n", evt);
     }
@@ -32,7 +32,7 @@ export const EventDebugProcessBlock = async (startHeight: number, rpcConnection:
 
         let blockchainEntitiesProviders: Map<string, JsinfoSchema.Provider> = new Map();
         let blockchainEntitiesSpecs: Map<string, JsinfoSchema.Spec> = new Map();
-        let blockchainEntitiesStakes: Map<string, JsinfoSchema.ProviderStake[]> = new Map();
+        let blockchainEntitiesStakes: Map<string, JsinfoSchema.InsertProviderStake[]> = new Map();
 
         const lavaBlock: LavaBlock = {
             height: height,

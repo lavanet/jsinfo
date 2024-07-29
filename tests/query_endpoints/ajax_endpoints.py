@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import os
 import sys
 import requests
 
@@ -56,12 +57,16 @@ def check_keys(url, *expected_keys):
     for parent_key, child_keys in parsed_keys.items():
         check_current_level_keys(json_data, parent_key, child_keys)
 
-# Example usage
-check_keys("http://localhost:8081/providers", "providers:[address,moniker]")
-check_keys("http://localhost:8081/specs", "specs:[id]")
-check_keys("http://localhost:8081/consumers", "consumers:[address]")
-check_keys("http://localhost:8081/cacheLinks", "urls")
-check_keys("http://localhost:8081/autoCompleteLinksHandler", "data:[id,name,type,link,moniker]")
+
+# Get SERVER_ADDRESS from environment variable, default to localhost:8081 if not set
+server_address = os.getenv('SERVER_ADDRESS', 'localhost:8081')
+
+# Example usage with dynamic server address
+check_keys(f"{server_address}/providers", "providers:[address,moniker]")
+check_keys(f"{server_address}/specs", "specs:[id]")
+check_keys(f"{server_address}/consumers", "consumers:[address]")
+check_keys(f"{server_address}/cacheLinks", "urls")
+check_keys(f"{server_address}/autoCompleteLinksHandler", "data:[id,name,type,link,moniker]")
 
 if any_missing:
     sys.exit(1)

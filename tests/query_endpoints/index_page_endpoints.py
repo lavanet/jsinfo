@@ -1,10 +1,14 @@
+import os
 import requests
 import unittest
+
+# Get SERVER_ADDRESS from environment variable, default to localhost:8081 if not set
+server_address = os.getenv('SERVER_ADDRESS', 'localhost:8081')
 
 class TestIndexChartsEndpoint(unittest.TestCase):
     def test_index_charts_structure(self):
         """Test the structure of the response from the indexCharts endpoint."""
-        url = "http://localhost:8081/indexCharts"
+        url = server_address + "/indexCharts"
         response = requests.get(url)
         self.assertEqual(response.status_code, 200, "Expected status code 200")
 
@@ -30,7 +34,7 @@ class TestIndexChartsEndpoint(unittest.TestCase):
 
     def test_index_structure(self):
         """Test the structure of the response from the index endpoint."""
-        url = "http://localhost:8081/index"
+        url = server_address + "/index"
         response = requests.get(url)
         self.assertEqual(response.status_code, 200, "Expected status code 200")
 

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import os
 import sys
 import requests
 
@@ -56,8 +57,10 @@ def check_keys(url, *expected_keys):
     for parent_key, child_keys in parsed_keys.items():
         check_current_level_keys(json_data, parent_key, child_keys)
 
-# Example usage
-check_keys("http://localhost:8081/indexProviders", "data:[provider,moniker,monikerfull,rewardSum,totalServices,totalStake]")
+# Get SERVER_ADDRESS from environment variable, default to localhost:8081 if not set
+server_address = os.getenv('SERVER_ADDRESS', 'localhost:8081')
+
+check_keys(server_address + "/indexProviders", "data:[provider,moniker,monikerfull,rewardSum,totalServices,totalStake]")
 
 def check_csv_first_line(url, expected_line):
     """Check if the first line of the CSV file matches the expected line."""
@@ -77,8 +80,7 @@ def check_csv_first_line(url, expected_line):
         print(f"Found: {first_line}")
         any_missing = True
 
-# Example usage
-check_csv_first_line("http://localhost:8081/indexProvidersCsv", '"Moniker","Provider Address","Total Rewards","Total Services","Total Stake"')
+check_csv_first_line(server_address + "/indexProvidersCsv", '"Moniker","Provider Address","Total Rewards","Total Services","Total Stake"')
 
 if any_missing:
     sys.exit(1)

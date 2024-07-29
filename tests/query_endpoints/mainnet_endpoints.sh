@@ -4,10 +4,13 @@
 # http://jsinfo.lava-cybertron.xyz/supply/total
 # https://jsinfo.lava-cybertron.xyz/listProviders
 
-# Endpoint URLs
-PROVIDERS_URL="http://localhost:8081/listProviders"
-TOTAL_SUPPLY_URL="http://localhost:8081/supply/total"
-CIRCULATING_SUPPLY_URL="http://localhost:8081/supply/circulating"
+# Check if SERVER_ADDRESS environment variable is set, default to localhost:8081 if not
+SERVER_ADDRESS="${SERVER_ADDRESS:-http://localhost:8081}"
+
+# Endpoint URLs with dynamic server address
+PROVIDERS_URL="${SERVER_ADDRESS}/listProviders"
+TOTAL_SUPPLY_URL="${SERVER_ADDRESS}/supply/total"
+CIRCULATING_SUPPLY_URL="${SERVER_ADDRESS}/supply/circulating"
 
 # Initialize a flag to track test success
 test_success=0

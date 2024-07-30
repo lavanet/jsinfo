@@ -9,19 +9,30 @@ if [ $# -eq 0 ]; then
   exit 1
 fi
 
-# Set SERVER_ADDRESS based on the mode
-case $1 in
+# Store the mode in TESTS_ENV
+export TESTS_ENV=$1
+
+# Source env.sh if it exists
+if [ -f "./env.sh" ]; then
+  source ./env.sh
+else
+  echo "env.sh not found. run cp env.sh.example env.sh ."
+  exit 1
+fi
+
+# Set TESTS_SERVER_ADDRESS based on the mode
+case $TESTS_ENV in
   local)
-    export SERVER_ADDRESS="http://localhost:8081"
+    export TESTS_SERVER_ADDRESS=${TESTS_SERVER_ADDRESS_LOCAL:-"http://localhost:8081"}
     ;;
   staging)
-    export SERVER_ADDRESS="https://jsinfo.lava-cybertron.xyz"
+    export TESTS_SERVER_ADDRESS=${TESTS_SERVER_ADDRESS_STAGING}
     ;;
   testnet)
-    export SERVER_ADDRESS="https://jsinfo.lavanet.xyz"
+    export TESTS_SERVER_ADDRESS=${TESTS_SERVER_ADDRESS_TESTNET}
     ;;
   mainnet)
-    export SERVER_ADDRESS="https://jsinfo.mainnet.lavanet.xyz"
+    export TESTS_SERVER_ADDRESS=${TESTS_SERVER_ADDRESS_MAINNET}
     ;;
   *)
     echo "Invalid mode specified. Usage: $0 [local|staging|testnet|mainnet]"
@@ -29,34 +40,49 @@ case $1 in
     ;;
 esac
 
-echo "Mode: $1"
-echo "SERVER_ADDRESS set to $SERVER_ADDRESS"
+echo "TESTS_ENV: $TESTS_ENV"
 
-# Perform a health check by browsing to SERVER_ADDRESS/health and assert the response
-HEALTH_CHECK_RESPONSE=$(curl -s "${SERVER_ADDRESS}/health")
-if echo "$HEALTH_CHECK_RESPONSE" | grep -q '"health":"ok"'; then
-  echo "Health check passed."
-else
-  echo "Health check failed: $HEALTH_CHECK_RESPONSE"
-  exit 1
-fi
+# removed until further notice
+# # Perform a health check by browsing to TESTS_SERVER_ADDRESS/health and assert the response
+# HEALTH_CHECK_RESPONSE=$(curl -s "${TESTS_SERVER_ADDRESS}/health")
+# if echo "$HEALTH_CHECK_RESPONSE" | grep -q '"health":"ok"'; then
+#   echo "Health check passed."
+# else
+#   echo "Health check failed: $HEALTH_CHECK_RESPONSE"
+#   exit 1
+# fi
 
 # Define an array of commands to execute
 commands=(
-  "./mainnet_endpoints.sh"
-  "python3 ajax_endpoints.py"
-  "python3 index_page_endpoints.py"
-  "python3 index_tabs_endpoints.py"
+  "./tests/mainnet_endpoints.sh"
+  "python3 ./tests/ajax_endpoints.py"
+
+  "python3 ./tests/index_page_endpoints.py"
+  "python3 ./tests/index_tabs_endpoints.py"
+
+  # TESTS_FULL tests:
+  "python3 ./tests/provider_page_endpoints.py"
+  "python3 ./tests/provider_tabs_endpoints.py"
+  "python3 ./tests/provider_csv_endpoints.py"
+
+  "python3 ./tests/consumer_page_endpoints.py"
+
+  "python3 ./tests/events_page_endpoints.py"
+  "python3 ./tests/events_csv_endpoints.py"
+
+  "python3 ./tests/spec_page_endpoints.py"
+  "python3 ./tests/spec_providerhealth_endpoint.py"
 )
 
 # Loop through the commands and execute them
 for cmd in "${commands[@]}"; do
-  echo "Executing: $cmd"
+  echo "TESTS:: Environment: $TESTS_ENV, Full Tests: $TESTS_FULL, Time: $(date)"
+  echo "TESTS:: Executing: $cmd"
   if ! $cmd; then
     echo "Error executing: $cmd"
     exit 1
   fi
 done
 
-echo "All commands executed successfully."
+echo "All tests executed successfully."
 

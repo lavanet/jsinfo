@@ -14,16 +14,16 @@ def fmt_unhealthy_error(msg):
         return "provider query timed out"
     return msg
 
-def parse_and_save_provider_health_status_from_request(data: Dict[str, Any], guid: str) -> List[Dict[str, Any]]:
+def save_provider_health_status_from_request(data: Dict[str, Any] | None, guid: str):
     parsed_data: List[Dict[str, Any]] = []
 
     if data is None:
-        log("parse_and_save_provider_health_status_from_request", "error - data is None")
-        return []
+        error("save_provider_health_status_from_request", "error - data is None")
+        return
     
     if 'providerData' not in data and 'unhealthyProviders' not in data and not 'latestBlocks' in data:
-        log("parse_and_save_provider_health_status_from_request", "bad data:: Keys 'providerData' or 'unhealthyProviders' not found in data: " + safe_json_dump(data))
-        return None
+        log("save_provider_health_status_from_request", "bad data:: Keys 'providerData' or 'unhealthyProviders' not found in data: " + safe_json_dump(data))
+        return
     
     processed_ids = set()
 
@@ -48,7 +48,6 @@ def parse_and_save_provider_health_status_from_request(data: Dict[str, Any], gui
                 'others': data['latestBlocks'][spec],
                 'latency': value['latency'],
             }
-
             db_add_provider_health_data(guid, provider_id, spec, apiinterface, "healthy", health_data)
 
     for key, value in data.get('unhealthyProviders', {}).items():
@@ -87,7 +86,7 @@ class RequestHandler(BaseHTTPRequestHandler):
                 log("http_server_post", "Missing 'resultsGUID' in the received data")
                 print("Missing 'resultsGUID' in the received data")
             else:
-                parse_and_save_provider_health_status_from_request(data, guid)
+                save_provider_health_status_from_request(data, guid)
                 print(f"Processing data for GUID: {guid}")
 
         # Send a 200 OK response

@@ -1,16 +1,12 @@
 #!/bin/bash
 
-# http://jsinfo.lava-cybertron.xyz/supply/circulating
-# http://jsinfo.lava-cybertron.xyz/supply/total
-# https://jsinfo.lava-cybertron.xyz/listProviders
-
-# Check if SERVER_ADDRESS environment variable is set, default to localhost:8081 if not
-SERVER_ADDRESS="${SERVER_ADDRESS:-http://localhost:8081}"
+# Check if TESTS_SERVER_ADDRESS environment variable is set, default to localhost:8081 if not
+TESTS_SERVER_ADDRESS="${TESTS_SERVER_ADDRESS:-http://localhost:8081}"
 
 # Endpoint URLs with dynamic server address
-PROVIDERS_URL="${SERVER_ADDRESS}/listProviders"
-TOTAL_SUPPLY_URL="${SERVER_ADDRESS}/supply/total"
-CIRCULATING_SUPPLY_URL="${SERVER_ADDRESS}/supply/circulating"
+PROVIDERS_URL="${TESTS_SERVER_ADDRESS}/listProviders"
+TOTAL_SUPPLY_URL="${TESTS_SERVER_ADDRESS}/supply/total"
+CIRCULATING_SUPPLY_URL="${TESTS_SERVER_ADDRESS}/supply/circulating"
 
 # Initialize a flag to track test success
 test_success=0

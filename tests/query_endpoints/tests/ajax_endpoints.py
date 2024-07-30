@@ -1,7 +1,12 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
 import os
 import sys
 import requests
+
+# Get TESTS_SERVER_ADDRESS from environment variable, default to localhost:8081 if not set
+server_address = os.getenv('TESTS_SERVER_ADDRESS', 'http://localhost:8081')
 
 any_missing = False
 
@@ -56,10 +61,6 @@ def check_keys(url, *expected_keys):
 
     for parent_key, child_keys in parsed_keys.items():
         check_current_level_keys(json_data, parent_key, child_keys)
-
-
-# Get SERVER_ADDRESS from environment variable, default to localhost:8081 if not set
-server_address = os.getenv('SERVER_ADDRESS', 'localhost:8081')
 
 # Example usage with dynamic server address
 check_keys(f"{server_address}/providers", "providers:[address,moniker]")

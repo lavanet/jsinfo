@@ -1,9 +1,5 @@
 // src/query/handlers/specProviderHealthHandler.ts
 
-// curl http://localhost:8081/specProviderHealth/lava@1vuavgpa0cpufrq60zdggm8rusxann8ys76taf4
-// curl http://localhost:8081/specProviderHealth/lava@1uhwudw7vzqtnffu2hf5yhv4n8trj79ezl66z99
-// curl http://localhost:8081/specProviderHealth/lava@1jv9274ary4d87fagglandk0cstel05nktgx762
-
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryGetJsinfoReadDbInstance } from '../queryDb';
 import { eq, and, gte } from "drizzle-orm";

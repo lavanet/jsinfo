@@ -1,9 +1,12 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
 import os
 import requests
 import unittest
 
-# Get SERVER_ADDRESS from environment variable, default to localhost:8081 if not set
-server_address = os.getenv('SERVER_ADDRESS', 'localhost:8081')
+# Get TESTS_SERVER_ADDRESS from environment variable, default to localhost:8081 if not set
+server_address = os.getenv('TESTS_SERVER_ADDRESS', 'localhost:8081')
 
 class TestIndexChartsEndpoint(unittest.TestCase):
     def test_index_charts_structure(self):

@@ -110,17 +110,12 @@ def db_worker_work_accountinfo(data):
     """, (data['provider_id'],))
     if ret is False:
         return
+
     result = db_cur_fetchone()
     if result is not None:
-        existing_data = result[0]
+        existing_data = result[0]["data"]
         new_data = data['data']
-        if replace_for_compare(existing_data) == replace_for_compare(new_data):
-            # If data is the same, update the timestamp of the existing record
-            db_execute_operation("""
-                UPDATE provider_accountinfo SET timestamp = %s WHERE provider = %s
-            """, (data['timestamp'], data['provider_id']))
-            log("db_worker_work_accountinfo", "Data is the same - timestamp updated for existing record")
-        else:
+        if replace_for_compare(existing_data) != replace_for_compare(new_data):
             # If data is different, insert a new record
             db_execute_operation("""
                 INSERT INTO provider_accountinfo (provider, timestamp, data)

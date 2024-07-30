@@ -70,7 +70,7 @@ query_test_lavap_prodiver_error_parsing:
 	bun run ./src/query/utils/lavapProvidersErrorParser.test.ts 
 
 run_lavapProviderHealth:
-	cd lavapProviderHealth && python run.py
+	cd lavapProviderHealth && python3 run.py
 
 scripts_local_startQueryProviderDualStackingDelegatorRewardsContainer:
 	QUERY_PROVIDER_DUAL_STACKING_DELEGATOR_REWARDS_CONTAINER_DEBUG=true bash scripts/startQueryProviderDualStackingDelegatorRewardsContainer.sh

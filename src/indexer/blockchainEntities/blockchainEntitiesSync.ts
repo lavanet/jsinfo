@@ -2,11 +2,12 @@
 
 import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { ne } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import { DoInChunks } from "../../utils";
 import { JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE } from '../indexerConsts';
 import { LavaClient } from '../types';
 import { UpdateStakeInformation } from './blockchainEntitiesStakeUpdater';
+import { PgColumn } from 'drizzle-orm/pg-core';
 
 // async function getLatestPlans(client: LavaClient, dbPlans: Map<string, JsinfoSchema.Plan>) {
 //     try {
@@ -97,15 +98,27 @@ export async function SyncBlockchainEntities(
             })
         }))
 
+        let xx = await tx.select().from(JsinfoSchema.providerStakes)
+
+        console.log("dasd", xx)
+
         // Update old stakes
         console.log("SyncBlockchainEntities: Updating old stakes to inactive status");
         await tx.update(JsinfoSchema.providerStakes)
             .set({
                 status: JsinfoSchema.LavaProviderStakeStatus.Inactive
             })
-            .where(ne(JsinfoSchema.providerStakes.blockId, height))
+            .where(
+                and(
+                    eq(JsinfoSchema.providerStakes.status, JsinfoSchema.LavaProviderStakeStatus.Active),
+                    ne(JsinfoSchema.providerStakes.blockId, height)
+                ));
 
         const endTime = Date.now();
         console.log("SyncBlockchainEntities: SyncBlockchainEntities completed in", (endTime - startTime) / 1000, "seconds with stakes");
     })
+}
+
+function neq(status: PgColumn<{ name: "status"; tableName: "provider_stakes"; dataType: "number"; columnType: "PgInteger"; data: number; driverParam: string | number; notNull: false; hasDefault: false; enumValues: undefined; baseColumn: never; }, {}, {}>, Inactive: JsinfoSchema.LavaProviderStakeStatus): import("drizzle-orm").SQLWrapper | undefined {
+    throw new Error('Function not implemented.');
 }

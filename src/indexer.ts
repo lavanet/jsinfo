@@ -196,8 +196,6 @@ const indexer = async (): Promise<void> => {
 
     const db = await migrateAndFetchDb();
     logger.info('Done migrateAndFetchDb');
-    await syncBlockchainEntitiesInDb(db, rpcConnection);
-    logger.info('Done syncBlockchainEntitiesInDb');
     await aggProviderAndConsumerRelayPaymentsSync(db);
     logger.info('Done aggProviderAndConsumerRelayPaymentsSync');
     await SaveTokenSupplyToDB(db, rpcConnection.lavajsClient);
@@ -225,18 +223,22 @@ const migrateAndFetchDb = async (): Promise<PostgresJsDatabase> => {
     return db;
 }
 
-const syncBlockchainEntitiesInDb = async (db: PostgresJsDatabase, rpcConnection: RpcConnection) => {
-    logger.info('syncing blockchain entities in db...');
-    await SyncBlockchainEntities(
-        db,
-        rpcConnection.lavajsClient,
-        rpcConnection.height,
-        static_blockchainEntitiesProviders,
-        static_blockchainEntitiesSpecs,
-        static_blockchainEntitiesStakes
-    );
-    logger.info('Blockchain entities synced in db.');
-}
+// const syncBlockchainEntitiesInDb = async (db: PostgresJsDatabase, rpcConnection: RpcConnection) => {
+//     try {
+//         logger.info('syncBlockchainEntitiesInDb:: syncing blockchain entities in db...');
+//         await SyncBlockchainEntities(
+//             db,
+//             rpcConnection.lavajsClient,
+//             rpcConnection.height,
+//             static_blockchainEntitiesProviders,
+//             static_blockchainEntitiesSpecs,
+//             static_blockchainEntitiesStakes
+//         );
+//         logger.info('syncBlockchainEntitiesInDb:: Blockchain entities synced in db.');
+//     } catch (error) {
+//         logger.error(`syncBlockchainEntitiesInDb:: Failed to sync blockchain entities in db: ${error}`);
+//     }
+// }
 
 const fillUpBackoffRetry = async (db: PostgresJsDatabase, rpcConnection: RpcConnection) => {
     logger.info('fillUpBackoffRetry:: Filling up blocks...');
@@ -307,32 +309,50 @@ const fillUp = async (db: PostgresJsDatabase, rpcConnection: RpcConnection) => {
         }
     }
 
+    // await doBatch(db, rpcConnection.client, rpcConnection.clientTm, dbHeight, latestHeight);
+
+    // if (latestHeight > dbHeight) {
+    logger.info(`fillUp: Starting batch process for DB height ${dbHeight} and blockchain height ${latestHeight}`);
     await doBatch(db, rpcConnection.client, rpcConnection.clientTm, dbHeight, latestHeight);
+    logger.info('fillUp: Batch process completed');
+    // }
 
-    if (latestHeight > dbHeight) {
-        logger.info(`fillUp: Starting batch process for DB height ${dbHeight} and blockchain height ${latestHeight}`);
-        await doBatch(db, rpcConnection.client, rpcConnection.clientTm, dbHeight, latestHeight);
-        logger.info('fillUp: Batch process completed');
-
-        if (latestHeight - dbHeight == 1) {
-            logger.info('fillUp: Attempting to sync blockchain entities');
-            try {
-                await SyncBlockchainEntities(
-                    db,
-                    rpcConnection.lavajsClient,
-                    rpcConnection.height,
-                    static_blockchainEntitiesProviders,
-                    static_blockchainEntitiesSpecs,
-                    static_blockchainEntitiesStakes
-                );
-                logger.info('fillUp: Successfully synced blockchain entities');
-            } catch (e) {
-                logger.info(`fillUp: Error in SyncBlockchainEntities: ${e}`);
-            }
-            aggProviderAndConsumerRelayPayments(db);
-            logger.info('fillUp: Aggregated provider and consumer relay payments');
-        }
+    let latestDbBlock2;
+    try {
+        latestDbBlock2 = await db.select().from(JsinfoSchema.blocks).orderBy(desc(JsinfoSchema.blocks.height)).limit(1);
+        logger.info('fillUp: Successfully retrieved latest DB block');
+    } catch (e) {
+        logger.error(`fillUp: Error in getting latestDbBlock: ${e}`);
+        logger.error('fillUp: Restarting DB connection');
+        db = await GetJsinfoDb();
+        fillUpBackoffRetryWTimeout(db, rpcConnection);
+        return;
     }
+
+    if (latestHeight != latestDbBlock2[0].height) {
+        logger.error(`fillUp: latestHeight ${latestHeight} != latestDbBlock2[0].height ${latestDbBlock2[0].height}`);
+        db = await GetJsinfoDb();
+        fillUpBackoffRetryWTimeout(db, rpcConnection);
+        return;
+    }
+
+    logger.info('fillUp: Attempting to sync blockchain entities');
+    try {
+        await SyncBlockchainEntities(
+            db,
+            rpcConnection.lavajsClient,
+            latestHeight,
+            static_blockchainEntitiesProviders,
+            static_blockchainEntitiesSpecs,
+            static_blockchainEntitiesStakes
+        );
+        logger.info('fillUp: Successfully synced blockchain entities');
+    } catch (e) {
+        logger.info(`fillUp: Error in SyncBlockchainEntities: ${e}`);
+    }
+
+    aggProviderAndConsumerRelayPayments(db);
+    logger.info('fillUp: Aggregated provider and consumer relay payments');
 
     await SaveTokenSupplyToDB(db, rpcConnection.lavajsClient);
 

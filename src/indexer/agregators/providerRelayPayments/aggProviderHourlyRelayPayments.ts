@@ -106,7 +106,7 @@ export async function aggProviderHourlyRelayPayments(db: PostgresJsDatabase) {
         // console.log("Checking for latestHourData - r.datehour:", r.datehour, "rTime:", rTime, "startTime:", startTime);
         return rTime == startTime!.getTime();
     });
-    console.log("latestHourData:", latestHourData);
+    // console.log("latestHourData:", latestHourData);
 
     const remainingData = aggResults.filter(r => {
         const rTime = (new Date(r.datehour)).getTime();

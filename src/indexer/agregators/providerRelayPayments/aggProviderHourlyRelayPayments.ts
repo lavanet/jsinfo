@@ -83,49 +83,76 @@ export async function aggProviderHourlyRelayPayments(db: PostgresJsDatabase) {
         return;
     }
 
+    const uniqueIdentifiers = new Set<string>();
+
+    for (const result of aggResults) {
+        const identifier = `${result.provider}-${result.datehour}-${result.specId}`;
+
+        if (uniqueIdentifiers.has(identifier)) {
+            throw new Error("Non-unique item found in aggResults by provider, datehour, and specId.");
+        } else {
+            uniqueIdentifiers.add(identifier);
+        }
+    }
+
     //
     // Update first the latest aggregate hour rows inserting
     // Note: the latest aggregate hour rows are partial (until updated post their hour)
-    const latestHourData = aggResults.filter(r =>
-        (new Date(r.datehour)).getTime() == startTime!.getTime()
-    );
-    const remainingData = aggResults.filter(r =>
-        (new Date(r.datehour)).getTime() > startTime!.getTime()
-    );
+    // console.log("aggResults:", aggResults);
+    // console.log("startTime:", startTime);
+
+    const latestHourData = aggResults.filter(r => {
+        const rTime = (new Date(r.datehour)).getTime();
+        // console.log("Checking for latestHourData - r.datehour:", r.datehour, "rTime:", rTime, "startTime:", startTime);
+        return rTime == startTime!.getTime();
+    });
+    console.log("latestHourData:", latestHourData);
+
+    const remainingData = aggResults.filter(r => {
+        const rTime = (new Date(r.datehour)).getTime();
+        // console.log("Checking for remainingData - r.datehour:", r.datehour, "rTime:", rTime, "startTime:", startTime);
+        return rTime > startTime!.getTime();
+    });
+
+    // console.log("remainingData:", remainingData);
+
     await db.transaction(async (tx) => {
         for (const row of latestHourData) {
-            await tx.insert(JsinfoProviderAgrSchema.aggHourlyRelayPayments)
-                .values(row as any)
-                .onConflictDoUpdate(
-                    {
-                        target: [
-                            JsinfoProviderAgrSchema.aggHourlyRelayPayments.datehour,
-                            JsinfoProviderAgrSchema.aggHourlyRelayPayments.provider,
-                            JsinfoProviderAgrSchema.aggHourlyRelayPayments.specId,
-                        ],
-                        set: {
-                            cuSum: row.cuSum,
-                            relaySum: row.relaySum,
-                            rewardSum: row.rewardSum,
-                            qosSyncAvg: row.qosSyncAvg,
-                            qosAvailabilityAvg: row.qosAvailabilityAvg,
-                            qosLatencyAvg: row.qosLatencyAvg,
-                            qosSyncExcAvg: row.qosSyncExcAvg,
-                            qosAvailabilityExcAvg: row.qosAvailabilityExcAvg,
-                            qosLatencyExcAvg: row.qosLatencyExcAvg
-                        } as any
-                    }
-                )
+            try {
+                await tx.insert(JsinfoProviderAgrSchema.aggHourlyRelayPayments)
+                    .values(row as any)
+                    .onConflictDoUpdate(
+                        {
+                            target: [
+                                JsinfoProviderAgrSchema.aggHourlyRelayPayments.datehour,
+                                JsinfoProviderAgrSchema.aggHourlyRelayPayments.provider,
+                                JsinfoProviderAgrSchema.aggHourlyRelayPayments.specId,
+                            ],
+                            set: {
+                                cuSum: row.cuSum,
+                                relaySum: row.relaySum,
+                                rewardSum: row.rewardSum,
+                                qosSyncAvg: row.qosSyncAvg,
+                                qosAvailabilityAvg: row.qosAvailabilityAvg,
+                                qosLatencyAvg: row.qosLatencyAvg,
+                                qosSyncExcAvg: row.qosSyncExcAvg,
+                                qosAvailabilityExcAvg: row.qosAvailabilityExcAvg,
+                                qosLatencyExcAvg: row.qosLatencyExcAvg
+                            } as any
+                        }
+                    );
+            } catch (error) {
+                console.error('Error inserting row:', error);
+                remainingData.push(row);
+            }
         }
 
-        //
-        // Insert new rows
         if (remainingData.length === 0) {
             return;
         }
         await DoInChunks(250, remainingData, async (arr: any) => {
             await tx.insert(JsinfoProviderAgrSchema.aggHourlyRelayPayments)
-                .values(arr)
+                .values(arr).onConflictDoNothing();
         })
     })
 }

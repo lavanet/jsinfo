@@ -151,6 +151,14 @@ def is_health_status_better(old_status: str, new_status: str, old_data: str, new
     return False
 
 def replace_for_compare(data):
+    # Convert data types to a uniform format before comparison
+    if isinstance(data, (dict, list)):
+        data = json.dumps(data, sort_keys=True)
+    elif data is None:
+        data = 'null'
+    elif data == 0:
+        data = '0'
+    
     return str(data).replace(" ", "").replace("\t", "").replace("\n", "").lower()
 
 def convert_dict_to_dbjson(data):

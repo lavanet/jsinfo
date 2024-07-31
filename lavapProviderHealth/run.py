@@ -5,7 +5,7 @@ from env import BATCH_AMOUNT, CD_ON_START, GEO_LOCATION
 from accountinfo import accountinfo_process_batch, accountinfo_process_lavaid, get_provider_addresses_from_jsinfoapi
 from dbworker import start_db_worker
 from subscriptionlist import start_subscriptionlist_index
-from utils import log, exit_script, is_valid_lava_id
+from utils import log, exit_script, is_valid_lavaid
 from server import start_http_server
 
 def start_threads():
@@ -58,7 +58,7 @@ if __name__ == "__main__":
         if sys.argv[1] in ("-h", "--help"):
             print_help()
         lava_id = sys.argv[1]
-        if not is_valid_lava_id(lava_id):
+        if not is_valid_lavaid(lava_id):
             print("Error: Invalid lava_id format.")
             print_help()
     else:

@@ -7,16 +7,7 @@ POSTGRES_URL = os.environ.get('JSINFO_HEALTHPROBEJOB_POSTGRESQL_URL', 'postgres:
 PROVIDERS_URL: str = get_env_var('JSINFO_HEALTHPROBEJOB_PROVIDERS_URL', "https://jsinfo.lavanet.xyz/providers")
 NODE_URL: str = get_env_var('JSINFO_HEALTHPROBEJOB_NODE_URL', "https://public-rpc.lavanet.xyz:443")
 
-HPLAWNS_FILENAME: str = get_env_var('JSINFO_HEALTHPROBEJOB_HPLAWNS_FILENAME', os.path.expanduser("~/tmp/health_probe_lava_addresses_with_no_specs.json"))
-HPLAWNS_FILENAME = os.path.abspath(HPLAWNS_FILENAME)
-directory = os.path.dirname(HPLAWNS_FILENAME)
-if not os.path.exists(directory):
-    os.makedirs(directory)
-
-AIPB_FILENAME: str = get_env_var('JSINFO_HEALTHPROBEJOB_AIPB_FILENAME', os.path.expanduser("~/tmp/account_info_process_batch_state___PH_BATCHID_PH__.json"))
-AIPB_FILENAME = os.path.abspath(AIPB_FILENAME)
-
-HPLAWNS_QUERY_INTERVAL = relativedelta(days=int(get_env_var('JSINFO_HEALTHPROBEJOB_HPLAWNS_QUERY_INTERVAL', 1)))
+EMPTY_ACCOUNTINFO_CHECK_INTERVAL = relativedelta(days=int(get_env_var('JSINFO_HEALTHPROBEJOB_EMPTY_ACCOUNTINFO_CHECK_INTERVAL', 1)))
 DEBUG_PRINT_ACCOUNT_INFO_STDOUT: bool = get_env_var('JSINFO_HEALTHPROBEJOB_DEBUG_PRINT_ACCOUNT_INFO_STDOUT', 'False') == 'True'
 HTTP_SERVER_ADDRESS: tuple[str, int] = tuple(json.loads(get_env_var('JSINFO_HEALTHPROBEJOB_HTTP_SERVER_ADDRESS', json.dumps(('127.0.0.1', 6500)))))
 GEO_LOCATION: bool = get_env_var('JSINFO_HEALTHPROBEJOB_GEO_LOCATION', 'EU')
@@ -48,4 +39,28 @@ def update_guid() -> None:
         
 threading.Thread(target=update_guid).start()
 
-log('env', 'health_probe_lava_addresses_with_no_specs path is:\n' + HPLAWNS_FILENAME)
+def get_reddis_server():
+    env_var_value = get_env_var('JSINFO_HEALTHPROBEJOB_REDIS_URL', None)
+    if env_var_value:
+        log("get_reddis_server", "The JSINFO_HEALTHPROBEJOB_REDIS_URL came from env")
+        return env_var_value
+
+    env_var_value = get_env_var('JSINFO_QUERY_REDDIS_CACHE', None)
+    if env_var_value:
+        log("get_reddis_server", "The JSINFO_QUERY_REDDIS_CACHE came from env")
+        return env_var_value
+
+    env_var_value = parse_dotenv_for_var('JSINFO_HEALTHPROBEJOB_REDIS_URL')
+    if env_var_value:
+        log("get_reddis_server", "The JSINFO_HEALTHPROBEJOB_REDIS_URL env file was loaded from disk")
+        return env_var_value
+    
+    env_var_value = parse_dotenv_for_var('JSINFO_QUERY_REDDIS_CACHE')
+    if env_var_value:
+        log("get_reddis_server", "The JSINFO_QUERY_REDDIS_CACHE env file was loaded from disk")
+        return env_var_value
+
+    raise Exception("missing reddis url config JSINFO_HEALTHPROBEJOB_REDIS_URL or JSINFO_QUERY_REDDIS_CACHE in env or .env file")
+
+REDIS_SERVER = get_reddis_server()
+

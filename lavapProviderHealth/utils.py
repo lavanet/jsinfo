@@ -3,7 +3,9 @@ import re, os, json, threading
 from datetime import datetime
 from datetime import timezone
 from dateutil.parser import parse as parse_date
-from typing import Dict, Optional, Any
+from typing import Dict, Any
+from datetime import datetime, timezone, timedelta
+import time
 
 def get_env_var(name, default):
     value = os.environ.get(name, default)
@@ -23,72 +25,85 @@ def parse_dotenv_for_var(var_name):
             log("parse_dotenv_for_var", f".env not found in {current_dir}, trying {parent_dir}")
             dotenv_path = parent_dir / '.env'
 
-        if dotenv_path.exists():
-            log("parse_dotenv_for_var", f"Using .env from {dotenv_path}")
-            with open(dotenv_path, 'r') as file:
-                for line in file:
-                    if line.startswith(var_name):
-                        value = line.strip().split('=', 1)[1]
-                        log("parse_dotenv_for_var", f"Found {var_name} with value: {value}")
-                        return value
-            log("parse_dotenv_for_var", f"{var_name} not found in .env file")
-        else:
-            pass
-            # error("parse_dotenv_for_var", f".env file not found in both {current_dir} and {parent_dir}")
+        if not dotenv_path.exists():
+            return None
+        
+        log("parse_dotenv_for_var", f"Using .env from {dotenv_path}")
+        with open(dotenv_path, 'r') as file:
+            for line in file:
+                if line.startswith(var_name):
+                    value = line.strip().split('=', 1)[1]
+                    log("parse_dotenv_for_var", f"Found {var_name} with value: {value}")
+                    return value
+        log("parse_dotenv_for_var", f"{var_name} not found in .env file")
+
     except Exception as e:
-        # error("parse_dotenv_for_var", f"Error parsing .env file: {str(e)}")
         pass
     return None
 
+last_log_time = datetime.now(timezone.utc)
+
 def log(function: str, content: str) -> None:
+    global last_log_time
     timestamp: str = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
     trimmed_content = content[:2000] + ' ...' if len(content) > 2000 else content
-    print(f"[{timestamp}] PyProbe Log [{threading.current_thread().name}] :: {function} :: {trimmed_content}")
+    print(f"[{timestamp}] Log [{threading.current_thread().name}] :: {function} :: {trimmed_content}")
+    last_log_time = datetime.now(timezone.utc)
 
 def error(function: str, content: str) -> None:
+    global last_log_time
     timestamp: str = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
     trimmed_content = content[:2000] + ' ...' if len(content) > 2000 else content
-    print(f"!! [{timestamp}] PyProbe Error [{threading.current_thread().name}] :: {function} :: {trimmed_content}")
+    print(f"!! [{timestamp}] Error [{threading.current_thread().name}] :: {function} :: {trimmed_content}")
+    last_log_time = datetime.now(timezone.utc)
+
+def tick_checker():
+    global last_log_time
+    while True:
+        time.sleep(30)  # Check every 30 seconds
+        if datetime.now(timezone.utc) - last_log_time > timedelta(seconds=30):
+            print(f"[{datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')}] Tick")
+
+# Start the tick checker in a background thread
+tick_thread = threading.Thread(target=tick_checker, daemon=True)
+tick_thread.start()
 
 def exit_script() -> None:
     log("exit_script", "Exiting script")
     os._exit(1)
 
-def safe_json_load(obj: str, print_error: bool = True) -> Optional[Dict[str, Any]]:
-    try:
-        return json.loads(obj)
-    except Exception:
-        if print_error:
-            error("safe_json_dump", f"Failed to load json, Obj of type {type(obj)}:\n{obj}")
-        return None
-
-def safe_load_json_or_none(obj: str) -> Dict[str, Any] | None:
+def json_load_or_none(obj: str, print_error: bool = False) -> Dict[str, Any] | None:
     if str(obj).strip().lower() in ["{}","", "[]", "\"\"", "null", "none"]:
         return None
     try:
-        ret = safe_json_load(obj, print_error=False)
-        if str(ret).strip().lower() in ["{}","", "[]", "\"\"", "null", "none"]:
+        try:
+            ret = json.loads(obj)
+            if str(ret).strip().lower() in ["{}","", "[]", "\"\"", "null", "none"]:
+                return None
+        except Exception:
+            if print_error:
+                error("json_load_or_none", f"Failed to load json, Obj of type {type(obj)}:\n{obj}")
             return None
         return ret
     except Exception:
         return None
     
-def safe_json_dump(obj: Any, slim: bool = False) -> str:
+def json_to_str(obj: Any, slim: bool = False) -> str:
     try:
         if slim:
             return json.dumps(obj, separators=(',', ':'), default=str)
         else:
             return json.dumps(obj, indent=4, default=str)
     except Exception:
-        error("safe_json_dump","Json Parsing Error, Original Data:\n" + str(obj))
-        return {}
+        error("json_to_str","Json Parsing Error, Original Data:\n" + str(obj))
+        return ""
     
 def replace_archive(input_string: str) -> str:
     while '"archive","archive"' in input_string:
         input_string = input_string.replace('"archive","archive"', '"archive"')
     return input_string
 
-def is_valid_lava_id(lava_id):
+def is_valid_lavaid(lava_id):
     return re.match(r"^lava@[0-9a-zA-Z]+$", lava_id) is not None
 
 def parse_date_to_utc(dt):
@@ -117,8 +132,8 @@ def is_health_status_better(old_status: str, new_status: str, old_data: str, new
     elif new_rank < old_rank:
         return False
     
-    old_data_json = safe_load_json_or_none(old_data)
-    new_data_json = safe_load_json_or_none(new_data)
+    old_data_json = json_load_or_none(old_data)
+    new_data_json = json_load_or_none(new_data)
 
     if old_data_json == None and new_data_json == None:
         return False
@@ -165,7 +180,7 @@ def convert_dict_to_dbjson(data):
     if (type(data) == str and data.strip() == "") or str(data).strip() in ["{}","", "[]", "\"\"", "null", "None"]:
         return ""
     elif type(data) != str:
-        return safe_json_dump(data, slim=True)
+        return json_to_str(data, slim=True)
     return data
 
 def trim_and_limit_json_dict_size(json_dict):

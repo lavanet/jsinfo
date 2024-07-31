@@ -5,7 +5,7 @@ import subprocess
 import threading
 import time
 from typing import Dict, List, Optional, Any
-from utils import log, error, exit_script, log, safe_json_dump, safe_json_load
+from utils import log, error, exit_script, log, json_to_str, json_load_or_none
 from env import HTTP_SERVER_ADDRESS
 from dbworker import db_add_provider_health_data
 
@@ -22,7 +22,7 @@ def save_provider_health_status_from_request(data: Dict[str, Any] | None, guid: 
         return
     
     if 'providerData' not in data and 'unhealthyProviders' not in data and not 'latestBlocks' in data:
-        log("save_provider_health_status_from_request", "bad data:: Keys 'providerData' or 'unhealthyProviders' not found in data: " + safe_json_dump(data))
+        log("save_provider_health_status_from_request", "bad data:: Keys 'providerData' or 'unhealthyProviders' not found in data: " + json_to_str(data))
         return
     
     processed_ids = set()
@@ -78,7 +78,7 @@ class RequestHandler(BaseHTTPRequestHandler):
     def do_POST(self) -> None:
         content_length: int = int(self.headers['Content-Length'])
         post_data: bytes = self.rfile.read(content_length)
-        data: Optional[Dict[str, Any]] = safe_json_load(post_data.decode('utf-8'))
+        data: Optional[Dict[str, Any]] = json_load_or_none(post_data.decode('utf-8'))
 
         if data is not None:
             guid: Optional[str] = data.get('resultsGUID', "")

@@ -2,37 +2,20 @@ import json, threading, time, queue, traceback
 from datetime import datetime
 from datetime import timezone
 from typing import Any
-from utils import log, error, safe_json_dump, exit_script, is_health_status_better, replace_for_compare, convert_dict_to_dbjson
+from rediscache import rediscache
+from utils import log, error, json_to_str, exit_script, is_health_status_better, replace_for_compare, convert_dict_to_dbjson
 from env import GEO_LOCATION
 from database import db_cur_fetchone, db_execute_operation, db_execute_operation_nolog, db_reconnect
 
 # Global queue for provider health data
 db_task_queue = queue.Queue()
-db_queue_condition = threading.Condition()
+
+REDIS_KEY="worker-queue"
 
 def db_save_data_to_queue(data: Any) -> None:
-    data_to_send_to_server = safe_json_dump(data)
-    # log("db_save_data_to_queue", data_to_send_to_server)
-
-    for _ in range(20):
-        if db_queue_condition.acquire(timeout=30): 
-            try:
-                db_task_queue.put(data_to_send_to_server)
-                db_queue_condition.release()
-                return
-            except Exception as e:
-                db_queue_condition.release()
-                error("db_save_data_to_queue", "Error while adding data to queue: ", e)
-        else:
-            log("db_save_data_to_queue", "Waited for 30 seconds but condition was not notified")
-
-    log("db_save_data_to_queue", "Retry limit exceeded")
-    if db_task_queue.empty():
-        log("db_save_data_to_queue", "Queue is empty, exiting script")
-        exit_script()
+    rediscache.lpush_dict(REDIS_KEY, data)
 
 def db_add_provider_health_data(guid: str, provider_id: str, spec: str, apiinterface: str, status: str, data: Any) -> None:
-    global db_task_queue, db_queue_condition
     db_save_data_to_queue({
         'type': 'health',
         'guid': guid,
@@ -45,7 +28,6 @@ def db_add_provider_health_data(guid: str, provider_id: str, spec: str, apiinter
     })
 
 def db_add_accountinfo_data(provider_id: str, data: Any) -> None:
-    global db_task_queue, db_queue_condition
     db_save_data_to_queue({
         'type': 'accountinfo',
         'timestamp': datetime.now(timezone.utc).isoformat(),
@@ -54,27 +36,12 @@ def db_add_accountinfo_data(provider_id: str, data: Any) -> None:
     })
 
 def db_worker_work():
-    global db_queue_condition, db_task_queue
-
-    item = None
-    if db_queue_condition.acquire(timeout=30):
-        log("db_worker_work", "Acquired queue condition lock")
-        try:
-            try:
-                item = db_task_queue.get_nowait()
-            except queue.Empty:
-                log("db_worker_work", "Queue is empty")
-                pass
-        finally:
-            # log("db_worker_work", "Released queue condition lock")
-            db_queue_condition.release()
-
-    if item is None:
+    data = rediscache.brpop_dict(REDIS_KEY, timeout=60)
+    if data is None:
         log("db_worker_work", "No item found in queue - sleeping for 60 seconds")
         time.sleep(60)
         return
 
-    data = json.loads(item)
     if data["type"] == "health":
         db_worker_work_health(data)
     elif data["type"] == "accountinfo":
@@ -94,7 +61,7 @@ def db_worker_work():
 def db_worker_work_accountinfo(data):
     log("db_worker_work_accountinfo", f"Processing item: {data}")
 
-    if data['provider_id'] not in verified_providers:
+    if str(rediscache.get('verified_provider_' + data['provider_id'])).lower() != "valid":
         ret = db_execute_operation_nolog("""
             INSERT INTO providers (address, moniker)
             VALUES (%s, %s)
@@ -103,7 +70,7 @@ def db_worker_work_accountinfo(data):
         if ret is False:
             error("db_worker_work_provider_spec_moniker", "Error ensuring provider exists")
             return
-        verified_providers.add(data['provider_id'])
+        rediscache.set('verified_provider_' + data['provider_id'], "valid", ttl=86400)  # Set TTL for 1 day
     
     ret = db_execute_operation_nolog("""
         SELECT data, timestamp FROM provider_accountinfo WHERE provider = %s ORDER BY timestamp DESC LIMIT 1
@@ -130,9 +97,6 @@ def db_worker_work_accountinfo(data):
         """, (data['provider_id'], data['timestamp'], data['data']))
         log("db_worker_work_accountinfo", "New record inserted because no existing data was found")
 
-verified_specs = set()
-verified_providers = set()
-
 def db_worker_work_provider_spec_moniker(data):
     if not all(key in data for key in ['provider', 'moniker', 'spec']):
         log("db_worker_work_provider_spec_moniker", "Invalid data format")
@@ -140,21 +104,19 @@ def db_worker_work_provider_spec_moniker(data):
     log("db_worker_work_provider_spec_moniker", f"Processing item: {data}")
 
     # Ensure provider exists in providers table
-    if data['provider'] not in verified_providers:
+    if str(rediscache.get('verified_provider_' + data['provider'])).lower() != "valid":
         ret = db_execute_operation_nolog("""
             INSERT INTO providers (address, moniker)
             VALUES (%s, %s)
-            ON CONFLICT (address) DO UPDATE
-            SET moniker = EXCLUDED.moniker
+            ON CONFLICT (address) DO NOTHING
         """, (data['provider'], data['moniker']))
         if ret is False:
             error("db_worker_work_provider_spec_moniker", "Error ensuring provider exists")
             return
-        verified_providers.add(data['provider'])
+        rediscache.set('verified_provider_' + data['provider'], "valid", ttl=86400)  # Set TTL for 1 day
 
     # Ensure spec exists in specs table
-    if data['spec'] not in verified_specs:
-        # Attempt to insert spec into specs table
+    if str(rediscache.get('verified_spec_' + data['spec'])).lower() != "valid":
         ret = db_execute_operation_nolog("""
             INSERT INTO specs (id)
             VALUES (%s)
@@ -163,8 +125,7 @@ def db_worker_work_provider_spec_moniker(data):
         if ret is False:
             error("db_worker_work_provider_spec_moniker", "Error ensuring spec exists")
             return
-        # Add spec to global set after successful check or insert
-        verified_specs.add(data['spec'])
+        rediscache.set('verified_spec_' + data['spec'], "valid", ttl=86400)  # Set TTL for 1 day
     
     # UPSERT operation (Insert or Update on Conflict)
     ret = db_execute_operation_nolog("""
@@ -205,27 +166,24 @@ def db_worker_work_health(data):
             db_execute_operation("""
                 UPDATE provider_health SET timestamp = NOW() WHERE provider = %s AND guid = %s AND spec = %s AND interface = %s AND geolocation = %s
             """, (data['provider_id'], data['guid'], data['spec'], data['apiinterface'], GEO_LOCATION))
-    db_task_queue.task_done()
 
-verified_consumers = set()
 
 def db_worker_work_subscriptionlist(data):
-    global verified_consumers
-
-    data = safe_json_dump(data["data"])
+    data = json_to_str(data["data"])
 
     log("db_worker_work_subscriptionlist", f"Processing item: {data}")
 
-     # Ensure consumer exists in consumers table
-    if data['consumer'] not in verified_consumers:
-        # Attempt to insert consumer into consumers table
-        db_execute_operation("""
+    # Ensure spec exists in specs table
+    if str(rediscache.get('verified_consumer_' + data['consumer'])).lower() != "valid":
+        ret = db_execute_operation("""
             INSERT INTO consumers (address)
             VALUES (%s)
             ON CONFLICT (address) DO NOTHING
         """, (data['consumer'],))
-        # Add consumer to global set
-        verified_consumers.add(data['consumer'])
+        if ret is False:
+            error("db_worker_work_subscriptionlist", "Error ensuring consumer exists")
+            return
+        rediscache.set('verified_consumer_' + data['consumer'], "valid", ttl=86400)  # Set TTL for 1 day
 
     ret = db_execute_operation("""
         SELECT fulltext FROM consumer_subscription_list WHERE consumer = %s ORDER BY createdat DESC LIMIT 1
@@ -251,7 +209,6 @@ def db_worker_work_subscriptionlist(data):
         log("db_worker_work_subscriptionlist", "New record inserted because no existing data was found")
 
 def db_add_subscription_list_data(data: Any) -> None:
-    global db_task_queue, db_queue_condition
     db_save_data_to_queue({
         'type': 'subscriptionlist',
         'consumer': data["consumer"],
@@ -263,11 +220,6 @@ def db_worker_thread():
     log("db_worker", "Starting worker")
     db_reconnect()
     while True:
-        # log("db_worker", "Checking if queue is empty")
-        if db_task_queue.empty():
-            # log("db_worker", "Queue is empty, sleeping for 10 seconds")
-            time.sleep(10)
-        # log("db_worker", "Starting work loop")
         for i in range(3):
             try:
                 if i > 0:

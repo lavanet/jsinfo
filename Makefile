@@ -16,6 +16,7 @@
         query_test_lavap_provider_error_parsing \
         scripts_local_startQueryProviderDualStackingDelegatorRewardsContainer \
         redis_run \
+		redis_restart \
         redis_connect \
         macos_psql_start \
         macos_query_port_pid \
@@ -77,6 +78,9 @@ scripts_local_startQueryProviderDualStackingDelegatorRewardsContainer:
 
 redis_run:
 	docker run -d --name redis-stack -p 6379:6379 -p 8001:8001 -e REDIS_ARGS="--requirepass mypassword" redis/redis-stack:latest
+
+redis_restart:
+	docker restart redis-stack
 
 redis_connect:
 	docker exec -it redis-stack redis-cli

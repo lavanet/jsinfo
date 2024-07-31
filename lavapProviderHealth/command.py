@@ -1,6 +1,6 @@
 import subprocess, threading, time, random, shlex, json
 from typing import Dict, List, Optional, Any
-from utils import log, safe_json_dump, safe_json_load, exit_script, replace_archive
+from utils import log, json_load_or_none, exit_script, replace_archive
 from env import HEALTH_RESULTS_GUID, NODE_URL, DEBUG_PRINT_ACCOUNT_INFO_STDOUT
 
 def run_command(command: str, print_stdout: bool = True, timeout: int = 120) -> str:
@@ -61,10 +61,10 @@ def run_accountinfo_command(address: str) -> Optional[Dict[str, Any]]:
     command = f"lavad q pairing account-info {address} --output json --node {NODE_URL}"
     output = run_command(command, print_stdout=DEBUG_PRINT_ACCOUNT_INFO_STDOUT)
     log('run_accountinfo_command', 'Pairing command completed.')
-    return safe_json_load(replace_archive(output))
+    return json_load_or_none(replace_archive(output))
 
 def run_subscription_list_command() -> Optional[Dict[str, Any]]:
     command = f"lavad q subscription list --output json --node {NODE_URL}"
     output = run_command(command, print_stdout=DEBUG_PRINT_ACCOUNT_INFO_STDOUT)
     log('run_subscription_list_command', 'Subscription list command completed.')
-    return safe_json_load(output)
+    return json_load_or_none(output)

@@ -1,35 +1,27 @@
 from datetime import datetime, timezone
-import json, os, requests
+import json, requests
 import traceback
+import random
 from typing import Dict, List, Optional, Any
 from dbworker import db_add_accountinfo_data, db_add_provider_health_data, db_worker_work_provider_spec_moniker
 from command import run_accountinfo_command, run_health_command
-from utils import log, error, parse_date_to_utc, safe_json_dump, safe_json_load, trim_and_limit_json_dict_size
-from env import AIPB_FILENAME, HEALTH_RESULTS_GUID, HPLAWNS_FILENAME, HPLAWNS_QUERY_INTERVAL, PROVIDERS_URL
+from utils import log, error, parse_date_to_utc, json_to_str, trim_and_limit_json_dict_size
+from env import HEALTH_RESULTS_GUID, EMPTY_ACCOUNTINFO_CHECK_INTERVAL, PROVIDERS_URL
+from rediscache import rediscache
 
-def haplawns_read_addresses_from_file() -> Dict[str, str]:
-    if os.path.exists(HPLAWNS_FILENAME):
-        with open(HPLAWNS_FILENAME, 'r') as f:
-            ret = safe_json_load(f.read(), print_error=True)
-            if ret in [None, {}]:
-                os.remove(HPLAWNS_FILENAME)
-                return {}
-            return ret
-    else:
-        return {}
+REDIS_KEY = 'providers-with-empty-accountinfo'
 
-def haplawns_write_address_to_file(address: str) -> None:
-    addresses = haplawns_read_addresses_from_file()
-    addresses[address] = (datetime.now(timezone.utc) + HPLAWNS_QUERY_INTERVAL).isoformat()
-    with open(HPLAWNS_FILENAME, 'w') as f:
-        json.dump(addresses, f)
+def mark_empty_account_info_for_provider(address: str) -> None:
+    addresses = rediscache.get_dict(REDIS_KEY) or {}
+    addresses[address] = (datetime.now(timezone.utc) + EMPTY_ACCOUNTINFO_CHECK_INTERVAL).isoformat()
+    rediscache.set_dict(REDIS_KEY, addresses, ttl=86400)  # Set TTL for 1 day
 
 def get_provider_addresses_from_jsinfoapi() -> List[str]:
     log('get_provider_addresses_from_jsinfoapi', 'Fetching provider addresses...')
     response = requests.get(PROVIDERS_URL)
     providers: List[Dict[str, Any]] = response.json()['providers']
     addresses: List[str] = []
-    next_query_times: Dict[str, str] = haplawns_read_addresses_from_file()
+    next_query_times: Dict[str, str] = rediscache.get_dict(REDIS_KEY) or {}
     for provider in providers:
         address: str = provider['address']
         next_query_time: Optional[str] = next_query_times.get(address, None)
@@ -49,10 +41,24 @@ def accountinfo_process_lavaid(address: str) -> None:
     db_add_accountinfo_data(address, info_command_raw_json)
     process_provider_spec_moniker(info_command_raw_json)
 
+    # Attempt to retrieve cached account info
+    cached_info = rediscache.get("account-info-" + address)
+    if cached_info:
+        info_command_raw_json = json.loads(cached_info)
+    else:
+        # If not in cache, run the command and cache the result
+        info_command_raw_json = run_accountinfo_command(address)
+        if info_command_raw_json is None:
+            log("accountinfo_process_lavaid", 'Failed parsing account info output for: ' + address + '. Skipping...')
+            return
+        else:
+            # Cache the result with a TTL of 30 minutes (1800 seconds)
+            rediscache.set("account-info-" + address, json.dumps(info_command_raw_json), 1800)
+
     info_command_parsed_json: Dict[str, Dict[str, List[str]]] = parse_accountinfo_command(info_command_raw_json)
     if all(len(info_command_parsed_json[key]) == 0 for key in ['healthy', 'unstaked', 'frozen']):
         log("accountinfo_process_lavaid", 'Provider has no spec data: ' + address)
-        haplawns_write_address_to_file(address)
+        mark_empty_account_info_for_provider(address)
         return
 
     if len(info_command_parsed_json["healthy"]) > 0:
@@ -81,10 +87,10 @@ def parse_accountinfo_command(output: Dict[str, Any]) -> Dict[str, Dict[str, Lis
         parse_accountinfo_spec(result, "frozen", provider)
     for provider in unstaked:
         parse_accountinfo_spec(result, "unstaked", provider)
-    log('parse_accountinfo_command', "Result:\n" + "\n".join(safe_json_dump(result).splitlines()[:10]))
+    log('parse_accountinfo_command', "Result:\n" + "\n".join(json_to_str(result).splitlines()[:10]))
     return result
 
-def parse_accountinfo_spec(result: Dict[str, Dict[str, List[str]]], key: str, provider: Dict[str, Any]) -> None:
+def parse_accountinfo_spec(result: Dict[str, Dict[str, List[str]]], key: str, provider: Dict[str, Any] | None) -> None:
     if provider is None:
         log("parse_accountinfo_spec", f"Error: Provider is None. Key: {key}, Provider: {provider}")
         return
@@ -132,39 +138,42 @@ def process_provider_spec_moniker(data):
             }
             db_worker_work_provider_spec_moniker(trim_and_limit_json_dict_size(provider_data))
 
+random_number = random.randint(1, 10000)
+
 def get_last_processed_address(batch_id):
-    filename = AIPB_FILENAME.replace("__PH_BATCHID_PH__", str(batch_id))
-    try:
-        with open(filename, 'r') as file:
-            return file.read().strip()
-    except FileNotFoundError:
-        return None
+    redis_key = f"last_processed_lavaid:{batch_id}:{random_number}"
+    address = rediscache.get(redis_key)
+    return address.decode("utf-8") if address else None
 
 def set_last_processed_address(batch_id, address):
-    filename = AIPB_FILENAME.replace("__PH_BATCHID_PH__", str(batch_id))
-    with open(filename, 'w') as file:
-        file.write(address)
+    redis_key = f"last_processed_lavaid:{batch_id}:{random_number}"
+    rediscache.set(redis_key, address, 1800)
 
 def accountinfo_process_batch(batch_idx, batch):
     last_processed_address = get_last_processed_address(batch_idx)
-    should_start_processing_from_address = last_processed_address != None and last_processed_address in batch
-    if not should_start_processing_from_address:
+    start_index = 0  # Default to start from the beginning
+
+    if last_processed_address in batch:
+        calculated_index = batch.index(last_processed_address) + 1
+        # Ensure start_index does not exceed the length of the batch
+        start_index = calculated_index if calculated_index < len(batch) else 0
+        if start_index == 0:
+            log("accountinfo_process_batch", "Last processed address is the last in the batch, starting from beginning")
+        else:
+            log("accountinfo_process_batch", f"Resuming from last processed address {last_processed_address}")
+    else:
         log("accountinfo_process_batch", "No last processed address found in batch, processing from beginning")
+
     while True:
         log("accountinfo_process_batch", "Starting new loop")
-        for address in batch:
-            if should_start_processing_from_address:
-                if address != last_processed_address:
-                    continue
-                else:
-                    log("accountinfo_process_batch", f"Found last processed address {last_processed_address}, resuming from next")
-            should_start_processing_from_address = False
+        for address in batch[start_index:]:
             try:
                 log("accountinfo_process_batch", f"Processing address: {address}")
                 accountinfo_process_lavaid(address)
                 log("accountinfo_process_batch", f"Successfully processed address: {address}")
                 set_last_processed_address(batch_idx, address)
             except Exception as e:
-                error("accountinfo_process_batch", f"Error processing address: {address}. Error: {str(e)}\nStack Trace: {traceback.format_exc()}")
+                error("accountinfo_process_batch", f"Error processing address: {address}. Error: {str(e)}. Traceback: {traceback.format_exc()}")
         log("accountinfo_process_batch", "Finished loop")
-        should_start_processing_from_address = False        
+
+     

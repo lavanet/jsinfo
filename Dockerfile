@@ -6,7 +6,7 @@ WORKDIR /lava
 RUN apk add --update python3 py3-pip git bash jq curl make gcc go linux-headers
 
 # support for the lavapProviderHealth script
-RUN pip3 install requests python-dateutil psycopg2-binary
+RUN pip3 install requests python-dateutil psycopg2-binary redis
 
 # health probe branch - 20/06/2024 commit
 RUN git clone https://github.com/lavanet/lava.git . && git checkout 688e89ee59b48161688939f7e52641de5b0c0b88

@@ -77,13 +77,11 @@ scripts_local_startQueryProviderDualStackingDelegatorRewardsContainer:
 	QUERY_PROVIDER_DUAL_STACKING_DELEGATOR_REWARDS_CONTAINER_DEBUG=true bash scripts/startQueryProviderDualStackingDelegatorRewardsContainer.sh
 
 redis_run:
-	docker run -d --name redis-stack -p 6379:6379 -p 8001:8001 -e REDIS_ARGS="--requirepass mypassword" redis/redis-stack:latest
-
-redis_restart:
-	docker restart redis-stack
+	docker rm -f redis-stack || true
+	docker run --name redis-stack -p 6379:6379 -p 8001:8001 -e REDIS_ARGS="--requirepass mypassword" redis/redis-stack:latest
 
 redis_connect:
-	docker exec -it redis-stack redis-cli
+	docker exec -it redis-stack redis-cli -a mypassword
 
 macos_psql_start:
 	brew services start postgresql; brew services list

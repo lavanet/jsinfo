@@ -176,7 +176,7 @@ def replace_for_compare(data):
     
     return str(data).replace(" ", "").replace("\t", "").replace("\n", "").lower()
 
-def convert_dict_to_dbjson(data):
+def json_to_dbstr(data):
     if (type(data) == str and data.strip() == "") or str(data).strip() in ["{}","", "[]", "\"\"", "null", "None"]:
         return ""
     elif type(data) != str:

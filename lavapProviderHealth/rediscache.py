@@ -1,11 +1,12 @@
+import traceback
 import redis
 import logging
 import env
-from utils import convert_dict_to_dbjson, json_load_or_none
+from utils import json_to_dbstr, json_load_or_none
 
 class RedisCacheClass:
     def __init__(self, key_prefix: str, debug_logs: bool = False):
-        self.key_prefix = key_prefix
+        self.key_prefix = key_prefix or "-" + "-"
         self.debug_logs = debug_logs
         self.redis_url = None
         self.client = None
@@ -73,7 +74,7 @@ class RedisCacheClass:
 
     def set_array(self, key: str, value: list, ttl: int = 30):
         try:
-            string_value = convert_dict_to_dbjson(value)
+            string_value = json_to_dbstr(value)
             self.set(key, string_value, ttl)
         except Exception as error:
             self.log_error(f'Error serializing array for key {self.key_prefix + key}', error)
@@ -86,7 +87,7 @@ class RedisCacheClass:
 
     def set_dict(self, key: str, value: dict, ttl: int = 30):
         try:
-            string_value = convert_dict_to_dbjson(value)
+            string_value = json_to_dbstr(value)
             self.set(key, string_value, ttl)
         except Exception as error:
             self.log_error(f'Error serializing dict for key {self.key_prefix + key}', error)
@@ -97,10 +98,12 @@ class RedisCacheClass:
             return
 
         full_key = self.key_prefix + key
+        data = json_to_dbstr(value)
         try:            
-            self.client.lpush(full_key, convert_dict_to_dbjson(value))
+            self.client.lpush(full_key, data)
         except Exception as error:
-            self.log_error(f'Error LPUSH to key {full_key} in Redis', error)
+            tb = traceback.format_exc()  # Format the traceback
+            self.log_error(f'Error LPUSH to key {full_key} in Redis. Error: {error}. Data: {value}. Traceback: {tb}', error)
             self.reconnect()
 
     def brpop_dict(self, key: str, timeout: int = 0) -> dict | None:

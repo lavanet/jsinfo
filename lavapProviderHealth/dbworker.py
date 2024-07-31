@@ -3,7 +3,7 @@ from datetime import datetime
 from datetime import timezone
 from typing import Any
 from rediscache import rediscache
-from utils import log, error, json_to_str, exit_script, is_health_status_better, replace_for_compare, convert_dict_to_dbjson
+from utils import log, error, json_to_str, exit_script, is_health_status_better, replace_for_compare, json_to_dbstr
 from env import GEO_LOCATION
 from database import db_cur_fetchone, db_execute_operation, db_execute_operation_nolog, db_reconnect
 
@@ -24,7 +24,7 @@ def db_add_provider_health_data(guid: str, provider_id: str, spec: str, apiinter
         'spec': spec,
         'apiinterface': apiinterface,
         'status': status,
-        'data': convert_dict_to_dbjson(data)
+        'data': json_to_dbstr(data)
     })
 
 def db_add_accountinfo_data(provider_id: str, data: Any) -> None:
@@ -32,7 +32,7 @@ def db_add_accountinfo_data(provider_id: str, data: Any) -> None:
         'type': 'accountinfo',
         'timestamp': datetime.now(timezone.utc).isoformat(),
         'provider_id': provider_id,
-        'data': convert_dict_to_dbjson(data)
+        'data': json_to_dbstr(data)
     })
 
 def db_worker_work():
@@ -205,7 +205,7 @@ def db_worker_work_subscriptionlist(data):
         db_execute_operation("""
             INSERT INTO consumer_subscription_list (consumer, plan, fulltext)
             VALUES (%s, %s, %s)
-        """, (data['consumer'], data['plan'], convert_dict_to_dbjson(data)))
+        """, (data['consumer'], data['plan'], json_to_dbstr(data)))
         log("db_worker_work_subscriptionlist", "New record inserted because no existing data was found")
 
 def db_add_subscription_list_data(data: Any) -> None:
@@ -213,7 +213,7 @@ def db_add_subscription_list_data(data: Any) -> None:
         'type': 'subscriptionlist',
         'consumer': data["consumer"],
         'timestamp': datetime.now(timezone.utc).isoformat(),
-        'data': convert_dict_to_dbjson(data)
+        'data': json_to_dbstr(data)
     })
 
 def db_worker_thread():

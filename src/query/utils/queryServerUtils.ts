@@ -1,6 +1,7 @@
 // ./src/query/server.ts
 
 import { RouteShorthandOptions, FastifyReply } from 'fastify'
+import { logger } from '../../utils';
 
 export function AddErrorResponseToFastifyServerOpts(consumerOpts: RouteShorthandOptions): RouteShorthandOptions {
     const schema = consumerOpts.schema || {};
@@ -65,5 +66,6 @@ export const ItemCountOpts: RouteShorthandOptions = {
 };
 
 export function WriteErrorToFastifyReply(reply: FastifyReply, message: string) {
+    logger.error(`WriteErrorToFastifyReply:: ${message}`);
     reply.code(400).send({ error: message });
 }

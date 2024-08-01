@@ -5,7 +5,6 @@ import * as consts from './queryConsts';
 
 // -- Server status ajax --
 import { LatestRawHandler, LatestRawHandlerOpts } from './handlers/latestHandler';
-import { HealthRawHandler, HealthRawHandlerOpts } from './handlers/healthHandler';
 
 // -- Server supply ajax --
 import { SupplyRawHandlerOpts, TotalSupplyRawHandler, CirculatingSupplyRawHandler } from './handlers/supplyHandler';
@@ -40,7 +39,9 @@ import { ProviderRewardsPaginatedHandlerOpts, ProviderRewardsPaginatedHandler, P
 import { ProviderReportsPaginatedHandlerOpts, ProviderReportsPaginatedHandler, ProviderReportsItemCountPaginatiedHandler, ProviderReportsCSVRawHandler } from './handlers/providerReportsHandler';
 import { ProviderDelegatorRewardsPaginatedHandlerOpts, ProviderDelegatorRewardsPaginatedHandler, ProviderDelegatorRewardsItemCountPaginatiedHandler, ProviderDelegatorRewardsCSVRawHandler } from './handlers/providerDelegatorRewardsHandler';
 import { ProviderBlockReportsPaginatedHandlerOpts, ProviderBlockReportsPaginatedHandler, ProviderBlockReportsItemCountPaginatiedHandler, ProviderBlockReportsCSVRawHandler } from './handlers/providerBlockReportsHandler';
+
 import { ProviderHealthLatestPaginatedHandler, ProviderHealthLatestPaginatedHandlerOpts } from './handlers/providerHealthLatestHandler';
+import { ProviderAccountInfoRawHandler, ProviderAccountInfoRawHandlerOpts } from './handlers/providerAccountinfoHandler';
 
 // -- Events page ajax -- 
 import { EventsEventsPaginatedHandlerOpts, EventsEventsPaginatedHandler, EventsEventsItemCountPaginatiedHandler, EventsEventsCSVRawHandler } from './handlers/eventsEventsHandler';
@@ -98,7 +99,9 @@ RegisterPaginationServerHandler('/providerRewards/:addr', ProviderRewardsPaginat
 RegisterPaginationServerHandler('/providerReports/:addr', ProviderReportsPaginatedHandlerOpts, ProviderReportsPaginatedHandler, ProviderReportsItemCountPaginatiedHandler);
 RegisterPaginationServerHandler('/providerDelegatorRewards/:addr', ProviderDelegatorRewardsPaginatedHandlerOpts, ProviderDelegatorRewardsPaginatedHandler, ProviderDelegatorRewardsItemCountPaginatiedHandler);
 RegisterPaginationServerHandler('/providerBlockReports/:addr', ProviderBlockReportsPaginatedHandlerOpts, ProviderBlockReportsPaginatedHandler, ProviderBlockReportsItemCountPaginatiedHandler);
+
 RegisterRedisBackedHandler('/providerLatestHealth/:addr', ProviderHealthLatestPaginatedHandlerOpts, ProviderHealthLatestPaginatedHandler, { cache_ttl: 2 * 60 });
+GetServerInstance().get('/providerAccountInfo/:addr', ProviderAccountInfoRawHandlerOpts, ProviderAccountInfoRawHandler);
 
 GetServerInstance().get('/providerHealthCsv/:addr', ProviderHealthCSVRawHandler);
 GetServerInstance().get('/providerErrorsCsv/:addr', ProviderErrorsCSVRawHandler);

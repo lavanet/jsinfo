@@ -1,287 +1,160 @@
 
-// src/query/handlers/providerReportsHandler.ts
+// src/query/handlers/providerAccountInfoHandler.ts
+
+// curl http://localhost:8081/providerAccountInfo/lava@1vfpuqq06426z3x4qsn38w6hdqrywqxlc6wmnxp
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../queryDb';
 import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
-import { asc, desc, eq, gte, sql, and } from "drizzle-orm";
-import { Pagination, ParsePaginationFromString } from '../utils/queryPagination';
-import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '../queryConsts';
-import { CSVEscape, GetAndValidateProviderAddressFromRequest } from '../utils/queryUtils';
-import { RequestHandlerBase } from '../classes/RequestHandlerBase';
+import { desc, eq, gte, and } from "drizzle-orm";
+import { GetAndValidateProviderAddressFromRequest } from '../utils/queryUtils';
+import { RedisCache } from '../classes/RedisCache';
+import { logger } from '../../utils';
+import { WriteErrorToFastifyReply } from '../utils/queryServerUtils';
 
-export type ProviderReportsResponse = {
-    provider_reported: {
-        provider: string | null;
-        blockId: number | null;
-        cu: number | null;
-        disconnections: number | null;
-        epoch: number | null;
-        errors: number | null;
-        project: string | null;
-        datetime: Date | null;
-        totalComplaintEpoch: number | null;
-        tx: string | null;
-    };
-    blocks: {
-        height: number | null;
-        datetime: Date | null;
-    } | null;
+type ReportEntry = {
+    id: number;
+    timestamp: Date;
+    provider: string | null;
+    data: string | null;
 };
 
-export const ProviderReportsPaginatedHandlerOpts: RouteShorthandOptions = {
+export const ProviderAccountInfoRawHandlerOpts: RouteShorthandOptions = {
     schema: {
         response: {
             200: {
                 type: 'object',
                 properties: {
                     data: {
-                        type: 'array',
-                        items: {
-                            type: 'object',
-                            properties: {
-                                provider_reported: {
-                                    type: 'object',
-                                    properties: {
-                                        provider: {
-                                            type: ['string', 'null']
-                                        },
-                                        blockId: {
-                                            type: ['number', 'null']
-                                        },
-                                        cu: {
-                                            type: ['number', 'null']
-                                        },
-                                        disconnections: {
-                                            type: ['number', 'null']
-                                        },
-                                        epoch: {
-                                            type: ['number', 'null']
-                                        },
-                                        errors: {
-                                            type: ['number', 'null']
-                                        },
-                                        project: {
-                                            type: ['string', 'null']
-                                        },
-                                        datetime: {
-                                            type: ['string', 'null'],
-                                            format: 'date-time'
-                                        },
-                                        totalComplaintEpoch: {
-                                            type: ['number', 'null']
-                                        },
-                                        tx: {
-                                            type: ['string', 'null']
-                                        }
-                                    }
-                                },
-                                blocks: {
-                                    type: ['object', 'null'],
-                                    properties: {
-                                        height: {
-                                            type: ['number', 'null']
-                                        },
-                                        datetime: {
-                                            type: ['string', 'null'],
-                                            format: 'date-time'
-                                        }
-                                    }
-                                }
-                            }
+                        type: 'object',
+                        properties: {
+                            id: { type: 'number' },
+                            timestamp: { type: 'string' },
+                            provider: { type: ['string', 'null'] },
+                            data: { type: ['string', 'null'] }
                         }
-                    }
-                }
+                    },
+                    id: { type: 'number' },
+                    timestamp: { type: 'string' },
+                    itemCount: { type: 'number' },
+                    idx: { type: 'number' }
+                },
+                required: ['data', 'id', 'timestamp', 'itemCount', 'idx']
             }
         }
     }
 };
 
-class ProviderReportsData extends RequestHandlerBase<ProviderReportsResponse> {
-    private addr: string;
 
-    constructor(addr: string) {
-        super("ProviderReportsData");
-        this.addr = addr;
-    }
-
-    public static GetInstance(addr: string): ProviderReportsData {
-        return ProviderReportsData.GetInstanceBase(addr);
-    }
-
-    protected getCSVFileName(): string {
-        return `ProviderReports_${this.addr}.csv`;
-    }
-
-    protected async fetchAllRecords(): Promise<ProviderReportsResponse[]> {
-        await QueryCheckJsinfoReadDbInstance();
-
-        let thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-        let reportsRes = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.providerReported).
-            leftJoin(JsinfoSchema.blocks, eq(JsinfoSchema.providerReported.blockId, JsinfoSchema.blocks.height)).
-            where(
-                and(
-                    eq(JsinfoSchema.providerReported.provider, this.addr),
-                    gte(JsinfoSchema.providerReported.datetime, thirtyDaysAgo)
-                )
-            ).
-            orderBy(desc(JsinfoSchema.providerReported.id)).
-            offset(0).
-            limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
-
-        return reportsRes;
-    }
-
-    protected async fetchRecordCountFromDb(): Promise<number> {
-        await QueryCheckJsinfoReadDbInstance();
-
-        const countResult = await QueryGetJsinfoReadDbInstance()
-            .select({
-                count: sql<number>`COUNT(*)`
-            })
-            .from(JsinfoSchema.providerReported)
-            .where(eq(JsinfoSchema.providerReported.provider, this.addr));
-
-        return Math.min(countResult[0].count || 0, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION - 1);
-    }
-
-    public async fetchPaginatedRecords(pagination: Pagination | null): Promise<ProviderReportsResponse[]> {
-        const defaultSortKey = "provider_reported.id";
-        let finalPagination: Pagination;
-
-        if (pagination) {
-            finalPagination = pagination;
-        } else {
-            finalPagination = ParsePaginationFromString(
-                `${defaultSortKey},descending,1,${JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE}`
-            );
+function removeKey(data: any, key: string): any {
+    if (data instanceof Object && !Array.isArray(data)) {
+        const newData = {};
+        for (const [k, v] of Object.entries(data)) {
+            if (k !== key) {
+                newData[k] = removeKey(v, key);
+            }
         }
+        return newData;
+    } else if (Array.isArray(data)) {
+        return data.map(item => removeKey(item, key));
+    } else {
+        return data;
+    }
+}
 
-        if (finalPagination.sortKey === null) {
-            finalPagination.sortKey = defaultSortKey;
-        }
+function stringifyWithSortedKeys(data: any): string {
+    const sortedObject = Object.keys(data).sort().reduce((result, key) => {
+        result[key] = data[key] instanceof Object ? stringifyWithSortedKeys(data[key]) : data[key];
+        return result;
+    }, {});
+    return JSON.stringify(sortedObject);
+}
 
-        const keyToColumnMap = {
-            "provider_reported.id": JsinfoSchema.providerReported.id,
-            "provider_reported.blockId": JsinfoSchema.providerReported.blockId,
-            "blocks.datetime": JsinfoSchema.providerReported.datetime, // this is faster
-            "provider_reported.cu": JsinfoSchema.providerReported.cu,
-            "provider_reported.disconnections": JsinfoSchema.providerReported.disconnections,
-            "provider_reported.errors": JsinfoSchema.providerReported.errors,
-            "provider_reported.project": JsinfoSchema.providerReported.project
-        };
+function removeKeyAndStringifyWithSortedKeys(data: string, keyToRemove: string): string {
+    const parsedData = JSON.parse(data);
+    const cleanedData = removeKey(parsedData, keyToRemove);
+    return stringifyWithSortedKeys(cleanedData);
+}
 
-        if (!Object.keys(keyToColumnMap).includes(finalPagination.sortKey)) {
-            const trimmedSortKey = finalPagination.sortKey.substring(0, 500);
-            throw new Error(`Invalid sort key: ${trimmedSortKey}`);
-        }
+async function fetchAllData(addr: string): Promise<ReportEntry[]> {
+    await QueryCheckJsinfoReadDbInstance();
 
-        await QueryCheckJsinfoReadDbInstance();
+    let thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-        const sortColumn = keyToColumnMap[finalPagination.sortKey];
-        const orderFunction = finalPagination.direction === 'ascending' ? asc : desc;
-
-        let thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-        const reportsRes = await QueryGetJsinfoReadDbInstance()
-            .select({
-                providerReported: {
-                    id: JsinfoSchema.providerReported.id,
-                    provider: JsinfoSchema.providerReported.provider,
-                    blockId: JsinfoSchema.providerReported.blockId,
-                    cu: JsinfoSchema.providerReported.cu,
-                    disconnections: JsinfoSchema.providerReported.disconnections,
-                    epoch: JsinfoSchema.providerReported.epoch,
-                    errors: JsinfoSchema.providerReported.errors,
-                    project: JsinfoSchema.providerReported.project,
-                    datetime: JsinfoSchema.providerReported.datetime,
-                    totalComplaintEpoch: JsinfoSchema.providerReported.totalComplaintEpoch,
-                    tx: JsinfoSchema.providerReported.tx
-                },
-                blocks: {
-                    height: JsinfoSchema.blocks.height,
-                    datetime: JsinfoSchema.blocks.datetime
-                }
-            })
-            .from(JsinfoSchema.providerReported)
-            .where(
-                and(
-                    eq(JsinfoSchema.providerReported.provider, this.addr),
-                    gte(JsinfoSchema.providerReported.datetime, thirtyDaysAgo)
-                )
+    let reportsRes: ReportEntry[] = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.providerAccountInfo)
+        .where(
+            and(
+                eq(JsinfoSchema.providerAccountInfo.provider, addr),
+                gte(JsinfoSchema.providerAccountInfo.timestamp, thirtyDaysAgo)
             )
-            .leftJoin(JsinfoSchema.blocks, eq(JsinfoSchema.providerReported.blockId, JsinfoSchema.blocks.height))
-            .orderBy(orderFunction(sortColumn))
-            .offset((finalPagination.page - 1) * finalPagination.count)
-            .limit(finalPagination.count);
+        )
+        .orderBy(desc(JsinfoSchema.providerAccountInfo.id))
+        .offset(0)
+        .limit(500);
 
-        return reportsRes.map(row => ({
-            provider_reported: {
-                provider: row.providerReported.provider,
-                blockId: row.providerReported.blockId,
-                cu: row.providerReported.cu,
-                disconnections: row.providerReported.disconnections,
-                epoch: row.providerReported.epoch,
-                errors: row.providerReported.errors,
-                project: row.providerReported.project,
-                datetime: row.blocks?.datetime ?? null,
-                totalComplaintEpoch: row.providerReported.totalComplaintEpoch,
-                tx: row.providerReported.tx
-            },
-            blocks: row.blocks ? {
-                height: row.blocks.height,
-                datetime: row.blocks.datetime
-            } : null
-        }));
-    }
+    // remove here keys that match:
+    //     if isinstance(data, (dict, list)):
+    // data = remove_key(data, 'block_report')
+    // data = json.dumps(data, sort_keys = True)
 
-    protected async convertRecordsToCsv(data: ProviderReportsResponse[]): Promise<string> {
-        const columns = [
-            { key: "provider_reported.blockId", name: "Block" },
-            { key: "blocks.datetime", name: "Time" },
-            { key: "provider_reported.cu", name: "CU" },
-            { key: "provider_reported.disconnections", name: "Disconnections" },
-            { key: "provider_reported.errors", name: "Errors" },
-            { key: "provider_reported.project", name: "Project" },
-        ];
+    const finalRes: ReportEntry[] = [];
+    const uniqueTimestamps = new Set<string>();
+    const uniqueConts = new Set<string>();
 
-        let csv = columns.map(column => CSVEscape(column.name)).join(',') + '\n';
+    reportsRes.forEach((report: ReportEntry) => {
+        if (!report.data) return;
 
-        data.forEach((item: any) => {
-            csv += columns.map(column => {
-                const keys = column.key.split('.');
-                const value = keys.reduce((obj, key) => (obj && obj[key] !== undefined) ? obj[key] : '', item);
-                return CSVEscape(String(value));
-            }).join(',') + '\n';
-        });
+        const cont = removeKeyAndStringifyWithSortedKeys(report.data, 'block_report');
+        if (uniqueConts.has(cont)) return;
 
-        return csv;
-    }
+        const timestampKey = report.timestamp.toString();
+        if (uniqueTimestamps.has(timestampKey)) return;
+
+        uniqueTimestamps.add(timestampKey);
+        uniqueConts.add(cont);
+        finalRes.push(report);
+    });
+
+    return finalRes;
 }
 
-export async function ProviderReportsPaginatedHandler(request: FastifyRequest, reply: FastifyReply) {
-    let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
-    if (addr === '') {
-        return null;
+async function getAllData(addr: string): Promise<ReportEntry[]> {
+    const val = await RedisCache.get("ProviderAccountInfoRawHandler-" + addr);
+    if (val) {
+        try {
+            return JSON.parse(val);
+        } catch (e) {
+            logger.error("Error parsing JSON from Redis cache", e);
+        }
     }
-    return await ProviderReportsData.GetInstance(addr).PaginatedRecordsRequestHandler(request, reply)
+    const data = await fetchAllData(addr);
+    await RedisCache.set("ProviderAccountInfoRawHandler-" + addr, JSON.stringify(data), 10 * 60); // Ensure data is stringified before storing
+    return data;
 }
 
-export async function ProviderReportsItemCountPaginatiedHandler(request: FastifyRequest, reply: FastifyReply) {
+export async function ProviderAccountInfoRawHandler(request: FastifyRequest, reply: FastifyReply) {
     let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
     if (addr === '') {
-        return null;
+        return reply;
     }
-    return await ProviderReportsData.GetInstance(addr).getTotalItemCountPaginatedHandler(request, reply)
-}
 
-export async function ProviderReportsCSVRawHandler(request: FastifyRequest, reply: FastifyReply) {
-    let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
-    if (addr === '') {
-        return;
+    const data: ReportEntry[] = await getAllData(addr);
+
+    // Check if 'idx' query parameter is provided and is a valid number
+    const idx = parseInt((request.query as any).idx, 10);
+    if (!isNaN(idx) && idx >= 0 && idx < data.length) {
+        // Return the specific item at index 'idx' along with item count and item id
+        const item = data[idx];
+        return {
+            data: item,
+            id: item.id,
+            timestamp: item.timestamp,
+            itemCount: data.length,
+            idx: idx
+        };
     }
-    return await ProviderReportsData.GetInstance(addr).CSVRequestHandler(request, reply)
+
+    WriteErrorToFastifyReply(reply, "Invalid 'idx' query parameter. Please provide a valid index: " + JSON.stringify(request.query));
+    return reply;
 }

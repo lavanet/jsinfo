@@ -165,9 +165,19 @@ def is_health_status_better(old_status: str, new_status: str, old_data: str, new
     
     return False
 
+def remove_key(data, key):
+    """Recursively remove the key from dictionaries or lists."""
+    if isinstance(data, dict):
+        return {k: remove_key(v, key) for k, v in data.items() if k != key}
+    elif isinstance(data, list):
+        return [remove_key(item, key) for item in data]
+    else:
+        return data
+    
 def replace_for_compare(data):
     # Convert data types to a uniform format before comparison
     if isinstance(data, (dict, list)):
+        data = remove_key(data, 'block_report')
         data = json.dumps(data, sort_keys=True)
     elif data is None:
         data = 'null'

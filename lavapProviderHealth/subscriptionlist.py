@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS "consumer_subscription_list" (
 """
 
 def subscriptionlist_index() -> None:
-    if rediscache.get('subscriptionlist_index_marker', 'none') == 'wait':
+    if rediscache.get('subscriptionlist_index_marker') == 'wait':
         return
     rediscache.set('subscriptionlist_index_marker', 'wait', 500)
 

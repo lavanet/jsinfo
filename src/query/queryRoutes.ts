@@ -41,7 +41,7 @@ import { ProviderDelegatorRewardsPaginatedHandlerOpts, ProviderDelegatorRewardsP
 import { ProviderBlockReportsPaginatedHandlerOpts, ProviderBlockReportsPaginatedHandler, ProviderBlockReportsItemCountPaginatiedHandler, ProviderBlockReportsCSVRawHandler } from './handlers/providerBlockReportsHandler';
 
 import { ProviderHealthLatestPaginatedHandler, ProviderHealthLatestPaginatedHandlerOpts } from './handlers/providerHealthLatestHandler';
-import { ProviderAccountInfoRawHandler, ProviderAccountInfoRawHandlerOpts } from './handlers/providerAccountinfoHandler';
+import { ProviderAccountInfoRawHandler, ProviderAccountInfoRawHandlerOpts } from './handlers/providerAccountInfoHandler';
 
 // -- Events page ajax -- 
 import { EventsEventsPaginatedHandlerOpts, EventsEventsPaginatedHandler, EventsEventsItemCountPaginatiedHandler, EventsEventsCSVRawHandler } from './handlers/eventsEventsHandler';

@@ -1,4 +1,4 @@
-import json, threading, time, queue, traceback
+import threading, time, traceback
 from datetime import datetime
 from datetime import timezone
 from typing import Any
@@ -8,8 +8,6 @@ from env import GEO_LOCATION
 from database import db_cur_fetchone, db_execute_operation, db_execute_operation_nolog, db_reconnect
 
 # Global queue for provider health data
-db_task_queue = queue.Queue()
-
 REDIS_KEY="worker-queue"
 
 def db_save_data_to_queue(data: Any) -> None:

@@ -2,6 +2,7 @@ import threading, time, traceback
 from dbworker import  db_add_subscription_list_data
 from command import run_subscription_list_command
 from utils import log, error, trim_and_limit_json_dict_size
+from rediscache import rediscache
 
 """
 lavad q subscription list --node https://public-rpc.lavanet.xyz:443 --output json | jq
@@ -37,6 +38,10 @@ CREATE TABLE IF NOT EXISTS "consumer_subscription_list" (
 """
 
 def subscriptionlist_index() -> None:
+    if rediscache.get('subscriptionlist_index_marker', 'none') == 'wait':
+        return
+    rediscache.set('subscriptionlist_index_marker', 'wait', 500)
+
     subs_list_output = run_subscription_list_command()
     if subs_list_output is None:
         log('subscriptionlist_index', 'No subscription list data returned.')
@@ -47,6 +52,7 @@ def subscriptionlist_index() -> None:
     for subs_info in subs_info_list:
         db_add_subscription_list_data(trim_and_limit_json_dict_size(subs_info))
         # log('subscriptionlist_index', f'Processed subscription data for consumer: {subs_info.get("consumer")}')
+
 
 def subscriptionlist_index_runner():
     while True:

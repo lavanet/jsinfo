@@ -163,7 +163,8 @@ def accountinfo_process_batch(batch_idx, batch):
             log("accountinfo_process_batch", f"Resuming from last processed address {last_processed_address}")
     else:
         log("accountinfo_process_batch", "No last processed address found in batch, processing from beginning")
-
+        start_index = random_number % len(batch)
+        
     while True:
         log("accountinfo_process_batch", "Starting new loop")
         for address in batch[start_index:]:

@@ -3,7 +3,7 @@
 import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { and, eq, ne } from "drizzle-orm";
-import { DoInChunks } from "../../utils";
+import { DoInChunks, logger } from "../../utils";
 import { JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE } from '../indexerConsts';
 import { LavaClient } from '../types';
 import { UpdateStakeInformation } from './blockchainEntitiesStakeUpdater';
@@ -36,7 +36,7 @@ export async function SyncBlockchainEntities(
     blockchainEntitiesSpecs: Map<string, JsinfoSchema.Spec>,
     blockchainEntitiesStakes: Map<string, JsinfoSchema.InsertProviderStake[]>
 ) {
-    console.log("SyncBlockchainEntities: Starting SyncBlockchainEntities at height", height);
+    // console.log("SyncBlockchainEntities: Starting SyncBlockchainEntities at height", height);
     const startTime = Date.now();
 
     await UpdateStakeInformation(client, height, blockchainEntitiesProviders, blockchainEntitiesSpecs, blockchainEntitiesStakes)
@@ -45,7 +45,7 @@ export async function SyncBlockchainEntities(
     await db.transaction(async (tx) => {
         // Insert all specs
         const arrSpecs = Array.from(blockchainEntitiesSpecs.values())
-        console.log("SyncBlockchainEntities: Inserting", arrSpecs.length, "specs");
+        // console.log("SyncBlockchainEntities: Inserting", arrSpecs.length, "specs");
         await DoInChunks(JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, arrSpecs, async (arr: any) => {
             await tx.insert(JsinfoSchema.specs)
                 .values(arr)
@@ -54,7 +54,7 @@ export async function SyncBlockchainEntities(
 
         // Find / create all providers
         const arrProviders = Array.from(blockchainEntitiesProviders.values())
-        console.log("SyncBlockchainEntities: Processing", arrProviders.length, "providers");
+        // console.log("SyncBlockchainEntities: Processing", arrProviders.length, "providers");
         await DoInChunks(JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, arrProviders, async (arr: any) => {
             return arr.map(async (provider: any) => {
                 return await tx.insert(JsinfoSchema.providers)
@@ -71,7 +71,7 @@ export async function SyncBlockchainEntities(
         })
 
         // Insert all stakes
-        console.log("SyncBlockchainEntities: Inserting stakes");
+        // console.log("SyncBlockchainEntities: Inserting stakes");
         await Promise.all(Array.from(blockchainEntitiesStakes.values()).map(async (stakes) => {
             return stakes.map(async (stake) => {
                 if (stake.specId == null || stake.specId == "") return;
@@ -98,12 +98,8 @@ export async function SyncBlockchainEntities(
             })
         }))
 
-        let xx = await tx.select().from(JsinfoSchema.providerStakes)
-
-        console.log("dasd", xx)
-
         // Update old stakes
-        console.log("SyncBlockchainEntities: Updating old stakes to inactive status");
+        // console.log("SyncBlockchainEntities: Updating old stakes to inactive status");
         await tx.update(JsinfoSchema.providerStakes)
             .set({
                 status: JsinfoSchema.LavaProviderStakeStatus.Inactive
@@ -115,7 +111,7 @@ export async function SyncBlockchainEntities(
                 ));
 
         const endTime = Date.now();
-        console.log("SyncBlockchainEntities: SyncBlockchainEntities completed in", (endTime - startTime) / 1000, "seconds with stakes");
+        logger.info("SyncBlockchainEntities: SyncBlockchainEntities completed in", (endTime - startTime) / 1000, "seconds with stakes");
     })
 }
 

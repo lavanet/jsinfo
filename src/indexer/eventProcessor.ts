@@ -1,3 +1,5 @@
+// src/indexer/eventProcessor.ts
+
 import { Event } from "@cosmjs/stargate"
 
 import * as JsinfoSchema from '../schemas/jsinfoSchema/jsinfoSchema';
@@ -11,6 +13,7 @@ import { ParseEventDelProjectToSubscription } from "./events/EventDelProjectToSu
 import { ParseEventDelKeyFromProject } from "./events/EventDelKeyFromProject";
 import { ParseEventAddKeyToProject } from "./events/EventAddKeyToProject";
 import { ParseEventExpireSubscrption } from "./events/EventExpireSubscription";
+import { ParseEventSetSubscriptionPolicyEvent } from "./events/EventSetSubscriptionPolicyEvent";
 
 // Provider Events
 import { ParseEventRelayPayment } from "./events/EventRelayPayment";
@@ -21,6 +24,7 @@ import { ParseEventFreezeProvider } from "./events/EventFreezeProvider";
 import { ParseEventUnfreezeProvider } from "./events/EventUnfreezeProvider";
 import { ParseEventProviderReported } from "./events/EventProviderReported";
 import { ParseEventProviderJailed } from "./events/EventProviderJailed";
+import { ParseEventProviderTemporaryJailed } from "./events/EventProviderTemporaryJailed";
 import { ParseEventProviderLatestBlockReport } from "./events/EventProviderLatestBlockReport";
 
 // Conflict Events
@@ -43,6 +47,7 @@ import { ParseEventRedelegateBetweenProviders } from "./events/EventRedelegateBe
 import { ParseEventLavaFreezeFromUnbound } from "./events/EventFreezeFromUnbond";
 import { ParseEventUnstakeFromUnbound } from "./events/EventUnstakeFromUnbound";
 import { ParseValidatorSlash } from "./events/EventValidatorSlash";
+import { ParseEventDelegatorClaimRewards } from "./events/EventDelegatorClaimRewards";
 
 // Unidentified Event
 import { ParseEventUnidentified } from "./events/EventUnidentified";
@@ -63,7 +68,9 @@ export const ProcessOneEvent = (
         throw new Error(`ProcessOneEvent: block height is larger than the maximum safe integer: ${height}`);
     }
 
-    switch (evt.type) {
+    const evt_name = evt.type.startsWith('/') ? evt.type.substring(1) : evt.type
+
+    switch (evt_name) {
         //
         // Providers
         // https://github.com/lavanet/lava/blob/main/x/pairing/types/types.go#L8
@@ -103,6 +110,9 @@ export const ProcessOneEvent = (
         case 'lava_provider_jailed':
             ParseEventProviderJailed(evt, height, txHash, lavaBlock, blockchainEntitiesProviders, blockchainEntitiesSpecs, blockchainEntitiesStakes)
             break
+        case 'lava_provider_temporary_jailed':
+            ParseEventProviderTemporaryJailed(evt, height, txHash, lavaBlock, blockchainEntitiesProviders, blockchainEntitiesSpecs, blockchainEntitiesStakes)
+            break
         // a successful report of latest block of a provider per chain
         case 'lava_provider_latest_block_report':
             ParseEventProviderLatestBlockReport(evt, height, txHash, lavaBlock, blockchainEntitiesProviders, blockchainEntitiesSpecs, blockchainEntitiesStakes)
@@ -133,6 +143,9 @@ export const ProcessOneEvent = (
             break
         case 'lava_expire_subscription_event':
             ParseEventExpireSubscrption(evt, height, txHash, lavaBlock, blockchainEntitiesProviders, blockchainEntitiesSpecs, blockchainEntitiesStakes)
+            break
+        case 'lava_set_subscription_policy_event':
+            ParseEventSetSubscriptionPolicyEvent(evt, height, txHash, lavaBlock, blockchainEntitiesProviders, blockchainEntitiesSpecs, blockchainEntitiesStakes)
             break
 
 
@@ -231,8 +244,8 @@ export const ProcessOneEvent = (
             break
 
         // // a successful provider delegator reward claim
-        // case 'lava_delegator_claim_rewards':
-        //     break
+        case 'lava_delegator_claim_rewards':
+            ParseEventDelegatorClaimRewards(evt, height, txHash, lavaBlock, blockchainEntitiesProviders, blockchainEntitiesSpecs, blockchainEntitiesStakes)
 
         // // spec contributor got new rewards
         // case 'lava_contributor_rewards':
@@ -341,9 +354,15 @@ export const ProcessOneEvent = (
         case 'update_feegrant':
             break
 
+        // new events added on 02/08/2024
+        case 'cosmos.authz.v1beta1.EventGrant':
+        case 'cosmos.authz.v1beta1.MsgGrant':
+        case 'set_withdraw_address':
+            break
+
         default:
             ParseEventUnidentified(evt, height, txHash, lavaBlock, blockchainEntitiesProviders, blockchainEntitiesSpecs, blockchainEntitiesStakes)
-            logger.info('ProcessOneEvent:: Uknown event', height, evt.type, evt)
+            console.log(`ProcessOneEvent: Unknown event detected at height ${height} with event type ${evt.type} and event details:`, evt);
             break
     }
 }

@@ -1,7 +1,9 @@
 import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
-import { Event } from "@cosmjs/stargate"
+import { Attribute, Event } from "@cosmjs/stargate"
 import { LavaBlock } from "../types";
 import { SetTx } from "../blockchainEntities/blockchainEntitiesGettersAndSetters";
+import { EventExtractKeyFromAttribute } from '../eventUtils';
+import { JSINFO_INDEXER_EVENT_ATTRIBUTE_KEY_COUNT_MAX, JSINFO_INDEXER_EVENT_ATTRIBUTE_VALUE_MAX_LENGTH } from '../indexerConsts';
 
 export const ParseEventError = (
     evt: Event,
@@ -20,7 +22,38 @@ export const ParseEventError = (
 
     let parsedAttributes = { type: evt.type, error: String(error).substring(0, 4000), caller: caller };
 
+    let eventAttributes: { [key: string]: string } = {};
+
+    try {
+        evt.attributes.forEach((attr: Attribute) => {
+            let keysCounter = 0;
+            keysCounter++;
+            if (keysCounter > JSINFO_INDEXER_EVENT_ATTRIBUTE_KEY_COUNT_MAX) {
+                return;
+            }
+
+            try {
+                if (attr.key == "" || attr.value == "") return;
+                if (attr.key.toLocaleLowerCase() == "<nil>" || attr.value == "<nil>") return;
+
+                let key = EventExtractKeyFromAttribute(attr);
+                let value = attr.value;
+
+                if (key.length > JSINFO_INDEXER_EVENT_ATTRIBUTE_VALUE_MAX_LENGTH) {
+                    key = key.substring(0, JSINFO_INDEXER_EVENT_ATTRIBUTE_VALUE_MAX_LENGTH) + " ...";
+                }
+
+                if (value.length > JSINFO_INDEXER_EVENT_ATTRIBUTE_VALUE_MAX_LENGTH) {
+                    value = value.substring(0, JSINFO_INDEXER_EVENT_ATTRIBUTE_VALUE_MAX_LENGTH) + " ...";
+                }
+
+                eventAttributes[key] = value;
+            } catch { }
+        });
+    } catch { }
+
     dbEvent.t1 = JSON.stringify(parsedAttributes);
+    dbEvent.fulltext = JSON.stringify(eventAttributes).substring(0, 10000);
 
     SetTx(lavaBlock.dbTxs, txHash, height)
     lavaBlock.dbEvents.push(dbEvent)

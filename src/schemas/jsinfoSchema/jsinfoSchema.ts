@@ -136,6 +136,9 @@ export enum LavaProviderEventType {
   ValidtorSlash,
   IPRPCPoolEmission,
   DistributionPoolsRefill,
+  ProviderTemporaryJailed,
+  DelegatorClaimRewards,
+  SetSubscriptionPolicyEvent,
   UnidentifiedEvent = 1000,
   ErrorEvent = 1001
 }

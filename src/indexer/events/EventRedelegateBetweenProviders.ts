@@ -65,13 +65,13 @@ export const ParseEventRedelegateBetweenProviders = (
     processAttribute: (key: string, value: string) => {
       switch (key) {
         case 'delegator':
-          if (value.startsWith('lava@')) delegator = EventParseProviderAddress(value);
+          delegator = EventParseProviderAddress(value);
           break;
         case 'from_provider':
-          if (value.startsWith('lava@')) from_provider = EventParseProviderAddress(value);
+          from_provider = EventParseProviderAddress(value);
           break;
         case 'to_provider':
-          if (value.startsWith('lava@')) to_provider = EventParseProviderAddress(value);
+          to_provider = EventParseProviderAddress(value);
           break;
         case 'from_chainID':
           from_chainID = value;

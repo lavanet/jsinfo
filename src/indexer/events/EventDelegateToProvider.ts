@@ -123,10 +123,10 @@ export const ParseEventDelegateToProvider = (
     processAttribute: (key: string, value: string) => {
       switch (key) {
         case 'delegator':
-          if (value.startsWith('lava@')) delegator = EventParseProviderAddress(value);
+          delegator = EventParseProviderAddress(value);
           break;
         case 'provider':
-          if (value.startsWith('lava@')) provider = EventParseProviderAddress(value);
+          provider = EventParseProviderAddress(value);
           break;
         case 'chainID':
           dbEvent.t2 = value;

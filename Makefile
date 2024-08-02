@@ -70,6 +70,9 @@ query_port8090:
 query_test_lavap_prodiver_error_parsing:
 	bun run ./src/query/utils/lavapProvidersErrorParser.test.ts 
 
+getblock:
+	JSINFO_QUERY_IS_DEBUG_MODE=true bun run src/executils/getblock.ts 1629704
+	
 run_lavapProviderHealth:
 	cd lavapProviderHealth && python3 run.py
 

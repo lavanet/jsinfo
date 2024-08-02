@@ -4,6 +4,57 @@ import { LavaBlock } from "../types";
 import { GetOrSetProvider, SetTx } from "../blockchainEntities/blockchainEntitiesGettersAndSetters";
 import { EventParseUlava, EventProcessAttributes, EventParseProviderAddress } from "../eventUtils";
 
+// After 2Aug2024
+// {"type":"lava_unstake_from_unbond","error":"verifyFunctionCalledAndFailed","caller":"ParseEventUnstakeFromUnbound"}
+/*
+{
+  "type": "lava_unstake_from_unbond",
+  "attributes": [
+    {
+      "key": "chain_id",
+      "value": "BLASTSP",
+      "index": true
+    },
+    {
+      "key": "description",
+      "value": "moniker: SGTstake\n",
+      "index": true
+    },
+    {
+      "key": "effective_stake",
+      "value": "0ulava",
+      "index": true
+    },
+    {
+      "key": "min_self_delegation",
+      "value": "100000000ulava",
+      "index": true
+    },
+    {
+      "key": "moniker",
+      "value": "SGTstake",
+      "index": true
+    },
+    {
+      "key": "provider_provider",
+      "value": "lava@1uhwudw7vzqtnffu2hf5yhv4n8trj79ezl66z99",
+      "index": true
+    },
+    {
+      "key": "provider_vault",
+      "value": "lava@1uhwudw7vzqtnffu2hf5yhv4n8trj79ezl66z99",
+      "index": true
+    },
+    {
+      "key": "stake",
+      "value": "0ulava",
+      "index": true
+    }
+  ]
+}
+  */
+
+// Before 2Aug2024
 /*
 EventDebug txs event 1084948 lava_unbond_from_provider {
 // effective_stake and stake are always 0 - tokens where taken out  
@@ -89,10 +140,18 @@ export const ParseEventUnstakeFromUnbound = (
     processAttribute: (key: string, value: string) => {
       switch (key) {
         case 'provider':
+          if (dbEvent.provider) break;
+          dbEvent.provider = EventParseProviderAddress(value);
+          break;
+        case 'provider_provider':
+          if (dbEvent.provider) break;
           dbEvent.provider = EventParseProviderAddress(value);
           break;
         case 'chainID':
           dbEvent.t2 = value;
+          break
+        case 'provider_vault':
+          dbEvent.t3 = value;
           break
         case 'min_self_delegation':
           dbEvent.b1 = EventParseUlava(value);

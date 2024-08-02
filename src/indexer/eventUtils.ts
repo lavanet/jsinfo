@@ -145,13 +145,13 @@ export function EventProcessAttributes(
 
     let attributesDict: { [key: string]: string } = {};
     let keysCounter = 0;
-    let error: unknown | null | string = null;
+    let errors: string[] = [];
 
     try {
         evt.attributes.forEach((attr: Attribute) => {
             keysCounter++;
             if (keysCounter > JSINFO_INDEXER_EVENT_ATTRIBUTE_KEY_COUNT_MAX) {
-                error = `EventProcessAttributes: Too many keys: ${evt.attributes.length}`;
+                console.log(`EventProcessAttributes: Too many keys: ${evt.attributes.length}`);
                 return;
             }
 
@@ -176,30 +176,43 @@ export function EventProcessAttributes(
         })
 
     } catch (error) {
-        error = error;
+        let errorMessage = "An error occurred during evt.attributes processing. ";
+        if (error instanceof Error) {
+            errorMessage += error.message;
+        } else {
+            errorMessage += error + "";
+        }
+        errors.push(errorMessage);
     }
 
-    if (!error) {
+    if (errors.length === 0) {
         try {
             if (verifyFunction && !verifyFunction()) {
-                error = "verifyFunctionCalledAndFailed";
+                errors.push("verifyFunction called and failed.");
             }
         } catch (error) {
-            error = error;
+            let errorMessage = "Error in verifyFunction. ";
+            if (error instanceof Error) {
+                errorMessage += error.message;
+            } else {
+                errorMessage += error + "";
+            }
+            errors.push(errorMessage);
         }
     }
 
     try {
+        // console.log("dbEvent dbEvent dbEvent attributesDict", attributesDict);
         if (dbEvent) {
-            dbEvent.fulltext = JSON.stringify(attributesDict).substring(0, 10000);;
+            dbEvent.fulltext = JSON.stringify(attributesDict).substring(0, 10000);
         }
     } catch (error) {
-        error = "dbEventFulltextStringifyError"
+        errors.push("Error in dbEvent fulltext stringify: " + JSON.stringify(error));
     }
 
     if (dbEvent) dbEvent.timestamp = new Date(lavaBlock.datetime);
 
-    if (!error) return true;
+    if (errors.length === 0) return true;
 
     if (dbEvent && !dbEvent.fulltext) {
         try {
@@ -212,12 +225,12 @@ export function EventProcessAttributes(
     console.warn(`
         EventProcessAttributes processAttribute error.
         Caller: ${caller}
-        ${(error + "").substring(0, 0x1000)}
+        ${(errors.join(" ") + "").substring(0, 0x1000)}
         Height: ${height.toString().substring(0, 0x1000)}
         TxHash: ${txHash?.substring(0, 0x1000)}
         Event: ${JSON.stringify(evt).substring(0, 0x1000)}
     `);
 
-    ParseEventError(evt, height, txHash, lavaBlock, error, caller);
+    ParseEventError(evt, height, txHash, lavaBlock, errors.join(" "), caller);
     return false;
 }

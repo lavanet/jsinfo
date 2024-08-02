@@ -71,11 +71,9 @@ export async function SyncBlockchainEntities(
         })
 
         // Insert all stakes
-        // console.log("SyncBlockchainEntities: Inserting stakes");
         await Promise.all(Array.from(blockchainEntitiesStakes.values()).map(async (stakes) => {
             return stakes.map(async (stake) => {
                 if (stake.specId == null || stake.specId == "") return;
-                // console.log("SyncBlockchainEntities: Inserting stake for provider", stake.provider, "and specId", stake.specId);
                 return await tx.insert(JsinfoSchema.providerStakes)
                     .values(stake)
                     .onConflictDoUpdate(

@@ -4,7 +4,22 @@ import { LavaBlock } from "../types";
 import { GetOrSetProvider, SetTx } from "../blockchainEntities/blockchainEntitiesGettersAndSetters";
 import { EventParseUlava, EventProcessAttributes, EventParseProviderAddress } from "../eventUtils";
 
+/* sample form 2aug24:
+export const ParseEventLavaFreezeFromUnbound = (
+{
+  "chain_id": "EVMOS",
+  "description": "moniker: Borsh\n",
+  "effective_stake": "8623952059ulava",
+  "min_spec_stake": "50000000000ulava",
+  "moniker": "Borsh",
+  "provider_provider": "lava@1w6dpe5r6jqw7smwhnxyclren9xm5tfcldv96q6",
+  "provider_vault": "lava@1w6dpe5r6jqw7smwhnxyclren9xm5tfcldv96q6",
+  "stake": "8623952059ulava"
+}
+*/
+
 /*
+sample for 18apr24:
 https://github.com/lavanet/lava/blob/976bbd1063c66742b2f49465d39fe57ef6edff8a/x/dualstaking/keeper/delegate.go#L245
 
   details := map[string]string{
@@ -109,6 +124,9 @@ export const ParseEventLavaFreezeFromUnbound = (
           dbEvent.b2 = EventParseUlava(value)
           break
         case 'provider':
+          dbEvent.provider = EventParseProviderAddress(value);
+          break
+        case 'provider_provider':
           dbEvent.provider = EventParseProviderAddress(value);
           break
         case 'moniker':

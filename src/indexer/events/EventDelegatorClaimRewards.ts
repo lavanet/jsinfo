@@ -29,7 +29,7 @@ export const ParseEventDelegatorClaimRewards = (
   const dbEvent: JsinfoSchema.InsertEvent = {
     tx: txHash,
     blockId: height,
-    eventType: JsinfoSchema.LavaProviderEventType.RedelegateBetweenProviders,
+    eventType: JsinfoSchema.LavaProviderEventType.DelegatorClaimRewards,
     consumer: null,
     provider: null,
   }

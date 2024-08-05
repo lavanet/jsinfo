@@ -6,6 +6,11 @@ import { GetOrSetProvider, SetTx } from "../blockchainEntities/blockchainEntitie
 import { EventParseUlava, EventProcessAttributes, EventParseProviderAddress } from "../eventUtils";
 
 /*
+Aug5 sample:
+{"type":"lava_delegator_claim_rewards"}
+{"claimed":"465588965965ulava","delegator":"lava@1tlkpa7t48fjl7qan4ete6xh0lsy679flnqdw57"}
+
+Aug2 notes:
 SELECT * FROM events  WHERE event_type >= 1000 AND t1 not like '%lava_provider_temporary_jailed%' AND t1 not like '%cosmos.authz.v1beta1.EventGrant%' AND t1 not like '%lava_unstake_from_unbond%' ORDER BY "id" desc LIMIT 100
 
 {
@@ -35,7 +40,7 @@ export const ParseEventDelegatorClaimRewards = (
   }
 
   if (!EventProcessAttributes({
-    caller: "EventRedelegateBetweenProviders",
+    caller: "ParseEventDelegatorClaimRewards",
     lavaBlock: lavaBlock,
     evt: evt,
     height: height,

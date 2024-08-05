@@ -8,7 +8,7 @@ import { EventParseInt, EventProcessAttributes } from "../eventUtils";
 {"type":"lava_distribution_pools_refill","allocation_pool_remaining_lifetime":"43","leftover_burn_rate":"1.000000000000000000","next_refill_block":"1229316","next_refill_time":"2024-05-27 12:23:34 +0000 UTC","providers_distribution_pool_balance":"769821204696102","validators_distribution_pool_balance":"769840294693826"}
 */
 
-export const ParseDistributionPoolsRefill = (
+export const ParseEventDistributionPoolsRefill = (
   evt: Event,
   height: number,
   txHash: string | null,
@@ -27,7 +27,7 @@ export const ParseDistributionPoolsRefill = (
   }
 
   if (!EventProcessAttributes({
-    caller: "ParseDistributionPoolsRefill",
+    caller: "ParseEventDistributionPoolsRefill",
     lavaBlock: lavaBlock,
     evt: evt,
     height: height,

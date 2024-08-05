@@ -38,7 +38,7 @@ import { ParseEventConflictDetectionVoteUnresolved } from "./events/EventConflic
 
 // Rewards Events
 import { ParseEventProviderBonusRewards } from "./events/EventProviderBonusRewards";
-import { ParseIPRPCPoolEmission } from "./events/EventIPRPCPoolEmmission";
+import { ParseEventIPRPCPoolEmission } from "./events/EventIPRPCPoolEmmission";
 
 // Dual Staking Events
 import { ParseEventDelegateToProvider } from "./events/EventDelegateToProvider";
@@ -46,12 +46,12 @@ import { ParseEventUbondFromProvider } from "./events/EventUnbondFromProvider";
 import { ParseEventRedelegateBetweenProviders } from "./events/EventRedelegateBetweenProviders";
 import { ParseEventLavaFreezeFromUnbound } from "./events/EventFreezeFromUnbond";
 import { ParseEventUnstakeFromUnbound } from "./events/EventUnstakeFromUnbound";
-import { ParseValidatorSlash } from "./events/EventValidatorSlash";
+import { ParseEventValidatorSlash } from "./events/EventValidatorSlash";
 import { ParseEventDelegatorClaimRewards } from "./events/EventDelegatorClaimRewards";
 
 // Unidentified Event
 import { ParseEventUnidentified } from "./events/EventUnidentified";
-import { ParseDistributionPoolsRefill } from "./events/EventDistributionPoolsRefill";
+import { ParseEventDistributionPoolsRefill } from "./events/EventDistributionPoolsRefill";
 import { logger } from "../utils";
 
 export const ProcessOneEvent = (
@@ -253,7 +253,7 @@ export const ProcessOneEvent = (
 
         // validator slashed happened, providers slashed accordingly
         case 'lava_validator_slash':
-            ParseValidatorSlash(evt, height, txHash, lavaBlock, blockchainEntitiesProviders, blockchainEntitiesSpecs, blockchainEntitiesStakes)
+            ParseEventValidatorSlash(evt, height, txHash, lavaBlock, blockchainEntitiesProviders, blockchainEntitiesSpecs, blockchainEntitiesStakes)
             break
 
         case 'lava_freeze_from_unbond':
@@ -276,12 +276,12 @@ export const ProcessOneEvent = (
         // a successful distribution of IPRPC bonus rewards
         case "lava_iprpc-pool-emmission":
         case "lava_iprpc_pool_emmission":
-            ParseIPRPCPoolEmission(evt, height, txHash, lavaBlock, blockchainEntitiesProviders, blockchainEntitiesSpecs, blockchainEntitiesStakes)
+            ParseEventIPRPCPoolEmission(evt, height, txHash, lavaBlock, blockchainEntitiesProviders, blockchainEntitiesSpecs, blockchainEntitiesStakes)
             break
 
         // a successful distribution rewards pools refill     
         case "lava_distribution_pools_refill":
-            ParseDistributionPoolsRefill(evt, height, txHash, lavaBlock, blockchainEntitiesProviders, blockchainEntitiesSpecs, blockchainEntitiesStakes)
+            ParseEventDistributionPoolsRefill(evt, height, txHash, lavaBlock, blockchainEntitiesProviders, blockchainEntitiesSpecs, blockchainEntitiesStakes)
             break
 
         //

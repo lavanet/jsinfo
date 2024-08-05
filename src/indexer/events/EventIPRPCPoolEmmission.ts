@@ -5,10 +5,11 @@ import { SetTx } from "../blockchainEntities/blockchainEntitiesGettersAndSetters
 import { EventProcessAttributes } from "../eventUtils";
 
 /* 
-1500436	1000	 	1138596	{"type":"lava_iprpc-pool-emmission","iprpc_rewards_leftovers":"9ulava"}
+1500436	1000	 	1138596	
+{"type":"lava_iprpc-pool-emmission","iprpc_rewards_leftovers":"9ulava"}
 */
 
-export const ParseIPRPCPoolEmission = (
+export const ParseEventIPRPCPoolEmission = (
   evt: Event,
   height: number,
   txHash: string | null,
@@ -27,7 +28,7 @@ export const ParseIPRPCPoolEmission = (
   }
 
   if (!EventProcessAttributes({
-    caller: "ParseIPRPCPoolEmission",
+    caller: "ParseEventIPRPCPoolEmission",
     lavaBlock: lavaBlock,
     evt: evt,
     height: height,

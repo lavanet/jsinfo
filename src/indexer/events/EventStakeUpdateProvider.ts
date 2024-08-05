@@ -43,8 +43,6 @@ lava_stake_update_provider {
 }
 */
 
-
-
 export const ParseEventStakeUpdateProvider = (
   evt: Event,
   height: number,

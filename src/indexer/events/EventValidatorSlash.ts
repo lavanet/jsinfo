@@ -23,7 +23,7 @@ EventDebug event 1068947 lava_validator_slash {
 1499721	1000	 	1137740	{"type":"lava_validator_slash","slash_fraction":"0.004999998332364468","validator_address":"lava@valoper13sjlfk3hys245nm04ljjmg6pf6l8qtaqk0flnq"}
 */
 
-export const ParseValidatorSlash = (
+export const ParseEventValidatorSlash = (
   evt: Event,
   height: number,
   txHash: string | null,
@@ -42,7 +42,7 @@ export const ParseValidatorSlash = (
   }
 
   if (!EventProcessAttributes({
-    caller: "ParseValidatorSlash",
+    caller: "ParseEventValidatorSlash",
     lavaBlock: lavaBlock,
     evt: evt,
     height: height,

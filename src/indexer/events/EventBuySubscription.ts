@@ -5,6 +5,9 @@ import { GetOrSetConsumer, SetTx } from "../blockchainEntities/blockchainEntitie
 import { EventProcessAttributes, EventParseProviderAddress, EventParseInt } from "../eventUtils";
 
 /*
+// 5aug24 - confirmed with yarom, this event is used
+
+// original sample:
 360227  {
   type: 'lava_buy_subscription_event',
   attributes: [

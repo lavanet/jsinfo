@@ -17,9 +17,9 @@ export type ProviderEventsResponse = {
         t1: string | null;
         t2: string | null;
         t3: string | null;
-        b1: bigint | null;
-        b2: bigint | null;
-        b3: bigint | null;
+        b1: string | bigint | null;
+        b2: string | bigint | null;
+        b3: string | bigint | null;
         i1: number | null;
         i2: number | null;
         i3: number | null;
@@ -107,10 +107,16 @@ class ProviderEventsData extends RequestHandlerBase<ProviderEventsResponse> {
     protected async fetchAllRecords(): Promise<ProviderEventsResponse[]> {
         await QueryCheckJsinfoReadDbInstance();
 
-        const eventsRes = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.events).
+        const eventsRes: ProviderEventsResponse[] = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.events).
             leftJoin(JsinfoSchema.blocks, eq(JsinfoSchema.events.blockId, JsinfoSchema.blocks.height)).
             where(eq(JsinfoSchema.events.provider, this.addr)).
             orderBy(desc(JsinfoSchema.events.id)).offset(0).limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION)
+
+        eventsRes.forEach((event) => {
+            event.events.b1 = event.events.b1?.toString() || null;
+            event.events.b2 = event.events.b2?.toString() || null;
+            event.events.b3 = event.events.b3?.toString() || null;
+        });
 
         return eventsRes;
     }
@@ -171,7 +177,7 @@ class ProviderEventsData extends RequestHandlerBase<ProviderEventsResponse> {
         const sortColumn = keyToColumnMap[finalPagination.sortKey];
         const orderFunction = finalPagination.direction === 'ascending' ? asc : desc;
 
-        const eventsRes = await QueryGetJsinfoReadDbInstance()
+        const eventsRes: ProviderEventsResponse[] = await QueryGetJsinfoReadDbInstance()
             .select()
             .from(JsinfoSchema.events)
             .where(eq(JsinfoSchema.events.provider, this.addr))
@@ -179,6 +185,12 @@ class ProviderEventsData extends RequestHandlerBase<ProviderEventsResponse> {
             .orderBy(orderFunction(sortColumn))
             .offset((finalPagination.page - 1) * finalPagination.count)
             .limit(finalPagination.count);
+
+        eventsRes.forEach((event) => {
+            event.events.b1 = event.events.b1?.toString() || null;
+            event.events.b2 = event.events.b2?.toString() || null;
+            event.events.b3 = event.events.b3?.toString() || null;
+        });
 
         return eventsRes;
     }

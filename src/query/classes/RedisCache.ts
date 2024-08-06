@@ -115,6 +115,25 @@ class RedisCacheClass {
         }
     }
 
+    async getDict(key: string): Promise<{ [key: string]: any } | null> {
+        const result = await this.get(key);
+        if (!result) return null;
+        try {
+            return JSON.parse(result);
+        } catch (error) {
+            this.logError(`Error parsing JSON for key ${this.keyPrefix + key}`, error);
+            return null;
+        }
+    }
+
+    async setDict(key: string, value: { [key: string]: any }, ttl: number = 30): Promise<void> {
+        try {
+            const stringValue = JSON.stringify(value);
+            await this.set(key, stringValue, ttl);
+        } catch (error) {
+            this.logError(`Error serializing dictionary for key ${this.keyPrefix + key}`, error);
+        }
+    }
     private log(message: string) {
         if (!this.debugLogs) return;
         logger.info(`RedisCache: ${message}`);

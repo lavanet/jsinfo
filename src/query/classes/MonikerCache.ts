@@ -3,7 +3,7 @@
 import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../queryDb';
 import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import { gte } from 'drizzle-orm';
-
+import { RedisCache } from './RedisCache';
 interface ProviderSpecMoniker {
     provider: string;
     moniker: string | null;
@@ -32,8 +32,16 @@ class ProviderSpecMonikerCache {
 
     private async refreshCache() {
         await QueryCheckJsinfoReadDbInstance();
-        this.psmCache = await this.fetchProviderSpecMonikerTable();
-        this.pmCache = await this.fetchProviderMonikerTable();
+        this.psmCache = await RedisCache.getArray("ProviderSpecMonikerTable") as ProviderSpecMoniker[]
+        if (!this.psmCache) {
+            this.psmCache = await this.fetchProviderSpecMonikerTable();
+            RedisCache.setArray("ProviderSpecMonikerTable", this.psmCache, this.refreshInterval);
+        }
+        this.psmCache = await RedisCache.getArray("ProviderMonikerTable") as ProviderSpecMoniker[]
+        if (!this.psmCache) {
+            this.pmCache = await this.fetchProviderMonikerTable();
+            RedisCache.setArray("ProviderMonikerTable", this.psmCache, this.refreshInterval);
+        }
         this.monikerForProviderCache.clear();
         this.monikerFullDescriptionCache.clear();
     }

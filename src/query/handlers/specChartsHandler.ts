@@ -10,6 +10,7 @@ import { RequestHandlerBase } from '../classes/RequestHandlerBase';
 import { GetAndValidateSpecIdFromRequest, GetDataLength } from '../utils/queryUtils';
 import { MonikerCache } from '../classes/MonikerCache';
 import { PgColumn } from 'drizzle-orm/pg-core';
+import { JSONStringifySpaced } from '../../utils/utils';
 
 type SpecChartCuRelay = {
     provider: string;
@@ -162,13 +163,13 @@ class SpecChartsData extends RequestHandlerBase<SpecChartResponse> {
             item.qosLatencyAvg = Number(item.qosLatencyAvg);
 
             if (!item.date || isNaN(Date.parse(item.date))) {
-                throw new Error(`Data format does not match the QosQueryData interface.Item: ${JSONStringify(item)}.Reason: item.date is not a valid date.`);
+                throw new Error(`Data format does not match the QosQueryData interface.Item: ${JSONStringifySpaced(item)}.Reason: item.date is not a valid date.`);
             } else if (isNaN(item.qosSyncAvg)) {
-                throw new Error(`Data format does not match the QosQueryData interface.Item: ${JSONStringify(item)}.Reason: item.qosSyncAvg is not a number.`);
+                throw new Error(`Data format does not match the QosQueryData interface.Item: ${JSONStringifySpaced(item)}.Reason: item.qosSyncAvg is not a number.`);
             } else if (isNaN(item.qosAvailabilityAvg)) {
-                throw new Error(`Data format does not match the QosQueryData interface.Item: ${JSONStringify(item)}.Reason: item.qosAvailabilityAvg is not a number.`);
+                throw new Error(`Data format does not match the QosQueryData interface.Item: ${JSONStringifySpaced(item)}.Reason: item.qosAvailabilityAvg is not a number.`);
             } else if (isNaN(item.qosLatencyAvg)) {
-                throw new Error(`Data format does not match the QosQueryData interface.Item: ${JSONStringify(item)}.Reason: item.qosLatencyAvg is not a number.`);
+                throw new Error(`Data format does not match the QosQueryData interface.Item: ${JSONStringifySpaced(item)}.Reason: item.qosLatencyAvg is not a number.`);
             }
 
             const qos = Math.cbrt(item.qosSyncAvg * item.qosAvailabilityAvg * item.qosLatencyAvg);

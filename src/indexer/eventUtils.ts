@@ -75,6 +75,21 @@ export function EventParseInt(value: string): number {
     return numberValue;
 }
 
+export function EventParseBigInt(value: string): bigint {
+    const pattern = /^\d+$/;
+
+    if (!pattern.test(value)) {
+        throw new Error(`EventParseBigInt: Value is not a valid integer: ${value}`);
+    }
+
+    try {
+        const bigIntValue = BigInt(value);
+        return bigIntValue;
+    } catch (error) {
+        throw new Error(`EventParseBigInt: Error parsing value to BigInt: ${value}`);
+    }
+}
+
 export function EventParseFloat(value: string): number {
     const pattern = /^-?\d*(\.\d+)?$/;
 

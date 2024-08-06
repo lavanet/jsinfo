@@ -2,7 +2,7 @@ import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import { Event } from "@cosmjs/stargate"
 import { LavaBlock } from "../types";
 import { SetTx } from "../blockchainEntities/blockchainEntitiesGettersAndSetters";
-import { EventParseInt, EventProcessAttributes } from "../eventUtils";
+import { EventParseBigInt, EventParseInt, EventProcessAttributes } from "../eventUtils";
 
 /*
 EventDebug event 1083240 lava_conflict_detection_vote_unresolved {
@@ -99,10 +99,10 @@ export const ParseEventConflictDetectionVoteUnresolved = (
           break
 
         case 'RewardPool':
-          dbEvent.b1 = EventParseInt(value)
+          dbEvent.b1 = EventParseBigInt(value)
           break
         case 'TotalVotes':
-          dbEvent.b2 = EventParseInt(value) // stake
+          dbEvent.b2 = EventParseBigInt(value) // stake
           break
 
         /*case 'FirstProviderVotes':

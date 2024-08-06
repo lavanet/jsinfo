@@ -2,7 +2,7 @@ import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import { Event } from "@cosmjs/stargate"
 import { LavaBlock } from "../types";
 import { GetOrSetProvider, SetTx } from "../blockchainEntities/blockchainEntitiesGettersAndSetters";
-import { EventProcessAttributes, EventParseProviderAddress, EventParseInt } from "../eventUtils";
+import { EventProcessAttributes, EventParseProviderAddress, EventParseInt, EventParseBigInt } from "../eventUtils";
 
 export const ParseEventConflictDetectionVoteResolved = (
   evt: Event,
@@ -45,10 +45,10 @@ export const ParseEventConflictDetectionVoteResolved = (
           break
 
         case 'RewardPool':
-          dbEvent.b1 = EventParseInt(value)
+          dbEvent.b1 = EventParseBigInt(value)
           break
         case 'TotalVotes':
-          dbEvent.b2 = EventParseInt(value) // stake
+          dbEvent.b2 = EventParseBigInt(value) // stake
           break
 
         /*case 'FirstProviderVotes':

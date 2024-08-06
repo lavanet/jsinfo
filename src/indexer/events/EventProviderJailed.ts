@@ -2,7 +2,7 @@ import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import { Event } from "@cosmjs/stargate"
 import { LavaBlock } from "../types";
 import { GetOrSetProvider, SetTx } from "../blockchainEntities/blockchainEntitiesGettersAndSetters";
-import { EventProcessAttributes, EventParseProviderAddress, EventParseInt } from "../eventUtils";
+import { EventProcessAttributes, EventParseProviderAddress, EventParseBigInt } from "../eventUtils";
 
 /*
 485100 {
@@ -48,13 +48,13 @@ export const ParseEventProviderJailed = (
           dbEvent.t1 = value;
           break
         case 'complaint_cu':
-          dbEvent.b1 = EventParseInt(value)
+          dbEvent.b1 = EventParseBigInt(value)
           break
         case 'provider_address':
           dbEvent.provider = EventParseProviderAddress(value);
           break
         case 'serviced_cu':
-          dbEvent.b2 = EventParseInt(value)
+          dbEvent.b2 = EventParseBigInt(value)
           break
       }
     },

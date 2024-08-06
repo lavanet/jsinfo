@@ -4,7 +4,7 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { isNotNull, sql, and } from "drizzle-orm";
 import * as JsinfoSchema from "../../../schemas/jsinfoSchema/jsinfoSchema";
 import * as JsinfoConsumerAgrSchema from '../../../schemas/jsinfoSchema/consumerRelayPaymentsAgregation';
-import { DoInChunks, JSONStringify, logger } from "../../../utils/utils";
+import { DoInChunks, logger } from "../../../utils/utils";
 import { PgColumn } from 'drizzle-orm/pg-core';
 
 export async function getConsumerAggHourlyTimeSpan(db: PostgresJsDatabase): Promise<{ startTime: Date | null, endTime: Date | null }> {
@@ -111,7 +111,7 @@ export async function aggConsumerHourlyRelayPayments(db: PostgresJsDatabase) {
         if (uniqueCombinations.has(key)) {
             // If the combination is already in the map, add it to duplicates
             const firstDuplicate = uniqueCombinations.get(key);
-            duplicates.push(`Duplicate: ${JSONStringify(result, null, 2)} | First occurrence: ${JSONStringify(firstDuplicate)}\n`);
+            duplicates.push(`Duplicate: ${JSON.stringify(result, null, 2)} | First occurrence: ${JSON.stringify(firstDuplicate)}\n`);
         } else {
             // Otherwise, add the combination to the map
             uniqueCombinations.set(key, result);
@@ -121,8 +121,8 @@ export async function aggConsumerHourlyRelayPayments(db: PostgresJsDatabase) {
     // Check if there are any duplicates
     if (duplicates.length > 0) {
         // Log or throw an exception with the details of the duplicates
-        logger.error(`Duplicate entries found for consumer, datehour, specId combinations: ${JSONStringify(duplicates, null, 2)}`);
-        throw new Error(`Duplicate entries found for consumer, datehour, specId combinations: ${JSONStringify(duplicates, null, 2)}`);
+        logger.error(`Duplicate entries found for consumer, datehour, specId combinations: ${JSON.stringify(duplicates, null, 2)}`);
+        throw new Error(`Duplicate entries found for consumer, datehour, specId combinations: ${JSON.stringify(duplicates, null, 2)}`);
     }
 
     //

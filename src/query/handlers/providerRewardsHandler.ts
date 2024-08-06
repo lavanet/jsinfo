@@ -15,7 +15,7 @@ export type ProviderRewardsResponse = {
         id: number;
         relays: number | null;
         cu: number | null;
-        pay: number | null;
+        pay: string | bigint | null;
         datetime: Date | null;
         qosSync: number | null;
         qosAvailability: number | null;
@@ -56,7 +56,7 @@ export const ProviderRewardsPaginatedHandlerOpts: RouteShorthandOptions = {
                                             type: ['number', 'null']
                                         },
                                         pay: {
-                                            type: ['number', 'null']
+                                            type: ['string', 'null']
                                         },
                                         datetime: {
                                             type: ['string', 'null'],
@@ -141,7 +141,7 @@ class ProviderRewardsData extends RequestHandlerBase<ProviderRewardsResponse> {
         let thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-        const paymentsRes = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.relayPayments).
+        const paymentsRes: ProviderRewardsResponse[] = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.relayPayments).
             leftJoin(JsinfoSchema.blocks, eq(JsinfoSchema.relayPayments.blockId, JsinfoSchema.blocks.height)).
             where(
                 and(
@@ -151,6 +151,10 @@ class ProviderRewardsData extends RequestHandlerBase<ProviderRewardsResponse> {
             orderBy(desc(JsinfoSchema.relayPayments.id)).
             offset(0).
             limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION)
+
+        paymentsRes.forEach((payment) => {
+            payment.relay_payments.pay = payment.relay_payments.pay ? BigInt(payment.relay_payments.pay).toString() : null;
+        });
 
         return paymentsRes;
     }
@@ -206,13 +210,17 @@ class ProviderRewardsData extends RequestHandlerBase<ProviderRewardsResponse> {
         const sortColumn = keyToColumnMap[finalPagination.sortKey];
         const orderFunction = finalPagination.direction === 'ascending' ? asc : desc;
 
-        const paymentsRes = await QueryGetJsinfoReadDbInstance()
+        const paymentsRes: ProviderRewardsResponse[] = await QueryGetJsinfoReadDbInstance()
             .select()
             .from(JsinfoSchema.relayPayments)
             .leftJoin(JsinfoSchema.blocks, eq(JsinfoSchema.relayPayments.blockId, JsinfoSchema.blocks.height))
             .orderBy(orderFunction(sortColumn))
             .offset((finalPagination.page - 1) * finalPagination.count)
             .limit(finalPagination.count);
+
+        paymentsRes.forEach((payment) => {
+            payment.relay_payments.pay = payment.relay_payments.pay ? BigInt(payment.relay_payments.pay).toString() : null;
+        });
 
         return paymentsRes;
     }

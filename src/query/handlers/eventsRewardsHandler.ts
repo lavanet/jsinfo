@@ -14,7 +14,7 @@ export interface EventsRewardsResponse {
     id: number | null;
     relays: number | null;
     cu: number | null;
-    pay: number | null;
+    pay: string | null;
     datetime: Date | null;
     qosSync: number | null;
     qosAvailability: number | null;
@@ -96,6 +96,7 @@ class EventsRewardsData extends RequestHandlerBase<EventsRewardsResponse> {
 
         const flattenedRes = paymentsRes.map(data => ({
             ...data,
+            pay: data.pay?.toString() || null,
             moniker: MonikerCache.GetMonikerForProvider(data.provider),
             monikerfull: MonikerCache.GetMonikerFullDescription(data.provider),
         }));
@@ -175,6 +176,7 @@ class EventsRewardsData extends RequestHandlerBase<EventsRewardsResponse> {
 
             const flattenedRewards = paymentsRes.map(data => ({
                 ...data.relay_payments,
+                pay: data.relay_payments.pay?.toString() || null,
                 moniker: MonikerCache.GetMonikerForProvider(data.relay_payments.provider),
                 monikerfull: MonikerCache.GetMonikerFullDescription(data.relay_payments.provider),
             }));
@@ -191,6 +193,7 @@ class EventsRewardsData extends RequestHandlerBase<EventsRewardsResponse> {
 
         const flattenedRewards = paymentsRes.map(data => ({
             ...data,
+            pay: data.pay?.toString() || null,
             moniker: MonikerCache.GetMonikerForProvider(data.provider),
             monikerfull: MonikerCache.GetMonikerFullDescription(data.provider),
         }));

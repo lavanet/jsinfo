@@ -94,3 +94,6 @@ macos_query_port_pid:
 
 query_endpoints_full_tests_all:
 	cd tests/query_endpoints && make query_endpoints_full_tests_all
+
+query_endpoints_full_tests_local:
+	cd tests/query_endpoints && make query_endpoints_full_tests_local

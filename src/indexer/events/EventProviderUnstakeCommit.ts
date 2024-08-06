@@ -2,7 +2,7 @@ import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import { Event } from "@cosmjs/stargate"
 import { LavaBlock } from "../types";
 import { GetOrSetProvider, SetTx } from "../blockchainEntities/blockchainEntitiesGettersAndSetters";
-import { EventProcessAttributes, EventParseProviderAddress, EventParseInt } from "../eventUtils";
+import { EventProcessAttributes, EventParseProviderAddress, EventParseInt, EventParseBigInt } from "../eventUtils";
 
 /*
 
@@ -98,7 +98,7 @@ export const ParseEventProviderUnstakeCommit = (
           dbEvent.t1 = value;
           break
         case 'stake':
-          dbEvent.b1 = EventParseInt(value)
+          dbEvent.b1 = EventParseBigInt(value)
           break
         case 'address':
           dbEvent.provider = EventParseProviderAddress(value);

@@ -28,16 +28,16 @@ class TestEndpoints(unittest.TestCase):
     def test_eventsEvents_endpoint(self):
         url = f"{server_address}/eventsEvents"
         response = requests.get(url)
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 200, f"Expected status code 200 for URL {url}, got {response.status_code}")
         data = response.json()
-        self.assertTrue(isinstance(data, dict))
-        self.assertIn('data', data)
-        self.assertTrue(isinstance(data['data'], list))
-        if data['data']: 
+        self.assertTrue(isinstance(data, dict), "Expected data to be a dictionary")
+        self.assertIn('data', data, "Key 'data' not found in response")
+        self.assertTrue(isinstance(data['data'], list), "Expected 'data' key to contain a list")
+        if data['data']:
             item = data['data'][0]
-            self.assertIn('id', item)
-            self.assertIn('eventType', item)
-            self.assertIn('provider', item)
+            self.assertIn('id', item, "Key 'id' not found in the first item of 'data'")
+            self.assertIn('eventType', item, "Key 'eventType' not found in the first item of 'data'")
+            self.assertIn('provider', item, "Key 'provider' not found in the first item of 'data'")
 
     def test_eventsRewards_endpoint(self):
         url = f"{server_address}/eventsRewards"

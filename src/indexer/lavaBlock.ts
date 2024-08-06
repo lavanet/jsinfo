@@ -6,7 +6,7 @@ import { Tendermint37Client } from "@cosmjs/tendermint-rpc";
 import { ProcessOneEvent } from './eventProcessor';
 import { LavaBlock } from './types';
 import LavaBlockCache from './lavaBlockCache';
-import { logger } from '../utils';
+import { logger } from '../utils/utils';
 
 const cache = new LavaBlockCache();
 

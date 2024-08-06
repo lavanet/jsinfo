@@ -4,7 +4,7 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { isNotNull, sql, and } from "drizzle-orm";
 import * as JsinfoSchema from "../../../schemas/jsinfoSchema/jsinfoSchema";
 import * as JsinfoProviderAgrSchema from '../../../schemas/jsinfoSchema/providerRelayPaymentsAgregation';
-import { DoInChunks, logger } from "../../../utils";
+import { DoInChunks, logger } from "../../../utils/utils";
 import { PgColumn } from 'drizzle-orm/pg-core';
 
 export async function getProviderAggHourlyTimeSpan(db: PostgresJsDatabase): Promise<{ startTime: Date | null, endTime: Date | null }> {

@@ -1,7 +1,7 @@
 // src/query/classes/RedisCache.ts
 
 import { createClient, RedisClientType } from 'redis';
-import { logger } from '../../utils';
+import { JSONStringify, logger } from '../../utils/utils';
 
 class RedisCacheClass {
     private client: RedisClientType | null = null;
@@ -108,7 +108,7 @@ class RedisCacheClass {
 
     async setArray(key: string, value: any[], ttl: number = 30): Promise<void> {
         try {
-            const stringValue = JSON.stringify(value);
+            const stringValue = JSONStringify(value);
             await this.set(key, stringValue, ttl);
         } catch (error) {
             this.logError(`Error serializing array for key ${this.keyPrefix + key}`, error);

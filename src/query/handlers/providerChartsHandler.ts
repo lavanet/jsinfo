@@ -8,6 +8,7 @@ import { DateToISOString, FormatDateItems } from '../utils/queryDateUtils';
 import { RequestHandlerBase } from '../classes/RequestHandlerBase';
 import { GetAndValidateProviderAddressFromRequest, GetDataLength } from '../utils/queryUtils';
 import { PgColumn } from 'drizzle-orm/pg-core';
+import { JSONStringifySpaced } from '../../utils/utils';
 
 type ProviderChartCuRelay = {
     specId: string;
@@ -121,13 +122,13 @@ class ProviderChartsData extends RequestHandlerBase<ProviderChartResponse> {
             item.qosLatencyAvg = Number(item.qosLatencyAvg);
 
             if (!item.date || isNaN(Date.parse(item.date))) {
-                throw new Error(`Data format does not match the ProviderQosQueryData interface.Item: ${JSON.stringify(item)}.Reason: item.date is not a valid date.`);
+                throw new Error(`Data format does not match the ProviderQosQueryData interface.Item: ${JSONStringifySpaced(item)}.Reason: item.date is not a valid date.`);
             } else if (isNaN(item.qosSyncAvg)) {
-                throw new Error(`Data format does not match the ProviderQosQueryData interface.Item: ${JSON.stringify(item)}.Reason: item.qosSyncAvg is not a number.`);
+                throw new Error(`Data format does not match the ProviderQosQueryData interface.Item: ${JSONStringifySpaced(item)}.Reason: item.qosSyncAvg is not a number.`);
             } else if (isNaN(item.qosAvailabilityAvg)) {
-                throw new Error(`Data format does not match the ProviderQosQueryData interface.Item: ${JSON.stringify(item)}.Reason: item.qosAvailabilityAvg is not a number.`);
+                throw new Error(`Data format does not match the ProviderQosQueryData interface.Item: ${JSONStringifySpaced(item)}.Reason: item.qosAvailabilityAvg is not a number.`);
             } else if (isNaN(item.qosLatencyAvg)) {
-                throw new Error(`Data format does not match the ProviderQosQueryData interface.Item: ${JSON.stringify(item)}.Reason: item.qosLatencyAvg is not a number.`);
+                throw new Error(`Data format does not match the ProviderQosQueryData interface.Item: ${JSONStringifySpaced(item)}.Reason: item.qosLatencyAvg is not a number.`);
             }
 
             const qos = Math.cbrt(item.qosSyncAvg * item.qosAvailabilityAvg * item.qosLatencyAvg);

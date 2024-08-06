@@ -5,7 +5,7 @@ import { JSINFO_INDEXER_EVENT_ATTRIBUTE_KEY_COUNT_MAX, JSINFO_INDEXER_EVENT_ATTR
 import { ParseEventError } from "./events/EventError";
 import { LavaBlock } from "./types";
 import * as JsinfoSchema from '../schemas/jsinfoSchema/jsinfoSchema';
-import { logger } from "../utils";
+import { JSONStringify, logger, ParseUlavaToBigInt } from "../utils/utils";
 
 export function EventExtractKeyFromAttribute(attr: Attribute): string {
     if (attr.key.length < 2) {
@@ -95,26 +95,8 @@ export function EventParseAlphaNumericString(key: string): string {
     return key;
 }
 
-export function EventParseUlava(value: string): number {
-    const ulavaIndex = value.indexOf('ulava');
-    if (ulavaIndex === -1) {
-        throw new Error(`ParseUlavaToInt: Value does not contain 'ulava': ${value}`);
-    }
-
-    const numberPart = value.substring(0, ulavaIndex);
-
-    // Check if the string only contains numeric characters
-    if (!/^\d+$/.test(numberPart)) {
-        throw new Error(`ParseUlavaToInt: Value is not a valid integer: ${value}`);
-    }
-
-    const parsedNumber = parseInt(numberPart);
-
-    if (isNaN(parsedNumber)) {
-        throw new Error(`ParseUlavaToInt: Value is not a parsable number: ${value}`);
-    }
-
-    return parsedNumber;
+export function EventParseUlava(value: string): bigint {
+    return ParseUlavaToBigInt(value);
 }
 
 export interface EventProcessAttributesProps {
@@ -204,10 +186,10 @@ export function EventProcessAttributes(
     try {
         // console.log("dbEvent dbEvent dbEvent attributesDict", attributesDict);
         if (dbEvent) {
-            dbEvent.fulltext = JSON.stringify(attributesDict).substring(0, 10000);
+            dbEvent.fulltext = JSONStringify(attributesDict).substring(0, 10000);
         }
     } catch (error) {
-        errors.push("Error in dbEvent fulltext stringify: " + JSON.stringify(error));
+        errors.push("Error in dbEvent fulltext stringify: " + JSONStringify(error));
     }
 
     if (dbEvent) dbEvent.timestamp = new Date(lavaBlock.datetime);
@@ -216,7 +198,7 @@ export function EventProcessAttributes(
 
     if (dbEvent && !dbEvent.fulltext) {
         try {
-            dbEvent.fulltext = JSON.stringify(evt).substring(0, 10000);
+            dbEvent.fulltext = JSONStringify(evt).substring(0, 10000);
         } catch (error) {
             dbEvent.fulltext = (evt + "").substring(0, 10000);
         }
@@ -228,7 +210,7 @@ export function EventProcessAttributes(
         ${(errors.join(" ") + "").substring(0, 0x1000)}
         Height: ${height.toString().substring(0, 0x1000)}
         TxHash: ${txHash?.substring(0, 0x1000)}
-        Event: ${JSON.stringify(evt).substring(0, 0x1000)}
+        Event: ${JSONStringify(evt).substring(0, 0x1000)}
     `);
 
     ParseEventError(evt, height, txHash, lavaBlock, errors.join(" "), caller);

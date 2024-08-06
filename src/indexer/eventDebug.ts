@@ -1,7 +1,8 @@
 // src/indexer/eventDebug.ts
 
 import { GetRpcBlock, GetRpcTxs, GetRpcBlockResultEvents } from "./lavaBlock";
-import { logger, RpcConnection } from "../utils";
+import { logger } from "../utils/utils";
+import { RpcConnection } from "../utils/rpc";
 import { ProcessOneEvent } from "./eventProcessor";
 import * as JsinfoSchema from '../schemas/jsinfoSchema/jsinfoSchema';
 import { LavaBlock } from "./types";

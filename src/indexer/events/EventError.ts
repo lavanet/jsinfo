@@ -4,6 +4,7 @@ import { LavaBlock } from "../types";
 import { SetTx } from "../blockchainEntities/blockchainEntitiesGettersAndSetters";
 import { EventExtractKeyFromAttribute } from '../eventUtils';
 import { JSINFO_INDEXER_EVENT_ATTRIBUTE_KEY_COUNT_MAX, JSINFO_INDEXER_EVENT_ATTRIBUTE_VALUE_MAX_LENGTH } from '../indexerConsts';
+import { JSONStringify } from '../../utils/utils';
 
 export const ParseEventError = (
     evt: Event,
@@ -52,8 +53,8 @@ export const ParseEventError = (
         });
     } catch { }
 
-    dbEvent.t1 = JSON.stringify(parsedAttributes);
-    dbEvent.fulltext = JSON.stringify(eventAttributes).substring(0, 10000);
+    dbEvent.t1 = JSONStringify(parsedAttributes);
+    dbEvent.fulltext = JSONStringify(eventAttributes).substring(0, 10000);
 
     SetTx(lavaBlock.dbTxs, txHash, height)
     lavaBlock.dbEvents.push(dbEvent)

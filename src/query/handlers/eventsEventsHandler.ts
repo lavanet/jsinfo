@@ -1,3 +1,4 @@
+
 // src/query/handlers/eventsEventsHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
@@ -16,9 +17,9 @@ export interface EventsEventsResponse {
     t1: string | null;
     t2: string | null;
     t3: string | null;
-    b1: number | null;
-    b2: number | null;
-    b3: number | null;
+    b1: string | bigint | null;
+    b2: string | bigint | null;
+    b3: string | bigint | null;
     i1: number | null;
     i2: number | null;
     i3: number | null;
@@ -51,9 +52,9 @@ export const EventsEventsPaginatedHandlerOpts: RouteShorthandOptions = {
                                 t1: { type: ['string', 'null'] },
                                 t2: { type: ['string', 'null'] },
                                 t3: { type: ['string', 'null'] },
-                                b1: { type: ['number', 'null'] },
-                                b2: { type: ['number', 'null'] },
-                                b3: { type: ['number', 'null'] },
+                                b1: { type: ['string', 'null'] },
+                                b2: { type: ['string', 'null'] },
+                                b3: { type: ['string', 'null'] },
                                 i1: { type: ['number', 'null'] },
                                 i2: { type: ['number', 'null'] },
                                 i3: { type: ['number', 'null'] },
@@ -103,6 +104,9 @@ class EventsEventsData extends RequestHandlerBase<EventsEventsResponse> {
 
         const flattenedEvents = eventsRes.map(event => ({
             ...event.events,
+            b1: event.events.b1?.toString() ?? null,
+            b2: event.events.b1?.toString() ?? null,
+            b3: event.events.b1?.toString() ?? null,
             moniker: MonikerCache.GetMonikerForProvider(event.events.provider),
             monikerfull: MonikerCache.GetMonikerFullDescription(event.events.provider),
             datetime: event.blocks?.datetime?.toISOString() ?? null
@@ -202,6 +206,9 @@ class EventsEventsData extends RequestHandlerBase<EventsEventsResponse> {
 
         const flattenedEvents = eventsRes.map(event => ({
             ...event.events,
+            b1: event.events.b1?.toString() ?? null,
+            b2: event.events.b1?.toString() ?? null,
+            b3: event.events.b1?.toString() ?? null,
             moniker: MonikerCache.GetMonikerForProvider(event.events.provider),
             monikerfull: MonikerCache.GetMonikerFullDescription(event.events.provider),
             datetime: event.blocks?.datetime?.toISOString() ?? null

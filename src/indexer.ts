@@ -12,8 +12,9 @@ import { GetOneLavaBlock } from './indexer/lavaBlock'
 import { EventDebug } from './indexer/eventDebug'
 import { LavaBlock } from './indexer/types'
 import { SyncBlockchainEntities } from './indexer/blockchainEntities/blockchainEntitiesSync'
-import { DoInChunks, logger, BackoffRetry, ConnectToRpc, RpcConnection } from "./utils";
-import { MigrateDb, GetJsinfoDb } from "./dbUtils";
+import { DoInChunks, logger, BackoffRetry } from "./utils/utils";
+import { ConnectToRpc, RpcConnection } from "./utils/rpc";
+import { MigrateDb, GetJsinfoDb } from "./utils/dbUtils";
 import { aggProviderAndConsumerRelayPayments, aggProviderAndConsumerRelayPaymentsSync } from './indexer/agregators/aggProviderAndConsumerRelayPayments';
 import { SaveTokenSupplyToDB } from './indexer/supply/syncSupply';
 

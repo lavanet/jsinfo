@@ -1,7 +1,7 @@
 // ./src/query/server.ts
 
 import { RouteShorthandOptions, FastifyReply } from 'fastify'
-import { logger } from '../../utils';
+import { logger } from '../../utils/utils';
 
 export function AddErrorResponseToFastifyServerOpts(consumerOpts: RouteShorthandOptions): RouteShorthandOptions {
     const schema = consumerOpts.schema || {};

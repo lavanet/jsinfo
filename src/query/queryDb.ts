@@ -1,7 +1,7 @@
 // ./src/query/dbUtils.ts
 
-import { logger } from '../utils';
-import { GetJsinfoDb, GetJsinfoReadDb, GetRelaysReadDb } from '../dbUtils';
+import { logger } from '../utils/utils';
+import { GetJsinfoDb, GetJsinfoReadDb, GetRelaysReadDb } from '../utils/dbUtils';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { desc } from "drizzle-orm";
 import { JSINFO_NO_READ_DB } from './queryConsts';

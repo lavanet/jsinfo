@@ -10,7 +10,7 @@ import { CSVEscape, GetAndValidateProviderAddressFromRequest } from '../utils/qu
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '../queryConsts';
 import { RequestHandlerBase } from '../classes/RequestHandlerBase';
 import { ParseDateToUtc } from '../utils/queryDateUtils';
-import { logger } from '../../utils';
+import { logger } from '../../utils/utils';
 
 export interface HealthReportEntry {
     message: string | null;

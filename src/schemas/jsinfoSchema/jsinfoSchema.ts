@@ -83,7 +83,7 @@ export const relayPayments = pgTable('relay_payments', {
   id: serial('id').primaryKey(),
   relays: bigint('relays', { mode: 'number' }),
   cu: bigint('cu', { mode: 'number' }),
-  pay: bigint('pay', { mode: 'number' }),
+  pay: bigint('pay', { mode: 'bigint' }),
   datetime: timestamp('datetime', { mode: "date" }),
 
   qosSync: real('qos_sync'),
@@ -150,9 +150,9 @@ export const events = pgTable('events', {
   t1: text('t1'),
   t2: text('t2'),
   t3: text('t3'),
-  b1: bigint('b1', { mode: 'number' }),
-  b2: bigint('b2', { mode: 'number' }),
-  b3: bigint('b3', { mode: 'number' }),
+  b1: bigint('b1', { mode: 'bigint' }),
+  b2: bigint('b2', { mode: 'bigint' }),
+  b3: bigint('b3', { mode: 'bigint' }),
   i1: integer('i1'),
   i2: integer('i2'),
   i3: integer('i3'),
@@ -322,7 +322,7 @@ export const dualStackingDelegatorRewards = pgTable('dual_stacking_delegator_rew
   provider: text('provider').notNull().references(() => providers.address),
   timestamp: timestamp('timestamp').notNull(),
   chainId: text('chain_id').notNull(),
-  amount: bigint('amount', { mode: 'number' }).notNull(),
+  amount: bigint('amount', { mode: 'bigint' }).notNull(),
   denom: text('denom').notNull(),
 }, (table) => {
   return {

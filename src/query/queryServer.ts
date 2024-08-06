@@ -9,7 +9,7 @@ import pino from 'pino';
 import { JSINFO_QUERY_HIGH_POST_BODY_LIMIT, JSINFO_QUERY_FASITY_PRINT_LOGS } from './queryConsts';
 import { AddErrorResponseToFastifyServerOpts, ItemCountOpts, WriteErrorToFastifyReply } from './utils/queryServerUtils';
 import { validatePaginationString } from './utils/queryPagination';
-import { logger } from '../utils';
+import { JSONStringify, logger } from '../utils/utils';
 
 // Local classes
 import { RedisCache } from './classes/RedisCache';
@@ -91,7 +91,7 @@ function handleRequestWithRedisCache(
         if (handlerData == null) return reply;
 
         // Cache the new response
-        await RedisCache.set(cacheKey, JSON.stringify(handlerData), cache_ttl || 30);
+        await RedisCache.set(cacheKey, JSONStringify(handlerData), cache_ttl || 30);
 
         let data = handlerData;
         if (is_text) {

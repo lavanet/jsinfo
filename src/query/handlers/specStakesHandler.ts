@@ -9,7 +9,7 @@ import { sql, desc, gt, and, eq } from "drizzle-orm";
 import { ReplaceArchive } from '../../indexer/indexerUtils';
 import { GetAndValidateSpecIdFromRequest } from '../utils/queryUtils';
 import { MonikerCache } from '../classes/MonikerCache';
-import { BigIntIsZero } from '../../utils';
+import { BigIntIsZero } from '../../utils/utils';
 
 export type SpecSpecsResponse = {
     stake: string;

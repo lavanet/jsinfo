@@ -1,10 +1,6 @@
 
 import retry from 'async-retry';
 import util from 'util';
-import { StargateClient } from "@cosmjs/stargate"
-import { Tendermint37Client } from "@cosmjs/tendermint-rpc";
-import * as lavajs from '@lavanet/lavajs';
-import axios from 'axios';
 
 export function GetEnvVar(key: string, alt?: string): string {
     const value = process.env[key];
@@ -69,42 +65,6 @@ export const BackoffRetry = async <T>(title: string, fn: () => Promise<T>): Prom
     );
 };
 
-export interface RpcConnection {
-    client: StargateClient;
-    clientTm: Tendermint37Client;
-    chainId: string;
-    height: number;
-    lavajsClient: any;
-}
-
-export async function ConnectToRpc(rpc: string): Promise<RpcConnection> {
-    try {
-        await axios.get(rpc);
-        logger.info(`ConnectToRpc:: http tested successfully connected to ${rpc}`);
-    } catch (error) {
-        logger.error(`ConnectToRpc:: error connecting to ${rpc}: ${error}`);
-        throw error;
-    }
-
-    logger.info(`ConnectToRpc:: connecting to ${rpc}`);
-    const client = await StargateClient.connect(rpc);
-    logger.info(`ConnectToRpc:: connected to StargateClient`);
-
-    const clientTm = await Tendermint37Client.connect(rpc);
-    logger.info(`ConnectToRpc:: connected to Tendermint37Client`);
-
-    const chainId = await client.getChainId();
-    logger.info(`ConnectToRpc:: fetched chainId ${chainId}`);
-
-    const height = await client.getHeight();
-    logger.info(`ConnectToRpc:: fetched height ${height}`);
-
-    const lavajsClient = await lavajs.lavanet.ClientFactory.createRPCQueryClient({ rpcEndpoint: rpc });
-    logger.info(`ConnectToRpc:: created lavajsClient`);
-
-    return { client, clientTm, chainId, height, lavajsClient };
-}
-
 export function Sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
@@ -135,7 +95,7 @@ export async function DoInChunks(size: number, arr: any[], callback: (arr: any[]
         try {
             await callback(tmpArr);
         } catch (error) {
-            logger.error(`Error processing chunk: ${JSON.stringify(tmpArr)}`);
+            logger.error(`Error processing chunk: ${JSONStringify(tmpArr)}`);
             logger.error(`Callback function: ${callback.toString()}`);
             if (error instanceof Error) {
                 logger.error(`Error message: ${error.message}`);
@@ -155,4 +115,45 @@ export function MinBigInt(a: bigint | null, b: bigint | null): bigint {
 
 export function BigIntIsZero(value: bigint | null): boolean {
     return value === null ? false : value === 0n;
+}
+
+export function ParseUlavaToBigInt(value: string): bigint {
+    const claimedParts = value.split(',');
+
+    // Iterate over each value to find 'ulava'
+    let ulavaValue = '';
+    for (const part of claimedParts) {
+        if (part.includes('ulava')) {
+            ulavaValue = part;
+            break;
+        }
+    }
+
+    if (ulavaValue === '') return 0n;
+
+    const ulavaIndex = ulavaValue.indexOf('ulava');
+    if (ulavaIndex === -1) {
+        throw new Error(`ParseUlavaToBigInt: Value does not contain 'ulava': ${value}, ulavaValue: ${ulavaValue}`);
+    }
+
+    const numberPart = ulavaValue.substring(0, ulavaIndex);
+
+    // Check if the string only contains numeric characters
+    if (!/^\d+$/.test(numberPart)) {
+        throw new Error(`ParseUlavaToBigInt: value is not a valid integer: ${value}, numberPart: ${numberPart}`);
+    }
+
+    return BigInt(numberPart);
+}
+
+export function JSONStringify(obj: any): string {
+    return JSON.stringify(obj, (key, value) =>
+        typeof value === 'bigint' ? value.toString() : value
+    );
+}
+
+export function JSONStringifySpaced(obj: any): string {
+    return JSON.stringify(obj, (key, value) =>
+        typeof value === 'bigint' ? value.toString() : value, 2
+    );
 }

@@ -1,6 +1,6 @@
 // src/indexer/indexerConsts.ts
 
-import { GetEnvVar } from '../utils';
+import { GetEnvVar } from '../utils/utils';
 import { ParseSizeToBytes } from './indexerUtils';
 import { existsSync, mkdirSync } from 'fs';
 import { homedir } from 'os';

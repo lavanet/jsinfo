@@ -3,7 +3,7 @@
 require('dotenv').config();
 
 import * as consts from './query/queryConsts'
-import { logger } from './utils'
+import { logger } from './utils/utils'
 
 import { GetServerInstance } from './query/queryServer'
 import { QueryInitJsinfoDbInstance, QueryInitJsinfoReadDbInstance, QueryInitRelaysReadDbInstance, GetLatestBlock } from './query/queryDb'

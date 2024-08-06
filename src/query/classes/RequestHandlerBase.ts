@@ -8,7 +8,8 @@ import { WriteErrorToFastifyReply } from '../utils/queryServerUtils';
 import { JSINFO_REQUEST_HANDLER_BASE_DEBUG } from '../queryConsts';
 import { RedisCache } from './RedisCache';
 import { ParseDateToUtc } from "../utils/queryDateUtils";
-import { logger } from "../../utils";
+import { JSONStringify, logger } from "../../utils/utils";
+
 export class RequestHandlerBase<T> {
     protected className: string;
     protected csvFileName: string = "";
@@ -46,7 +47,7 @@ export class RequestHandlerBase<T> {
         if (!type.name || type.name === 'RequestHandlerBase') {
             throw new Error(`Type name must not be empty or equal to "RequestHandlerBase". className: ${type.name}`);
         }
-        return `${type.name}-${args ? JSON.stringify(args) : "-"}`;
+        return `${type.name}-${args ? JSONStringify(args) : "-"}`;
     }
 
     constructor(className: string) {

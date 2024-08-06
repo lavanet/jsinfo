@@ -3,13 +3,9 @@
 
 // curl http://localhost:8081/provider/lava@14shwrej05nrraem8mwsnlw50vrtefkajar75ge
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { GetLatestBlock, QueryGetJsinfoReadDbInstance } from '../queryDb';
-import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
-import * as JsinfoProviderAgrSchema from '../../schemas/jsinfoSchema/providerRelayPaymentsAgregation';
-import { sql, desc, and, eq } from "drizzle-orm";
+import { GetLatestBlock, QueryCheckJsinfoReadDbInstance } from '../queryDb';
 import { GetAndValidateProviderAddressFromRequest } from '../utils/queryUtils';
 import { MonikerCache } from '../classes/MonikerCache';
-import { MinBigInt } from '../../utils';
 
 export const ProviderPaginatedHandlerOpts: RouteShorthandOptions = {
     schema: {
@@ -32,36 +28,6 @@ export const ProviderPaginatedHandlerOpts: RouteShorthandOptions = {
                     monikerfull: {
                         type: 'string'
                     },
-                    cuSum: {
-                        type: 'number'
-                    },
-                    relaySum: {
-                        type: 'number'
-                    },
-                    rewardSum: {
-                        type: 'number'
-                    },
-                    stakeSum: {
-                        type: 'string',
-                    },
-                    events: {
-                        type: 'array',
-                    },
-                    stakes: {
-                        type: 'array',
-                    },
-                    payments: {
-                        type: 'array',
-                    },
-                    reports: {
-                        type: 'array',
-                    },
-                    claimedRewards: {
-                        type: 'string'
-                    },
-                    claimableRewards: {
-                        type: 'string'
-                    }
                 }
             }
         }
@@ -69,95 +35,14 @@ export const ProviderPaginatedHandlerOpts: RouteShorthandOptions = {
 }
 
 export async function ProviderPaginatedHandler(request: FastifyRequest, reply: FastifyReply) {
-    let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
+    const addr = await GetAndValidateProviderAddressFromRequest(request, reply);
     if (addr === '') {
         return;
     }
 
-    const { latestHeight, latestDatetime } = await GetLatestBlock()
+    await QueryCheckJsinfoReadDbInstance();
 
-    //
-    // Sums
-    let cuSum = 0
-    let relaySum = 0
-    let rewardSum = 0
-    const cuRelayAndRewardsTotalRes = await QueryGetJsinfoReadDbInstance().select({
-        cuSum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggAllTimeRelayPayments.cuSum})`,
-        relaySum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggAllTimeRelayPayments.relaySum})`,
-        rewardSum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggAllTimeRelayPayments.rewardSum})`,
-    }).from(JsinfoProviderAgrSchema.aggAllTimeRelayPayments).
-        where(eq(JsinfoProviderAgrSchema.aggAllTimeRelayPayments.provider, addr)).
-        groupBy(JsinfoProviderAgrSchema.aggAllTimeRelayPayments.provider)
-    if (cuRelayAndRewardsTotalRes.length == 1) {
-        cuSum = cuRelayAndRewardsTotalRes[0].cuSum
-        relaySum = cuRelayAndRewardsTotalRes[0].relaySum
-        rewardSum = cuRelayAndRewardsTotalRes[0].rewardSum
-    }
-
-    // Get stakes
-    let stakesRes = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.providerStakes).
-        where(eq(JsinfoSchema.providerStakes.provider, addr)).orderBy(desc(JsinfoSchema.providerStakes.stake))
-    let stakeSum = 0n
-    stakesRes.forEach((stake) => {
-        stakeSum += stake.stake! + MinBigInt(stake.delegateTotal, stake.delegateLimit)
-    })
-
-    // const claimedRewards = await QueryGetJsinfoReadDbInstance().select()
-    //     .from(JsinfoSchema.events)
-    //     .where(
-    //         and(
-    //             eq(JsinfoSchema.events.provider, addr),
-    //             eq(JsinfoSchema.events.eventType, JsinfoSchema.LavaProviderEventType.DelegateToProvider)
-    //         )
-    //     )
-
-    // let claimedRewardsSum = 0;
-
-    // for (let i = 0; i < claimedRewards.length; i++) {
-    //     const reward = claimedRewards[i];
-
-    //     if (reward.b1 !== null && reward.b1 !== 0) {
-    //         claimedRewardsSum += reward.b1;
-    //     } else if (reward.t3 !== null && reward.t3.toLowerCase().endsWith('ulava')) {
-    //         claimedRewardsSum += Number(reward.t3.slice(0, -5));
-    //     }
-    // }
-
-    // let claimedRewardsSumULava = claimedRewardsSum ? claimedRewardsSum + ' ulava' : 0;
-
-    const claimableRewards = await QueryGetJsinfoReadDbInstance().select()
-        .from(JsinfoSchema.dualStackingDelegatorRewards)
-        .where(
-            and(
-                eq(JsinfoSchema.dualStackingDelegatorRewards.provider, addr),
-                eq(JsinfoSchema.dualStackingDelegatorRewards.denom, 'ulava')
-            )
-        )
-        .orderBy(desc(JsinfoSchema.dualStackingDelegatorRewards.timestamp))
-        .limit(200);
-
-    let maxRewardsByChainId = {};
-
-    // Iterate over the fetched rewards to find the latest entry per chain_id
-    for (const claimableReward of claimableRewards) {
-        const chainId = claimableReward.chainId;
-        // Check if the current chain_id is already in maxRewardsByChainId with a newer timestamp
-        if (!maxRewardsByChainId[chainId] || maxRewardsByChainId[chainId].timestamp < claimableReward.timestamp) {
-            maxRewardsByChainId[chainId] = claimableReward;
-        }
-    }
-
-    // Filter to keep only entries with denom "ulava" and sum amounts
-    let totalSum = 0;
-    for (const key in maxRewardsByChainId) {
-        if (maxRewardsByChainId[key].denom === 'ulava') {
-            totalSum += maxRewardsByChainId[key].amount;
-        }
-    }
-
-    const claimableRewardsULava = totalSum ? totalSum + ' ulava' : 0;
-
-    /* claimedRewards: claimedRewardsSumULava, */
+    const { latestHeight, latestDatetime } = await GetLatestBlock();
 
     return {
         height: latestHeight,
@@ -165,11 +50,5 @@ export async function ProviderPaginatedHandler(request: FastifyRequest, reply: F
         provider: addr,
         moniker: MonikerCache.GetMonikerForProvider(addr),
         monikerfull: MonikerCache.GetMonikerFullDescription(addr),
-        cuSum: cuSum,
-        relaySum: relaySum,
-        rewardSum: rewardSum,
-        stakeSum: stakeSum.toString(),
-        claimedRewards: 0,
-        claimableRewards: claimableRewardsULava,
     }
 }

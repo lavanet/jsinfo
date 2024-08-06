@@ -40,11 +40,36 @@ class TestProviderEndpoints(unittest.TestCase):
 
                 data = response.json()
                 # Verify expected keys
-                expected_keys = ['height', 'datetime', 'provider', 'moniker', 'monikerfull', 'cuSum', 'relaySum', 'rewardSum', 'stakeSum', 'claimedRewards', 'claimableRewards']
+                expected_keys = ['height', 'datetime', 'provider', 'moniker', 'monikerfull',]
                 for key in expected_keys:
                     self.assertIn(key, data, f"Expected '{key}' key in response")
             except:
                 print(f"Failed test_provider_endpoint_structure for provider {addr}, url: {url}")
+                print(f"Response: {response}")
+                print(f"Data: {data}")
+                raise
+        
+    def test_provider_cards_endpoint_structure(self):
+        """Test the structure of the response from the provider endpoint for random providers."""
+        addr = "-"
+        url = "-"
+        response = "-"
+        data = "-"
+
+        for provider in self.selected_providers:
+            try:
+                addr = provider['address']
+                url = f"{server_address}/providerCards/{addr}"
+                response = requests.get(url)
+                self.assertEqual(response.status_code, 200, "Expected status code 200")
+
+                data = response.json()
+                # Verify expected keys
+                expected_keys = ['cuSum', 'relaySum', 'rewardSum', 'stakeSum', 'claimedRewardsAllTime', 'claimedRewards30DaysAgo','claimableRewards']
+                for key in expected_keys:
+                    self.assertIn(key, data, f"Expected '{key}' key in response")
+            except:
+                print(f"Failed test_provider_cards_endpoint_structure for provider {addr}, url: {url}")
                 print(f"Response: {response}")
                 print(f"Data: {data}")
                 raise

@@ -1,7 +1,8 @@
 // src/executils/getblock.ts
 
 import { GetRpcBlock, GetRpcTxs } from "../indexer/lavaBlock";
-import { ConnectToRpc, logger, RpcConnection } from "../utils";
+import { logger } from "../utils/utils";
+import { ConnectToRpc, RpcConnection } from "../utils/rpc";
 import * as indexerconsts from '../indexer/indexerConsts';
 
 const printBlockAndTxs = async (height: number, rpcConnection: RpcConnection): Promise<void> => {

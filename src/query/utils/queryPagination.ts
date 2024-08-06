@@ -3,7 +3,7 @@
 import { FastifyRequest } from "fastify";
 import * as url from 'url';
 import { JSINFO_QUERY_ALLOWED_ITEMS_PER_PAGE } from "../queryConsts";
-import { logger } from "../../utils";
+import { logger } from "../../utils/utils";
 
 export interface Pagination {
     sortKey: string | null;

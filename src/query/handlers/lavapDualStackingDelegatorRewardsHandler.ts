@@ -6,7 +6,7 @@ import { QueryCheckJsinfoDbInstance, QueryGetJsinfoDbInstance } from '../queryDb
 import { eq, lt, and, desc } from "drizzle-orm";
 import { JSINFO_QUERY_PROVIDER_DUAL_STACKING_DELEGATOR_REWARDS_CUTOFF_DAYS } from '../queryConsts';
 import { WriteErrorToFastifyReply } from '../utils/queryServerUtils';
-import { logger } from '../../utils';
+import { JSONStringifySpaced, logger } from '../../utils/utils';
 
 type RewardInput = {
     provider: string;
@@ -82,7 +82,7 @@ export async function LavapDualStackingDelegatorRewardsHandler(request: FastifyR
             timestamp: addTimestamp,
             provider: reward.provider,
             chainId: reward.chain_id,
-            amount: parseInt(a.amount),
+            amount: BigInt(a.amount),
             denom: a.denom
         }));
     });
@@ -129,7 +129,7 @@ export async function LavapDualStackingDelegatorRewardsHandler(request: FastifyR
                     const result = await tx.insert(JsinfoSchema.dualStackingDelegatorRewards).values(data)
                         .returning({ chain: JsinfoSchema.dualStackingDelegatorRewards.chainId });
 
-                    logger.info(`LavapDualStackingDelegatorRewardsHandler: Provider: ${data.provider}. Inserted 1 reward entry. chains: ${JSON.stringify(result)}`);
+                    logger.info(`LavapDualStackingDelegatorRewardsHandler: Provider: ${data.provider}. Inserted 1 reward entry. chains: ${JSONStringifySpaced(result)}`);
                 }
             }
         });

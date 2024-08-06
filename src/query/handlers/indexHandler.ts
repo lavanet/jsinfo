@@ -5,7 +5,7 @@ import { QueryCheckJsinfoReadDbInstance, GetLatestBlock, QueryGetJsinfoReadDbIns
 import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import * as JsinfoProviderAgrSchema from '../../schemas/jsinfoSchema/providerRelayPaymentsAgregation';
 import { sql, desc, gt } from "drizzle-orm";
-import { logger, MinBigInt } from '../../utils';
+import { logger, MinBigInt } from '../../utils/utils';
 
 export const IndexHandlerOpts: RouteShorthandOptions = {
     schema: {

@@ -5,7 +5,7 @@ import { StakeEntry } from '@lavanet/lavajs/dist/codegen/lavanet/lava/epochstora
 import { AppendUniqueItems, ToSignedBigIntOrMinusOne, ToSignedIntOrMinusOne } from '../indexerUtils';
 import { GetOrSetProvider, GetOrSetSpec } from './blockchainEntitiesGettersAndSetters';
 import { LavaClient } from '../types';
-import { logger } from '../../utils';
+import { logger } from '../../utils/utils';
 
 /*
 providers with stake {

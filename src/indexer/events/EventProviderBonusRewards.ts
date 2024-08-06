@@ -51,7 +51,7 @@ export const ParseEventProviderBonusRewards = (
       provider: provider,
       t1: chain,
       r1: amount,
-      fulltext: JSON.stringify({ chain: chain, amount: amount }),
+      fulltext: JSONStringify({ chain: chain, amount: amount }),
     };
 
     GetOrSetProvider(lavaBlock.dbProviders, blockchainEntitiesProviders, provider, '');

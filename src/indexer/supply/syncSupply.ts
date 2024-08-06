@@ -4,7 +4,7 @@ import { LavaClient } from "../types";
 import { ContinuousVestingAccount, PeriodicVestingAccount } from "cosmjs-types/cosmos/vesting/v1beta1/vesting";
 import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-import { logger } from "../../utils";
+import { logger } from "../../utils/utils";
 
 async function getPoolsAmount(client: LavaClient): Promise<bigint> {
     const lavaClient = client.lavanet.lava.rewards;

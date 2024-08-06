@@ -28,7 +28,7 @@ import { IndexChartsRawHandler, IndexChartsRawHandlerOpts } from './handlers/ind
 
 // -- Provider page ajax --
 import { ProviderPaginatedHandler, ProviderPaginatedHandlerOpts } from './handlers/providerHandler';
-
+import { ProviderCardsHandler, ProviderCardsHandlerOpts } from './handlers/providerCardsHandler';
 import { ProviderChartsRawHandler, ProviderChartsRawHandlerOpts } from './handlers/providerChartsHandler';
 
 import { ProviderHealthPaginatedHandler, ProviderHealthPaginatedHandlerOpts, ProviderHealthItemCountPaginatiedHandler, ProviderHealthCSVRawHandler } from './handlers/providerHealthHandler';
@@ -89,6 +89,7 @@ GetServerInstance().get('/indexCharts', IndexChartsRawHandlerOpts, IndexChartsRa
 
 // -- Provider page ajax --
 RegisterRedisBackedHandler('/provider/:addr', ProviderPaginatedHandlerOpts, ProviderPaginatedHandler);
+RegisterRedisBackedHandler('/providerCards/:addr', ProviderCardsHandlerOpts, ProviderCardsHandler);
 GetServerInstance().get('/providerCharts/:addr', ProviderChartsRawHandlerOpts, ProviderChartsRawHandler);
 
 RegisterPaginationServerHandler('/providerHealth/:addr', ProviderHealthPaginatedHandlerOpts, ProviderHealthPaginatedHandler, ProviderHealthItemCountPaginatiedHandler);

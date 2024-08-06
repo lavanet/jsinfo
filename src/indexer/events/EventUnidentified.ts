@@ -3,6 +3,7 @@ import { Event } from "@cosmjs/stargate"
 import { LavaBlock } from "../types";
 import { EventProcessAttributes } from "../eventUtils";
 import { SetTx } from "../blockchainEntities/blockchainEntitiesGettersAndSetters";
+import { JSONStringify } from '../../utils/utils';
 
 export const ParseEventUnidentified = (
     evt: Event,
@@ -31,7 +32,7 @@ export const ParseEventUnidentified = (
         dbEvent: dbEvent,
     });
 
-    dbEvent.t1 = JSON.stringify(parsedAttributes);
+    dbEvent.t1 = JSONStringify(parsedAttributes);
 
     SetTx(lavaBlock.dbTxs, txHash, height)
     lavaBlock.dbEvents.push(dbEvent)

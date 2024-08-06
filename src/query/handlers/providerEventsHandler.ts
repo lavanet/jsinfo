@@ -17,9 +17,9 @@ export type ProviderEventsResponse = {
         t1: string | null;
         t2: string | null;
         t3: string | null;
-        b1: number | null;
-        b2: number | null;
-        b3: number | null;
+        b1: bigint | null;
+        b2: bigint | null;
+        b3: bigint | null;
         i1: number | null;
         i2: number | null;
         i3: number | null;
@@ -53,9 +53,9 @@ export const ProviderEventsPaginatedHandlerOpts: RouteShorthandOptions = {
                                         t1: { type: ['string', 'null'] },
                                         t2: { type: ['string', 'null'] },
                                         t3: { type: ['string', 'null'] },
-                                        b1: { type: ['number', 'null'] },
-                                        b2: { type: ['number', 'null'] },
-                                        b3: { type: ['number', 'null'] },
+                                        b1: { type: ['string', 'null'] },
+                                        b2: { type: ['string', 'null'] },
+                                        b3: { type: ['string', 'null'] },
                                         i1: { type: ['number', 'null'] },
                                         i2: { type: ['number', 'null'] },
                                         i3: { type: ['number', 'null'] },

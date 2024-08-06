@@ -10,7 +10,7 @@ import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_
 import { CSVEscape, GetAndValidateProviderAddressFromRequest } from '../utils/queryUtils';
 import { ReplaceArchive } from '../../indexer/indexerUtils';
 import { RequestHandlerBase } from '../classes/RequestHandlerBase';
-import { BigIntIsZero } from '../../utils';
+import { BigIntIsZero } from '../../utils/utils';
 
 type ProviderStakesResponse = {
     stake: string;

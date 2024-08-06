@@ -9,7 +9,7 @@ import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import { desc, eq, gte, and } from "drizzle-orm";
 import { GetAndValidateProviderAddressFromRequest } from '../utils/queryUtils';
 import { RedisCache } from '../classes/RedisCache';
-import { logger } from '../../utils';
+import { JSONStringify, JSONStringifySpaced, logger } from '../../utils/utils';
 import { WriteErrorToFastifyReply } from '../utils/queryServerUtils';
 
 type ReportEntry = {
@@ -67,7 +67,7 @@ function stringifyWithSortedKeys(data: any): string {
         result[key] = data[key] instanceof Object ? stringifyWithSortedKeys(data[key]) : data[key];
         return result;
     }, {});
-    return JSON.stringify(sortedObject);
+    return JSONStringify(sortedObject);
 }
 
 function removeKeyAndStringifyWithSortedKeys(data: string, keyToRemove: string): string {
@@ -129,7 +129,7 @@ async function getAllData(addr: string): Promise<ReportEntry[]> {
         }
     }
     const data = await fetchAllData(addr);
-    await RedisCache.set("ProviderAccountInfoRawHandler-" + addr, JSON.stringify(data), 10 * 60); // Ensure data is stringified before storing
+    await RedisCache.set("ProviderAccountInfoRawHandler-" + addr, JSONStringify(data), 10 * 60); // Ensure data is stringified before storing
     return data;
 }
 
@@ -155,6 +155,16 @@ export async function ProviderAccountInfoRawHandler(request: FastifyRequest, rep
         };
     }
 
-    WriteErrorToFastifyReply(reply, "Invalid 'idx' query parameter. Please provide a valid index: " + JSON.stringify(request.query));
+    if (idx == 0 && data.length == 0) {
+        return {
+            data: "empty",
+            id: "",
+            timestamp: 0,
+            itemCount: 0,
+            idx: 0
+        };
+    }
+
+    WriteErrorToFastifyReply(reply, "Invalid 'idx' query parameter. Please provide a valid index: " + JSONStringifySpaced(request.query));
     return reply;
 }

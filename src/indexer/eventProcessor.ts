@@ -52,7 +52,7 @@ import { ParseEventDelegatorClaimRewards } from "./events/EventDelegatorClaimRew
 // Unidentified Event
 import { ParseEventUnidentified } from "./events/EventUnidentified";
 import { ParseEventDistributionPoolsRefill } from "./events/EventDistributionPoolsRefill";
-import { logger } from "../utils";
+import { logger } from "../utils/utils";
 
 export const ProcessOneEvent = (
     evt: Event,

@@ -1,4 +1,5 @@
 // from yarom 5aug:
+// this runs once a month at the end of the month
 // {
 //     "type": "lava_subscription_payout",
 //         "attributes": [

@@ -21,20 +21,22 @@ class TestSpecProviderHealthEndpoint(unittest.TestCase):
             ("testnet", "STRK", "lava@1lwyx7akkma0kyejl2tkltw0uekvppez3pqpvmh"),
         ]
 
-    def test_specProviderHealth_endpoints(self):
-        if_happend = False
-        for env, spec_id, addr in self.test_cases:
-            with self.subTest(env=env, spec_id=spec_id, addr=addr):
-                response = requests.get(f"{server_address}/specProviderHealth/{spec_id}/{addr}")
-                if response.status_code != 200:
-                    continue
-                if_happend = True
-                data = response.json()
-                self.assertIn('data', data, "Expected 'data' key in response")
-                self.assertIn('healthy', data['data'], "Expected 'healthy' key in data")
-                self.assertIn('unhealthy', data['data'], "Expected 'unhealthy' key in data")
-        if not if_happend:
-            raise Exception("No valid response from any of the test cases")
+def test_specProviderHealth_endpoints(self):
+    if_happened = False
+    for env, spec_id, addr in self.test_cases:
+        with self.subTest(env=env, spec_id=spec_id, addr=addr):
+            url = f"{server_address}/specProviderHealth/{spec_id}/{addr}"
+            response = requests.get(url)
+            if response.status_code != 200:
+                print(f"Skipping test case due to non-200 response: env={env}, spec_id={spec_id}, addr={addr}, status_code={response.status_code}, url={url}")
+                continue
+            if_happened = True
+            data = response.json()
+            self.assertIn('data', data, f"Response for env={env}, spec_id={spec_id}, addr={addr} does not contain 'data' key")
+            self.assertIn('healthy', data['data'], f"Data for env={env}, spec_id={spec_id}, addr={addr} does not contain 'healthy' key")
+            self.assertIn('unhealthy', data['data'], f"Data for env={env}, spec_id={spec_id}, addr={addr} does not contain 'unhealthy' key")
+    if not if_happened:
+        raise Exception("No valid response from any of the test cases. All test cases resulted in non-200 responses or were skipped.")
 
 if __name__ == '__main__':
     unittest.main()

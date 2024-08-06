@@ -3,7 +3,7 @@
 import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { and, eq, ne } from "drizzle-orm";
-import { DoInChunks, logger } from "../../utils";
+import { DoInChunks, logger } from "../../utils/utils";
 import { JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE } from '../indexerConsts';
 import { LavaClient } from '../types';
 import { UpdateStakeInformation } from './blockchainEntitiesStakeUpdater';

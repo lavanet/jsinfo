@@ -23,6 +23,7 @@ class TestProviderEndpoints(unittest.TestCase):
         providers_data = response.json()
         cls.providers = providers_data['providers']
         cls.selected_providers = random.sample(cls.providers, 3) if len(cls.providers) >= 3 else cls.providers
+        print("TestProviderEndpoints:: selected_providers: ", cls.selected_providers)
 
     def test_provider_health(self):
         for provider in self.selected_providers:
@@ -78,15 +79,16 @@ class TestProviderEndpoints(unittest.TestCase):
 
     def test_provider_events(self):
         for provider in self.selected_providers:
-            response = requests.get(f"{server_address}/providerEvents/{provider['address']}")
-            assert response.status_code == 200
+            url = f"{server_address}/providerEvents/{provider['address']}"
+            response = requests.get(url)
+            assert response.status_code == 200, f"Expected status code 200, got {response.status_code} for provider {provider['address']}, url: {url}"
             if len(response.json()['data']) == 0:
                 continue
             data = response.json()['data'][0]
             events = data['events']
-            assert 'id' in events
-            assert 'eventType' in events
-            assert 't1' in events
+            assert 'id' in events, f"'id' not found in events for provider {provider['address']}, url: {url}"
+            assert 'eventType' in events, f"'eventType' not found in events for provider {provider['address']}, url: {url}"
+            assert 't1' in events, f"'t1' not found in events for provider {provider['address']}, url: {url}"
 
     def test_provider_rewards(self):
         for provider in self.selected_providers:
@@ -164,14 +166,30 @@ class TestProviderEndpoints(unittest.TestCase):
                     specData = spec['specData']
                     assert 'overallStatus' in specData
                     assert 'interfaces' in specData
-                    for interface_name, regions in specData['interfaces'].items():
-                        for region, details in regions.items():
+                    for _, regions in specData['interfaces'].items():
+                        for _, details in regions.items():
                             assert 'status' in details
                             assert 'data' in details
                             assert 'timestamp' in details
             except:
                 print(f"Failed test_provider_health for provider {provider['address']}")
                 print(f"Response: {response_json}")
+                raise
+
+    def test_provider_account_info(self):
+        for provider in self.selected_providers:
+            response = requests.get(f"{server_address}/providerAccountInfo/{provider['address']}?idx=0")
+            assert response.status_code == 200
+            data = response.json()
+            assert isinstance(data, dict) 
+            try:
+                assert 'idx' in data
+                assert 'itemCount' in data
+                assert 'timestamp' in data
+                assert 'data' in data
+            except:
+                print(f"Failed test_provider_health for provider {provider['address']}")
+                print(f"Response: {data}")
                 raise
 
 if __name__ == '__main__':

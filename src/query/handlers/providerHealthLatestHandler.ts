@@ -10,7 +10,7 @@ import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import { GetAndValidateProviderAddressFromRequest } from '../utils/queryUtils';
 import { WriteErrorToFastifyReply } from '../utils/queryServerUtils';
 import { ParseDateToUtc } from '../utils/queryDateUtils';
-import { logger } from '../../utils';
+import { logger } from '../../utils/utils';
 
 type HealthRecord = {
     id: number;

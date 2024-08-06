@@ -34,13 +34,15 @@ class ProviderSpecMonikerCache {
         await QueryCheckJsinfoReadDbInstance();
         this.psmCache = await RedisCache.getArray("ProviderSpecMonikerTable") as ProviderSpecMoniker[]
         if (!this.psmCache) {
+            this.psmCache = [];
             this.psmCache = await this.fetchProviderSpecMonikerTable();
             RedisCache.setArray("ProviderSpecMonikerTable", this.psmCache, this.refreshInterval);
         }
-        this.psmCache = await RedisCache.getArray("ProviderMonikerTable") as ProviderSpecMoniker[]
-        if (!this.psmCache) {
+        this.pmCache = await RedisCache.getArray("ProviderMonikerTable") as ProviderMoniker[]
+        if (!this.pmCache) {
+            this.pmCache = [];
             this.pmCache = await this.fetchProviderMonikerTable();
-            RedisCache.setArray("ProviderMonikerTable", this.psmCache, this.refreshInterval);
+            RedisCache.setArray("ProviderMonikerTable", this.pmCache, this.refreshInterval);
         }
         this.monikerForProviderCache.clear();
         this.monikerFullDescriptionCache.clear();

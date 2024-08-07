@@ -37,7 +37,7 @@ export async function IsLatestRawHandler(request: FastifyRequest, reply: Fastify
         const currentUtcTime = new Date().getTime();
 
         // Check if the latestDatetime is more than one hour away from the current UTC time
-        if (Math.abs(currentUtcTime - latestDatetime) > 3600000) { // 3600000 milliseconds = 1 hour
+        if (Math.abs(currentUtcTime - latestDatetime) > 900000) { // 900000 milliseconds = 15 minutes
             console.error("The latest block's datetime is more than one hour away from the current time.");
             WriteErrorToFastifyReply(reply, "The latest block's datetime is more than one hour away from the current time.");
             return null;

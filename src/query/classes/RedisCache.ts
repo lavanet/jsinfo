@@ -175,4 +175,4 @@ class RedisCacheClass {
     }
 }
 
-export const RedisCache = new RedisCacheClass("jsinfo");
+export const RedisCache = new RedisCacheClass("jsinfo-");

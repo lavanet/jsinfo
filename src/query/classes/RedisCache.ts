@@ -79,6 +79,37 @@ class RedisCacheClass {
         }
     }
 
+    async getNoKeyPrefix(key: string): Promise<string | null> {
+        if (!this.client) {
+            this.log('Redis client is not available.');
+            return null;
+        }
+
+        const fullKey = key;
+        const startTime = Date.now();
+        try {
+            const promise = this.client.get(fullKey);
+            const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 2000));
+            const result = await Promise.race([promise, timeout]);
+            const endTime = Date.now();
+            const timeTaken = endTime - startTime;
+
+            if (!result) {
+                this.log(`Cache miss for key ${fullKey}. Time taken: ${timeTaken}ms`);
+                return null;
+            } else {
+                this.log(`Cache hit for key ${fullKey}. Time taken: ${timeTaken}ms`);
+                return String(result);
+            }
+        } catch (error) {
+            const endTime = Date.now();
+            const timeTaken = endTime - startTime;
+            this.logError(`Error getting key ${fullKey} from Redis. Time taken: ${timeTaken}ms`, error);
+            await this.reconnect();
+            return null;
+        }
+    }
+
     async set(key: string, value: string, ttl: number = 30): Promise<void> {
         if (!this.client) {
             this.log('Redis client is not available.');

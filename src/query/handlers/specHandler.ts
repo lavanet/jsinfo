@@ -6,6 +6,7 @@ import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import * as JsinfoProviderAgrSchema from '../../schemas/jsinfoSchema/providerRelayPaymentsAgregation';
 import { sql, eq, count, and, gte } from "drizzle-orm";
 import { GetAndValidateSpecIdFromRequest } from '../utils/queryUtils';
+import { RedisCache } from '../classes/RedisCache';
 
 export const SpecPaginatedHandlerOpts: RouteShorthandOptions = {
     schema: {
@@ -32,6 +33,9 @@ export const SpecPaginatedHandlerOpts: RouteShorthandOptions = {
                         type: 'number'
                     },
                     providerCount: {
+                        type: 'number'
+                    },
+                    cacheHitRate: {
                         type: 'number'
                     },
                     endpointHealth: {
@@ -104,6 +108,12 @@ export async function SpecPaginatedHandler(request: FastifyRequest, reply: Fasti
         }
     });
 
+    let cacheHitRate = 0.0;
+    const cacheHitRateData = await RedisCache.getNoKeyPrefix("jsinfo-healthp-cachedmetrics") || {};
+    const specUpper = spec.toUpperCase();
+    if (cacheHitRateData[specUpper]) {
+        cacheHitRate = cacheHitRateData[specUpper];
+    }
     return {
         height: latestHeight,
         datetime: latestDatetime,
@@ -112,6 +122,7 @@ export async function SpecPaginatedHandler(request: FastifyRequest, reply: Fasti
         relaySum: relaySum,
         rewardSum: rewardSum,
         providerCount: providerCount[0].count,
-        endpointHealth: healthStatusCounts
+        endpointHealth: healthStatusCounts,
+        cacheHitRate: cacheHitRate,
     }
 }

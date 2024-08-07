@@ -32,13 +32,13 @@ class ProviderSpecMonikerCache {
 
     private async refreshCache() {
         await QueryCheckJsinfoReadDbInstance();
-        this.psmCache = await RedisCache.getArray("ProviderSpecMonikerTable") as ProviderSpecMoniker[]
+        this.psmCache = await (RedisCache.getArray("ProviderSpecMonikerTable") || []) as ProviderSpecMoniker[]
         if (!this.psmCache) {
             this.psmCache = [];
             this.psmCache = await this.fetchProviderSpecMonikerTable();
             RedisCache.setArray("ProviderSpecMonikerTable", this.psmCache, this.refreshInterval);
         }
-        this.pmCache = await RedisCache.getArray("ProviderMonikerTable") as ProviderMoniker[]
+        this.pmCache = (await RedisCache.getArray("ProviderMonikerTable") || []) as ProviderMoniker[]
         if (!this.pmCache) {
             this.pmCache = [];
             this.pmCache = await this.fetchProviderMonikerTable();

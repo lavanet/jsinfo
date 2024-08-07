@@ -5,6 +5,7 @@ import * as consts from './queryConsts';
 
 // -- Server status ajax --
 import { LatestRawHandler, LatestRawHandlerOpts } from './handlers/latestHandler';
+import { IsLatestRawHandler, IsLatestRawHandlerOpts } from './handlers/isLatestHandler';
 
 // -- Server supply ajax --
 import { SupplyRawHandlerOpts, TotalSupplyRawHandler, CirculatingSupplyRawHandler } from './handlers/supplyHandler';
@@ -63,6 +64,7 @@ import { LavapDualStackingDelegatorRewardsHandler, LavapDualStackingDelegatorRew
 
 // -- Server status ajax --
 GetServerInstance().get('/latest', LatestRawHandlerOpts, LatestRawHandler);
+GetServerInstance().get('/islatest', IsLatestRawHandlerOpts, IsLatestRawHandler);
 // GetServerInstance().get('/health', HealthRawHandlerOpts, HealthRawHandler);
 
 // -- Server supply ajax --

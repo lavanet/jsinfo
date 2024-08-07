@@ -114,6 +114,7 @@ export async function SpecPaginatedHandler(request: FastifyRequest, reply: Fasti
     if (cacheHitRateData[specUpper]) {
         cacheHitRate = cacheHitRateData[specUpper];
     }
+
     return {
         height: latestHeight,
         datetime: latestDatetime,

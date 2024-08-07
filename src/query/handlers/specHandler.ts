@@ -109,7 +109,7 @@ export async function SpecPaginatedHandler(request: FastifyRequest, reply: Fasti
     });
 
     let cacheHitRate = 0.0;
-    const cacheHitRateData = await RedisCache.getNoKeyPrefix("jsinfo-healthp-cachedmetrics") || {};
+    const cacheHitRateData = await RedisCache.getDictNoKeyPrefix("jsinfo-healthp-cachedmetrics") || {};
     const specUpper = spec.toUpperCase();
     if (cacheHitRateData[specUpper]) {
         cacheHitRate = cacheHitRateData[specUpper];

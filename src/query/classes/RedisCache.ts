@@ -157,6 +157,17 @@ class RedisCacheClass {
         }
     }
 
+    async getDictNoKeyPrefix(key: string): Promise<{ [key: string]: any } | null> {
+        const result = await this.getNoKeyPrefix(key);
+        if (!result) return null;
+        try {
+            return JSON.parse(result);
+        } catch (error) {
+            this.logError(`Error parsing JSON for key ${this.keyPrefix + key}`, error);
+            return null;
+        }
+    }
+
     async setDict(key: string, value: { [key: string]: any }, ttl: number = 30): Promise<void> {
         try {
             const stringValue = JSON.stringify(value);

@@ -14,7 +14,6 @@ if (!JSINFO_QUERY_PORT_STRING) {
 export const JSINFO_QUERY_PORT = parseInt(JSINFO_QUERY_PORT_STRING);
 export const JSINFO_QUERY_HOST = GetEnvVar('JSINFO_QUERY_HOST', '0.0.0.0');
 
-// the lavapProviderHealthHandler endpoint is sending alot of data
 export const JSINFO_QUERY_HIGH_POST_BODY_LIMIT = false;
 export const JSINFO_QUERY_LAVAP_DUAL_STACKING_DELEGATOR_REWARDS_ENDPOINT_ENABLED = GetEnvVar("JSINFO_QUERY_LAVAP_DUAL_STACKING_DELEGATOR_REWARDS_ENDPOINT_ENABLED", "false").toLowerCase() === "true";
 

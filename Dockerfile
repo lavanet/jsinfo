@@ -3,10 +3,7 @@
 FROM oven/bun:1.0.25-alpine as base
 RUN mkdir /lava
 WORKDIR /lava
-RUN apk add --update python3 py3-pip git bash jq curl make gcc go linux-headers
-
-# support for the lavapProviderHealth script
-RUN pip3 install requests python-dateutil psycopg2-binary redis
+RUN apk add --update git bash jq curl make gcc go linux-headers
 
 # health probe branch - 20/06/2024 commit
 RUN git clone https://github.com/lavanet/lava.git . && git checkout 688e89ee59b48161688939f7e52641de5b0c0b88
@@ -39,4 +36,3 @@ COPY --from=prerelease /usr/src/app/dist .
 
 # Add scripts
 COPY scripts scripts
-COPY lavapProviderHealth lavapProviderHealth

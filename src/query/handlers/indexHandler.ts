@@ -6,6 +6,7 @@ import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import * as JsinfoProviderAgrSchema from '../../schemas/jsinfoSchema/providerRelayPaymentsAgregation';
 import { sql, desc, gt } from "drizzle-orm";
 import { logger, MinBigInt } from '../../utils/utils';
+import { RedisCache } from '../classes/RedisCache';
 
 export const IndexHandlerOpts: RouteShorthandOptions = {
     schema: {
@@ -34,6 +35,9 @@ export const IndexHandlerOpts: RouteShorthandOptions = {
                     allSpecs: {
                         type: 'array',
                     },
+                    cacheHitRate: {
+                        type: 'number'
+                    }
                 }
             }
         }
@@ -90,6 +94,20 @@ export async function IndexHandler(request: FastifyRequest, reply: FastifyReply)
         }).from(JsinfoSchema.specs)
     }
 
+    const cacheHitRateData = await RedisCache.getDictNoKeyPrefix("jsinfo-healthp-cachedmetrics") || {};
+
+    let sum = 0;
+    let count = 0;
+
+    for (const [key, value] of Object.entries(cacheHitRateData)) {
+        if (key.toUpperCase() !== 'LAVA' && value !== 0) {
+            sum += value;
+            count++;
+        }
+    }
+
+    const cacheHitRateAverage = count > 0 ? sum / count : 0;
+
     return {
         height: latestHeight,
         datetime: latestDatetime,
@@ -98,5 +116,6 @@ export async function IndexHandler(request: FastifyRequest, reply: FastifyReply)
         rewardSum: rewardSum,
         stakeSum: stakeSum.toString(),
         allSpecs: topSpecs,
+        cacheHitRate: cacheHitRateAverage.toFixed(2),
     }
 }

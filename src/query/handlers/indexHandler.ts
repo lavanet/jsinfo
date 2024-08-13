@@ -7,6 +7,7 @@ import * as JsinfoProviderAgrSchema from '../../schemas/jsinfoSchema/providerRel
 import { sql, desc, gt } from "drizzle-orm";
 import { logger, MinBigInt } from '../../utils/utils';
 import { RedisCache } from '../classes/RedisCache';
+import { JSINFO_QUERY_NETWORK } from '../queryConsts';
 
 export const IndexHandlerOpts: RouteShorthandOptions = {
     schema: {
@@ -99,10 +100,19 @@ export async function IndexHandler(request: FastifyRequest, reply: FastifyReply)
     let sum = 0;
     let count = 0;
 
-    for (const [key, value] of Object.entries(cacheHitRateData)) {
-        if (key.toUpperCase() !== 'LAVA' && value !== 0) {
-            sum += value;
-            count++;
+    if (JSINFO_QUERY_NETWORK === 'mainnet') {
+        for (const [key, value] of Object.entries(cacheHitRateData)) {
+            if (key.toUpperCase() === 'LAVA' && value !== 0) {
+                sum += value;
+                count++;
+            }
+        }
+    } else {
+        for (const [key, value] of Object.entries(cacheHitRateData)) {
+            if (key.toUpperCase() !== 'LAVA' && value !== 0) {
+                sum += value;
+                count++;
+            }
         }
     }
 

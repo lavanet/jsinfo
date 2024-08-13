@@ -26,6 +26,8 @@ export const JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE = parseInt(GetEnvVar("JSINFO_QU
 export const JSINFO_QUERY_ALLOWED_ITEMS_PER_PAGE = parseInt(GetEnvVar("JSINFO_QUERY_ALLOWED_ITEMS_PER_PAGE", "100"));
 export const JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION = parseInt(GetEnvVar("JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION", "5000"));
 
+export const JSINFO_QUERY_NETWORK = GetEnvVar("JSINFO_QUERY_NETWORK", "local");
+
 export const JSINFO_NO_READ_DB = GetEnvVar("JSINFO_NO_READ_DB", "true").toLowerCase() === "true";
 
 export const JSINFO_REQUEST_HANDLER_BASE_DEBUG = GetEnvVar("JSINFO_REQUEST_HANDLER_BASE_DEBUG", "true").toLowerCase() === "true";

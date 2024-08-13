@@ -4,63 +4,70 @@ import { RegisterPaginationServerHandler, RegisterRedisBackedHandler, GetServerI
 import * as consts from './queryConsts';
 
 // -- Server status ajax --
-import { LatestRawHandler, LatestRawHandlerOpts } from './handlers/latestHandler';
-import { IsLatestRawHandler, IsLatestRawHandlerOpts } from './handlers/isLatestHandler';
+import { LatestRawHandler, LatestRawHandlerOpts } from './handlers/health/latestHandler';
+import { IsLatestRawHandler, IsLatestRawHandlerOpts } from './handlers/health/isLatestHandler';
 
 // -- Server supply ajax --
-import { SupplyRawHandlerOpts, TotalSupplyRawHandler, CirculatingSupplyRawHandler } from './handlers/supplyHandler';
+import { SupplyRawHandlerOpts, TotalSupplyRawHandler, CirculatingSupplyRawHandler } from './handlers/ajax/supplyHandler';
 
 // -- list all providers and monikers endpoint ---
-import { ListProvidersRawHandlerOpts, ListProvidersRawHandler } from './handlers/listProvidersHandler';
+import { ListProvidersRawHandlerOpts, ListProvidersRawHandler } from './handlers/ajax/listProvidersHandler';
 
 // -- Server meta ajax --
-import { ProvidersPaginatedHandler, ProvidersPaginatedHandlerOpts } from './handlers/providersHandler';
-import { SpecsPaginatedHandler, SpecsPaginatedHandlerOpts } from './handlers/specsHandler';
-import { ConsumersPaginatedHandler, ConsumersPaginatedHandlerOpts } from './handlers/consumersHandler';
+import { ProvidersPaginatedHandler, ProvidersPaginatedHandlerOpts } from './handlers/provider/providersHandler';
+import { SpecsPaginatedHandler, SpecsPaginatedHandlerOpts } from './handlers/ajax/specsHandler';
+import { ConsumersPaginatedHandler, ConsumersPaginatedHandlerOpts } from './handlers/ajax/consumersHandler';
 
 // -- All pages ajax --
-import { CacheLinksPaginatedHandler, CacheLinksPaginatedHandlerOpts } from './handlers/cacheLinksHandler';
-import { AutoCompleteLinksPaginatedHandler, AutoCompleteLinksPaginatedHandlerOpts } from './handlers/autoCompleteLinksHandler';
+import { CacheLinksPaginatedHandler, CacheLinksPaginatedHandlerOpts } from './handlers/ajax/cacheLinksHandler';
+import { AutoCompleteLinksPaginatedHandler, AutoCompleteLinksPaginatedHandlerOpts } from './handlers/ajax/autoCompleteLinksHandler';
 
 // -- Index page ajax -- 
-import { IndexHandler, IndexHandlerOpts } from './handlers/indexHandler';
-import { IndexProvidersPaginatedHandler, IndexProvidersPaginatedHandlerOpts, IndexProvidersItemCountPaginatiedHandler, IndexProvidersCSVRawHandler } from './handlers/indexProvidersHandler';
-import { IndexChartsRawHandler, IndexChartsRawHandlerOpts } from './handlers/indexChartsHandler';
+import { IndexHandler, IndexHandlerOpts } from './handlers/index/indexHandler';
+import { IndexProvidersPaginatedHandler, IndexProvidersPaginatedHandlerOpts, IndexProvidersItemCountPaginatiedHandler, IndexProvidersCSVRawHandler } from './handlers/index/indexProvidersHandler';
+import { IndexChartsRawHandler, IndexChartsRawHandlerOpts } from './handlers/index/indexChartsHandler';
 
 // -- Provider page ajax --
-import { ProviderPaginatedHandler, ProviderPaginatedHandlerOpts } from './handlers/providerHandler';
-import { ProviderCardsHandler, ProviderCardsHandlerOpts } from './handlers/providerCardsHandler';
-import { ProviderChartsRawHandler, ProviderChartsRawHandlerOpts } from './handlers/providerChartsHandler';
+import { ProviderPaginatedHandler, ProviderPaginatedHandlerOpts } from './handlers/provider/providerHandler';
+import { ProviderCardsHandler, ProviderCardsHandlerOpts } from './handlers/provider/providerCardsHandler';
+import { ProviderChartsRawHandler, ProviderChartsRawHandlerOpts } from './handlers/provider/providerChartsHandler';
 
-import { ProviderHealthPaginatedHandler, ProviderHealthPaginatedHandlerOpts, ProviderHealthItemCountPaginatiedHandler, ProviderHealthCSVRawHandler } from './handlers/providerHealthHandler';
-import { ProviderErrorsPaginatedHandler, ProviderErrorsPaginatedHandlerOpts, ProviderErrorsItemCountPaginatiedHandler, ProviderErrorsCSVRawHandler } from './handlers/providerErrorsHandler';
-import { ProviderStakesPaginatedHandlerOpts, ProviderStakesHandler, ProviderStakesItemCountPaginatiedHandler, ProviderStakesCSVRawHandler } from './handlers/providerStakesHandler';
-import { ProviderEventsPaginatedHandlerOpts, ProviderEventsPaginatedHandler, ProviderEventsItemCountPaginatiedHandler, ProviderEventsCSVRawHandler } from './handlers/providerEventsHandler';
-import { ProviderRewardsPaginatedHandlerOpts, ProviderRewardsPaginatedHandler, ProviderRewardsItemCountPaginatiedHandler, ProviderRewardsCSVRawHandler } from './handlers/providerRewardsHandler';
-import { ProviderReportsPaginatedHandlerOpts, ProviderReportsPaginatedHandler, ProviderReportsItemCountPaginatiedHandler, ProviderReportsCSVRawHandler } from './handlers/providerReportsHandler';
-import { ProviderDelegatorRewardsPaginatedHandlerOpts, ProviderDelegatorRewardsPaginatedHandler, ProviderDelegatorRewardsItemCountPaginatiedHandler, ProviderDelegatorRewardsCSVRawHandler } from './handlers/providerDelegatorRewardsHandler';
-import { ProviderBlockReportsPaginatedHandlerOpts, ProviderBlockReportsPaginatedHandler, ProviderBlockReportsItemCountPaginatiedHandler, ProviderBlockReportsCSVRawHandler } from './handlers/providerBlockReportsHandler';
+import { ProviderHealthPaginatedHandler, ProviderHealthPaginatedHandlerOpts, ProviderHealthItemCountPaginatiedHandler, ProviderHealthCSVRawHandler } from './handlers/provider/providerHealthHandler';
+import { ProviderErrorsPaginatedHandler, ProviderErrorsPaginatedHandlerOpts, ProviderErrorsItemCountPaginatiedHandler, ProviderErrorsCSVRawHandler } from './handlers/provider/providerErrorsHandler';
+import { ProviderStakesPaginatedHandlerOpts, ProviderStakesHandler, ProviderStakesItemCountPaginatiedHandler, ProviderStakesCSVRawHandler } from './handlers/provider/providerStakesHandler';
+import { ProviderEventsPaginatedHandlerOpts, ProviderEventsPaginatedHandler, ProviderEventsItemCountPaginatiedHandler, ProviderEventsCSVRawHandler } from './handlers/provider/providerEventsHandler';
+import { ProviderRewardsPaginatedHandlerOpts, ProviderRewardsPaginatedHandler, ProviderRewardsItemCountPaginatiedHandler, ProviderRewardsCSVRawHandler } from './handlers/provider/providerRewardsHandler';
+import { ProviderReportsPaginatedHandlerOpts, ProviderReportsPaginatedHandler, ProviderReportsItemCountPaginatiedHandler, ProviderReportsCSVRawHandler } from './handlers/provider/providerReportsHandler';
+import { ProviderDelegatorRewardsPaginatedHandlerOpts, ProviderDelegatorRewardsPaginatedHandler, ProviderDelegatorRewardsItemCountPaginatiedHandler, ProviderDelegatorRewardsCSVRawHandler } from './handlers/provider/providerDelegatorRewardsHandler';
+import { ProviderBlockReportsPaginatedHandlerOpts, ProviderBlockReportsPaginatedHandler, ProviderBlockReportsItemCountPaginatiedHandler, ProviderBlockReportsCSVRawHandler } from './handlers/provider/providerBlockReportsHandler';
 
-import { ProviderHealthLatestPaginatedHandler, ProviderHealthLatestPaginatedHandlerOpts } from './handlers/providerHealthLatestHandler';
-import { ProviderAccountInfoRawHandler, ProviderAccountInfoRawHandlerOpts } from './handlers/providerAccountInfoHandler';
+import { ProviderHealthLatestPaginatedHandler, ProviderHealthLatestPaginatedHandlerOpts } from './handlers/provider/providerHealthLatestHandler';
+import { ProviderAccountInfoRawHandler, ProviderAccountInfoRawHandlerOpts } from './handlers/provider/providerAccountInfoHandler';
 
 // -- Events page ajax -- 
-import { EventsEventsPaginatedHandlerOpts, EventsEventsPaginatedHandler, EventsEventsItemCountPaginatiedHandler, EventsEventsCSVRawHandler } from './handlers/eventsEventsHandler';
-import { EventsRewardsPaginatedHandlerOpts, EventsRewardsPaginatedHandler, EventsRewardsItemCountPaginatiedHandler, EventsRewardsCSVRawHandler } from './handlers/eventsRewardsHandler';
-import { EventsReportsPaginatedHandlerOpts, EventsReportsPaginatedHandler, EventsReportsItemCountPaginatiedHandler, EventsReportsCSVRawHandler } from './handlers/eventsReportsHandler';
+import { EventsEventsPaginatedHandlerOpts, EventsEventsPaginatedHandler, EventsEventsItemCountPaginatiedHandler, EventsEventsCSVRawHandler } from './handlers/events/eventsEventsHandler';
+import { EventsRewardsPaginatedHandlerOpts, EventsRewardsPaginatedHandler, EventsRewardsItemCountPaginatiedHandler, EventsRewardsCSVRawHandler } from './handlers/events/eventsRewardsHandler';
+import { EventsReportsPaginatedHandlerOpts, EventsReportsPaginatedHandler, EventsReportsItemCountPaginatiedHandler, EventsReportsCSVRawHandler } from './handlers/events/eventsReportsHandler';
+
+// -- Consumer page ajax -- 
+import { ConsumerCahcedHandler, ConsumerCahcedHandlerOpts } from './handlers/consumer/consumerHandler';
+import { ConsumerSubscriptionRawHandler, ConsumerSubscriptionRawHandlerOpts } from './handlers/consumer/consumerSubscriptionHandler';
+
+// -- Consumersp page ajax -- 
+import { ConsumersPageHandler, ConsumersPageHandlerOpts } from './handlers/consumerspage/consumersPageHandler';
+import { ConsumersPageChartsRawHandler, ConsumersPageChartsRawHandlerOpts } from './handlers/consumerspage/consumersPageChartsHandler';
 
 // -- Spec page ajax --
-import { SpecPaginatedHandler, SpecPaginatedHandlerOpts } from './handlers/specHandler';
-import { SpecChartsRawHandler, SpecChartsRawHandlerOpts } from './handlers/specChartsHandler';
-import { SpecStakesPaginatedHandler, SpecStakesPaginatedHandlerOpts } from './handlers/specStakesHandler';
+import { SpecPaginatedHandler, SpecPaginatedHandlerOpts } from './handlers/spec/specHandler';
+import { SpecChartsRawHandler, SpecChartsRawHandlerOpts } from './handlers/spec/specChartsHandler';
+import { SpecStakesPaginatedHandler, SpecStakesPaginatedHandlerOpts } from './handlers/spec/specStakesHandler';
 
-import { ConsumerCahcedHandler, ConsumerCahcedHandlerOpts } from './handlers/consumerHandler';
-import { EventsPaginatedHandler, EventsPaginatedHandlerOpts } from './handlers/eventsHandler';
+import { EventsPaginatedHandler, EventsPaginatedHandlerOpts } from './handlers/events/eventsHandler';
 
-import { SpecProviderHealthHandler, SpecProviderHealthHandlerOpts } from './handlers/specProviderHealthHandler';
+import { SpecProviderHealthHandler, SpecProviderHealthHandlerOpts } from './handlers/spec/specProviderHealthHandler';
 
 // -- Internal data endpoints --
-import { LavapDualStackingDelegatorRewardsHandler, LavapDualStackingDelegatorRewardsOpts } from './handlers/lavapDualStackingDelegatorRewardsHandler';
+import { LavapDualStackingDelegatorRewardsHandler, LavapDualStackingDelegatorRewardsOpts } from './handlers/pods/lavapDualStackingDelegatorRewardsHandler';
 
 // -- Server status ajax --
 GetServerInstance().get('/latest', LatestRawHandlerOpts, LatestRawHandler);
@@ -117,6 +124,11 @@ GetServerInstance().get('/providerBlockReportsCsv/:addr', ProviderBlockReportsCS
 
 // -- Consumer page ajax --
 RegisterRedisBackedHandler('/consumer/:addr', ConsumerCahcedHandlerOpts, ConsumerCahcedHandler);
+RegisterRedisBackedHandler('/consumerSubscription/:addr', ConsumerSubscriptionRawHandlerOpts, ConsumerSubscriptionRawHandler);
+
+// -- Consumerspage page ajax --
+RegisterRedisBackedHandler('/consumerspage', ConsumersPageHandlerOpts, ConsumersPageHandler, { cache_ttl: 10 });
+GetServerInstance().get('/consumerspageCharts', ConsumersPageChartsRawHandlerOpts, ConsumersPageChartsRawHandler);
 
 // -- Events page ajax --
 RegisterRedisBackedHandler('/events', EventsPaginatedHandlerOpts, EventsPaginatedHandler, { cache_ttl: 30 });
@@ -139,6 +151,3 @@ RegisterRedisBackedHandler('/specProviderHealth/:specId/:addr', SpecProviderHeal
 if (consts.JSINFO_QUERY_LAVAP_DUAL_STACKING_DELEGATOR_REWARDS_ENDPOINT_ENABLED) {
     GetServerInstance().post('/lavapDualStackingDelegatorRewards', LavapDualStackingDelegatorRewardsOpts, LavapDualStackingDelegatorRewardsHandler);
 }
-
-
-

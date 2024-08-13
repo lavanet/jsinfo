@@ -141,7 +141,7 @@ export async function SpecStakesPaginatedHandler(request: FastifyRequest, reply:
             eq(JsinfoSchema.providerStakes.provider, JsinfoProviderAgrSchema.aggDailyRelayPayments.provider),
             and(
                 eq(JsinfoSchema.providerStakes.specId, JsinfoProviderAgrSchema.aggDailyRelayPayments.specId),
-                gt(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday, sql<Date>`now() - interval '30 day'`)
+                gt(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday, sql<Date>`now() - interval '90 day'`)
             )
         ))
         .where(eq(JsinfoSchema.providerStakes.specId, spec))

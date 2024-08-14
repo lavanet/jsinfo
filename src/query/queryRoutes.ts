@@ -49,13 +49,15 @@ import { EventsEventsPaginatedHandlerOpts, EventsEventsPaginatedHandler, EventsE
 import { EventsRewardsPaginatedHandlerOpts, EventsRewardsPaginatedHandler, EventsRewardsItemCountPaginatiedHandler, EventsRewardsCSVRawHandler } from './handlers/events/eventsRewardsHandler';
 import { EventsReportsPaginatedHandlerOpts, EventsReportsPaginatedHandler, EventsReportsItemCountPaginatiedHandler, EventsReportsCSVRawHandler } from './handlers/events/eventsReportsHandler';
 
+// -- Consumers page ajax -- 
+import { ConsumersPageHandler, ConsumersPageHandlerOpts } from './handlers/consumersPage/consumersPageHandler';
+import { ConsumersPageChartsRawHandler, ConsumersPageChartsRawHandlerOpts } from './handlers/consumersPage/consumersPageChartsHandler';
+import { ConsumersPageConsumersRawHandler, ConsumersPageConsumersRawHandlerOpts } from './handlers/consumersPage/consumersPageConsumersHandler';
+
 // -- Consumer page ajax -- 
 import { ConsumerCahcedHandler, ConsumerCahcedHandlerOpts } from './handlers/consumer/consumerHandler';
-import { ConsumerSubscriptionRawHandler, ConsumerSubscriptionRawHandlerOpts } from './handlers/consumer/consumerSubscriptionHandler';
-
-// -- Consumersp page ajax -- 
-import { ConsumersPageHandler, ConsumersPageHandlerOpts } from './handlers/consumerspage/consumersPageHandler';
-import { ConsumersPageChartsRawHandler, ConsumersPageChartsRawHandlerOpts } from './handlers/consumerspage/consumersPageChartsHandler';
+import { ConsumerSubscriptionItemCountPaginatiedHandler, ConsumerSubscriptionPaginatedRawHandler, ConsumerSubscriptionRawHandlerOpts } from './handlers/consumer/consumerSubscriptionHandler';
+import { ConsumerChartsRawHandler, ConsumerChartsRawHandlerOpts } from './handlers/consumer/consumerChartsHandler';
 
 // -- Spec page ajax --
 import { SpecPaginatedHandler, SpecPaginatedHandlerOpts } from './handlers/spec/specHandler';
@@ -124,11 +126,13 @@ GetServerInstance().get('/providerBlockReportsCsv/:addr', ProviderBlockReportsCS
 
 // -- Consumer page ajax --
 RegisterRedisBackedHandler('/consumer/:addr', ConsumerCahcedHandlerOpts, ConsumerCahcedHandler);
-RegisterRedisBackedHandler('/consumerSubscription/:addr', ConsumerSubscriptionRawHandlerOpts, ConsumerSubscriptionRawHandler);
+RegisterPaginationServerHandler('/consumerSubscriptions/:addr', ConsumerSubscriptionRawHandlerOpts, ConsumerSubscriptionPaginatedRawHandler, ConsumerSubscriptionItemCountPaginatiedHandler);
+GetServerInstance().get('/consumerCharts/:addr', ConsumerChartsRawHandlerOpts, ConsumerChartsRawHandler);
 
 // -- Consumerspage page ajax --
 RegisterRedisBackedHandler('/consumerspage', ConsumersPageHandlerOpts, ConsumersPageHandler, { cache_ttl: 10 });
 GetServerInstance().get('/consumerspageCharts', ConsumersPageChartsRawHandlerOpts, ConsumersPageChartsRawHandler);
+RegisterRedisBackedHandler('/consumerspageConsumers', ConsumersPageConsumersRawHandlerOpts, ConsumersPageConsumersRawHandler, { cache_ttl: 10 });
 
 // -- Events page ajax --
 RegisterRedisBackedHandler('/events', EventsPaginatedHandlerOpts, EventsPaginatedHandler, { cache_ttl: 30 });

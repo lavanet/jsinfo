@@ -1,11 +1,12 @@
 // src/query/handlers/consumerspageHandler.ts
 
+// curl http://localhost:8081/consumerspage | jq
+
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryCheckJsinfoReadDbInstance, GetLatestBlock, QueryGetJsinfoReadDbInstance } from '../../queryDb';
 import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
 import * as JsinfoConsumerAgrSchema from '../../../schemas/jsinfoSchema/providerRelayPaymentsAgregation';
-import { sql, desc, gt } from "drizzle-orm";
-import { logger, MinBigInt } from '../../../utils/utils';
+import { sql, gt } from "drizzle-orm";
 
 export const ConsumersPageHandlerOpts: RouteShorthandOptions = {
     schema: {
@@ -28,7 +29,7 @@ export const ConsumersPageHandlerOpts: RouteShorthandOptions = {
                     rewardSum: {
                         type: 'number'
                     },
-                    stakeSum: {
+                    consumerCount: {
                         type: 'number'
                     },
                     allSpecs: {
@@ -45,7 +46,6 @@ export async function ConsumersPageHandler(request: FastifyRequest, reply: Fasti
 
     const { latestHeight, latestDatetime } = await GetLatestBlock()
 
-    // Get total payments and more
     let cuSum = 0
     let relaySum = 0
     let rewardSum = 0
@@ -60,17 +60,11 @@ export async function ConsumersPageHandler(request: FastifyRequest, reply: Fasti
         rewardSum = res[0].rewardSum
     }
 
-    // Get total provider stake
-    let stakesRes = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.providerStakes).orderBy(desc(JsinfoSchema.providerStakes.stake));
-    let stakeSum = 0n;
-    stakesRes.forEach((stake) => {
-        stakeSum += stake.stake! + MinBigInt(stake.delegateTotal, stake.delegateLimit);
-    });
-
     // Get top chains
     let topSpecs = await QueryGetJsinfoReadDbInstance().select({
         chainId: JsinfoConsumerAgrSchema.aggDailyRelayPayments.specId,
         relaySum: sql<number>`SUM(${JsinfoConsumerAgrSchema.aggDailyRelayPayments.relaySum}) as relaySum`,
+        cuSum: sql<number>`SUM(${JsinfoConsumerAgrSchema.aggDailyRelayPayments.cuSum}) as cuSum`,
     }).from(JsinfoConsumerAgrSchema.aggDailyRelayPayments).
         groupBy(sql`${JsinfoConsumerAgrSchema.aggDailyRelayPayments.specId}`).
         where(gt(JsinfoConsumerAgrSchema.aggDailyRelayPayments.dateday, sql<Date>`now() - interval '30 day'`)).
@@ -86,8 +80,17 @@ export async function ConsumersPageHandler(request: FastifyRequest, reply: Fasti
         topSpecs = await QueryGetJsinfoReadDbInstance().select({
             chainId: JsinfoSchema.specs.id,
             relaySum: sql<number>`0`,
+            cuSum: sql<number>`0`,
         }).from(JsinfoSchema.specs)
     }
+
+    const uniqueConsumerCount = await QueryGetJsinfoReadDbInstance()
+        .select({
+            count: sql<number>`COUNT(DISTINCT consumer)`
+        })
+        .from(JsinfoSchema.consumerSubscriptionList);
+
+    const consumerCountRes = uniqueConsumerCount[0].count || 0;
 
     return {
         height: latestHeight,
@@ -95,7 +98,7 @@ export async function ConsumersPageHandler(request: FastifyRequest, reply: Fasti
         cuSum: cuSum,
         relaySum: relaySum,
         rewardSum: rewardSum,
-        stakeSum: stakeSum.toString(),
+        consumerCount: consumerCountRes,
         allSpecs: topSpecs,
     }
 }

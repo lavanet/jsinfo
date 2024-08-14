@@ -1,5 +1,7 @@
 // src/query/handlers/consumerspageChartsHandler.ts
 
+// curl http://localhost:8081/consumerspageCharts | jq
+
 import { FastifyReply, FastifyRequest, RouteShorthandOptions } from 'fastify';
 import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../../queryDb';
 import * as JsinfoConsumerAgrSchema from '../../../schemas/jsinfoSchema/providerRelayPaymentsAgregation';

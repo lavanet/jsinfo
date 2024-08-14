@@ -77,6 +77,7 @@ export async function IndexHandler(request: FastifyRequest, reply: FastifyReply)
     let topSpecs = await QueryGetJsinfoReadDbInstance().select({
         chainId: JsinfoProviderAgrSchema.aggDailyRelayPayments.specId,
         relaySum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum}) as relaySum`,
+        cuSum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggDailyRelayPayments.cuSum}) as cuSum`,
     }).from(JsinfoProviderAgrSchema.aggDailyRelayPayments).
         groupBy(sql`${JsinfoProviderAgrSchema.aggDailyRelayPayments.specId}`).
         where(gt(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday, sql<Date>`now() - interval '30 day'`)).
@@ -92,6 +93,7 @@ export async function IndexHandler(request: FastifyRequest, reply: FastifyReply)
         topSpecs = await QueryGetJsinfoReadDbInstance().select({
             chainId: JsinfoSchema.specs.id,
             relaySum: sql<number>`0`,
+            cuSum: sql<number>`0`,
         }).from(JsinfoSchema.specs)
     }
 

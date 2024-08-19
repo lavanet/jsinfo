@@ -54,13 +54,11 @@ class ProviderSpecMonikerCache {
         }
 
         this.pmCache = (await RedisCache.getArray("ProviderMonikerTable") || []) as ProviderMoniker[]
-        console.log("Fetched ProviderMonikerTable:", this.pmCache);
 
         if (Array.isArray(this.pmCache) && this.pmCache.length === 0) {
             console.log("pmCache is empty, fetching from source");
             this.pmCache = [];
             this.pmCache = await this.fetchProviderMonikerTable();
-            console.log("Fetched ProviderMonikerTable from source:", this.pmCache);
             if (Array.isArray(this.pmCache) && this.pmCache.length === 0) {
                 this.pmCacheIsEmpty = true;
                 console.log("pmCache remains empty after fetch");

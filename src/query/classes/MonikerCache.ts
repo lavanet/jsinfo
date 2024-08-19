@@ -4,6 +4,7 @@ import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '..
 import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import { gte } from 'drizzle-orm';
 import { RedisCache } from './RedisCache';
+import { NullSyncSubprocess } from 'bun';
 interface ProviderSpecMoniker {
     provider: string;
     moniker: string | null;
@@ -46,7 +47,6 @@ class ProviderSpecMonikerCache {
         }
 
         this.pmCache = (await RedisCache.getArray("ProviderMonikerTable") || []) as ProviderMoniker[]
-        console.log("this.pmCache", this.pmCache)
 
         if (Array.isArray(this.pmCache) && this.pmCache.length === 0) {
             this.pmCache = [];
@@ -63,6 +63,11 @@ class ProviderSpecMonikerCache {
     public GetMonikerForProvider(lavaid: string | null): string {
         if (!lavaid) return '';
         this.verifyLavaId(lavaid);
+
+        if (this.psmCache == null || this.pmCache == null) {
+            this.refreshCache()
+            return '';
+        }
 
         if (this.psmCache.length === 0 && this.pmCache.length === 0) {
             this.refreshCache()
@@ -97,6 +102,11 @@ class ProviderSpecMonikerCache {
     public GetMonikerFullDescription(lavaid: string | null): string {
         if (!lavaid) return '';
         this.verifyLavaId(lavaid);
+
+        if (this.psmCache == null || this.pmCache == null) {
+            this.refreshCache()
+            return '';
+        }
 
         if (this.psmCache.length === 0 && this.pmCache.length === 0) {
             this.refreshCache()
@@ -148,6 +158,10 @@ class ProviderSpecMonikerCache {
     }
 
     public GetMonikerCountForProvider(lavaid: string): number {
+        if (this.psmCache == null) {
+            this.refreshCache()
+            return 0;
+        }
         if (this.psmCache.length === 0) {
             this.refreshCache()
             if (this.psmCacheIsEmpty) return 0;

@@ -4,6 +4,7 @@ import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '..
 import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import { gte } from 'drizzle-orm';
 import { RedisCache } from './RedisCache';
+import { NullSyncSubprocess } from 'bun';
 interface ProviderSpecMoniker {
     provider: string;
     moniker: string | null;
@@ -34,6 +35,7 @@ class ProviderSpecMonikerCache {
 
     private async refreshCache() {
         await QueryCheckJsinfoReadDbInstance();
+<<<<<<< HEAD
         this.psmCache = await (RedisCache.getArray("ProviderSpecMonikerTable") || []) as ProviderSpecMoniker[]
 
         if (Array.isArray(this.psmCache) && this.psmCache.length === 0) {
@@ -41,21 +43,42 @@ class ProviderSpecMonikerCache {
             this.psmCache = await this.fetchProviderSpecMonikerTable();
             if (Array.isArray(this.psmCache) && this.psmCache.length === 0) {
                 this.psmCacheIsEmpty = true;
+=======
+
+        let new_psmCache = (await RedisCache.getArray("ProviderMonikerTable") || []) as ProviderMoniker[]
+
+        if ((new_psmCache == null) || (Array.isArray(new_psmCache) && new_psmCache.length === 0)) {
+            this.psmCache = await this.fetchProviderSpecMonikerTable();
+            if (Array.isArray(this.psmCache) && this.psmCache.length === 0) {
+                this.psmCacheIsEmpty = true;
+                console.log("psmCache remains empty after fetch");
+>>>>>>> testnet
             }
             RedisCache.setArray("ProviderSpecMonikerTable", this.psmCache, this.refreshInterval);
+        } else {
+            this.pmCache = new_psmCache
         }
 
+<<<<<<< HEAD
         this.pmCache = (await RedisCache.getArray("ProviderMonikerTable") || []) as ProviderMoniker[]
         console.log("this.pmCache", this.pmCache)
 
         if (Array.isArray(this.pmCache) && this.pmCache.length === 0) {
             this.pmCache = [];
+=======
+        let new_pmCache = (await RedisCache.getArray("ProviderMonikerTable") || []) as ProviderMoniker[]
+
+        if ((new_pmCache == null) || (Array.isArray(new_pmCache) && new_pmCache.length === 0)) {
+>>>>>>> testnet
             this.pmCache = await this.fetchProviderMonikerTable();
             if (Array.isArray(this.pmCache) && this.pmCache.length === 0) {
                 this.pmCacheIsEmpty = true;
             }
             RedisCache.setArray("ProviderMonikerTable", this.pmCache, this.refreshInterval);
+        } else {
+            this.pmCache = new_pmCache
         }
+
         this.monikerForProviderCache.clear();
         this.monikerFullDescriptionCache.clear();
     }

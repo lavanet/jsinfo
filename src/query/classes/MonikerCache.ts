@@ -34,28 +34,41 @@ class ProviderSpecMonikerCache {
     }
 
     private async refreshCache() {
+        console.log("Starting refreshCache");
         await QueryCheckJsinfoReadDbInstance();
+        console.log("Checked Jsinfo Read Db Instance");
         this.psmCache = await (RedisCache.getArray("ProviderSpecMonikerTable") || []) as ProviderSpecMoniker[]
+        console.log("Fetched ProviderSpecMonikerTable:", this.psmCache);
 
         if (Array.isArray(this.psmCache) && this.psmCache.length === 0) {
+            console.log("psmCache is empty, fetching from source");
             this.psmCache = [];
             this.psmCache = await this.fetchProviderSpecMonikerTable();
+            console.log("Fetched ProviderSpecMonikerTable from source:", this.psmCache);
             if (Array.isArray(this.psmCache) && this.psmCache.length === 0) {
                 this.psmCacheIsEmpty = true;
+                console.log("psmCache remains empty after fetch");
             }
             RedisCache.setArray("ProviderSpecMonikerTable", this.psmCache, this.refreshInterval);
+            console.log("Updated ProviderSpecMonikerTable in RedisCache");
         }
 
         this.pmCache = (await RedisCache.getArray("ProviderMonikerTable") || []) as ProviderMoniker[]
+        console.log("Fetched ProviderMonikerTable:", this.pmCache);
 
         if (Array.isArray(this.pmCache) && this.pmCache.length === 0) {
+            console.log("pmCache is empty, fetching from source");
             this.pmCache = [];
             this.pmCache = await this.fetchProviderMonikerTable();
+            console.log("Fetched ProviderMonikerTable from source:", this.pmCache);
             if (Array.isArray(this.pmCache) && this.pmCache.length === 0) {
                 this.pmCacheIsEmpty = true;
+                console.log("pmCache remains empty after fetch");
             }
             RedisCache.setArray("ProviderMonikerTable", this.pmCache, this.refreshInterval);
+            console.log("Updated ProviderMonikerTable in RedisCache");
         }
+        console.log("Clearing monikerForProviderCache and monikerFullDescriptionCache");
         this.monikerForProviderCache.clear();
         this.monikerFullDescriptionCache.clear();
     }

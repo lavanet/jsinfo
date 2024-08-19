@@ -49,7 +49,10 @@ class ProviderSpecMonikerCache {
     }
 
     public GetMonikerForProvider(lavaid: string | null): string {
-        if (this.psmCache.length === 0 && this.pmCache.length === 0) throw new Error('Cache is not populated');
+        if (this.psmCache.length === 0 && this.pmCache.length === 0) {
+            this.refreshCache()
+            throw new Error('Cache is not populated');
+        }
         if (!lavaid) return '';
         this.verifyLavaId(lavaid);
 
@@ -77,7 +80,10 @@ class ProviderSpecMonikerCache {
     }
 
     public GetMonikerFullDescription(lavaid: string | null): string {
-        if (this.psmCache.length === 0 && this.pmCache.length === 0) throw new Error('Cache is not populated');
+        if (this.psmCache.length === 0 && this.pmCache.length === 0) {
+            this.refreshCache()
+            throw new Error('Cache is not populated');
+        }
         if (!lavaid) return '';
         this.verifyLavaId(lavaid);
 
@@ -124,7 +130,10 @@ class ProviderSpecMonikerCache {
     }
 
     public GetMonikerCountForProvider(lavaid: string): number {
-        if (this.psmCache.length === 0 && this.pmCache.length === 0) throw new Error('Cache is not populated');
+        if (this.psmCache.length === 0 && this.pmCache.length === 0) {
+            this.refreshCache()
+            throw new Error('Cache is not populated');
+        }
         if (!lavaid) return 0;
         this.verifyLavaId(lavaid);
         return this.psmCache.filter(item => item.provider === lavaid).length;

@@ -34,39 +34,33 @@ class ProviderSpecMonikerCache {
     }
 
     private async refreshCache() {
-        console.log("Starting refreshCache");
         await QueryCheckJsinfoReadDbInstance();
-        console.log("Checked Jsinfo Read Db Instance");
-        this.psmCache = await (RedisCache.getArray("ProviderSpecMonikerTable") || []) as ProviderSpecMoniker[]
-        console.log("Fetched ProviderSpecMonikerTable:", this.psmCache);
 
-        if (Array.isArray(this.psmCache) && this.psmCache.length === 0) {
-            console.log("psmCache is empty, fetching from source");
-            this.psmCache = [];
+        let new_psmCache = (await RedisCache.getArray("ProviderMonikerTable") || []) as ProviderMoniker[]
+
+        if ((new_psmCache == null) || (Array.isArray(new_psmCache) && new_psmCache.length === 0)) {
             this.psmCache = await this.fetchProviderSpecMonikerTable();
-            console.log("Fetched ProviderSpecMonikerTable from source:", this.psmCache);
             if (Array.isArray(this.psmCache) && this.psmCache.length === 0) {
                 this.psmCacheIsEmpty = true;
                 console.log("psmCache remains empty after fetch");
             }
             RedisCache.setArray("ProviderSpecMonikerTable", this.psmCache, this.refreshInterval);
-            console.log("Updated ProviderSpecMonikerTable in RedisCache");
+        } else {
+            this.pmCache = new_psmCache
         }
 
-        this.pmCache = (await RedisCache.getArray("ProviderMonikerTable") || []) as ProviderMoniker[]
+        let new_pmCache = (await RedisCache.getArray("ProviderMonikerTable") || []) as ProviderMoniker[]
 
-        if (Array.isArray(this.pmCache) && this.pmCache.length === 0) {
-            console.log("pmCache is empty, fetching from source");
-            this.pmCache = [];
+        if ((new_pmCache == null) || (Array.isArray(new_pmCache) && new_pmCache.length === 0)) {
             this.pmCache = await this.fetchProviderMonikerTable();
             if (Array.isArray(this.pmCache) && this.pmCache.length === 0) {
                 this.pmCacheIsEmpty = true;
-                console.log("pmCache remains empty after fetch");
             }
             RedisCache.setArray("ProviderMonikerTable", this.pmCache, this.refreshInterval);
-            console.log("Updated ProviderMonikerTable in RedisCache");
+        } else {
+            this.pmCache = new_pmCache
         }
-        console.log("Clearing monikerForProviderCache and monikerFullDescriptionCache");
+
         this.monikerForProviderCache.clear();
         this.monikerFullDescriptionCache.clear();
     }
@@ -74,11 +68,6 @@ class ProviderSpecMonikerCache {
     public GetMonikerForProvider(lavaid: string | null): string {
         if (!lavaid) return '';
         this.verifyLavaId(lavaid);
-
-        if (this.psmCache == null || this.pmCache == null) {
-            this.refreshCache()
-            return '';
-        }
 
         if (this.psmCache.length === 0 && this.pmCache.length === 0) {
             this.refreshCache()
@@ -113,11 +102,6 @@ class ProviderSpecMonikerCache {
     public GetMonikerFullDescription(lavaid: string | null): string {
         if (!lavaid) return '';
         this.verifyLavaId(lavaid);
-
-        if (this.psmCache == null || this.pmCache == null) {
-            this.refreshCache()
-            return '';
-        }
 
         if (this.psmCache.length === 0 && this.pmCache.length === 0) {
             this.refreshCache()
@@ -169,10 +153,6 @@ class ProviderSpecMonikerCache {
     }
 
     public GetMonikerCountForProvider(lavaid: string): number {
-        if (this.psmCache == null) {
-            this.refreshCache()
-            return 0;
-        }
         if (this.psmCache.length === 0) {
             this.refreshCache()
             if (this.psmCacheIsEmpty) return 0;

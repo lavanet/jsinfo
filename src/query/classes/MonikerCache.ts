@@ -35,41 +35,23 @@ class ProviderSpecMonikerCache {
 
     private async refreshCache() {
         await QueryCheckJsinfoReadDbInstance();
-<<<<<<< HEAD
-        this.psmCache = await (RedisCache.getArray("ProviderSpecMonikerTable") || []) as ProviderSpecMoniker[]
 
-        if (Array.isArray(this.psmCache) && this.psmCache.length === 0) {
-            this.psmCache = [];
-            this.psmCache = await this.fetchProviderSpecMonikerTable();
-            if (Array.isArray(this.psmCache) && this.psmCache.length === 0) {
-                this.psmCacheIsEmpty = true;
-=======
+        let new_psmCache = (await RedisCache.getArray("ProviderSpecMonikerTable") || []) as ProviderSpecMoniker[]
 
-        let new_psmCache = (await RedisCache.getArray("ProviderMonikerTable") || []) as ProviderMoniker[]
-
-        if ((new_psmCache == null) || (Array.isArray(new_psmCache) && new_psmCache.length === 0)) {
+        if ((new_psmCache == null) || (Array.isArray(new_psmCache) && new_psmCache.length === 0) || this.psmCacheIsEmpty || (Array.isArray(this.psmCache) && this.psmCache.length === 0)) {
             this.psmCache = await this.fetchProviderSpecMonikerTable();
             if (Array.isArray(this.psmCache) && this.psmCache.length === 0) {
                 this.psmCacheIsEmpty = true;
                 console.log("psmCache remains empty after fetch");
->>>>>>> testnet
             }
             RedisCache.setArray("ProviderSpecMonikerTable", this.psmCache, this.refreshInterval);
         } else {
-            this.pmCache = new_psmCache
+            this.psmCache = new_psmCache
         }
 
-<<<<<<< HEAD
-        this.pmCache = (await RedisCache.getArray("ProviderMonikerTable") || []) as ProviderMoniker[]
-        console.log("this.pmCache", this.pmCache)
-
-        if (Array.isArray(this.pmCache) && this.pmCache.length === 0) {
-            this.pmCache = [];
-=======
         let new_pmCache = (await RedisCache.getArray("ProviderMonikerTable") || []) as ProviderMoniker[]
 
-        if ((new_pmCache == null) || (Array.isArray(new_pmCache) && new_pmCache.length === 0)) {
->>>>>>> testnet
+        if ((new_pmCache == null) || (Array.isArray(new_pmCache) && new_pmCache.length === 0) || this.pmCacheIsEmpty || (Array.isArray(this.pmCache) && this.pmCache.length === 0)) {
             this.pmCache = await this.fetchProviderMonikerTable();
             if (Array.isArray(this.pmCache) && this.pmCache.length === 0) {
                 this.pmCacheIsEmpty = true;
@@ -199,7 +181,7 @@ class ProviderSpecMonikerCache {
 
     private async fetchProviderSpecMonikerTable(): Promise<ProviderSpecMoniker[]> {
         const twoDaysAgo = new Date();
-        twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
+        twoDaysAgo.setDate(twoDaysAgo.getDate() - 5);
         return await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.providerSpecMoniker)
             .where(gte(JsinfoSchema.providerSpecMoniker.updatedAt, twoDaysAgo));
     }

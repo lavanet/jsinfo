@@ -302,6 +302,42 @@ export const providerHealth = pgTable('provider_health', {
 export type ProviderHealth = typeof providerHealth.$inferSelect;
 export type InsertProviderHealth = typeof providerHealth.$inferInsert;
 
+export const providerHealth2 = pgTable('provider_health2', {
+  id: serial('id'),
+  provider: text('provider').references(() => providers.address),
+  timestamp: timestamp('timestamp').notNull(),
+  guid: text('guid'),
+  spec: varchar("spec", { length: 50 }).notNull(),
+  geolocation: varchar("geolocation", { length: 10 }).default(sql`NULL`),
+  interface: varchar("interface", { length: 50 }).default(sql`NULL`),
+  status: varchar("status", { length: 10 }).notNull(), // 'healthy', 'frozen', 'unhealthy', 'jailed'
+  data: varchar("data", { length: 1024 }).default(sql`NULL`),
+}, (table) => {
+  return {
+    psmIdx: uniqueIndex("ph2idx").on(
+      table.provider,
+      table.spec,
+      table.geolocation,
+      table.interface,
+      table.guid,
+    ),
+    providerIdx: index("provider_health2_provider_idx").on(table.provider),
+    timestampIdx: index("provider_health2_timestamp_idx").on(table.timestamp),
+  };
+});
+
+export type ProviderHealth2 = typeof providerHealth2.$inferSelect;
+export type InsertProviderHealth2 = typeof providerHealth2.$inferInsert;
+
+export const uniqueVisitors = pgTable('unique_visitors', {
+  id: serial('id').primaryKey(),
+  timestamp: timestamp('timestamp').notNull(),
+  value: integer('value'),
+});
+
+export type UniqueVisitors = typeof uniqueVisitors.$inferSelect;
+export type InsertUniqueVisitors = typeof uniqueVisitors.$inferInsert;
+
 export const providerAccountInfo = pgTable('provider_accountinfo', {
   id: serial('id').primaryKey(),
   provider: text('provider').references(() => providers.address),

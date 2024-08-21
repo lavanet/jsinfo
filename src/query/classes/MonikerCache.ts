@@ -4,7 +4,6 @@ import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '..
 import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import { gte } from 'drizzle-orm';
 import { RedisCache } from './RedisCache';
-import { NullSyncSubprocess } from 'bun';
 interface ProviderSpecMoniker {
     provider: string;
     moniker: string | null;
@@ -42,7 +41,6 @@ class ProviderSpecMonikerCache {
             this.psmCache = await this.fetchProviderSpecMonikerTable();
             if (Array.isArray(this.psmCache) && this.psmCache.length === 0) {
                 this.psmCacheIsEmpty = true;
-                console.log("psmCache remains empty after fetch");
             }
             RedisCache.setArray("ProviderSpecMonikerTable", this.psmCache, this.refreshInterval);
         } else {

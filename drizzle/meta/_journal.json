@@ -204,6 +204,13 @@
       "when": 1724234038068,
       "tag": "0028_great_war_machine",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "5",
+      "when": 1724256209655,
+      "tag": "0029_luxuriant_stark_industries",
+      "breakpoints": true
     }
   ]
 }

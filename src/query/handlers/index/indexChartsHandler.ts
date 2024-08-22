@@ -1,8 +1,10 @@
 // src/query/handlers/indexChartsHandler.ts
 
 import { FastifyReply, FastifyRequest, RouteShorthandOptions } from 'fastify';
-import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../../queryDb';
-import * as JsinfoProviderAgrSchema from '../../../schemas/jsinfoSchema/providerRelayPaymentsAgregation';
+import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../queryDb';
+import * as JsinfoProviderAgrSchema from '../../schemas/jsinfoSchema/providerRelayPaymentsAgregation';
+import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
+
 import { sql, desc, gt, and, inArray, lt } from "drizzle-orm";
 import { DateToISOString, FormatDateItems } from '../../utils/queryDateUtils';
 import { RequestHandlerBase } from '../../classes/RequestHandlerBase';
@@ -19,6 +21,7 @@ type CuRelayItem = {
 type IndexChartResponse = {
     date: string;
     qos: number;
+    uniqueVisitors: number;
     data: CuRelayItem[];
 };
 
@@ -36,6 +39,12 @@ interface QosQueryData {
     qosLatencyAvg: number;
 }
 
+interface UniqueVisitorsData {
+    id: number;
+    timestamp: Date;
+    value: number | null;
+}
+
 export const IndexChartsRawHandlerOpts: RouteShorthandOptions = {
     schema: {
         response: {
@@ -49,6 +58,7 @@ export const IndexChartsRawHandlerOpts: RouteShorthandOptions = {
                             properties: {
                                 date: { type: 'string' },
                                 qos: { type: 'number' },
+                                uniqueVisitors: { type: 'number' },
                                 data: {
                                     type: 'array',
                                     items: {
@@ -216,7 +226,17 @@ class IndexChartsData extends RequestHandlerBase<IndexChartResponse> {
         return qosDataFormatted;
     }
 
-    private combineData(mainChartData: CuRelayQueryData[], qosDataFormatted: { [key: string]: number }): IndexChartResponse[] {
+    private async getUniqueVisitorsData(from: Date, to: Date): Promise<UniqueVisitorsData[]> {
+        return await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.uniqueVisitors).
+            orderBy(desc(JsinfoSchema.uniqueVisitors.id)).
+            where(and(
+                gt(JsinfoSchema.uniqueVisitors.timestamp, sql<Date>`${from}`),
+                lt(JsinfoSchema.uniqueVisitors.timestamp, sql<Date>`${to}`)
+            ))
+
+    }
+
+    private combineData(mainChartData: CuRelayQueryData[], qosDataFormatted: { [key: string]: number }, uniqueVisitors: UniqueVisitorsData[]): IndexChartResponse[] {
         // Group the mainChartData by date
         const groupedData: { [key: string]: CuRelayItem[] } = mainChartData.reduce((acc, item) => {
             const dateKey = DateToISOString(item.date);
@@ -231,11 +251,17 @@ class IndexChartsData extends RequestHandlerBase<IndexChartResponse> {
             return acc;
         }, {});
 
+        const uniqueVisitorsMap = new Map<Date, number | null>();
+        uniqueVisitors.forEach(item => {
+            uniqueVisitorsMap.set(item.timestamp, item.value);
+        });
+
         // Merge the groupedData with qosDataFormatted
         return Object.keys(groupedData).map(date => {
             return {
                 date: date,
                 qos: qosDataFormatted[date] || 0,
+                uniqueVisitors: uniqueVisitorsMap[date] || 0,
                 data: groupedData[date]
             };
         });
@@ -251,7 +277,8 @@ class IndexChartsData extends RequestHandlerBase<IndexChartResponse> {
 
         const mainChartData = await this.getMainChartData(topChains, from, to);
         const qosData = await this.getQosData(from, to);
-        const combinedData = this.combineData(mainChartData, qosData);
+        const uniqueVisitors = await this.getUniqueVisitorsData(from, to);
+        const combinedData = this.combineData(mainChartData, qosData, uniqueVisitors);
 
         return combinedData;
     }

@@ -27,7 +27,10 @@ export const IndexHandlerOpts: RouteShorthandOptions = {
                     relaySum: {
                         type: 'number'
                     },
-                    rewardSum: {
+                    cuSum30Days: {
+                        type: 'number'
+                    },
+                    relaySum30Days: {
                         type: 'number'
                     },
                     stakeSum: {
@@ -54,16 +57,26 @@ export async function IndexHandler(request: FastifyRequest, reply: FastifyReply)
     // Get total payments and more
     let cuSum = 0
     let relaySum = 0
-    let rewardSum = 0
     let res = await QueryGetJsinfoReadDbInstance().select({
         cuSum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggAllTimeRelayPayments.cuSum})`,
         relaySum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggAllTimeRelayPayments.relaySum})`,
-        rewardSum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggAllTimeRelayPayments.rewardSum})`
     }).from(JsinfoProviderAgrSchema.aggAllTimeRelayPayments)
     if (res.length != 0) {
         cuSum = res[0].cuSum
         relaySum = res[0].relaySum
-        rewardSum = res[0].rewardSum
+    }
+
+    let cuSum30Days = 0
+    let relaySum30Days = 0
+    let res30Days = await QueryGetJsinfoReadDbInstance().select({
+        cuSum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggDailyRelayPayments.cuSum})`,
+        relaySum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum})`,
+    }).from(JsinfoProviderAgrSchema.aggDailyRelayPayments).
+        where(gt(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday, sql<Date>`now() - interval '30 day'`))
+
+    if (res30Days.length != 0) {
+        cuSum30Days = res30Days[0].cuSum
+        relaySum30Days = res30Days[0].relaySum
     }
 
     // Get total provider stake
@@ -125,7 +138,8 @@ export async function IndexHandler(request: FastifyRequest, reply: FastifyReply)
         datetime: latestDatetime,
         cuSum: cuSum,
         relaySum: relaySum,
-        rewardSum: rewardSum,
+        cuSum30Days: cuSum30Days,
+        relaySum30Days: relaySum30Days,
         stakeSum: stakeSum.toString(),
         allSpecs: topSpecs,
         cacheHitRate: cacheHitRateAverage.toFixed(2),

@@ -1,0 +1,2 @@
+-- DROP TABLE "provider_health";--> statement-breakpoint
+-- DROP TABLE "provider_health_hourly";

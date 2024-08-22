@@ -137,29 +137,40 @@ export async function ProviderHealthLatestPaginatedHandler(request: FastifyReque
         return null;
     }
 
+
     const twoDaysAgo = new Date();
     twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
 
-    const healthRecords: HealthRecord[] = await QueryGetJsinfoReadDbInstance()
-        .select()
-        .from(JsinfoSchema.providerHealth)
-        .where(
-            and(
-                eq(JsinfoSchema.providerHealth.provider, provider),
-                gte(JsinfoSchema.providerHealth.timestamp, twoDaysAgo)
-            )
-        ).orderBy(desc(JsinfoSchema.providerHealth.timestamp))
-        .limit(1000);
+    const geolocations = ['EU', 'US', 'ASIA'];
+    let allHealthRecords: HealthRecord[] = [];
 
-    if (healthRecords.length === 0) {
+    for (const geolocation of geolocations) {
+        const healthRecords: HealthRecord[] = await QueryGetJsinfoReadDbInstance()
+            .select()
+            .from(JsinfoSchema.providerHealth)
+            .where(
+                and(
+                    eq(JsinfoSchema.providerHealth.provider, provider),
+                    eq(JsinfoSchema.providerHealth.geolocation, geolocation),
+                    gte(JsinfoSchema.providerHealth.timestamp, twoDaysAgo)
+                )
+            )
+            .orderBy(desc(JsinfoSchema.providerHealth.id))
+            .limit(500);
+
+        allHealthRecords.push(...healthRecords);
+    }
+
+    if (allHealthRecords.length === 0) {
         WriteErrorToFastifyReply(reply, 'No recent health records for provider');
         return null;
     }
+
     const specsArray: ProviderHealthLatestResponse['specs'] = [];
     const specsData: { [spec: string]: { overallStatus: string; interfaces: { [iface: string]: { [geolocation: string]: { status: string; data: string; timestamp: string; } } } } } = {};
     const healthStatusPerSpec: { [spec: string]: { allHealthy: boolean, allUnhealthy: boolean } } = {};
 
-    for (const record of healthRecords) {
+    for (const record of allHealthRecords) {
         const { spec, interface: iface, geolocation, status, timestamp, data } = record;
 
         if (!iface || !geolocation) {

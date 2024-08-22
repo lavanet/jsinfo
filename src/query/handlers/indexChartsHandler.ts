@@ -41,7 +41,7 @@ interface QosQueryData {
 
 interface UniqueVisitorsData {
     id: number;
-    timestamp: Date;
+    timestamp: string;
     value: number | null;
 }
 
@@ -227,12 +227,17 @@ class IndexChartsData extends RequestHandlerBase<IndexChartResponse> {
     }
 
     private async getUniqueVisitorsData(from: Date, to: Date): Promise<UniqueVisitorsData[]> {
-        return await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.uniqueVisitors).
+        let ret = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.uniqueVisitors).
             orderBy(desc(JsinfoSchema.uniqueVisitors.id)).
             where(and(
                 gt(JsinfoSchema.uniqueVisitors.timestamp, sql<Date>`${from}`),
                 lt(JsinfoSchema.uniqueVisitors.timestamp, sql<Date>`${to}`)
             ))
+        return ret.map((row: JsinfoSchema.UniqueVisitors) => ({
+            id: row.id,
+            timestamp: row.timestamp?.toISOString() ?? '',
+            value: row.value ?? 0,
+        }));
 
     }
 
@@ -251,13 +256,13 @@ class IndexChartsData extends RequestHandlerBase<IndexChartResponse> {
             return acc;
         }, {});
 
-        const uniqueVisitorsMap = new Map<Date, number | null>();
+        const uniqueVisitorsMap = new Map<string, number | null>();
         uniqueVisitors.forEach(item => {
             uniqueVisitorsMap.set(item.timestamp, item.value);
         });
 
         // Merge the groupedData with qosDataFormatted
-        return Object.keys(groupedData).map(date => {
+        const mergedData = Object.keys(groupedData).map(date => {
             return {
                 date: date,
                 qos: qosDataFormatted[date] || 0,
@@ -265,6 +270,19 @@ class IndexChartsData extends RequestHandlerBase<IndexChartResponse> {
                 data: groupedData[date]
             };
         });
+
+        uniqueVisitorsMap.forEach((value, key) => {
+            if (!groupedData.hasOwnProperty(key)) {
+                mergedData.push({
+                    date: key,
+                    qos: 0,
+                    uniqueVisitors: value || 0,
+                    data: []
+                });
+            }
+        });
+
+        return mergedData;
     }
 
     protected async fetchDateRangeRecords(from: Date, to: Date): Promise<IndexChartResponse[]> {

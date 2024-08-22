@@ -14,7 +14,7 @@ import { SupplyRawHandlerOpts, TotalSupplyRawHandler, CirculatingSupplyRawHandle
 import { ListProvidersRawHandlerOpts, ListProvidersRawHandler } from './handlers/ajax/listProvidersHandler';
 
 // -- Server meta ajax --
-import { ProvidersPaginatedHandler, ProvidersPaginatedHandlerOpts } from './handlers/provider/providersHandler';
+import { ProvidersPaginatedHandler, ProvidersPaginatedHandlerOpts } from './handlers/ajax/providersHandler';
 import { SpecsPaginatedHandler, SpecsPaginatedHandlerOpts } from './handlers/ajax/specsHandler';
 import { ConsumersPaginatedHandler, ConsumersPaginatedHandlerOpts } from './handlers/ajax/consumersHandler';
 
@@ -50,9 +50,9 @@ import { EventsRewardsPaginatedHandlerOpts, EventsRewardsPaginatedHandler, Event
 import { EventsReportsPaginatedHandlerOpts, EventsReportsPaginatedHandler, EventsReportsItemCountPaginatiedHandler, EventsReportsCSVRawHandler } from './handlers/events/eventsReportsHandler';
 
 // -- Consumers page ajax -- 
-import { ConsumersPageHandler, ConsumersPageHandlerOpts } from './handlers/consumersPage/consumersPageHandler';
-import { ConsumersPageChartsRawHandler, ConsumersPageChartsRawHandlerOpts } from './handlers/consumersPage/consumersPageChartsHandler';
-import { ConsumersPageConsumersRawHandler, ConsumersPageConsumersRawHandlerOpts } from './handlers/consumersPage/consumersPageConsumersHandler';
+import { ConsumersPageHandler, ConsumersPageHandlerOpts } from './handlers/consumerspage/consumersPageHandler';
+import { ConsumersPageChartsRawHandler, ConsumersPageChartsRawHandlerOpts } from './handlers/consumerspage/consumersPageChartsHandler';
+import { ConsumersPageConsumersRawHandler, ConsumersPageConsumersRawHandlerOpts } from './handlers/consumerspage/consumersPageConsumersHandler';
 
 // -- Consumer page ajax -- 
 import { ConsumerCahcedHandler, ConsumerCahcedHandlerOpts } from './handlers/consumer/consumerHandler';

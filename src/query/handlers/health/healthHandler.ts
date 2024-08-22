@@ -2,8 +2,8 @@
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import fetch from 'node-fetch';
-import { QueryCheckJsinfoReadDbInstance } from '../queryDb';
-import { JSINFO_QUERY_PORT, JSINFO_QUERY_HOST } from '../queryConsts';
+import { QueryCheckJsinfoReadDbInstance } from '../../queryDb';
+import { JSINFO_QUERY_PORT, JSINFO_QUERY_HOST } from '../../queryConsts';
 
 const JSINFO_BASE_URL = `http://${JSINFO_QUERY_HOST}:${JSINFO_QUERY_PORT}`;
 

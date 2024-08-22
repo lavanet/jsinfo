@@ -1,9 +1,9 @@
 // src/query/handlers/indexChartsHandler.ts
 
 import { FastifyReply, FastifyRequest, RouteShorthandOptions } from 'fastify';
-import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../queryDb';
-import * as JsinfoProviderAgrSchema from '../../schemas/jsinfoSchema/providerRelayPaymentsAgregation';
-import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
+import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../../queryDb';
+import * as JsinfoProviderAgrSchema from '../../../schemas/jsinfoSchema/providerRelayPaymentsAgregation';
+import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
 
 import { sql, desc, gt, and, inArray, lt } from "drizzle-orm";
 import { DateToISOString, FormatDateItems } from '../../utils/queryDateUtils';

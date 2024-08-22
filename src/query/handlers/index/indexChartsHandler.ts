@@ -6,7 +6,7 @@ import * as JsinfoProviderAgrSchema from '../../../schemas/jsinfoSchema/provider
 import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
 
 import { sql, desc, gt, and, inArray, lt } from "drizzle-orm";
-import { DateToISOString, FormatDateItems } from '../../utils/queryDateUtils';
+import { DateToDayDateString, FormatDateItems } from '../../utils/queryDateUtils';
 import { RequestHandlerBase } from '../../classes/RequestHandlerBase';
 import { GetDataLength } from '../../utils/queryUtils';
 import { PgColumn } from 'drizzle-orm/pg-core';
@@ -21,7 +21,7 @@ type CuRelayItem = {
 type IndexChartResponse = {
     date: string;
     qos: number;
-    uniqueVisitors: number;
+    uniqueVisitors: number | null;
     data: CuRelayItem[];
 };
 
@@ -41,8 +41,15 @@ interface QosQueryData {
 
 interface UniqueVisitorsData {
     id: number;
-    timestamp: Date;
+    timestamp: string;
     value: number | null;
+}
+
+interface IndexChartMergedData {
+    date: string;
+    qos: number;
+    uniqueVisitors: number | null;
+    data: CuRelayItem[];
 }
 
 export const IndexChartsRawHandlerOpts: RouteShorthandOptions = {
@@ -218,7 +225,7 @@ class IndexChartsData extends RequestHandlerBase<IndexChartResponse> {
 
             const qos = Math.cbrt(item.qosSyncAvg * item.qosAvailabilityAvg * item.qosLatencyAvg);
 
-            qosDataFormatted[DateToISOString(item.date)] = qos;
+            qosDataFormatted[DateToDayDateString(item.date)] = qos;
         });
 
         this.log(`getQosData:: Fetched data from: ${from.toLocaleDateString()} to: ${to.toLocaleDateString()}`);
@@ -227,19 +234,23 @@ class IndexChartsData extends RequestHandlerBase<IndexChartResponse> {
     }
 
     private async getUniqueVisitorsData(from: Date, to: Date): Promise<UniqueVisitorsData[]> {
-        return await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.uniqueVisitors).
+        let ret = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.uniqueVisitors).
             orderBy(desc(JsinfoSchema.uniqueVisitors.id)).
             where(and(
                 gt(JsinfoSchema.uniqueVisitors.timestamp, sql<Date>`${from}`),
                 lt(JsinfoSchema.uniqueVisitors.timestamp, sql<Date>`${to}`)
             ))
-
+        return ret.map((row: JsinfoSchema.UniqueVisitors) => ({
+            id: row.id,
+            timestamp: DateToDayDateString(row.timestamp),
+            value: row.value ?? 0,
+        }));
     }
 
     private combineData(mainChartData: CuRelayQueryData[], qosDataFormatted: { [key: string]: number }, uniqueVisitors: UniqueVisitorsData[]): IndexChartResponse[] {
         // Group the mainChartData by date
         const groupedData: { [key: string]: CuRelayItem[] } = mainChartData.reduce((acc, item) => {
-            const dateKey = DateToISOString(item.date);
+            const dateKey = DateToDayDateString(item.date);
             if (!acc[dateKey]) {
                 acc[dateKey] = [];
             }
@@ -251,20 +262,33 @@ class IndexChartsData extends RequestHandlerBase<IndexChartResponse> {
             return acc;
         }, {});
 
-        const uniqueVisitorsMap = new Map<Date, number | null>();
+        const uniqueVisitorsMap = new Map<string, number | null>();
         uniqueVisitors.forEach(item => {
             uniqueVisitorsMap.set(item.timestamp, item.value);
         });
 
         // Merge the groupedData with qosDataFormatted
-        return Object.keys(groupedData).map(date => {
+        const mergedData: IndexChartMergedData[] = Object.keys(groupedData).map(date => {
             return {
                 date: date,
                 qos: qosDataFormatted[date] || 0,
-                uniqueVisitors: uniqueVisitorsMap[date] || 0,
+                uniqueVisitors: uniqueVisitorsMap.get(date) || null,
                 data: groupedData[date]
             };
         });
+
+        uniqueVisitorsMap.forEach((value, key) => {
+            if (!groupedData.hasOwnProperty(key)) {
+                mergedData.push({
+                    date: key,
+                    qos: 0,
+                    uniqueVisitors: uniqueVisitorsMap.get(key) || null,
+                    data: []
+                });
+            }
+        });
+
+        return mergedData;
     }
 
     protected async fetchDateRangeRecords(from: Date, to: Date): Promise<IndexChartResponse[]> {

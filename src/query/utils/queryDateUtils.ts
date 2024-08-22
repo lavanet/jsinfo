@@ -75,3 +75,17 @@ export function DateToISOString(date: Date | string | null): string {
     }
     return new Date(date).toISOString();
 }
+
+export function DateToDayDateString(date: Date | string | null): string {
+    const dateString = (date + "").toLowerCase();
+    if (!date || ["null", "0", "undefined", "nan", ""].includes(dateString)) {
+        throw new Error("Invalid date value: " + date);
+    }
+    if (typeof date === 'string') {
+        date = new Date(date);
+    }
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}

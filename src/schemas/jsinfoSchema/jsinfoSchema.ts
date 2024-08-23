@@ -297,6 +297,20 @@ export const uniqueVisitors = pgTable('unique_visitors', {
 export type UniqueVisitors = typeof uniqueVisitors.$inferSelect;
 export type InsertUniqueVisitors = typeof uniqueVisitors.$inferInsert;
 
+export const visitorMetrics = pgTable('visitor_metrics', {
+  key: text('key').notNull().primaryKey(),
+  value: text('value'),
+}, (table) => {
+  return {
+    vmidx: index("vmidx").on(
+      table.key,
+    )
+  };
+});
+
+export type VisitorMetrics = typeof visitorMetrics.$inferSelect;
+export type InsertVisitorMetrics = typeof visitorMetrics.$inferInsert;
+
 export const providerAccountInfo = pgTable('provider_accountinfo', {
   id: serial('id').primaryKey(),
   provider: text('provider').references(() => providers.address),

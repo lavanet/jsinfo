@@ -24,8 +24,18 @@ import { AutoCompleteLinksPaginatedHandler, AutoCompleteLinksPaginatedHandlerOpt
 
 // -- Index page ajax -- 
 import { IndexHandler, IndexHandlerOpts } from './handlers/index/indexHandler';
+import { Index30DayCuHandlerOpts, Index30DayCuHandler } from './handlers/index/index30DayCuHandler';
+import { IndexCachedMetricsHandlerOpts, IndexCachedMetricsHandler } from './handlers/index/indexCachedMetricsHandler';
+import { IndexLatestBlockHandlerOpts, IndexLatestBlockHandler } from './handlers/index/indexLatestBlockHandler';
+import { IndexMonthlyUsersHandlerOpts, IndexMonthlyUsersHandler } from './handlers/index/indexMonthlyUsersHandler';
+import { IndexMonthlyUsersAvgHandlerOpts, IndexMonthlyUsersAvgHandler } from './handlers/index/indexMonthlyUsersAvgHandler';
+import { IndexTopChainsHandlerOpts, IndexTopChainsHandler } from './handlers/index/indexTopChainsHandler';
+import { IndexTotalCuHandlerOpts, IndexTotalCuHandler } from './handlers/index/indexTotalCuHandler';
+import { IndexStakesHandlerOpts, IndexStakesHandler } from './handlers/index/indexStakesHandler';
+
 import { IndexProvidersPaginatedHandler, IndexProvidersPaginatedHandlerOpts, IndexProvidersItemCountPaginatiedHandler, IndexProvidersCSVRawHandler } from './handlers/index/indexProvidersHandler';
 import { IndexChartsRawHandler, IndexChartsRawHandlerOpts } from './handlers/index/indexChartsHandler';
+import { IndexChartsV2RawHandler, IndexChartsV2RawHandlerOpts } from './handlers/index/indexChartsV2Handler';
 import { IndexUniqueVisitorsChartRawHandler, IndexUniqueVisitorsChartRawHandlerOpts } from './handlers/index/indexUniqueVisitorsChartHandler';
 
 // -- Provider page ajax --
@@ -95,9 +105,18 @@ RegisterRedisBackedHandler('/autoCompleteLinksHandler', AutoCompleteLinksPaginat
 
 // -- Index page ajax -- 
 RegisterRedisBackedHandler('/index', IndexHandlerOpts, IndexHandler, { cache_ttl: 10 });
+RegisterRedisBackedHandler('/index30DayCu', Index30DayCuHandlerOpts, Index30DayCuHandler, { cache_ttl: 10 });
+RegisterRedisBackedHandler('/indexCachedMetrics', IndexCachedMetricsHandlerOpts, IndexCachedMetricsHandler, { cache_ttl: 10 });
+RegisterRedisBackedHandler('/indexLatestBlock', IndexLatestBlockHandlerOpts, IndexLatestBlockHandler, { cache_ttl: 10 });
+RegisterRedisBackedHandler('/indexMonthlyUsers', IndexMonthlyUsersHandlerOpts, IndexMonthlyUsersHandler, { cache_ttl: 10 });
+RegisterRedisBackedHandler('/indexMonthlyUsersAvg', IndexMonthlyUsersAvgHandlerOpts, IndexMonthlyUsersAvgHandler, { cache_ttl: 10 });
+RegisterRedisBackedHandler('/indexTopChains', IndexTopChainsHandlerOpts, IndexTopChainsHandler, { cache_ttl: 10 });
+RegisterRedisBackedHandler('/indexTotalCu', IndexTotalCuHandlerOpts, IndexTotalCuHandler, { cache_ttl: 10 });
+RegisterRedisBackedHandler('/indexStakesHandler', IndexStakesHandlerOpts, IndexStakesHandler, { cache_ttl: 10 });
 RegisterPaginationServerHandler('/indexProviders', IndexProvidersPaginatedHandlerOpts, IndexProvidersPaginatedHandler, IndexProvidersItemCountPaginatiedHandler);
 GetServerInstance().get('/indexProvidersCsv', IndexProvidersCSVRawHandler);
 GetServerInstance().get('/indexCharts', IndexChartsRawHandlerOpts, IndexChartsRawHandler);
+GetServerInstance().get('/indexChartsV2', IndexChartsV2RawHandlerOpts, IndexChartsV2RawHandler);
 RegisterRedisBackedHandler('/indexUniqueVisitorsChart', IndexUniqueVisitorsChartRawHandlerOpts, IndexUniqueVisitorsChartRawHandler, { cache_ttl: 60 * 60 });
 
 // -- Provider page ajax --

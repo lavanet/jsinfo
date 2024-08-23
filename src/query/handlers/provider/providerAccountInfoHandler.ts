@@ -91,7 +91,7 @@ async function fetchAllData(addr: string): Promise<ReportEntry[]> {
         )
         .orderBy(desc(JsinfoSchema.providerAccountInfo.id))
         .offset(0)
-        .limit(500);
+        .limit(20);
 
     // remove here keys that match:
     //     if isinstance(data, (dict, list)):

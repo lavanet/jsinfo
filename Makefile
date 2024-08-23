@@ -1,24 +1,24 @@
 .PHONY: bun_create_migrations \
-        docker_build \
-        docker_sh \
-        docker_compose \
-        docker_compose_query_populate \
-        docker_compose_query \
-        docker_compose_indexer \
-        indexer \
-        indexer_debug_events \
-        query \
-        query_nodemon \
-        query_populate_mode \
-        query_no_cache \
-        query_test_health_handler \
-        query_test_lavap_provider_error_parsing \
-        scripts_local_startQueryProviderDualStackingDelegatorRewardsContainer \
-        redis_run \
+		docker_build \
+		docker_sh \
+		docker_compose \
+		docker_compose_query_populate \
+		docker_compose_query \
+		docker_compose_indexer \
+		indexer \
+		indexer_debug_events \
+		query \
+		query_nodemon \
+		query_populate_mode \
+		query_no_cache \
+		query_test_health_handler \
+		query_test_lavap_provider_error_parsing \
+		scripts_local_startQueryProviderDualStackingDelegatorRewardsContainer \
+		redis_run \
 		redis_restart \
-        redis_connect \
-        macos_psql_start \
-        macos_query_port_pid \
+		redis_connect \
+		macos_psql_start \
+		macos_query_port_pid \
 		query_endpoints_full_tests_all
 
 bun_create_migrations:
@@ -85,8 +85,16 @@ redis_connect:
 macos_psql_start:
 	brew services start postgresql; brew services list
 
-macos_query_port_pid:
-	lsof -i tcp:8081 -sTCP:LISTEN
+macos_kill_query_port:
+	@echo "Querying PID for the process on port 8081..."
+	@PID=$$(lsof -ti tcp:8081); \
+	if [ -n "$$PID" ]; then \
+		echo "Killing process $$PID..."; \
+		kill $$PID; \
+		echo "Process $$PID has been terminated."; \
+	else \
+		echo "No process found listening on port 8081."; \
+	fi
 
 query_endpoints_full_tests_all:
 	cd tests/query_endpoints && make query_endpoints_full_tests_all

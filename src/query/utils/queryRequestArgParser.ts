@@ -22,7 +22,7 @@ export async function GetAndValidateConsumerAddressFromRequest(request: FastifyR
 
     await QueryCheckJsinfoReadDbInstance();
 
-    res = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.consumerSubscriptionList).where(eq(JsinfoSchema.consumerSubscriptionList.consumer, addr)).limit(1);
+    res = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.consumers).where(eq(JsinfoSchema.consumers.address, addr)).limit(1);
 
     if (res.length != 1) {
         WriteErrorToFastifyReply(reply, 'Consumer does not exist');

@@ -26,6 +26,7 @@ import { AutoCompleteLinksPaginatedHandler, AutoCompleteLinksPaginatedHandlerOpt
 import { IndexHandler, IndexHandlerOpts } from './handlers/index/indexHandler';
 import { IndexProvidersPaginatedHandler, IndexProvidersPaginatedHandlerOpts, IndexProvidersItemCountPaginatiedHandler, IndexProvidersCSVRawHandler } from './handlers/index/indexProvidersHandler';
 import { IndexChartsRawHandler, IndexChartsRawHandlerOpts } from './handlers/index/indexChartsHandler';
+import { IndexUniqueVisitorsChartRawHandler, IndexUniqueVisitorsChartRawHandlerOpts } from './handlers/index/indexUniqueVisitorsChartHandler';
 
 // -- Provider page ajax --
 import { ProviderPaginatedHandler, ProviderPaginatedHandlerOpts } from './handlers/provider/providerHandler';
@@ -51,7 +52,6 @@ import { EventsReportsPaginatedHandlerOpts, EventsReportsPaginatedHandler, Event
 
 // -- Consumers page ajax -- 
 import { ConsumersPageHandler, ConsumersPageHandlerOpts } from './handlers/consumerspage/consumersPageHandler';
-import { ConsumersPageChartsRawHandler, ConsumersPageChartsRawHandlerOpts } from './handlers/consumerspage/consumersPageChartsHandler';
 import { ConsumersPageConsumersRawHandler, ConsumersPageConsumersRawHandlerOpts } from './handlers/consumerspage/consumersPageConsumersHandler';
 
 // -- Consumer page ajax -- 
@@ -97,6 +97,7 @@ RegisterRedisBackedHandler('/index', IndexHandlerOpts, IndexHandler, { cache_ttl
 RegisterPaginationServerHandler('/indexProviders', IndexProvidersPaginatedHandlerOpts, IndexProvidersPaginatedHandler, IndexProvidersItemCountPaginatiedHandler);
 GetServerInstance().get('/indexProvidersCsv', IndexProvidersCSVRawHandler);
 GetServerInstance().get('/indexCharts', IndexChartsRawHandlerOpts, IndexChartsRawHandler);
+RegisterRedisBackedHandler('/indexUniqueVisitorsChart', IndexUniqueVisitorsChartRawHandlerOpts, IndexUniqueVisitorsChartRawHandler, { cache_ttl: 60 * 60 });
 
 // -- Provider page ajax --
 RegisterRedisBackedHandler('/provider/:addr', ProviderPaginatedHandlerOpts, ProviderPaginatedHandler);
@@ -128,14 +129,14 @@ GetServerInstance().get('/providerBlockReportsCsv/:addr', ProviderBlockReportsCS
 RegisterRedisBackedHandler('/consumer/:addr', ConsumerCahcedHandlerOpts, ConsumerCahcedHandler);
 RegisterPaginationServerHandler('/consumerSubscriptions/:addr', ConsumerSubscriptionRawHandlerOpts, ConsumerSubscriptionPaginatedRawHandler, ConsumerSubscriptionItemCountPaginatiedHandler);
 GetServerInstance().get('/consumerCharts/:addr', ConsumerChartsRawHandlerOpts, ConsumerChartsRawHandler);
+RegisterPaginationServerHandler('/consumerEvents/:addr', ProviderEventsPaginatedHandlerOpts, ProviderEventsPaginatedHandler, ProviderEventsItemCountPaginatiedHandler);
 
 // -- Consumerspage page ajax --
-RegisterRedisBackedHandler('/consumerspage', ConsumersPageHandlerOpts, ConsumersPageHandler, { cache_ttl: 10 });
-GetServerInstance().get('/consumerspageCharts', ConsumersPageChartsRawHandlerOpts, ConsumersPageChartsRawHandler);
-RegisterRedisBackedHandler('/consumerspageConsumers', ConsumersPageConsumersRawHandlerOpts, ConsumersPageConsumersRawHandler, { cache_ttl: 10 });
+RegisterRedisBackedHandler('/consumerspage', ConsumersPageHandlerOpts, ConsumersPageHandler, { cache_ttl: 60 });
+RegisterRedisBackedHandler('/consumerspageConsumers', ConsumersPageConsumersRawHandlerOpts, ConsumersPageConsumersRawHandler, { cache_ttl: 60 });
 
 // -- Events page ajax --
-RegisterRedisBackedHandler('/events', EventsPaginatedHandlerOpts, EventsPaginatedHandler, { cache_ttl: 30 });
+RegisterRedisBackedHandler('/events', EventsPaginatedHandlerOpts, EventsPaginatedHandler, { cache_ttl: 20 });
 RegisterPaginationServerHandler('/eventsEvents', EventsEventsPaginatedHandlerOpts, EventsEventsPaginatedHandler, EventsEventsItemCountPaginatiedHandler);
 RegisterPaginationServerHandler('/eventsRewards', EventsRewardsPaginatedHandlerOpts, EventsRewardsPaginatedHandler, EventsRewardsItemCountPaginatiedHandler);
 RegisterPaginationServerHandler('/eventsReports', EventsReportsPaginatedHandlerOpts, EventsReportsPaginatedHandler, EventsReportsItemCountPaginatiedHandler);

@@ -7,7 +7,7 @@ import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../../queryDb';
 import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
 import * as JsinfoConsumerAgrSchema from '../../../schemas/jsinfoSchema/consumerRelayPaymentsAgregation';
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, sql } from "drizzle-orm";
 import { GetAndValidateConsumerAddressFromRequest } from '../../utils/queryRequestArgParser';
 
 export const ConsumerCahcedHandlerOpts: RouteShorthandOptions = {
@@ -53,11 +53,12 @@ export async function ConsumerCahcedHandler(request: FastifyRequest, reply: Fast
     let relaySum = 0
     let rewardSum = 0
     const cuRelayAndRewardsTotalRes = await QueryGetJsinfoReadDbInstance().select({
-        cuSum: JsinfoConsumerAgrSchema.aggConsumerAllTimeRelayPayments.cuSum,
-        relaySum: JsinfoConsumerAgrSchema.aggConsumerAllTimeRelayPayments.relaySum,
-        rewardSum: JsinfoConsumerAgrSchema.aggConsumerAllTimeRelayPayments.rewardSum,
+        cuSum: sql<number>`SUM(${JsinfoConsumerAgrSchema.aggConsumerAllTimeRelayPayments.cuSum})`,
+        relaySum: sql<number>`SUM(${JsinfoConsumerAgrSchema.aggConsumerAllTimeRelayPayments.relaySum})`,
+        rewardSum: sql<number>`SUM(${JsinfoConsumerAgrSchema.aggConsumerAllTimeRelayPayments.rewardSum})`,
     }).from(JsinfoConsumerAgrSchema.aggConsumerAllTimeRelayPayments)
         .where(eq(JsinfoConsumerAgrSchema.aggConsumerAllTimeRelayPayments.consumer, addr))
+
     if (cuRelayAndRewardsTotalRes.length == 1) {
         cuSum = cuRelayAndRewardsTotalRes[0].cuSum || 0
         relaySum = cuRelayAndRewardsTotalRes[0].relaySum || 0

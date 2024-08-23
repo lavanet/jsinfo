@@ -21,7 +21,6 @@ type CuRelayItem = {
 type IndexChartResponse = {
     date: string;
     qos: number;
-    uniqueVisitors: number | null;
     data: CuRelayItem[];
 };
 
@@ -39,16 +38,9 @@ interface QosQueryData {
     qosLatencyAvg: number;
 }
 
-interface UniqueVisitorsData {
-    id: number;
-    timestamp: string;
-    value: number | null;
-}
-
 interface IndexChartMergedData {
     date: string;
     qos: number;
-    uniqueVisitors: number | null;
     data: CuRelayItem[];
 }
 
@@ -65,7 +57,6 @@ export const IndexChartsRawHandlerOpts: RouteShorthandOptions = {
                             properties: {
                                 date: { type: 'string' },
                                 qos: { type: 'number' },
-                                uniqueVisitors: { type: 'number' },
                                 data: {
                                     type: 'array',
                                     items: {
@@ -233,21 +224,7 @@ class IndexChartsData extends RequestHandlerBase<IndexChartResponse> {
         return qosDataFormatted;
     }
 
-    private async getUniqueVisitorsData(from: Date, to: Date): Promise<UniqueVisitorsData[]> {
-        let ret = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.uniqueVisitors).
-            orderBy(desc(JsinfoSchema.uniqueVisitors.id)).
-            where(and(
-                gt(JsinfoSchema.uniqueVisitors.timestamp, sql<Date>`${from}`),
-                lt(JsinfoSchema.uniqueVisitors.timestamp, sql<Date>`${to}`)
-            ))
-        return ret.map((row: JsinfoSchema.UniqueVisitors) => ({
-            id: row.id,
-            timestamp: DateToDayDateString(row.timestamp),
-            value: row.value ?? 0,
-        }));
-    }
-
-    private combineData(mainChartData: CuRelayQueryData[], qosDataFormatted: { [key: string]: number }, uniqueVisitors: UniqueVisitorsData[]): IndexChartResponse[] {
+    private combineData(mainChartData: CuRelayQueryData[], qosDataFormatted: { [key: string]: number }): IndexChartResponse[] {
         // Group the mainChartData by date
         const groupedData: { [key: string]: CuRelayItem[] } = mainChartData.reduce((acc, item) => {
             const dateKey = DateToDayDateString(item.date);
@@ -262,30 +239,13 @@ class IndexChartsData extends RequestHandlerBase<IndexChartResponse> {
             return acc;
         }, {});
 
-        const uniqueVisitorsMap = new Map<string, number | null>();
-        uniqueVisitors.forEach(item => {
-            uniqueVisitorsMap.set(item.timestamp, item.value);
-        });
-
         // Merge the groupedData with qosDataFormatted
         const mergedData: IndexChartMergedData[] = Object.keys(groupedData).map(date => {
             return {
                 date: date,
                 qos: qosDataFormatted[date] || 0,
-                uniqueVisitors: uniqueVisitorsMap.get(date) || null,
                 data: groupedData[date]
             };
-        });
-
-        uniqueVisitorsMap.forEach((value, key) => {
-            if (!groupedData.hasOwnProperty(key)) {
-                mergedData.push({
-                    date: key,
-                    qos: 0,
-                    uniqueVisitors: uniqueVisitorsMap.get(key) || null,
-                    data: []
-                });
-            }
         });
 
         return mergedData;
@@ -301,8 +261,7 @@ class IndexChartsData extends RequestHandlerBase<IndexChartResponse> {
 
         const mainChartData = await this.getMainChartData(topChains, from, to);
         const qosData = await this.getQosData(from, to);
-        const uniqueVisitors = await this.getUniqueVisitorsData(from, to);
-        const combinedData = this.combineData(mainChartData, qosData, uniqueVisitors);
+        const combinedData = this.combineData(mainChartData, qosData);
 
         return combinedData;
     }

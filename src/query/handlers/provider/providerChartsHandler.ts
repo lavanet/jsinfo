@@ -238,7 +238,7 @@ class ProviderChartsData extends RequestHandlerBase<ProviderChartResponse> {
 }
 
 export async function ProviderChartsRawHandler(request: FastifyRequest, reply: FastifyReply) {
-    let provider = await GetAndValidateProviderAddressFromRequest(request, reply);
+    let provider = await GetAndValidateProviderAddressFromRequest("providerCharts", request, reply);
     if (provider === '') {
         return reply;
     }

@@ -36,10 +36,10 @@ export async function GetAndValidateConsumerAddressFromRequest(request: FastifyR
 
 let GetAndValidateProviderAddressFromRequest_cache = {};
 
-export async function GetAndValidateProviderAddressFromRequest(request: FastifyRequest, reply: FastifyReply): Promise<string> {
+export async function GetAndValidateProviderAddressFromRequest(endpoint: string, request: FastifyRequest, reply: FastifyReply): Promise<string> {
     const { addr } = request.params as { addr: string };
     if (addr.length != 44 || !addr.startsWith('lava@')) {
-        WriteErrorToFastifyReply(reply, 'Bad provider address');
+        WriteErrorToFastifyReply(reply, 'Bad provider address on ' + endpoint);
         return '';
     }
 
@@ -53,7 +53,7 @@ export async function GetAndValidateProviderAddressFromRequest(request: FastifyR
     res = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.providers).where(eq(JsinfoSchema.providers.address, addr)).limit(1);
 
     if (res.length != 1) {
-        WriteErrorToFastifyReply(reply, 'Provider does not exist');
+        WriteErrorToFastifyReply(reply, 'Provider does not exist on ' + endpoint);
         return '';
     }
 

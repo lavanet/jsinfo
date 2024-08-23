@@ -152,7 +152,7 @@ class ProviderErrorsData extends RequestHandlerBase<ErrorsReportResponse> {
 }
 
 export async function ProviderErrorsPaginatedHandler(request: FastifyRequest, reply: FastifyReply) {
-    let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
+    let addr = await GetAndValidateProviderAddressFromRequest("providerErrors", request, reply);
     if (addr === '') {
         return null;
     }
@@ -160,7 +160,7 @@ export async function ProviderErrorsPaginatedHandler(request: FastifyRequest, re
 }
 
 export async function ProviderErrorsItemCountPaginatiedHandler(request: FastifyRequest, reply: FastifyReply) {
-    let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
+    let addr = await GetAndValidateProviderAddressFromRequest("providerErrors", request, reply);
     if (addr === '') {
         return null;
     }
@@ -168,7 +168,7 @@ export async function ProviderErrorsItemCountPaginatiedHandler(request: FastifyR
 }
 
 export async function ProviderErrorsCSVRawHandler(request: FastifyRequest, reply: FastifyReply) {
-    let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
+    let addr = await GetAndValidateProviderAddressFromRequest("providerErrors", request, reply);
     if (addr === '') {
         return;
     }

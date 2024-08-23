@@ -147,7 +147,7 @@ class ProviderDelegatorRewardsData extends RequestHandlerBase<DelegatorRewardRes
 }
 
 export async function ProviderDelegatorRewardsPaginatedHandler(request: FastifyRequest, reply: FastifyReply) {
-    let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
+    let addr = await GetAndValidateProviderAddressFromRequest("providerDelegatorRewards", request, reply);
     if (addr === '') {
         return null;
     }
@@ -155,7 +155,7 @@ export async function ProviderDelegatorRewardsPaginatedHandler(request: FastifyR
 }
 
 export async function ProviderDelegatorRewardsItemCountPaginatiedHandler(request: FastifyRequest, reply: FastifyReply) {
-    let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
+    let addr = await GetAndValidateProviderAddressFromRequest("providerDelegatorRewards", request, reply);
     if (addr === '') {
         return reply;
     }
@@ -163,7 +163,7 @@ export async function ProviderDelegatorRewardsItemCountPaginatiedHandler(request
 }
 
 export async function ProviderDelegatorRewardsCSVRawHandler(request: FastifyRequest, reply: FastifyReply) {
-    let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
+    let addr = await GetAndValidateProviderAddressFromRequest("providerDelegatorRewards", request, reply);
     if (addr === '') {
         return reply;
     }

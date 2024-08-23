@@ -253,7 +253,7 @@ class ProviderRewardsData extends RequestHandlerBase<ProviderRewardsResponse> {
 }
 
 export async function ProviderRewardsPaginatedHandler(request: FastifyRequest, reply: FastifyReply) {
-    let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
+    let addr = await GetAndValidateProviderAddressFromRequest("providerRewards", request, reply);
     if (addr === '') {
         return null;
     }
@@ -261,7 +261,7 @@ export async function ProviderRewardsPaginatedHandler(request: FastifyRequest, r
 }
 
 export async function ProviderRewardsItemCountPaginatiedHandler(request: FastifyRequest, reply: FastifyReply) {
-    let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
+    let addr = await GetAndValidateProviderAddressFromRequest("providerRewards", request, reply);
     if (addr === '') {
         return reply;
     }
@@ -269,7 +269,7 @@ export async function ProviderRewardsItemCountPaginatiedHandler(request: Fastify
 }
 
 export async function ProviderRewardsCSVRawHandler(request: FastifyRequest, reply: FastifyReply) {
-    let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
+    let addr = await GetAndValidateProviderAddressFromRequest("providerRewards", request, reply);
     if (addr === '') {
         return reply;
     }

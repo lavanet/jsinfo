@@ -236,16 +236,9 @@ export async function ConsumerEventsPaginatedHandler(request: FastifyRequest, re
 
 export async function ConsumerEventsItemCountPaginatiedHandler(request: FastifyRequest, reply: FastifyReply) {
     let addr = await GetAndValidateConsumerAddressFromRequest(request, reply);
+
     if (addr === '') {
         return reply;
     }
     return await ConsumerEventsData.GetInstance(addr).getTotalItemCountPaginatedHandler(request, reply)
-}
-
-export async function ConsumerEventsCSVRawHandler(request: FastifyRequest, reply: FastifyReply) {
-    let addr = await GetAndValidateConsumerAddressFromRequest(request, reply);
-    if (addr === '') {
-        return reply;
-    }
-    return await ConsumerEventsData.GetInstance(addr).CSVRequestHandler(request, reply)
 }

@@ -109,7 +109,19 @@ async function fetchAllData(addr: string): Promise<ConsumerSubscriptionRawEntry[
         .offset(0)
         .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
 
-    return reportsRes
+    const uniqueEntries = new Map<string, ConsumerSubscriptionRawEntry>();
+
+    reportsRes.forEach(entry => {
+        const key = `${entry.consumer}-${entry.plan}-${entry.fulltext}`;
+        const existingEntry = uniqueEntries.get(key);
+        if (!existingEntry || existingEntry.createdAt < entry.createdAt) {
+            uniqueEntries.set(key, entry);
+        }
+    });
+
+    const uniqueReportsRes = Array.from(uniqueEntries.values());
+
+    return uniqueReportsRes;
 }
 
 async function getAllDataNoRedis(addr: string): Promise<ConsumerSubscriptionEntry[]> {

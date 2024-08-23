@@ -231,7 +231,7 @@ async function getClaimableRewards(addr: string): Promise<bigint> {
 }
 
 export async function ProviderCardsHandler(request: FastifyRequest, reply: FastifyReply) {
-    const addr = await GetAndValidateProviderAddressFromRequest(request, reply);
+    const addr = await GetAndValidateProviderAddressFromRequest("providerCards", request, reply);
     if (addr === '') {
         return;
     }

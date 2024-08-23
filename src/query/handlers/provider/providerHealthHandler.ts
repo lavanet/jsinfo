@@ -232,7 +232,7 @@ const ParseMessageFromHealthV2 = (data: string | null): string => {
 }
 
 export async function ProviderHealthPaginatedHandler(request: FastifyRequest, reply: FastifyReply) {
-    let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
+    let addr = await GetAndValidateProviderAddressFromRequest("providerHealth", request, reply);
     if (addr === '') {
         return null;
     }
@@ -240,7 +240,7 @@ export async function ProviderHealthPaginatedHandler(request: FastifyRequest, re
 }
 
 export async function ProviderHealthItemCountPaginatiedHandler(request: FastifyRequest, reply: FastifyReply) {
-    let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
+    let addr = await GetAndValidateProviderAddressFromRequest("providerHealth", request, reply);
     if (addr === '') {
         return reply;
     }
@@ -248,7 +248,7 @@ export async function ProviderHealthItemCountPaginatiedHandler(request: FastifyR
 }
 
 export async function ProviderHealthCSVRawHandler(request: FastifyRequest, reply: FastifyReply) {
-    let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
+    let addr = await GetAndValidateProviderAddressFromRequest("providerHealth", request, reply);
     if (addr === '') {
         return reply;
     }

@@ -40,7 +40,7 @@ export const SpecProviderHealthHandlerOpts: RouteShorthandOptions = {
 
 export async function SpecProviderHealthHandler(request: FastifyRequest, reply: FastifyReply): Promise<{ data: { healthy: number; unhealthy: number } } | null> {
 
-    let provider = await GetAndValidateProviderAddressFromRequest(request, reply);
+    let provider = await GetAndValidateProviderAddressFromRequest("specProviderHealth", request, reply);
     if (provider === '') {
         return null;
     }

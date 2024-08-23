@@ -132,7 +132,7 @@ const ParseMessageFromHealthV2 = (data: any | null): string => {
 // reply is returned in the *RawHandler functions - does not the use the RequestHandlerBase class
 
 export async function ProviderHealthLatestPaginatedHandler(request: FastifyRequest, reply: FastifyReply): Promise<{ data: ProviderHealthLatestResponse } | null> {
-    let provider = await GetAndValidateProviderAddressFromRequest(request, reply);
+    let provider = await GetAndValidateProviderAddressFromRequest("providerHealthLatest", request, reply);
     if (provider === '') {
         return null;
     }

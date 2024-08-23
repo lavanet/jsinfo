@@ -134,7 +134,7 @@ async function getAllData(addr: string): Promise<ReportEntry[]> {
 }
 
 export async function ProviderAccountInfoRawHandler(request: FastifyRequest, reply: FastifyReply) {
-    let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
+    let addr = await GetAndValidateProviderAddressFromRequest("providerAccountInfo", request, reply);
     if (addr === '') {
         return reply;
     }

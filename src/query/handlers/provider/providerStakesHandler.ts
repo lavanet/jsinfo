@@ -254,7 +254,7 @@ class ProviderStakesData extends RequestHandlerBase<ProviderStakesResponse> {
 }
 
 export async function ProviderStakesHandler(request: FastifyRequest, reply: FastifyReply) {
-    let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
+    let addr = await GetAndValidateProviderAddressFromRequest("providerStakes", request, reply);
     if (addr === '') {
         return null;
     }
@@ -262,7 +262,7 @@ export async function ProviderStakesHandler(request: FastifyRequest, reply: Fast
 }
 
 export async function ProviderStakesItemCountPaginatiedHandler(request: FastifyRequest, reply: FastifyReply) {
-    let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
+    let addr = await GetAndValidateProviderAddressFromRequest("providerStakes", request, reply);
     if (addr === '') {
         return reply;
     }
@@ -270,7 +270,7 @@ export async function ProviderStakesItemCountPaginatiedHandler(request: FastifyR
 }
 
 export async function ProviderStakesCSVRawHandler(request: FastifyRequest, reply: FastifyReply) {
-    let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
+    let addr = await GetAndValidateProviderAddressFromRequest("providerStakes", request, reply);
     if (addr === '') {
         return;
     }

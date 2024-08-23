@@ -173,7 +173,7 @@ class ProviderBlockReportsData extends RequestHandlerBase<BlockReportsResponse> 
 }
 
 export async function ProviderBlockReportsPaginatedHandler(request: FastifyRequest, reply: FastifyReply) {
-    let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
+    let addr = await GetAndValidateProviderAddressFromRequest("providerBlockReports", request, reply);
     if (addr === '') {
         return null;
     }
@@ -181,7 +181,7 @@ export async function ProviderBlockReportsPaginatedHandler(request: FastifyReque
 }
 
 export async function ProviderBlockReportsItemCountPaginatiedHandler(request: FastifyRequest, reply: FastifyReply) {
-    let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
+    let addr = await GetAndValidateProviderAddressFromRequest("providerBlockReports", request, reply);
     if (addr === '') {
         return reply;
     }
@@ -189,7 +189,7 @@ export async function ProviderBlockReportsItemCountPaginatiedHandler(request: Fa
 }
 
 export async function ProviderBlockReportsCSVRawHandler(request: FastifyRequest, reply: FastifyReply) {
-    let addr = await GetAndValidateProviderAddressFromRequest(request, reply);
+    let addr = await GetAndValidateProviderAddressFromRequest("providerBlockReports", request, reply);
     if (addr === '') {
         return reply;
     }

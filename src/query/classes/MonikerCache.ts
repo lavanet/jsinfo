@@ -178,10 +178,7 @@ class ProviderSpecMonikerCache {
     }
 
     private async fetchProviderSpecMonikerTable(): Promise<ProviderSpecMoniker[]> {
-        const twoDaysAgo = new Date();
-        twoDaysAgo.setDate(twoDaysAgo.getDate() - 5);
         return await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.providerSpecMoniker)
-            .where(gte(JsinfoSchema.providerSpecMoniker.updatedAt, twoDaysAgo));
     }
 
     private async fetchProviderMonikerTable(): Promise<ProviderMoniker[]> {

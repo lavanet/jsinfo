@@ -2,8 +2,8 @@
 
 import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../queryDb';
 import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
-import { gte } from 'drizzle-orm';
 import { RedisCache } from './RedisCache';
+
 interface ProviderSpecMoniker {
     provider: string;
     moniker: string | null;
@@ -64,16 +64,22 @@ class ProviderSpecMonikerCache {
     }
 
     public GetMonikerForProvider(lavaid: string | null): string {
-        if (!lavaid) return '';
+        if (!lavaid) {
+            return '';
+        }
+
         this.verifyLavaId(lavaid);
 
         if (this.psmCache.length === 0 && this.pmCache.length === 0) {
             this.refreshCache()
-            if (this.psmCacheIsEmpty && this.pmCacheIsEmpty) return '';
+            if (this.psmCacheIsEmpty && this.pmCacheIsEmpty) {
+                return '';
+            }
         }
 
         if (this.monikerForProviderCache.has(lavaid)) {
-            return this.monikerForProviderCache.get(lavaid)!;
+            let ret = this.monikerForProviderCache.get(lavaid)
+            if (ret) return ret;
         }
 
         const filtered = this.psmCache.filter(item => item.provider === lavaid);
@@ -81,16 +87,31 @@ class ProviderSpecMonikerCache {
             // If not found in psmCache, try pmCache
             const filtered2 = this.pmCache.filter(item => item.address === lavaid);
             let ret = '';
-            if (filtered2.length != 0) ret = filtered2[0].moniker || '';
-            if (ret != '') this.monikerForProviderCache.set(lavaid, ret);
+            if (filtered2.length != 0) {
+                ret = filtered2[0].moniker || '';
+            }
+            if (ret != '') {
+                this.monikerForProviderCache.set(lavaid, ret);
+            }
             return ret
         }
 
-        const monikerCounts = filtered.reduce((acc, curr) => {
-            acc[curr.moniker!] = (acc[curr.moniker!] || 0) + 1;
-            return acc;
-        }, {} as { [key: string]: number });
-        const highestCountMoniker = Object.keys(monikerCounts).reduce((a, b) => monikerCounts[a] > monikerCounts[b] ? a : b);
+        let highestCountMoniker = '';
+        let highestCount = 0;
+        const monikerCounts = new Map<string, number>();
+
+        filtered.forEach(curr => {
+            if (!curr.moniker) return;
+            const moniker = curr.moniker;
+            const count = (monikerCounts.get(moniker) || 0) + 1;
+            monikerCounts.set(moniker, count);
+
+            if (count > highestCount) {
+                highestCount = count;
+                highestCountMoniker = moniker;
+            }
+        });
+
         const result = this.sanitizeAndTrimMoniker(highestCountMoniker);
 
         this.monikerForProviderCache.set(lavaid, result);
@@ -107,7 +128,8 @@ class ProviderSpecMonikerCache {
         }
 
         if (this.monikerFullDescriptionCache.has(lavaid)) {
-            return this.monikerFullDescriptionCache.get(lavaid)!;
+            let ret = this.monikerFullDescriptionCache.get(lavaid);
+            if (ret) return ret;
         }
 
         const filtered = this.psmCache.filter(item => item.provider === lavaid);

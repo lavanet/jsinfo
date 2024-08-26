@@ -21,6 +21,15 @@ export async function QueryCheckJsinfoDbInstance() {
     }
 }
 
+export async function QueryCheckIsJsinfoDbInstanceOk() {
+    try {
+        await db!.select().from(JsinfoSchema.blocks).limit(1)
+        return true
+    } catch (e) {
+        return false;
+    }
+}
+
 export async function QueryInitJsinfoDbInstance() {
     logger.info('Starting queryserver - connecting to jsinfo db')
     db = db || await GetJsinfoDb();

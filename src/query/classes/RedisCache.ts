@@ -126,6 +126,20 @@ class RedisCacheClass {
         }
     }
 
+    async IsAlive(): Promise<boolean> {
+        if (!this.client) {
+            return false;
+        }
+
+        try {
+            await this.client.set(this.keyPrefix + "test", "test", {
+                EX: 1,
+            });
+            return true
+        } catch (error) {
+            return false;
+        }
+    }
     async getArray(key: string): Promise<any[] | null> {
         const result = await this.get(key);
         if (!result) return null;

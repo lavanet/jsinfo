@@ -9,7 +9,7 @@ import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
 import { desc, eq, gte, and } from "drizzle-orm";
 import { GetAndValidateProviderAddressFromRequest } from '../../utils/queryRequestArgParser';
 import { RedisCache } from '../../classes/RedisCache';
-import { JSONStringify, JSONStringifySpaced, logger } from '../../../utils/utils';
+import { IsMeaningfulText, JSONStringify, JSONStringifySpaced, logger } from '../../../utils/utils';
 import { WriteErrorToFastifyReply } from '../../utils/queryServerUtils';
 
 type ReportEntry = {
@@ -103,7 +103,13 @@ async function fetchAllData(addr: string): Promise<ReportEntry[]> {
     const uniqueConts = new Set<string>();
 
     reportsRes.forEach((report: ReportEntry) => {
-        if (!report.data) return;
+        if (!report.data || !IsMeaningfulText(report.data)) return;
+
+        try {
+            let x = JSON.parse(report.data);
+        } catch (error) {
+            return;
+        }
 
         const cont = removeKeyAndStringifyWithSortedKeys(report.data, 'block_report');
         if (uniqueConts.has(cont)) return;

@@ -171,7 +171,7 @@ export class RequestHandlerBase<T> {
 
             const filteredData = await this.fetchDateRangeRecords(from, to);
             this.logExecutionTime("DateRangeRequestHandler", startTime, `DateRangeRequestHandler (cache miss): ${key}`);
-            await RedisCache.setArray(key, filteredData, this.getTTL(key));
+            RedisCache.setArray(key, filteredData, this.getTTL(key));
             return { data: filteredData };
         } catch (error) {
             this.handleError("DateRangeRequestHandler", reply, error);
@@ -189,7 +189,7 @@ export class RequestHandlerBase<T> {
                 reply.send({ itemCount: parseInt(itemCountRedis) });
             } else {
                 const itemCount = await this.fetchRecordCountFromDb();
-                await RedisCache.set(key, itemCount.toString(), this.getTTL(key));
+                RedisCache.set(key, itemCount.toString(), this.getTTL(key));
                 this.logExecutionTime("getTotalItemCountPaginatedHandler", startTime, "Fetched item count from DB and cached");
                 reply.send({ itemCount: itemCount });
             }
@@ -223,7 +223,7 @@ export class RequestHandlerBase<T> {
                     return reply;
                 }
 
-                await RedisCache.set(cacheKey, csv);
+                RedisCache.set(cacheKey, csv);
                 this.logExecutionTime("CSVRequestHandler", startTime, "CSV data prepared and cached");
                 reply.header('Content-Type', 'text/csv');
                 reply.header('Content-Disposition', `attachment; filename="${this.getCSVFileNameCached()}"`);

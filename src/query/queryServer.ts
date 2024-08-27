@@ -90,8 +90,8 @@ function handleRequestWithRedisCache(
         // returns null on error and handler handled the response
         if (handlerData == null) return reply;
 
-        // Cache the new response
-        await RedisCache.set(cacheKey, JSONStringify(handlerData), cache_ttl || 30);
+        // Cache the new response, don't await
+        RedisCache.set(cacheKey, JSONStringify(handlerData), cache_ttl || 30);
 
         let data = handlerData;
         if (is_text) {

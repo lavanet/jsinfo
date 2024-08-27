@@ -2,7 +2,7 @@
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryGetJsinfoReadDbInstance } from '../../queryDb';
-import { eq, and, gte } from "drizzle-orm";
+import { eq, and, gte, desc } from "drizzle-orm";
 import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
 import { GetAndValidateProviderAddressFromRequest, GetAndValidateSpecIdFromRequest } from '../../utils/queryRequestArgParser';
 import { WriteErrorToFastifyReply } from '../../utils/queryServerUtils';
@@ -38,6 +38,14 @@ export const SpecProviderHealthHandlerOpts: RouteShorthandOptions = {
     }
 };
 
+// SELECT DISTINCT ON(provider, spec, interface) *
+//     FROM provider_health2
+// WHERE provider = 'lava@1lamrmq78w6dnw5ahpyflus5ps7pvlwrtn9rf83'
+// AND spec = 'NEAR'
+// AND timestamp >= '2024-08-24'
+// ORDER BY provider, spec, interface, timestamp DESC
+// LIMIT 1000
+
 export async function SpecProviderHealthHandler(request: FastifyRequest, reply: FastifyReply): Promise<{ data: { healthy: number; unhealthy: number } } | null> {
 
     let provider = await GetAndValidateProviderAddressFromRequest("specProviderHealth", request, reply);
@@ -56,6 +64,7 @@ export async function SpecProviderHealthHandler(request: FastifyRequest, reply: 
     const healthRecords: HealthRecord[] = await QueryGetJsinfoReadDbInstance()
         .selectDistinctOn([JsinfoSchema.providerHealth.provider, JsinfoSchema.providerHealth.spec, JsinfoSchema.providerHealth.interface])
         .from(JsinfoSchema.providerHealth)
+        .orderBy(JsinfoSchema.providerHealth.provider, JsinfoSchema.providerHealth.spec, JsinfoSchema.providerHealth.interface, JsinfoSchema.providerHealth.provider, JsinfoSchema.providerHealth.spec, desc(JsinfoSchema.providerHealth.timestamp))
         .where(
             and(
                 and(

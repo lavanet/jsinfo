@@ -36,6 +36,8 @@ import { IndexTotalCuHandlerOpts, IndexTotalCuHandler } from './handlers/index/i
 import { IndexStakesHandlerOpts, IndexStakesHandler } from './handlers/index/indexStakesHandler';
 
 import { IndexProvidersPaginatedHandler, IndexProvidersPaginatedHandlerOpts, IndexProvidersItemCountPaginatiedHandler, IndexProvidersCSVRawHandler } from './handlers/index/indexProvidersHandler';
+import { IndexProvidersActivePaginatedHandler, IndexProvidersActivePaginatedHandlerOpts, IndexProvidersActiveItemCountPaginatiedHandler, IndexProvidersActiveCSVRawHandler } from './handlers/index/indexProvidersActiveHandler';
+
 import { IndexChartsRawHandler, IndexChartsRawHandlerOpts } from './handlers/index/indexChartsHandler';
 import { IndexChartsV2RawHandler, IndexChartsV2RawHandlerOpts } from './handlers/index/indexChartsV2Handler';
 import { IndexUniqueVisitorsChartRawHandler, IndexUniqueVisitorsChartRawHandlerOpts } from './handlers/index/indexUniqueVisitorsChartHandler';
@@ -119,7 +121,9 @@ RegisterRedisBackedHandler('/indexTopChains', IndexTopChainsHandlerOpts, IndexTo
 RegisterRedisBackedHandler('/indexTotalCu', IndexTotalCuHandlerOpts, IndexTotalCuHandler, { cache_ttl: 10 });
 RegisterRedisBackedHandler('/indexStakesHandler', IndexStakesHandlerOpts, IndexStakesHandler, { cache_ttl: 10 });
 RegisterPaginationServerHandler('/indexProviders', IndexProvidersPaginatedHandlerOpts, IndexProvidersPaginatedHandler, IndexProvidersItemCountPaginatiedHandler);
+RegisterPaginationServerHandler('/indexProvidersActive', IndexProvidersActivePaginatedHandlerOpts, IndexProvidersActivePaginatedHandler, IndexProvidersActiveItemCountPaginatiedHandler);
 GetServerInstance().get('/indexProvidersCsv', IndexProvidersCSVRawHandler);
+GetServerInstance().get('/indexProvidersActiveCsv', IndexProvidersActiveCSVRawHandler);
 GetServerInstance().get('/indexCharts', IndexChartsRawHandlerOpts, IndexChartsRawHandler);
 GetServerInstance().get('/indexChartsV2', IndexChartsV2RawHandlerOpts, IndexChartsV2RawHandler);
 RegisterRedisBackedHandler('/indexUniqueVisitorsChart', IndexUniqueVisitorsChartRawHandlerOpts, IndexUniqueVisitorsChartRawHandler, { cache_ttl: 60 * 60 });

@@ -238,11 +238,15 @@ export async function ProviderCardsHandler(request: FastifyRequest, reply: Fasti
 
     await QueryCheckJsinfoReadDbInstance();
 
-    const { cuSum, relaySum, rewardSum } = await getCuRelayAndRewardsTotal(addr);
-    const stakeSum = await getStakes(addr);
-    const claimedRewardsAllTimeSum: bigint = await getClaimedRewards(addr);
-    const claimedRewards30DaysAgoSum: bigint = await getClaimedRewards30Days(addr);
-    const totalSum: bigint = await getClaimableRewards(addr);
+    const [cuRelayRewards, stakeSum, claimedRewardsAllTimeSum, claimedRewards30DaysAgoSum, totalSum] = await Promise.all([
+        getCuRelayAndRewardsTotal(addr),
+        getStakes(addr),
+        getClaimedRewards(addr),
+        getClaimedRewards30Days(addr),
+        getClaimableRewards(addr)
+    ]);
+
+    const { cuSum, relaySum, rewardSum } = cuRelayRewards;
 
     const claimableRewardsULava = totalSum ? totalSum + ' ulava' : "0";
     const claimedRewardsAllTimeSumULava = claimedRewardsAllTimeSum ? claimedRewardsAllTimeSum + ' ulava' : "0";
@@ -257,5 +261,5 @@ export async function ProviderCardsHandler(request: FastifyRequest, reply: Fasti
         claimableRewards: claimableRewardsULava,
         claimedRewardsAllTime: claimedRewardsAllTimeSumULava,
         claimedRewards30DaysAgo: claimedRewards30DaysAgoSumULava
-    }
+    };
 }

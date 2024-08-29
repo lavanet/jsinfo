@@ -131,7 +131,7 @@ class IndexProvidersActiveData extends RequestHandlerBase<IndexProvidersActiveRe
     }
 
     protected async getActiveProviderAddresses(): Promise<string[]> {
-        const data = await QueryGetJsinfoReadDbInstance()
+        const data1 = QueryGetJsinfoReadDbInstance()
             .select({
                 provider: JsinfoSchema.providerStakes.provider,
             })
@@ -154,9 +154,14 @@ class IndexProvidersActiveData extends RequestHandlerBase<IndexProvidersActiveRe
             .having(
                 and(
                     gt(sql<number>`MAX(${JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday})`, sql`NOW() - INTERVAL '30 day'`),
-                    gt(sql<number>`COALESCE(SUM(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum}), 0)`, 100)
+                    gt(sql<number>`COALESCE(SUM(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum}), 0)`, 1)
                 )
             )
+
+        console.log("data1.toSQL()", data1.toSQL())
+
+        const data = await data1;
+        console.log("getActiveProviderAddresses", data)
 
         return data.map(item => item.provider).filter((provider): provider is string => provider !== null);
     }
@@ -193,13 +198,15 @@ class IndexProvidersActiveData extends RequestHandlerBase<IndexProvidersActiveRe
 
         let activeProviders = await this.getActiveProviderAddresses();
 
-        const res = await QueryGetJsinfoReadDbInstance()
+        const res1 = QueryGetJsinfoReadDbInstance()
             .select({
                 count: sql<number>`COUNT(DISTINCT ${JsinfoSchema.providerStakes.provider})`,
             })
             .from(JsinfoSchema.providerStakes)
-            .where(inArray(JsinfoSchema.providers.address, activeProviders))
+            .where(inArray(JsinfoSchema.providerStakes.provider, activeProviders))
 
+        console.log("res1", res1.toSQL())
+        const res = await res1;
         return res[0].count || 0;
     }
 

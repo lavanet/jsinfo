@@ -107,3 +107,6 @@ query_endpoints_full_tests_staging:
 
 query_endpoints_full_tests_testnet:
 	cd tests/query_endpoints && make query_endpoints_full_tests_testnet
+
+query_endpoints_full_tests_mainnet:
+	cd tests/query_endpoints && make query_endpoints_full_tests_mainnet

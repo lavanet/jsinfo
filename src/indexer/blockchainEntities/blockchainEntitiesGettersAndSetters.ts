@@ -1,6 +1,7 @@
 // src/indexer/blockchainEntities/blockchainEntitiesGettersAndSetters.ts
 
 import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
+import { IsMeaningfulText } from '../../utils/utils';
 
 export function GetOrSetProvider(
     dbProviders: Map<string, JsinfoSchema.Provider>,
@@ -24,7 +25,10 @@ export function GetOrSetProvider(
         address: address,
         moniker: moniker,
     } as JsinfoSchema.Provider
-    dbProviders.set(address, provider)
+
+    if (IsMeaningfulText(address) && IsMeaningfulText(moniker)) {
+        dbProviders.set(address, provider)
+    }
 
     return provider
 }

@@ -44,16 +44,6 @@ make docker_build
 make docker_compose
 ```
 
-### Todo
-
-- QOS per chain per provider graph
-- Screen provider CU by subscription address
-- Move important events from generic events table to custom events table
-- Add QoS Excellence
-
-```
-Latency base:
-baseLatencyRelay := (150*ms) po.baseWorldLatency + (100*ms *CU / 2) common.BaseTimePerCU(cu)
 baseLatencyProbe: 150*ms
 To get the benchmark latency:
 150+50*10 = 650

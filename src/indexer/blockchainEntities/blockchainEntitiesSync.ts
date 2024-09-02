@@ -51,37 +51,24 @@ export async function SyncBlockchainEntities(
                 .onConflictDoNothing();
         })
 
-        let provider = {
-            address: 'lava@18fgqsc9qfcy5z77zg25l3wdel74wymqwe9hvdp',
-            moniker: '',
-        } as JsinfoSchema.Provider
-
-        blockchainEntitiesProviders.set('lava@18fgqsc9qfcy5z77zg25l3wdel74wymqwe9hvdp', provider)
-
-        let provider2 = {
-            address: 'lava@12nsvmz8jy6t9ll0fm5fknj35jxuc9cwduf6mmk',
-            moniker: 'nothing',
-        } as JsinfoSchema.Provider
-
-        blockchainEntitiesProviders.set('lava@12nsvmz8jy6t9ll0fm5fknj35jxuc9cwduf6mmk', provider2)
-
+        // The monikers are coming from relayserver now - and this also sometimes sets the monikers to empty values
         // Find / create all providers
-        const arrProviders = Array.from(blockchainEntitiesProviders.values())
+        // const arrProviders = Array.from(blockchainEntitiesProviders.values())
         // console.log("SyncBlockchainEntities: Processing", arrProviders.length, "providers");
-        await DoInChunks(JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, arrProviders, async (arr: any) => {
-            return arr.map(async (provider: any) => {
-                return await tx.insert(JsinfoSchema.providers)
-                    .values(provider)
-                    .onConflictDoUpdate(
-                        {
-                            target: [JsinfoSchema.providers.address],
-                            set: {
-                                moniker: provider.moniker
-                            },
-                        }
-                    );
-            })
-        })
+        // await DoInChunks(JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, arrProviders, async (arr: any) => {
+        //     return arr.map(async (provider: any) => {
+        //         return await tx.insert(JsinfoSchema.providers)
+        //             .values(provider)
+        //             .onConflictDoUpdate(
+        //                 {
+        //                     target: [JsinfoSchema.providers.address],
+        //                     set: {
+        //                         moniker: provider.moniker
+        //                     },
+        //                 }
+        //             );
+        //     })
+        // })
 
         const uniqueStakesMap = new Map<string, any>();
 

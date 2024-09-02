@@ -26,9 +26,7 @@ export function GetOrSetProvider(
         moniker: moniker,
     } as JsinfoSchema.Provider
 
-    if (IsMeaningfulText(address) && IsMeaningfulText(moniker)) {
-        dbProviders.set(address, provider)
-    }
+    dbProviders.set(address, provider)
 
     return provider
 }

@@ -148,7 +148,7 @@ export function EventProcessAttributes(
         evt.attributes.forEach((attr: Attribute) => {
             keysCounter++;
             if (keysCounter > JSINFO_INDEXER_EVENT_ATTRIBUTE_KEY_COUNT_MAX) {
-                console.log(`EventProcessAttributes: Too many keys: ${evt.attributes.length}`);
+                logger.error(`EventProcessAttributes: Too many keys: ${evt.attributes.length}`);
                 return;
             }
 

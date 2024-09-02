@@ -3,11 +3,10 @@
 import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { and, eq, ne } from "drizzle-orm";
-import { DoInChunks, logger } from "../../utils/utils";
+import { DoInChunks, IsMeaningfulText, logger } from "../../utils/utils";
 import { JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE } from '../indexerConsts';
 import { LavaClient } from '../types';
 import { UpdateStakeInformation } from './blockchainEntitiesStakeUpdater';
-import { PgColumn } from 'drizzle-orm/pg-core';
 
 // async function getLatestPlans(client: LavaClient, dbPlans: Map<string, JsinfoSchema.Plan>) {
 //     try {
@@ -52,6 +51,20 @@ export async function SyncBlockchainEntities(
                 .onConflictDoNothing();
         })
 
+        let provider = {
+            address: 'lava@18fgqsc9qfcy5z77zg25l3wdel74wymqwe9hvdp',
+            moniker: '',
+        } as JsinfoSchema.Provider
+
+        blockchainEntitiesProviders.set('lava@18fgqsc9qfcy5z77zg25l3wdel74wymqwe9hvdp', provider)
+
+        let provider2 = {
+            address: 'lava@12nsvmz8jy6t9ll0fm5fknj35jxuc9cwduf6mmk',
+            moniker: 'nothing',
+        } as JsinfoSchema.Provider
+
+        blockchainEntitiesProviders.set('lava@12nsvmz8jy6t9ll0fm5fknj35jxuc9cwduf6mmk', provider2)
+
         // Find / create all providers
         const arrProviders = Array.from(blockchainEntitiesProviders.values())
         // console.log("SyncBlockchainEntities: Processing", arrProviders.length, "providers");
@@ -70,31 +83,46 @@ export async function SyncBlockchainEntities(
             })
         })
 
-        // Insert all stakes
-        await Promise.all(Array.from(blockchainEntitiesStakes.values()).map(async (stakes) => {
-            return stakes.map(async (stake) => {
-                if (stake.specId == null || stake.specId == "") return;
-                return await tx.insert(JsinfoSchema.providerStakes)
-                    .values(stake)
-                    .onConflictDoUpdate(
-                        {
-                            target: [JsinfoSchema.providerStakes.provider, JsinfoSchema.providerStakes.specId],
-                            set: {
-                                stake: stake.stake,
-                                appliedHeight: stake.appliedHeight,
-                                blockId: height,
-                                geolocation: stake.geolocation,
-                                addons: stake.addons,
-                                extensions: stake.extensions,
-                                status: stake.status,
-                                delegateCommission: stake.delegateCommission,
-                                delegateLimit: stake.delegateLimit,
-                                delegateTotal: stake.delegateTotal,
-                            },
-                        }
-                    );
-            })
-        }))
+        const uniqueStakesMap = new Map<string, any>();
+
+        for (const stakes of blockchainEntitiesStakes.values()) {
+            stakes.forEach(stake => {
+                if (!IsMeaningfulText(stake.provider) || !IsMeaningfulText(stake.specId)) return;
+
+                const key = `${stake.provider}-${stake.specId}`;
+
+                if (uniqueStakesMap.has(key)) {
+                    const existingStake = uniqueStakesMap.get(key);
+                    if (stake.stake && existingStake.stake && stake.stake > existingStake.stake) {
+                        uniqueStakesMap.set(key, stake);
+                    }
+                } else {
+                    uniqueStakesMap.set(key, stake);
+                }
+            });
+        }
+
+        const uniqueStakesArray = Array.from(uniqueStakesMap.values());
+
+        await Promise.all(uniqueStakesArray.map(async (stake) => {
+            return await tx.insert(JsinfoSchema.providerStakes)
+                .values(stake)
+                .onConflictDoUpdate({
+                    target: [JsinfoSchema.providerStakes.provider, JsinfoSchema.providerStakes.specId],
+                    set: {
+                        stake: stake.stake,
+                        appliedHeight: stake.appliedHeight,
+                        blockId: height,
+                        geolocation: stake.geolocation,
+                        addons: stake.addons,
+                        extensions: stake.extensions,
+                        status: stake.status,
+                        delegateCommission: stake.delegateCommission,
+                        delegateLimit: stake.delegateLimit,
+                        delegateTotal: stake.delegateTotal,
+                    },
+                });
+        }));
 
         // Update old stakes
         // console.log("SyncBlockchainEntities: Updating old stakes to inactive status");
@@ -111,8 +139,4 @@ export async function SyncBlockchainEntities(
         const endTime = Date.now();
         logger.info("SyncBlockchainEntities: SyncBlockchainEntities completed in", (endTime - startTime) / 1000, "seconds with stakes");
     })
-}
-
-function neq(status: PgColumn<{ name: "status"; tableName: "provider_stakes"; dataType: "number"; columnType: "PgInteger"; data: number; driverParam: string | number; notNull: false; hasDefault: false; enumValues: undefined; baseColumn: never; }, {}, {}>, Inactive: JsinfoSchema.LavaProviderStakeStatus): import("drizzle-orm").SQLWrapper | undefined {
-    throw new Error('Function not implemented.');
 }

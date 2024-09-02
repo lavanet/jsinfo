@@ -302,21 +302,21 @@ const fillUp = async (db: PostgresJsDatabase, rpcConnection: RpcConnection) => {
         return;
     }
 
-    if (latestDbBlock.length != 0) {
-        const tHeight = latestDbBlock[0].height;
+    try {
+        const tHeight = latestDbBlock[0]?.height;
         if (tHeight != null) {
             dbHeight = tHeight;
             logger.info(`fillUp: DB height set to latest DB block height: ${dbHeight}`);
         }
+    } catch (error) {
+        logger.error(`Error accessing height: ${error}`);
+        logger.error(`Type of latestDbBlock[0]: ${typeof latestDbBlock}`);
+        logger.error(`Value of latestDbBlock[0]: ${JSON.stringify(latestDbBlock)}`);
     }
 
-    // await doBatch(db, rpcConnection.client, rpcConnection.clientTm, dbHeight, latestHeight);
-
-    // if (latestHeight > dbHeight) {
     logger.info(`fillUp: Starting batch process for DB height ${dbHeight} and blockchain height ${latestHeight}`);
     await doBatch(db, rpcConnection.client, rpcConnection.clientTm, dbHeight, latestHeight);
     logger.info('fillUp: Batch process completed');
-    // }
 
     let latestDbBlock2;
     try {
@@ -330,7 +330,20 @@ const fillUp = async (db: PostgresJsDatabase, rpcConnection: RpcConnection) => {
         return;
     }
 
-    if (latestHeight != latestDbBlock2[0].height) {
+    let dbHeight2 = consts.JSINFO_INDEXER_START_BLOCK;
+    try {
+        const tHeight2 = latestDbBlock2[0]?.height;
+        if (tHeight2 != null) {
+            dbHeight2 = tHeight2;
+            logger.info(`fillUp: DB height set to latest DB block height: ${dbHeight2}`);
+        }
+    } catch (error) {
+        logger.error(`Error accessing height: ${error}`);
+        logger.error(`Type of latestDbBlock2[0]: ${typeof latestDbBlock2}`);
+        logger.error(`Value of latestDbBlock2[0]: ${JSON.stringify(latestDbBlock2)}`);
+    }
+
+    if (latestHeight != dbHeight2) {
         logger.error(`fillUp: latestHeight ${latestHeight} != latestDbBlock2[0].height ${latestDbBlock2[0].height}`);
         db = await GetJsinfoDb();
         fillUpBackoffRetryWTimeout(db, rpcConnection);

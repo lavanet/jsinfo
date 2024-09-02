@@ -32,12 +32,6 @@ export async function IndexTopChainsHandler(request: FastifyRequest, reply: Fast
         groupBy(sql`${JsinfoProviderAgrSchema.aggDailyRelayPayments.specId}`).
         where(gt(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday, sql<Date>`now() - interval '30 day'`)).
         orderBy(sql`relaySum DESC`)
-    let getChains: string[] = []
-    topSpecs.map((chain) => {
-        if (getChains.length < 8) {
-            getChains.push(chain.chainId!)
-        }
-    })
 
     return {
         allSpecs: topSpecs,

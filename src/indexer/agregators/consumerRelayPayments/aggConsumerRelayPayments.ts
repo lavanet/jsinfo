@@ -47,7 +47,7 @@ export const aggConsumerRelayPayments = async (db: PostgresJsDatabase) => {
         const executionTime = Date.now() - start;
         logger.info(`Successfully executed aggConsumerAllTimeRelayPayments. Execution time: ${executionTime} ms`);
     } catch (e) {
-        logger.error(`Failed to update aggConsumerAllTimeRelayPayments. Error: ${(e as Error).message}`, { stack: (e as Error).stack });
+        logger.error(`Failed to update aggConsumerAllTimeRelayPayments. Error: ${(e as Error).message}`, { stack: (e as Error).stack }, e);
         isRunning = false;
         return;
     }

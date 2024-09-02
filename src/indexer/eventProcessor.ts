@@ -367,7 +367,7 @@ export const ProcessOneEvent = (
 
         default:
             ParseEventUnidentified(evt, height, txHash, lavaBlock, blockchainEntitiesProviders, blockchainEntitiesSpecs, blockchainEntitiesStakes)
-            console.log(`ProcessOneEvent: Unknown event detected at height ${height} with event type ${evt.type} and event details:`, evt);
+            logger.error(`ProcessOneEvent: Unknown event detected at height ${height} with event type ${evt.type} and event details:`, evt);
             break
     }
 }

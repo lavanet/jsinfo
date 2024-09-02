@@ -1,7 +1,7 @@
 // src/indexer/agregators/aggConsumerAllTimeRelayPayments.ts
 
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { sql } from "drizzle-orm";
+import { sql, ne } from "drizzle-orm";
 import * as JsinfoConsumerAgrSchema from '../../../schemas/jsinfoSchema/consumerRelayPaymentsAgregation';
 import { logger } from "../../../utils/utils";
 import { PgColumn } from 'drizzle-orm/pg-core';
@@ -26,7 +26,8 @@ export async function aggConsumerAllTimeRelayPayments(db: PostgresJsDatabase) {
         .groupBy(
             JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.consumer,
             JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.specId
-        )
+        ).where(ne(JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.relaySum, 0))
+
     if (aggResults.length === 0) {
         logger.error("aggConsumerDailyRelayPayments: no agg results found")
         return;

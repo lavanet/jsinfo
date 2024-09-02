@@ -1,7 +1,7 @@
 // src/indexer/agregators/aggProviderDailyRelayPayments.ts
 
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { isNotNull, sql, and } from "drizzle-orm";
+import { isNotNull, sql, and, ne } from "drizzle-orm";
 import * as JsinfoProviderAgrSchema from '../../../schemas/jsinfoSchema/providerRelayPaymentsAgregation';
 import { DoInChunks, logger } from "../../../utils/utils";
 import { PgColumn } from 'drizzle-orm/pg-core';
@@ -66,7 +66,8 @@ export async function aggProviderDailyRelayPayments(db: PostgresJsDatabase) {
         .where(
             and(
                 sql`${JsinfoProviderAgrSchema.aggHourlyRelayPayments.datehour} >= ${startTime}`,
-                isNotNull(JsinfoProviderAgrSchema.aggHourlyRelayPayments.provider)
+                isNotNull(JsinfoProviderAgrSchema.aggHourlyRelayPayments.provider),
+                ne(JsinfoProviderAgrSchema.aggHourlyRelayPayments.relaySum, 0)
             )
         )
         .groupBy(

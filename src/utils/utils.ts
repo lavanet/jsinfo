@@ -158,7 +158,7 @@ export function JSONStringifySpaced(obj: any): string {
     );
 }
 
-export const IsMeaningfulText = (text: string): boolean => {
+export const IsMeaningfulText = (text: string | null | undefined): boolean => {
     if (!text) {
         return false;
     }

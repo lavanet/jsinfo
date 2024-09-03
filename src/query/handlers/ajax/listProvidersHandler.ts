@@ -34,7 +34,13 @@ export const ListProvidersRawHandlerOpts: RouteShorthandOptions = {
                                                     chain: { type: 'string' },
                                                     spec: { type: 'string' },
                                                     moniker: { type: 'string' },
-                                                    monikerfull: { type: 'string' }
+                                                    stakestatus: { type: 'string' },
+                                                    stake: { type: 'string' },
+                                                    addons: { type: 'string' },
+                                                    extensions: { type: 'string' },
+                                                    delegateCommission: { type: 'string' },
+                                                    delegateLimit: { type: 'string' },
+                                                    delegateTotal: { type: 'string' },
                                                 },
                                                 required: ['spec', 'moniker']
                                             }
@@ -57,8 +63,13 @@ interface ProviderEntry {
     specs: {
         chain: string;
         spec: string | null;
-        moniker: string | null;
-        monikerfull: string | null;
+        stakestatus: string | null;
+        stake: string | null;
+        addons: string | null;
+        extensions: string | null;
+        delegateCommission: string | null;
+        delegateLimit: string | null;
+        delegateTotal: string | null;
     }[];
 }
 
@@ -161,22 +172,42 @@ const chainMapping: Record<string, string> = {
     UNION: "union mainnet",
 };
 
+const LavaProviderStakeStatusDict: { [key: number]: string } = {
+    [JsinfoSchema.LavaProviderStakeStatus.Active]: "Active",
+    [JsinfoSchema.LavaProviderStakeStatus.Frozen]: "Frozen",
+    [JsinfoSchema.LavaProviderStakeStatus.Unstaking]: "Unstaking",
+    [JsinfoSchema.LavaProviderStakeStatus.Inactive]: "Inactive",
+};
+
 export async function ListProvidersRawHandler(request: FastifyRequest, reply: FastifyReply) {
     await QueryCheckJsinfoReadDbInstance()
 
     const stakesRes = await QueryGetJsinfoReadDbInstance().select({
         provider: JsinfoSchema.providerStakes.provider,
         specId: JsinfoSchema.providerStakes.specId,
+        status: JsinfoSchema.providerStakes.status,
+        stake: JsinfoSchema.providerStakes.stake,
+        addons: JsinfoSchema.providerStakes.addons,
+        extensions: JsinfoSchema.providerStakes.extensions,
+        delegateCommission: JsinfoSchema.providerStakes.delegateCommission,
+        delegateLimit: JsinfoSchema.providerStakes.delegateLimit,
+        delegateTotal: JsinfoSchema.providerStakes.delegateTotal,
     }).from(JsinfoSchema.providerStakes)
         .where(eq(JsinfoSchema.providerStakes.status, JsinfoSchema.LavaProviderStakeStatus.Active));
 
     const providers = stakesRes.reduce<ProviderEntry[]>((acc, stake) => {
         const providerEntry = acc.find(entry => entry.provider === stake.provider);
         const specEntry = {
-            chain: chainMapping[stake.specId!] || "",
-            spec: stake.specId,
-            moniker: MonikerCache.GetMonikerForProvider(stake.provider),
-            monikerfull: MonikerCache.GetMonikerFullDescription(stake.provider),
+            chain: stake.specId ? chainMapping[stake.specId] || "" : "",
+            spec: stake.specId || '',
+            stakestatus: stake.status ? LavaProviderStakeStatusDict[stake.status] || "" : "",
+            stake: stake.stake?.toString() ?? '',
+            addons: stake.addons || '',
+            extensions: stake.extensions || '',
+            delegateCommission: stake.delegateCommission?.toString() ?? '',
+            delegateLimit: stake.delegateLimit?.toString() ?? '',
+            delegateTotal: stake.delegateTotal?.toString() ?? '',
+            moniker: MonikerCache.GetMonikerForSpec(stake.provider, stake.specId),
         };
         if (providerEntry) {
             providerEntry.specs.push(specEntry);

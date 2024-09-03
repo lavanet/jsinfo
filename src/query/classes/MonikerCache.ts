@@ -63,6 +63,32 @@ class ProviderSpecMonikerCache {
         this.monikerFullDescriptionCache.clear();
     }
 
+    public GetMonikerForSpec(lavaid: string | null, spec: string | null): string {
+        if (!lavaid) {
+            return '';
+        }
+
+        this.verifyLavaId(lavaid);
+
+        if (!spec) {
+            return this.GetMonikerForProvider(lavaid);
+        }
+
+        if (this.psmCache.length === 0 && this.pmCache.length === 0) {
+            this.refreshCache()
+            if (this.psmCacheIsEmpty && this.pmCacheIsEmpty) {
+                return '';
+            }
+        }
+
+        const filtered = this.psmCache.filter(item => item.provider === lavaid && item.specId === spec);
+        if (filtered.length === 1) {
+            return this.sanitizeAndTrimMoniker(filtered[0].moniker || '');
+        }
+
+        return this.GetMonikerForProvider(lavaid);
+    }
+
     public GetMonikerForProvider(lavaid: string | null): string {
         if (!lavaid) {
             return '';

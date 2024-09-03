@@ -31,7 +31,7 @@ LIMIT 20 OFFSET 80
 
 v2
 SELECT "provider_stakes"."provider",
-    CONCAT(COUNT(DISTINCT CASE WHEN "provider_stakes"."status" = 1 THEN "provider_stakes"."spec_id" ELSE NULL END), ' / ', COUNT(DISTINCT "provider_stakes"."spec_id")) AS "totalServices",
+    CONCAT(COUNT(DISTINCT CASE WHEN "provider_stakes"."status" = 1 THEN "provider_stakes"."spec_id" ELSE NULL END), ' / ', COUNT(DISTINCT "provider_stakesprovider_stakes"."spec_id")) AS "totalServices",
     COALESCE(SUM(CAST("provider_stakes"."stake" AS BIGINT) + LEAST(CAST("provider_stakes"."delegate_total" AS BIGINT), CAST("provider_stakes"."delegate_limit" AS BIGINT))), 0) AS "totalStake",
     COALESCE(SUM("agg_alltime_relay_payments"."rewardsum"), 0) AS "rewardSum",
     COALESCE(SUM("agg_daily_relay_payments"."relaysum"), 0) AS "monthlyrelaysum"
@@ -131,7 +131,7 @@ class IndexProvidersActiveData extends RequestHandlerBase<IndexProvidersActiveRe
     }
 
     protected async getActiveProviderAddresses(): Promise<string[]> {
-        const data1 = QueryGetJsinfoReadDbInstance()
+        const data = await QueryGetJsinfoReadDbInstance()
             .select({
                 provider: JsinfoSchema.providerStakes.provider,
             })
@@ -157,11 +157,6 @@ class IndexProvidersActiveData extends RequestHandlerBase<IndexProvidersActiveRe
                     gt(sql<number>`COALESCE(SUM(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum}), 0)`, 1)
                 )
             )
-
-        console.log("data1.toSQL()", data1.toSQL())
-
-        const data = await data1;
-        console.log("getActiveProviderAddresses", data)
 
         return data.map(item => item.provider).filter((provider): provider is string => provider !== null);
     }
@@ -198,15 +193,13 @@ class IndexProvidersActiveData extends RequestHandlerBase<IndexProvidersActiveRe
 
         let activeProviders = await this.getActiveProviderAddresses();
 
-        const res1 = QueryGetJsinfoReadDbInstance()
+        const res = await QueryGetJsinfoReadDbInstance()
             .select({
                 count: sql<number>`COUNT(DISTINCT ${JsinfoSchema.providerStakes.provider})`,
             })
             .from(JsinfoSchema.providerStakes)
             .where(inArray(JsinfoSchema.providerStakes.provider, activeProviders))
 
-        console.log("res1", res1.toSQL())
-        const res = await res1;
         return res[0].count || 0;
     }
 

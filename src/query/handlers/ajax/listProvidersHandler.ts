@@ -193,7 +193,6 @@ export async function ListProvidersRawHandler(request: FastifyRequest, reply: Fa
         delegateLimit: JsinfoSchema.providerStakes.delegateLimit,
         delegateTotal: JsinfoSchema.providerStakes.delegateTotal,
     }).from(JsinfoSchema.providerStakes)
-        .where(eq(JsinfoSchema.providerStakes.status, JsinfoSchema.LavaProviderStakeStatus.Active));
 
     const providers = stakesRes.reduce<ProviderEntry[]>((acc, stake) => {
         const providerEntry = acc.find(entry => entry.provider === stake.provider);

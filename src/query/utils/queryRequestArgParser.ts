@@ -92,3 +92,34 @@ export async function GetAndValidateSpecIdFromRequest(request: FastifyRequest, r
     return upSpecId;
 }
 
+export async function GetAndValidateSpecIdFromRequestWithAll(request: FastifyRequest, reply: FastifyReply): Promise<string> {
+    const { specId } = request.params as { specId: string };
+    if (specId.length <= 0) {
+        WriteErrorToFastifyReply(reply, 'invalid specId');
+        return '';
+    }
+
+    if (specId.toLowerCase() === 'all') {
+        return 'all';
+    }
+
+    const upSpecId = specId.toUpperCase();
+
+    let res = GetAndValidateSpecIdFromRequest_cache[upSpecId];
+    if (res) {
+        return upSpecId;
+    }
+
+    await QueryCheckJsinfoReadDbInstance();
+
+    res = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.specs).where(eq(JsinfoSchema.specs.id, upSpecId)).limit(1);
+
+    if (res.length != 1) {
+        WriteErrorToFastifyReply(reply, 'specId does not exist');
+        return '';
+    }
+
+    GetAndValidateSpecIdFromRequest_cache[upSpecId] = true;
+
+    return upSpecId;
+}

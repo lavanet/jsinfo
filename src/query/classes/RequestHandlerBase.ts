@@ -140,8 +140,17 @@ export class RequestHandlerBase<T> {
         const startTime = Date.now();
         try {
             const query = request.query as { [key: string]: string };
-            let from = 'f' in query ? ParseDateToUtc(query.f) : subMonths(new Date(), 3);
-            let to = 't' in query ? ParseDateToUtc(query.t) : new Date();
+            let from: Date;
+            let to: Date;
+
+            if ('f' in query && 't' in query) {
+                from = ParseDateToUtc(query.f);
+                to = ParseDateToUtc(query.t);
+            } else {
+                // Default to 3 months until now if either 'f' or 't' is not specified
+                to = new Date();
+                from = subMonths(to, 3);
+            }
 
             if (isAfter(from, to)) {
                 [from, to] = [to, from];

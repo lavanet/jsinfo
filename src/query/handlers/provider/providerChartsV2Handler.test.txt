@@ -1,0 +1,20 @@
+# Valid provider with 'all' specs
+curl -X GET "http://localhost:8081/providerChartsV2/all/lava@1ecnal2n43jqf8c24jwqkl70sve4f5927wr48zt"
+
+# Valid provider with SEP1 spec
+curl -X GET "http://localhost:8081/providerChartsV2/SEP1/lava@1ecnal2n43jqf8c24jwqkl70sve4f5927wr48zt"
+
+# Valid provider with ETH1 spec
+curl -X GET "http://localhost:8081/providerChartsV2/ETH1/lava@1ecnal2n43jqf8c24jwqkl70sve4f5927wr48zt"
+
+# Valid provider with AVAX spec
+curl -X GET "http://localhost:8081/providerChartsV2/AVAX/lava@1ecnal2n43jqf8c24jwqkl70sve4f5927wr48zt"
+
+# Valid provider with a bad spec (should return an error)
+curl -X GET "http://localhost:8081/providerChartsV2/BADSPEC/lava@1ecnal2n43jqf8c24jwqkl70sve4f5927wr48zt"
+
+# Invalid provider (should return an error)
+curl -X GET "http://localhost:8081/providerChartsV2/all/invalid_provider"
+
+# Missing specId (should return an error)
+curl -X GET "http://localhost:8081/providerChartsV2/lava@1ecnal2n43jqf8c24jwqkl70sve4f5927wr48zt"

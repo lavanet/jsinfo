@@ -16,7 +16,7 @@ export async function QueryCheckJsinfoDbInstance() {
     try {
         await db!.select().from(JsinfoSchema.blocks).limit(1)
     } catch (e) {
-        logger.info('QueryCheckJsinfoDbInstance exception, resetting connection', e)
+        logger.info('QueryCheckJsinfoDbInstance exception, resetting connection')
         db = await GetJsinfoDb()
     }
 }

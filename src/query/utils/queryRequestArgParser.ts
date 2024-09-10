@@ -62,6 +62,37 @@ export async function GetAndValidateProviderAddressFromRequest(endpoint: string,
     return addr;
 }
 
+export async function GetAndValidateProviderAddressFromRequestWithAll(endpoint: string, request: FastifyRequest, reply: FastifyReply): Promise<string> {
+    const { addr } = request.params as { addr: string };
+
+    if (addr.toLowerCase() === 'all') {
+        return 'all';
+    }
+
+    if (addr.length != 44 || !addr.startsWith('lava@')) {
+        WriteErrorToFastifyReply(reply, 'Bad provider address on ' + endpoint);
+        return '';
+    }
+
+    let res = GetAndValidateProviderAddressFromRequest_cache[addr];
+    if (res) {
+        return addr;
+    }
+
+    await QueryCheckJsinfoReadDbInstance();
+
+    res = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.providers).where(eq(JsinfoSchema.providers.address, addr)).limit(1);
+
+    if (res.length != 1) {
+        WriteErrorToFastifyReply(reply, 'Provider does not exist on ' + endpoint);
+        return '';
+    }
+
+    GetAndValidateProviderAddressFromRequest_cache[addr] = true;
+
+    return addr;
+}
+
 let GetAndValidateSpecIdFromRequest_cache = {};
 
 export async function GetAndValidateSpecIdFromRequest(request: FastifyRequest, reply: FastifyReply): Promise<string> {
@@ -94,13 +125,14 @@ export async function GetAndValidateSpecIdFromRequest(request: FastifyRequest, r
 
 export async function GetAndValidateSpecIdFromRequestWithAll(request: FastifyRequest, reply: FastifyReply): Promise<string> {
     const { specId } = request.params as { specId: string };
-    if (specId.length <= 0) {
-        WriteErrorToFastifyReply(reply, 'invalid specId');
-        return '';
-    }
 
     if (specId.toLowerCase() === 'all') {
         return 'all';
+    }
+
+    if (specId.length <= 0) {
+        WriteErrorToFastifyReply(reply, 'invalid specId');
+        return '';
     }
 
     const upSpecId = specId.toUpperCase();

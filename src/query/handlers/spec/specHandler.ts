@@ -65,7 +65,6 @@ export async function SpecPaginatedHandler(request: FastifyRequest, reply: Fasti
 
     const { latestHeight, latestDatetime } = await GetLatestBlock()
 
-    // console.log(`GetLatestBlock completed at ${new Date().toISOString()}. Time taken: ${(performance.now() - startTime).toFixed(2)}ms`);
 
     let cuSum = 0
     let relaySum = 0
@@ -77,7 +76,6 @@ export async function SpecPaginatedHandler(request: FastifyRequest, reply: Fasti
     }).from(JsinfoProviderAgrSchema.aggAllTimeRelayPayments)
         .where(eq(JsinfoProviderAgrSchema.aggAllTimeRelayPayments.specId, spec))
 
-    // console.log(`cuRelayAndRewardsTotalRes query completed at ${new Date().toISOString()}. Time taken: ${(performance.now() - startTime).toFixed(2)}ms`);
 
     if (cuRelayAndRewardsTotalRes.length == 1) {
         cuSum = cuRelayAndRewardsTotalRes[0].cuSum
@@ -85,19 +83,16 @@ export async function SpecPaginatedHandler(request: FastifyRequest, reply: Fasti
         rewardSum = cuRelayAndRewardsTotalRes[0].rewardSum
     }
 
-    // console.log(`cuRelayAndRewardsTotalRes query completed at ${new Date().toISOString()}. Time taken: ${(performance.now() - startTime).toFixed(2)}ms`);
 
     let providerCount = await QueryGetJsinfoReadDbInstance().select({
         count: count()
     }).from(JsinfoSchema.providerStakes)
         .where(eq(JsinfoSchema.providerStakes.specId, spec));
 
-    // console.log(`providerCount query completed at ${new Date().toISOString()}. Time taken: ${(performance.now() - startTime).toFixed(2)}ms`);
 
     const twoDaysAgo = new Date();
     twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
 
-    // Step 1: Get the latest IDs for each provider-spec-interface combination
     const latestIdsQuery = QueryGetJsinfoReadDbInstance()
         .select({
             provider: JsinfoSchema.providerHealth.provider,
@@ -119,9 +114,7 @@ export async function SpecPaginatedHandler(request: FastifyRequest, reply: Fasti
         );
 
     const latestIds = await latestIdsQuery;
-    // console.log("Latest IDs:", latestIds);
 
-    // Step 2: Get the health status for the latest records
     const healthStatusQuery = QueryGetJsinfoReadDbInstance()
         .select({
             id: JsinfoSchema.providerHealth.id,
@@ -136,11 +129,8 @@ export async function SpecPaginatedHandler(request: FastifyRequest, reply: Fasti
             inArray(JsinfoSchema.providerHealth.id, latestIds.map(li => li.maxId))
         );
 
-    // console.log("Health status query SQL:", healthStatusQuery.toSQL());
     const healthStatus = await healthStatusQuery;
-    // console.log("Health status:", healthStatus);
 
-    // Step 3: Count healthy and unhealthy records
     const healthyCount = healthStatus.filter(hs => hs.status === 'healthy').length;
     const unhealthyCount = healthStatus.length - healthyCount;
 
@@ -149,7 +139,6 @@ export async function SpecPaginatedHandler(request: FastifyRequest, reply: Fasti
         unhealthy: unhealthyCount
     };
 
-    // console.log("Health status counts:", healthStatusCounts);
 
     let cacheHitRate = 0.0;
     const cacheHitRateData = await RedisCache.getDictNoKeyPrefix("jsinfo-healthp-cachedmetrics") || {};

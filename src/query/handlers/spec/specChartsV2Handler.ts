@@ -1,17 +1,18 @@
-// src/query/handlers/ProviderChartsV2Handler.ts
+// src/query/handlers/spec/specChartsV2Handler.ts
 
 import { FastifyReply, FastifyRequest, RouteShorthandOptions } from 'fastify';
 import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../../queryDb';
 import * as JsinfoProviderAgrSchema from '../../../schemas/jsinfoSchema/providerRelayPaymentsAgregation';
 import { sql, gt, and, lt, desc, eq } from "drizzle-orm";
-import { DateToISOString, FormatDateItems } from '../../utils/queryDateUtils';
+import { DateToISOString } from '../../utils/queryDateUtils';
 import { RequestHandlerBase } from '../../classes/RequestHandlerBase';
-import { GetAndValidateProviderAddressFromRequest, GetAndValidateSpecIdFromRequestWithAll } from '../../utils/queryRequestArgParser';
+import { GetAndValidateSpecIdFromRequest, GetAndValidateProviderAddressFromRequestWithAll } from '../../utils/queryRequestArgParser';
 import { PgColumn } from 'drizzle-orm/pg-core';
 import { logger } from '../../../utils/utils';
 import { RedisCache } from '../../classes/RedisCache';
+import { MonikerCache } from '../../classes/MonikerCache';
 
-type ProviderChartDataPoint = {
+type SpecChartDataPoint = {
     date: string;
     qos: number;
     qosSyncAvg: number;
@@ -21,24 +22,25 @@ type ProviderChartDataPoint = {
     relays: number;
 };
 
-type ProviderChartsV2Response = {
-    provider: string;
-    selectedChain: string;
-    allAvailableSpecs: string[];
-    chartData: ProviderChartDataPoint[];
+type SpecChartsV2Response = {
+    spec: string;
+    selectedProvider: string;
+    allAvailableProviders: { [key: string]: string };
+    chartData: SpecChartDataPoint[];
+    totalItemCount: number;
 };
 
-export const ProviderChartsV2RawHandlerOpts: RouteShorthandOptions = {
+export const SpecChartsV2RawHandlerOpts: RouteShorthandOptions = {
     schema: {
         response: {
             200: {
                 type: 'object',
                 properties: {
-                    provider: { type: 'string' },
-                    selectedChain: { type: 'string' },
-                    allAvailableSpecs: {
-                        type: 'array',
-                        items: { type: 'string' }
+                    spec: { type: 'string' },
+                    selectedProvider: { type: 'string' },
+                    allAvailableProviders: {
+                        type: 'object',
+                        additionalProperties: { type: 'string' }
                     },
                     chartData: {
                         type: 'array',
@@ -54,71 +56,86 @@ export const ProviderChartsV2RawHandlerOpts: RouteShorthandOptions = {
                                 relays: { type: 'number' }
                             }
                         }
-                    }
+                    },
+                    totalItemCount: { type: 'number' }
                 }
             }
         }
     }
 };
 
-class ProviderChartsV2Data extends RequestHandlerBase<ProviderChartsV2Response> {
+class SpecChartsV2Data extends RequestHandlerBase<SpecChartsV2Response> {
+    private spec: string;
     private provider: string;
-    private chain: string;
 
-    constructor(provider: string, chain: string) {
-        super("ProviderChartsV2Data");
+    constructor(spec: string, provider: string) {
+        super("SpecChartsV2Data");
+        this.spec = spec;
         this.provider = provider;
-        this.chain = chain;
     }
 
-    public static GetInstance(provider: string, chain: string): ProviderChartsV2Data {
-        return ProviderChartsV2Data.GetInstanceBase(provider, chain);
+    public static GetInstance(spec: string, provider: string): SpecChartsV2Data {
+        return SpecChartsV2Data.GetInstanceBase(spec, provider);
     }
 
-    private async getAllAvailableSpecs(): Promise<string[]> {
-        const cacheKey = `provider-specs-chart-v2:${this.provider}`;
+    private async getAllAvailableProviders(): Promise<{ [key: string]: string }> {
+        const cacheKey = `spec-providers-chart-v2:${this.spec}`;
 
         try {
-            const cachedSpecs = await RedisCache.getArray(cacheKey);
-            if (cachedSpecs) {
-                logger.info('Retrieved specs from cache', { provider: this.provider, chain: this.chain });
-                return cachedSpecs;
+            const cachedProviders = await RedisCache.getDict(cacheKey);
+            if (cachedProviders) {
+                logger.info('Retrieved providers from cache', { spec: this.spec });
+                return cachedProviders;
             }
 
+            const sixMonthsAgo = new Date();
+            sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
             const query = QueryGetJsinfoReadDbInstance()
-                .select({ specId: JsinfoProviderAgrSchema.aggDailyRelayPayments.specId })
+                .select({
+                    provider: JsinfoProviderAgrSchema.aggDailyRelayPayments.provider,
+                    latestDate: sql<Date>`MAX(${JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday})`
+                })
                 .from(JsinfoProviderAgrSchema.aggDailyRelayPayments)
-                .where(eq(JsinfoProviderAgrSchema.aggDailyRelayPayments.provider, this.provider))
-                .groupBy(JsinfoProviderAgrSchema.aggDailyRelayPayments.specId);
+                .where(eq(JsinfoProviderAgrSchema.aggDailyRelayPayments.specId, this.spec))
+                .groupBy(JsinfoProviderAgrSchema.aggDailyRelayPayments.provider)
+                .having(gt(sql<Date>`MAX(${JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday})`, sixMonthsAgo));
 
-            const specs = await query;
-            const result = ['all', ...specs.filter(s => s.specId !== null).map(s => s.specId!)];
+            const providers = await query;
+            const result: { [key: string]: string } = { 'all': 'All Providers' };
 
-            await RedisCache.setArray(cacheKey, result, 1200); // 20 minutes
+            for (const p of providers) {
+                if (p.provider) {
+                    const moniker = await MonikerCache.GetMonikerForProvider(p.provider);
+                    result[p.provider] = moniker || p.provider;
+                }
+            }
+
+            await RedisCache.setDict(cacheKey, result, 1200); // 20 minutes
 
             return result;
         } catch (error) {
-            logger.error('Error in getAllAvailableSpecs', {
+            logger.error('Error in getAllAvailableProviders', {
                 error: error instanceof Error ? error.message : String(error),
                 stack: error instanceof Error ? error.stack : 'No stack trace available',
-                context: { provider: this.provider, chain: this.chain }
+                context: { spec: this.spec }
             });
             throw error;
         }
     }
 
-    private async getProviderData(from: Date, to: Date): Promise<ProviderChartDataPoint[]> {
+    private async getSpecData(from: Date, to: Date): Promise<SpecChartDataPoint[]> {
         try {
             const qosMetricWeightedAvg = (metric: PgColumn) => sql<number>`SUM(${metric} * ${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum}) / SUM(CASE WHEN ${metric} IS NOT NULL THEN ${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum} ELSE 0 END)`;
 
             let conditions = and(
-                eq(JsinfoProviderAgrSchema.aggDailyRelayPayments.provider, this.provider),
+                eq(JsinfoProviderAgrSchema.aggDailyRelayPayments.specId, this.spec),
                 gt(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday, sql<Date>`${from}`),
                 lt(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday, sql<Date>`${to}`)
             );
 
-            if (this.chain !== 'all') {
-                conditions = and(conditions, eq(JsinfoProviderAgrSchema.aggDailyRelayPayments.specId, this.chain));
+            if (this.provider !== 'all') {
+                conditions = and(conditions, eq(JsinfoProviderAgrSchema.aggDailyRelayPayments.provider, this.provider));
             }
 
             let query = QueryGetJsinfoReadDbInstance().select({
@@ -136,7 +153,7 @@ class ProviderChartsV2Data extends RequestHandlerBase<ProviderChartsV2Response> 
             let data = await query;
 
             if (data.length === 0) {
-                logger.warn(`No data found for provider: ${this.provider}, chain: ${this.chain}, from: ${from.toISOString()}, to: ${to.toISOString()}`);
+                logger.warn(`No data found for spec: ${this.spec}, provider: ${this.provider}, from: ${from.toISOString()}, to: ${to.toISOString()}`);
             }
 
             return data.map(item => ({
@@ -149,12 +166,12 @@ class ProviderChartsV2Data extends RequestHandlerBase<ProviderChartsV2Response> 
                 relays: Number(item.relays)
             }));
         } catch (error) {
-            const errorMessage = `Error in getProviderData:
+            const errorMessage = `Error in getSpecData:
 Error: ${error instanceof Error ? error.message : String(error)}
 Stack: ${error instanceof Error ? error.stack : 'No stack trace available'}
 Context:
+  Spec: ${this.spec}
   Provider: ${this.provider}
-  Chain: ${this.chain}
   From: ${from.toISOString()}
   To: ${to.toISOString()}`;
 
@@ -163,19 +180,20 @@ Context:
         }
     }
 
-    protected async fetchDateRangeRecords(from: Date, to: Date): Promise<ProviderChartsV2Response[]> {
+    protected async fetchDateRangeRecords(from: Date, to: Date): Promise<SpecChartsV2Response[]> {
         try {
             await QueryCheckJsinfoReadDbInstance();
 
-            const chartData = await this.getProviderData(from, to);
+            const chartData = await this.getSpecData(from, to);
 
-            const allAvailableSpecs = await this.getAllAvailableSpecs();
+            const allAvailableProviders = await this.getAllAvailableProviders();
 
-            const response = {
-                provider: this.provider,
-                selectedChain: this.chain === 'all' ? 'all' : this.chain,
-                allAvailableSpecs: allAvailableSpecs,
-                chartData: chartData
+            const response: SpecChartsV2Response = {
+                spec: this.spec,
+                selectedProvider: this.provider,
+                allAvailableProviders: allAvailableProviders,
+                chartData: chartData,
+                totalItemCount: chartData.length
             };
 
             logger.info('fetchDateRangeRecords completed successfully');
@@ -185,8 +203,8 @@ Context:
 Error: ${error instanceof Error ? error.message : String(error)}
 Stack: ${error instanceof Error ? error.stack : 'No stack trace available'}
 Context:
+  Spec: ${this.spec}
   Provider: ${this.provider}
-  Chain: ${this.chain}
   From: ${from.toISOString()}
   To: ${to.toISOString()}`;
 
@@ -197,18 +215,18 @@ Context:
     }
 }
 
-export async function ProviderChartsV2RawHandler(request: FastifyRequest, reply: FastifyReply) {
-    let provider = await GetAndValidateProviderAddressFromRequest("ProviderChartsV2", request, reply);
+export async function SpecChartsV2RawHandler(request: FastifyRequest, reply: FastifyReply) {
+    let spec = await GetAndValidateSpecIdFromRequest(request, reply);
+    if (spec === '') {
+        return reply;
+    }
+
+    let provider = await GetAndValidateProviderAddressFromRequestWithAll('SpecChartsV2RawHandler', request, reply);
     if (provider === '') {
         return reply;
     }
 
-    let chain = await GetAndValidateSpecIdFromRequestWithAll(request, reply);
-    if (chain === '') {
-        return reply;
-    }
-
-    let result = await ProviderChartsV2Data.GetInstance(provider, chain).DateRangeRequestHandler(request, reply);
+    let result = await SpecChartsV2Data.GetInstance(spec, provider).DateRangeRequestHandler(request, reply);
 
     if (result === null) {
         return reply;

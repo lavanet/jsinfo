@@ -233,6 +233,8 @@ class ConsumerSubscriptionData extends RequestHandlerBase<ConsumerSubscriptionEn
         const sortedList = sortList(staticList, finalPagination.sortKey, finalPagination.direction);
         const offset = (finalPagination.page - 1) * finalPagination.count;
 
+        if (staticList.length == 0) return [];
+
         if (offset >= staticList.length) {
             throw new Error("Page number is out of range");
         }

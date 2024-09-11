@@ -124,6 +124,6 @@ export async function SyncBlockchainEntities(
                 ));
 
         const endTime = Date.now();
-        logger.info("SyncBlockchainEntities: SyncBlockchainEntities completed in", (endTime - startTime) / 1000, "seconds with stakes");
+        logger.info("SyncBlockchainEntities: SyncBlockchainEntities completed in", { "time": (endTime - startTime) / 1000 });
     })
 }

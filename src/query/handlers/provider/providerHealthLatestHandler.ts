@@ -219,10 +219,18 @@ export async function ProviderHealthLatestPaginatedHandler(request: FastifyReque
     }
 
     for (const spec in specsData) {
-        if (healthStatusPerSpec[spec].allHealthy) {
+        const statuses = Object.values(specsData[spec].interfaces)
+            .flatMap(geo => Object.values(geo))
+            .map(data => data.status);
+
+        if (statuses.every(status => status === 'healthy')) {
             specsData[spec].overallStatus = 'healthy';
-        } else if (healthStatusPerSpec[spec].allUnhealthy) {
+        } else if (statuses.every(status => status === 'unhealthy')) {
             specsData[spec].overallStatus = 'unhealthy';
+        } else if (statuses.every(status => status === 'frozen')) {
+            specsData[spec].overallStatus = 'frozen';
+        } else if (statuses.every(status => status === 'jailed')) {
+            specsData[spec].overallStatus = 'jailed';
         } else {
             specsData[spec].overallStatus = 'degraded';
         }

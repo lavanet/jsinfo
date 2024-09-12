@@ -8,7 +8,7 @@ import { QueryGetJsinfoReadDbInstance } from '../../queryDb';
 import { eq, and, gte, desc } from "drizzle-orm";
 import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
 import { GetAndValidateProviderAddressFromRequest } from '../../utils/queryRequestArgParser';
-import { WriteErrorToFastifyReply } from '../../utils/queryServerUtils';
+import { WriteErrorToFastifyReply, WriteErrorToFastifyReplyNoLog } from '../../utils/queryServerUtils';
 import { ParseDateToUtc } from '../../utils/queryDateUtils';
 import { logger } from '../../../utils/utils';
 

@@ -5,7 +5,7 @@ import { QueryGetJsinfoReadDbInstance } from '../../queryDb';
 import { eq, and, gte, desc } from "drizzle-orm";
 import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
 import { GetAndValidateProviderAddressFromRequest, GetAndValidateSpecIdFromRequest } from '../../utils/queryRequestArgParser';
-import { WriteErrorToFastifyReply } from '../../utils/queryServerUtils';
+import { WriteErrorToFastifyReplyNoLog } from '../../utils/queryServerUtils';
 
 type HealthRecord = {
     id: number;
@@ -77,7 +77,7 @@ export async function SpecProviderHealthHandler(request: FastifyRequest, reply: 
         .limit(1000);
 
     if (healthRecords.length === 0) {
-        WriteErrorToFastifyReply(reply, 'No recent health records for provider');
+        WriteErrorToFastifyReplyNoLog(reply, 'No recent health records for provider');
         return null;
     }
 

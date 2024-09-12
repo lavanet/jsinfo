@@ -162,7 +162,7 @@ export async function ProviderHealthLatestPaginatedHandler(request: FastifyReque
     }
 
     if (allHealthRecords.length === 0) {
-        WriteErrorToFastifyReply(reply, 'No recent health records for provider');
+        WriteErrorToFastifyReplyNoLog(reply, 'No recent health records for provider');
         return null;
     }
 

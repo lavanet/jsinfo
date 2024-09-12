@@ -172,7 +172,8 @@ class IndexProvidersActiveData extends RequestHandlerBase<IndexProvidersActiveRe
             totalStake: sql<bigint>`COALESCE(SUM(CAST(${JsinfoSchema.providerStakes.stake} AS BIGINT) + LEAST(CAST(${JsinfoSchema.providerStakes.delegateTotal} AS BIGINT), CAST(${JsinfoSchema.providerStakes.delegateLimit} AS BIGINT))), 0) AS totalStake`,
             rewardSum: sql<number>`COALESCE((${rewardSumSubQuery}), 0) as rewardSum`,
         }).from(JsinfoSchema.providerStakes)
-            .where(inArray(JsinfoSchema.providers.address, activeProviders))
+            .where(inArray(JsinfoSchema.providerStakes.provider, activeProviders))
+            .groupBy(JsinfoSchema.providerStakes.provider)
             .orderBy(sql`rewardSum DESC`)
 
         const providersDetails: IndexProvidersActiveResponse[] = res.map(provider => ({
@@ -185,22 +186,6 @@ class IndexProvidersActiveData extends RequestHandlerBase<IndexProvidersActiveRe
         }));
 
         return providersDetails;
-    }
-
-
-    protected async fetchRecordCountFromDb(): Promise<number> {
-        await QueryCheckJsinfoReadDbInstance();
-
-        let activeProviders = await this.getActiveProviderAddresses();
-
-        const res = await QueryGetJsinfoReadDbInstance()
-            .select({
-                count: sql<number>`COUNT(DISTINCT ${JsinfoSchema.providerStakes.provider})`,
-            })
-            .from(JsinfoSchema.providerStakes)
-            .where(inArray(JsinfoSchema.providerStakes.provider, activeProviders))
-
-        return res[0].count || 0;
     }
 
     public async fetchPaginatedRecords(pagination: Pagination | null): Promise<IndexProvidersActiveResponse[]> {
@@ -243,7 +228,6 @@ class IndexProvidersActiveData extends RequestHandlerBase<IndexProvidersActiveRe
         const sortColumn = keyToColumnMap[finalPagination.sortKey];
         const orderFunction = finalPagination.direction === 'ascending' ? asc : desc;
 
-
         if (sortColumn === JsinfoSchema.providers.moniker) {
             // Execute the query with proper sorting, pagination using offset and limit
             const data = await QueryGetJsinfoReadDbInstance()
@@ -272,10 +256,6 @@ class IndexProvidersActiveData extends RequestHandlerBase<IndexProvidersActiveRe
             }));
         }
 
-        const rewardSum = QueryGetJsinfoReadDbInstance().select({
-            rewardSum: sql<number>`COALESCE(SUM(${JsinfoProviderAgrSchema.aggAllTimeRelayPayments.rewardSum}), 0) as rewardSum`,
-        }).from(JsinfoProviderAgrSchema.aggAllTimeRelayPayments)
-
         const data = await QueryGetJsinfoReadDbInstance()
             .select({
                 provider: JsinfoSchema.providerStakes.provider,
@@ -298,6 +278,21 @@ class IndexProvidersActiveData extends RequestHandlerBase<IndexProvidersActiveRe
             totalServices: item.totalServices,
             totalStake: item.totalStake.toString()
         }));
+    }
+
+    protected async fetchRecordCountFromDb(): Promise<number> {
+        await QueryCheckJsinfoReadDbInstance();
+
+        let activeProviders = await this.getActiveProviderAddresses();
+
+        const res = await QueryGetJsinfoReadDbInstance()
+            .select({
+                count: sql<number>`COUNT(DISTINCT ${JsinfoSchema.providerStakes.provider})`,
+            })
+            .from(JsinfoSchema.providerStakes)
+            .where(inArray(JsinfoSchema.providerStakes.provider, activeProviders))
+
+        return res[0].count || 0;
     }
 
     protected async convertRecordsToCsv(data: IndexProvidersActiveResponse[]): Promise<string> {

@@ -9,6 +9,7 @@ import * as JsinfoProviderAgrSchema from '../../../schemas/jsinfoSchema/provider
 import { sql, desc, and, eq, gte, isNotNull, like } from "drizzle-orm";
 import { GetAndValidateProviderAddressFromRequest } from '../../utils/queryRequestArgParser';
 import { JSONStringifySpaced, logger, MinBigInt, ParseUlavaToBigInt } from '../../../utils/utils';
+import { ProviderRewardsCache } from '../../classes/ProviderRewardsCache';
 
 export const ProviderCardsHandlerOpts: RouteShorthandOptions = {
     schema: {
@@ -45,73 +46,6 @@ export const ProviderCardsHandlerOpts: RouteShorthandOptions = {
 
 // {"claimed":"141991ibc/21E6274EDD0A68821E6C2FD4B243DF85EB86FF19920FF35FC18E68939DDE87CB,15253022710ulava","delegator":"lava@1fpprhv40h9z058ez0hxdattjvg0fjsrhkqc7cu"}
 // http://localhost:5100/provider/lava@1uhwudw7vzqtnffu2hf5yhv4n8trj79ezl66z99#health
-
-let AllRewards: Record<string, bigint> = {};
-let RewardsLast30Days: Record<string, bigint> = {};
-
-async function initRewardsCache() {
-    await QueryCheckJsinfoReadDbInstance();
-
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-    let allRewards: Record<string, bigint> = {};
-    let rewardsLast30Days: Record<string, bigint> = {};
-
-    const res = await QueryGetJsinfoReadDbInstance()
-        .select({
-            fulltext: JsinfoSchema.events.fulltext,
-            timestamp: JsinfoSchema.events.timestamp
-        })
-        .from(JsinfoSchema.events)
-        .where(
-            and(
-                like(JsinfoSchema.events.t1, '%lava_delegator_claim_rewards%')
-            ));
-
-    res.forEach((event) => {
-        if (!event.fulltext) return;
-        const j = JSON.parse(event.fulltext);
-        if (!j.claimed || !j.delegator) return;
-
-        let ulava = 0n;
-        try {
-            ulava = ParseUlavaToBigInt(j.claimed);
-        } catch (e) {
-            logger.error(`Error parsing claimed amount: ${e}, event: ${JSONStringifySpaced(event)}`);
-            return;
-        }
-
-        if (typeof ulava !== 'bigint') {
-            throw new TypeError(`Expected ulava to be a bigint, got ${typeof ulava}`);
-        }
-
-        let provider = j.delegator;
-        // Assuming timestamp is in a format that can be directly compared with Date objects
-        if (event.timestamp) {
-            let eventDate = new Date(event.timestamp);
-            if (eventDate >= thirtyDaysAgo) {
-                if (!rewardsLast30Days[provider]) {
-                    rewardsLast30Days[provider] = 0n;
-                }
-                rewardsLast30Days[provider] += ulava;
-            }
-        }
-
-        // Accumulate all-time rewards
-        if (!allRewards[provider]) {
-            allRewards[provider] = 0n;
-        }
-        allRewards[provider] += ulava;
-    });
-
-    AllRewards = allRewards;
-    RewardsLast30Days = rewardsLast30Days;
-}
-
-initRewardsCache();
-// Refresh the cache every 2 minutes
-setInterval(initRewardsCache, 2 * 60 * 1000);
 
 async function getCuRelayAndRewardsTotal(addr: string) {
     const result = await QueryGetJsinfoReadDbInstance()
@@ -164,10 +98,8 @@ async function getClaimedRewards(addr: string): Promise<bigint> {
         );
 
     const claimedRewardsAllTimeSum = claimedRewardsAllTime.length ? BigInt(claimedRewardsAllTime[0].rewardSum) : 0n;
-    if (typeof AllRewards[addr] == 'bigint') {
-        return claimedRewardsAllTimeSum + AllRewards[addr];
-    }
-    return claimedRewardsAllTimeSum;
+    const cachedRewards = ProviderRewardsCache.getAllRewards()[addr] || 0n;
+    return claimedRewardsAllTimeSum + cachedRewards;
 }
 
 async function getClaimedRewards30Days(addr: string): Promise<bigint> {
@@ -181,21 +113,15 @@ async function getClaimedRewards30Days(addr: string): Promise<bigint> {
         .where(
             and(
                 eq(JsinfoSchema.events.provider, addr),
-                and(
-                    eq(JsinfoSchema.events.eventType, JsinfoSchema.LavaProviderEventType.DelegatorClaimRewards),
-                    and(
-                        isNotNull(JsinfoSchema.events.timestamp),
-                        gte(JsinfoSchema.events.timestamp, thirtyDaysAgo),
-                    )
-                )
+                eq(JsinfoSchema.events.eventType, JsinfoSchema.LavaProviderEventType.DelegatorClaimRewards),
+                isNotNull(JsinfoSchema.events.timestamp),
+                gte(JsinfoSchema.events.timestamp, thirtyDaysAgo)
             )
         );
 
     const claimedRewards30DaysAgoSum = claimedRewards30DaysAgo.length ? BigInt(claimedRewards30DaysAgo[0].rewardSum) : 0n;
-    if (typeof RewardsLast30Days[addr] == 'bigint') {
-        return claimedRewards30DaysAgoSum + RewardsLast30Days[addr];
-    }
-    return claimedRewards30DaysAgoSum;
+    const cachedRewards30Days = ProviderRewardsCache.getRewardsLast30Days()[addr] || 0n;
+    return claimedRewards30DaysAgoSum + cachedRewards30Days;
 }
 
 async function getClaimableRewards(addr: string): Promise<bigint> {

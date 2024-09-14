@@ -46,7 +46,13 @@ import { IndexUniqueVisitorsChartRawHandler, IndexUniqueVisitorsChartRawHandlerO
 
 // -- Provider page ajax --
 import { ProviderPaginatedHandler, ProviderPaginatedHandlerOpts } from './handlers/provider/providerHandler';
+import { ProviderV2PaginatedHandler, ProviderV2PaginatedHandlerOpts } from './handlers/provider/providerV2Handler';
 import { ProviderCardsHandler, ProviderCardsHandlerOpts } from './handlers/provider/providerCardsHandler';
+import { ProviderCardsClaimableRewardsHandler, ProviderCardsClaimableRewardsHandlerOpts } from './handlers/provider/providerCardsClaimableRewardsHandler';
+import { ProviderCardsClaimedRewards30DaysHandler, ProviderCardsClaimedRewards30DaysHandlerOpts } from './handlers/provider/providerCardsClaimedRewards30DaysHandler';
+import { ProviderCardsClaimedRewardsAllTimeHandler, ProviderCardsClaimedRewardsAllTimeHandlerOpts } from './handlers/provider/providerCardsClaimedRewardsAllTimeHandler';
+import { ProviderCardsCuRelayAndRewardsHandler, ProviderCardsCuRelayAndRewardsHandlerOpts } from './handlers/provider/providerCardsCuRelayAndRewardsHandler';
+import { ProviderCardsStakesHandler, ProviderCardsStakesHandlerOpts } from './handlers/provider/providerCardsStakesHandler';
 import { ProviderChartsRawHandler, ProviderChartsRawHandlerOpts } from './handlers/provider/providerChartsHandler';
 import { ProviderChartsV2RawHandler, ProviderChartsV2RawHandlerOpts } from './handlers/provider/providerChartsV2Handler';
 
@@ -134,7 +140,13 @@ RegisterRedisBackedHandler('/indexUniqueVisitorsChart', IndexUniqueVisitorsChart
 
 // -- Provider page ajax --
 RegisterRedisBackedHandler('/provider/:addr', ProviderPaginatedHandlerOpts, ProviderPaginatedHandler);
+RegisterRedisBackedHandler('/providerV2/:addr', ProviderV2PaginatedHandlerOpts, ProviderV2PaginatedHandler);
 RegisterRedisBackedHandler('/providerCards/:addr', ProviderCardsHandlerOpts, ProviderCardsHandler);
+RegisterRedisBackedHandler('/providerCardsClaimableRewards/:addr', ProviderCardsClaimableRewardsHandlerOpts, ProviderCardsClaimableRewardsHandler);
+RegisterRedisBackedHandler('/providerCardsClaimedRewards30Days/:addr', ProviderCardsClaimedRewards30DaysHandlerOpts, ProviderCardsClaimedRewards30DaysHandler);
+RegisterRedisBackedHandler('/providerCardsClaimedRewardsAllTime/:addr', ProviderCardsClaimedRewardsAllTimeHandlerOpts, ProviderCardsClaimedRewardsAllTimeHandler);
+RegisterRedisBackedHandler('/providerCardsCuRelayAndRewards/:addr', ProviderCardsCuRelayAndRewardsHandlerOpts, ProviderCardsCuRelayAndRewardsHandler);
+RegisterRedisBackedHandler('/providerCardsStakes/:addr', ProviderCardsStakesHandlerOpts, ProviderCardsStakesHandler);
 GetServerInstance().get('/providerCharts/:addr', ProviderChartsRawHandlerOpts, ProviderChartsRawHandler);
 GetServerInstance().get('/providerChartsV2/:specId/:addr', ProviderChartsV2RawHandlerOpts, ProviderChartsV2RawHandler);
 

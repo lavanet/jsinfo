@@ -83,6 +83,7 @@ import { ConsumerCahcedHandler, ConsumerCahcedHandlerOpts } from './handlers/con
 import { ConsumerSubscriptionItemCountPaginatiedHandler, ConsumerSubscriptionPaginatedRawHandler, ConsumerSubscriptionRawHandlerOpts } from './handlers/consumer/consumerSubscriptionHandler';
 import { ConsumerChartsRawHandler, ConsumerChartsRawHandlerOpts } from './handlers/consumer/consumerChartsHandler';
 import { ConsumerEventsPaginatedHandlerOpts, ConsumerEventsPaginatedHandler, ConsumerEventsItemCountPaginatiedHandler } from './handlers/consumer/consumerEventsHandler';
+import { ConsumerConflictsHandler, ConsumerConflictsHandlerOpts } from './handlers/consumer/consumerConflictsHandler';
 
 // -- Spec page ajax --
 import { SpecPaginatedHandler, SpecPaginatedHandlerOpts } from './handlers/spec/specHandler';
@@ -93,6 +94,7 @@ import { SpecProviderHealthHandler, SpecProviderHealthHandlerOpts } from './hand
 
 // -- Internal data endpoints --
 import { LavapDualStackingDelegatorRewardsHandler, LavapDualStackingDelegatorRewardsOpts } from './handlers/pods/lavapDualStackingDelegatorRewardsHandler';
+import { ConsumerV2CahcedHandler, ConsumerV2CahcedHandlerOpts } from './handlers/consumer/consumerV2Handler';
 
 // -- Server status ajax --
 GetServerInstance().get('/latest', LatestRawHandlerOpts, LatestRawHandler);
@@ -173,7 +175,9 @@ GetServerInstance().get('/providerBlockReportsCsv/:addr', ProviderBlockReportsCS
 
 // -- Consumer page ajax --
 RegisterRedisBackedHandler('/consumer/:addr', ConsumerCahcedHandlerOpts, ConsumerCahcedHandler);
+RegisterRedisBackedHandler('/consumerV2/:addr', ConsumerV2CahcedHandlerOpts, ConsumerV2CahcedHandler);
 RegisterPaginationServerHandler('/consumerSubscriptions/:addr', ConsumerSubscriptionRawHandlerOpts, ConsumerSubscriptionPaginatedRawHandler, ConsumerSubscriptionItemCountPaginatiedHandler);
+RegisterRedisBackedHandler('/consumerConflicts/:addr', ConsumerConflictsHandlerOpts, ConsumerConflictsHandler, { cache_ttl: 10 });
 GetServerInstance().get('/consumerCharts/:addr', ConsumerChartsRawHandlerOpts, ConsumerChartsRawHandler);
 RegisterPaginationServerHandler('/consumerEvents/:addr', ConsumerEventsPaginatedHandlerOpts, ConsumerEventsPaginatedHandler, ConsumerEventsItemCountPaginatiedHandler);
 

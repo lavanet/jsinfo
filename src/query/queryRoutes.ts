@@ -91,6 +91,16 @@ import { SpecChartsRawHandler, SpecChartsRawHandlerOpts } from './handlers/spec/
 import { SpecChartsV2RawHandler, SpecChartsV2RawHandlerOpts } from './handlers/spec/specChartsV2Handler';
 import { SpecStakesPaginatedHandler, SpecStakesPaginatedHandlerOpts } from './handlers/spec/specStakesHandler';
 import { SpecProviderHealthHandler, SpecProviderHealthHandlerOpts } from './handlers/spec/specProviderHealthHandler';
+import {
+    SpecCuRelayRewardsHandler,
+    SpecCuRelayRewardsHandlerOpts,
+    SpecProviderCountHandler,
+    SpecProviderCountHandlerOpts,
+    SpecEndpointHealthHandler,
+    SpecEndpointHealthHandlerOpts,
+    SpecCacheHitRateHandler,
+    SpecCacheHitRateHandlerOpts
+} from './handlers/spec/specV2Handlers';
 
 // -- Internal data endpoints --
 import { LavapDualStackingDelegatorRewardsHandler, LavapDualStackingDelegatorRewardsOpts } from './handlers/pods/lavapDualStackingDelegatorRewardsHandler';
@@ -200,6 +210,10 @@ RegisterPaginationServerHandler('/spec/:specId', SpecPaginatedHandlerOpts, SpecP
 GetServerInstance().get('/specStakes/:specId', SpecStakesPaginatedHandlerOpts, SpecStakesPaginatedHandler);
 GetServerInstance().get('/specCharts/:specId', SpecChartsRawHandlerOpts, SpecChartsRawHandler);
 GetServerInstance().get('/specChartsV2/:specId/:addr', SpecChartsV2RawHandlerOpts, SpecChartsV2RawHandler);
+RegisterRedisBackedHandler('/specCuRelayRewards/:specId', SpecCuRelayRewardsHandlerOpts, SpecCuRelayRewardsHandler);
+RegisterRedisBackedHandler('/specProviderCount/:specId', SpecProviderCountHandlerOpts, SpecProviderCountHandler);
+RegisterRedisBackedHandler('/specEndpointHealth/:specId', SpecEndpointHealthHandlerOpts, SpecEndpointHealthHandler);
+RegisterRedisBackedHandler('/specCacheHitRate/:specId', SpecCacheHitRateHandlerOpts, SpecCacheHitRateHandler);
 
 RegisterRedisBackedHandler('/specProviderHealth/:specId/:addr', SpecProviderHealthHandlerOpts, SpecProviderHealthHandler, { cache_ttl: 10 });
 

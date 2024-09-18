@@ -1,7 +1,7 @@
 // src/query/handlers/spec/specV2Handlers.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { GetLatestBlock, QueryGetJsinfoReadDbInstance } from '../../queryDb';
+import { GetLatestBlock, QueryGetJsinfoReadDbInstance, QueryCheckJsinfoReadDbInstance } from '../../queryDb';
 import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
 import * as JsinfoProviderAgrSchema from '../../../schemas/jsinfoSchema/providerRelayPaymentsAgregation';
 import { sql, eq, count, and, gte, inArray } from "drizzle-orm";
@@ -96,6 +96,8 @@ export async function SpecEndpointHealthHandler(request: FastifyRequest, reply: 
         return null;
     }
 
+    await QueryCheckJsinfoReadDbInstance();
+
     const twoDaysAgo = new Date();
     twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
 
@@ -119,19 +121,24 @@ export async function SpecEndpointHealthHandler(request: FastifyRequest, reply: 
             JsinfoSchema.providerHealth.interface
         );
 
+    if (latestIds.length === 0) {
+        return {
+            endpointHealth: {
+                healthy: 0,
+                unhealthy: 0
+            }
+        };
+    }
+
+    const maxIds = latestIds.map(li => li.maxId);
+
     const healthStatus = await QueryGetJsinfoReadDbInstance()
         .select({
             id: JsinfoSchema.providerHealth.id,
-            provider: JsinfoSchema.providerHealth.provider,
-            spec: JsinfoSchema.providerHealth.spec,
-            interface: JsinfoSchema.providerHealth.interface,
             status: JsinfoSchema.providerHealth.status,
-            timestamp: JsinfoSchema.providerHealth.timestamp,
         })
         .from(JsinfoSchema.providerHealth)
-        .where(
-            inArray(JsinfoSchema.providerHealth.id, latestIds.map(li => li.maxId))
-        );
+        .where(inArray(JsinfoSchema.providerHealth.id, maxIds));
 
     const healthyCount = healthStatus.filter(hs => hs.status === 'healthy').length;
     const unhealthyCount = healthStatus.length - healthyCount;

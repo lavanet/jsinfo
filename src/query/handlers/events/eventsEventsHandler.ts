@@ -161,7 +161,7 @@ class EventsEventsData extends RequestHandlerBase<EventsEventsResponse> {
             r2: JsinfoSchema.events.r2,
             r3: JsinfoSchema.events.r3,
             provider: JsinfoSchema.events.provider,
-            moniker: JsinfoSchema.providers.moniker,
+            moniker: sql`MAX(${JsinfoSchema.providerSpecMoniker.moniker})`,
             consumer: JsinfoSchema.events.consumer,
             blockId: JsinfoSchema.events.blockId,
             datetime: JsinfoSchema.blocks.datetime,
@@ -185,12 +185,12 @@ class EventsEventsData extends RequestHandlerBase<EventsEventsResponse> {
         const offset = (finalPagination.page - 1) * finalPagination.count;
 
         let eventsRes: any | null = null;
-        if (sortColumn == JsinfoSchema.providers.moniker) {
+        if (sortColumn === keyToColumnMap["moniker"]) {
             eventsRes = await QueryGetJsinfoReadDbInstance()
                 .select()
                 .from(JsinfoSchema.events)
                 .leftJoin(JsinfoSchema.blocks, eq(JsinfoSchema.events.blockId, JsinfoSchema.blocks.height))
-                .leftJoin(JsinfoSchema.providers, eq(JsinfoSchema.events.provider, JsinfoSchema.providers.address))
+                .leftJoin(JsinfoSchema.providerSpecMoniker, eq(JsinfoSchema.events.provider, JsinfoSchema.providerSpecMoniker.provider))
                 .orderBy(orderFunction(sortColumn))
                 .offset(offset)
                 .limit(finalPagination.count);

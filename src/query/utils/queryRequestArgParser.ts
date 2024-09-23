@@ -3,7 +3,7 @@
 import { FastifyReply, FastifyRequest } from "fastify";
 import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from "../queryDb";
 import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
-import { eq } from "drizzle-orm";
+import { eq, isNotNull } from "drizzle-orm";
 import { WriteErrorToFastifyReply } from "./queryServerUtils";
 
 let GetAndValidateConsumerAddressFromRequest_cache = {};
@@ -50,7 +50,13 @@ export async function GetAndValidateProviderAddressFromRequest(endpoint: string,
 
     await QueryCheckJsinfoReadDbInstance();
 
-    res = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.providers).where(eq(JsinfoSchema.providers.address, addr)).limit(1);
+    res = await QueryGetJsinfoReadDbInstance()
+        .select({
+            address: JsinfoSchema.providerSpecMoniker.provider
+        })
+        .from(JsinfoSchema.providerSpecMoniker)
+        .where(isNotNull(JsinfoSchema.providerSpecMoniker.provider))
+        .groupBy(JsinfoSchema.providerSpecMoniker.provider).limit(1);
 
     if (res.length != 1) {
         WriteErrorToFastifyReply(reply, 'Provider does not exist on ' + endpoint);
@@ -81,7 +87,13 @@ export async function GetAndValidateProviderAddressFromRequestWithAll(endpoint: 
 
     await QueryCheckJsinfoReadDbInstance();
 
-    res = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.providers).where(eq(JsinfoSchema.providers.address, addr)).limit(1);
+    res = await QueryGetJsinfoReadDbInstance()
+        .select({
+            address: JsinfoSchema.providerSpecMoniker.provider
+        })
+        .from(JsinfoSchema.providerSpecMoniker)
+        .where(isNotNull(JsinfoSchema.providerSpecMoniker.provider))
+        .groupBy(JsinfoSchema.providerSpecMoniker.provider).limit(1);
 
     if (res.length != 1) {
         WriteErrorToFastifyReply(reply, 'Provider does not exist on ' + endpoint);

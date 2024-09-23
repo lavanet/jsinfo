@@ -15,7 +15,7 @@ export const aggConsumerHourlyRelayPayments = pgTable(
   {
     consumer: text("consumer").references(() => jsinfoSchema.consumers.address),
     datehour: timestamp("datehour", { mode: "string" }),
-    specId: text("spec_id").references(() => jsinfoSchema.specs.id),
+    specId: text("spec_id"),
     cuSum: bigint("cusum", { mode: "number" }),
     relaySum: bigint("relaysum", { mode: "number" }),
     rewardSum: bigint("rewardsum", { mode: "number" }),
@@ -46,7 +46,7 @@ export const aggConsumerDailyRelayPayments = pgTable(
   {
     consumer: text("consumer").references(() => jsinfoSchema.consumers.address),
     dateday: timestamp("dateday", { mode: "string" }),
-    specId: text("spec_id").references(() => jsinfoSchema.specs.id),
+    specId: text("spec_id"),
     cuSum: bigint("cusum", { mode: "number" }),
     relaySum: bigint("relaysum", { mode: "number" }),
     rewardSum: bigint("rewardsum", { mode: "number" }),
@@ -76,7 +76,7 @@ export const aggConsumerAllTimeRelayPayments = pgTable(
   "agg_consumer_alltime_relay_payments",
   {
     consumer: text("consumer").references(() => jsinfoSchema.consumers.address),
-    specId: text("spec_id").references(() => jsinfoSchema.specs.id),
+    specId: text("spec_id"),
     cuSum: bigint("cusum", { mode: "number" }),
     relaySum: bigint("relaysum", { mode: "number" }),
     rewardSum: bigint("rewardsum", { mode: "number" }),

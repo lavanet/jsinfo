@@ -211,7 +211,7 @@ class IndexProvidersActiveData extends RequestHandlerBase<IndexProvidersActiveRe
         // Define the key-to-column mapping based on the schema provided
         const keyToColumnMap = {
             provider: JsinfoSchema.providerStakes.provider,
-            moniker: JsinfoSchema.providers.moniker,
+            moniker: sql`MAX(${JsinfoSchema.providerSpecMoniker.moniker})`,
             rewardSum: sql`rewardSum`,
             totalServices: sql`totalServices`,
             totalStake: sql`totalStake`
@@ -228,20 +228,20 @@ class IndexProvidersActiveData extends RequestHandlerBase<IndexProvidersActiveRe
         const sortColumn = keyToColumnMap[finalPagination.sortKey];
         const orderFunction = finalPagination.direction === 'ascending' ? asc : desc;
 
-        if (sortColumn === JsinfoSchema.providers.moniker) {
-            // Execute the query with proper sorting, pagination using offset and limit
+        if (sortColumn === keyToColumnMap["moniker"]) {
+
             const data = await QueryGetJsinfoReadDbInstance()
                 .select({
                     provider: JsinfoSchema.providerStakes.provider,
-                    moniker: JsinfoSchema.providers.moniker,
+                    moniker: sql`MAX(${JsinfoSchema.providerSpecMoniker.moniker}) as moniker`,
                     totalServices: sql<string>`CONCAT(SUM(CASE WHEN ${JsinfoSchema.providerStakes.status} = ${JsinfoSchema.LavaProviderStakeStatus.Active} THEN 1 ELSE 0 END), ' / ', COUNT(${JsinfoSchema.providerStakes.specId})) as totalServices`,
                     totalStake: sql<bigint>`COALESCE(SUM(CAST(${JsinfoSchema.providerStakes.stake} AS BIGINT) + LEAST(CAST(${JsinfoSchema.providerStakes.delegateTotal} AS BIGINT), CAST(${JsinfoSchema.providerStakes.delegateLimit} AS BIGINT))), 0) AS totalStake`,
                     rewardSum: sql<number>`COALESCE((${rewardSumSubQuery}), 0) as rewardSum`,
                 })
                 .from(JsinfoSchema.providerStakes)
-                .leftJoin(JsinfoSchema.providers, eq(JsinfoSchema.providerStakes.provider, JsinfoSchema.providers.address))
+                .leftJoin(JsinfoSchema.providerSpecMoniker, eq(JsinfoSchema.providerStakes.provider, JsinfoSchema.providerSpecMoniker.provider))
                 .where(inArray(JsinfoSchema.providerStakes.provider, activeProviders))
-                .groupBy(JsinfoSchema.providerStakes.provider, JsinfoSchema.providers.moniker)
+                .groupBy(JsinfoSchema.providerStakes.provider)
                 .orderBy(orderFunction(sortColumn))
                 .offset((finalPagination.page - 1) * finalPagination.count)
                 .limit(finalPagination.count);

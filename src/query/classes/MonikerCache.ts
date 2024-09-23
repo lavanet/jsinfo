@@ -13,16 +13,9 @@ interface ProviderSpecMoniker {
     updatedAt: Date | null;
 }
 
-interface ProviderMoniker {
-    moniker: string | null;
-    address: string | null;
-}[]
-
 class ProviderSpecMonikerCache {
     private psmCache: ProviderSpecMoniker[] = [];
     private psmCacheIsEmpty: boolean = false;
-    private pmCache: ProviderMoniker[] = [];
-    private pmCacheIsEmpty: boolean = false;
     private refreshInterval = 2 * 60 * 1000;
     private monikerForProviderCache: Map<string, string> = new Map();
     private monikerFullDescriptionCache: Map<string, string> = new Map();
@@ -47,18 +40,6 @@ class ProviderSpecMonikerCache {
             this.psmCache = new_psmCache
         }
 
-        let new_pmCache = (await RedisCache.getArray("ProviderMonikerTable") || []) as ProviderMoniker[]
-
-        if ((new_pmCache == null) || (Array.isArray(new_pmCache) && new_pmCache.length === 0) || this.pmCacheIsEmpty || (Array.isArray(this.pmCache) && this.pmCache.length === 0)) {
-            this.pmCache = await this.fetchProviderMonikerTable();
-            if (Array.isArray(this.pmCache) && this.pmCache.length === 0) {
-                this.pmCacheIsEmpty = true;
-            }
-            RedisCache.setArray("ProviderMonikerTable", this.pmCache, this.refreshInterval);
-        } else {
-            this.pmCache = new_pmCache
-        }
-
         this.monikerForProviderCache.clear();
         this.monikerFullDescriptionCache.clear();
     }
@@ -74,9 +55,9 @@ class ProviderSpecMonikerCache {
             return this.GetMonikerForProvider(lavaid);
         }
 
-        if (this.psmCache.length === 0 && this.pmCache.length === 0) {
+        if (this.psmCache.length === 0) {
             this.refreshCache()
-            if (this.psmCacheIsEmpty && this.pmCacheIsEmpty) {
+            if (this.psmCacheIsEmpty) {
                 return '';
             }
         }
@@ -96,9 +77,9 @@ class ProviderSpecMonikerCache {
 
         this.verifyLavaId(lavaid);
 
-        if (this.psmCache.length === 0 && this.pmCache.length === 0) {
+        if (this.psmCache.length === 0) {
             this.refreshCache()
-            if (this.psmCacheIsEmpty && this.pmCacheIsEmpty) {
+            if (this.psmCacheIsEmpty) {
                 return '';
             }
         }
@@ -110,16 +91,7 @@ class ProviderSpecMonikerCache {
 
         const filtered = this.psmCache.filter(item => item.provider === lavaid);
         if (filtered.length === 0) {
-            // If not found in psmCache, try pmCache
-            const filtered2 = this.pmCache.filter(item => item.address === lavaid);
-            let ret = '';
-            if (filtered2.length != 0) {
-                ret = filtered2[0].moniker || '';
-            }
-            if (ret != '') {
-                this.monikerForProviderCache.set(lavaid, ret);
-            }
-            return ret
+            return '';
         }
 
         let highestCountMoniker = '';
@@ -148,9 +120,9 @@ class ProviderSpecMonikerCache {
         if (!lavaid) return '';
         this.verifyLavaId(lavaid);
 
-        if (this.psmCache.length === 0 && this.pmCache.length === 0) {
+        if (this.psmCache.length === 0) {
             this.refreshCache()
-            if (this.psmCacheIsEmpty && this.pmCacheIsEmpty) return '';
+            if (this.psmCacheIsEmpty) return '';
         }
 
         if (this.monikerFullDescriptionCache.has(lavaid)) {
@@ -160,12 +132,7 @@ class ProviderSpecMonikerCache {
 
         const filtered = this.psmCache.filter(item => item.provider === lavaid);
         if (filtered.length === 0) {
-            // If not found in psmCache, try pmCache
-            const filtered2 = this.pmCache.filter(item => item.address === lavaid);
-            let ret = '';
-            if (filtered2.length != 0) ret = filtered2[0].moniker || '';
-            if (ret != '') this.monikerFullDescriptionCache.set(lavaid, ret);
-            return ret
+            return '';
         }
 
         const monikerToSpecIds = filtered.reduce((acc, item) => {
@@ -227,10 +194,6 @@ class ProviderSpecMonikerCache {
 
     private async fetchProviderSpecMonikerTable(): Promise<ProviderSpecMoniker[]> {
         return await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.providerSpecMoniker)
-    }
-
-    private async fetchProviderMonikerTable(): Promise<ProviderMoniker[]> {
-        return await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.providers);
     }
 }
 

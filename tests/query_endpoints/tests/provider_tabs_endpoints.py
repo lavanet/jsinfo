@@ -176,21 +176,6 @@ class TestProviderEndpoints(unittest.TestCase):
                 print(f"Response: {response_json}")
                 raise
 
-    def test_provider_account_info(self):
-        for provider in self.selected_providers:
-            response = requests.get(f"{server_address}/providerAccountInfo/{provider['address']}?idx=0")
-            assert response.status_code == 200
-            data = response.json()
-            assert isinstance(data, dict) 
-            try:
-                assert 'idx' in data
-                assert 'itemCount' in data
-                assert 'timestamp' in data
-                assert 'data' in data
-            except:
-                print(f"Failed test_provider_health for provider {provider['address']}")
-                print(f"Response: {data}")
-                raise
 
 if __name__ == '__main__':
     unittest.main()

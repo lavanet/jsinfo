@@ -28,8 +28,8 @@ export const ParseEventExpireSubscrption = (
   height: number,
   txHash: string | null,
   lavaBlock: LavaBlock,
-  blockchainEntitiesProviders: Map<string, JsinfoSchema.Provider>,
-  blockchainEntitiesSpecs: Map<string, JsinfoSchema.Spec>,
+
+
   blockchainEntitiesStakes: Map<string, JsinfoSchema.InsertProviderStake[]>,
 ) => {
 
@@ -58,7 +58,7 @@ export const ParseEventExpireSubscrption = (
     verifyFunction: () => !!dbEvent.consumer
   })) return;
 
-  SetTx(lavaBlock.dbTxs, txHash, height)
+
   GetOrSetConsumer(lavaBlock.dbConsumers, dbEvent.consumer!)
   lavaBlock.dbEvents.push(dbEvent)
 }

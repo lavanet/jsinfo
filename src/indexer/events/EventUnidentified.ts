@@ -2,7 +2,7 @@ import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import { Event } from "@cosmjs/stargate"
 import { LavaBlock } from "../types";
 import { EventProcessAttributes } from "../eventUtils";
-import { SetTx } from "../blockchainEntities/blockchainEntitiesGettersAndSetters";
+
 import { JSONStringify } from '../../utils/utils';
 
 export const ParseEventUnidentified = (
@@ -10,8 +10,8 @@ export const ParseEventUnidentified = (
     height: number,
     txHash: string | null,
     lavaBlock: LavaBlock,
-    blockchainEntitiesProviders: Map<string, JsinfoSchema.Provider>,
-    blockchainEntitiesSpecs: Map<string, JsinfoSchema.Spec>,
+
+
     blockchainEntitiesStakes: Map<string, JsinfoSchema.InsertProviderStake[]>,
 ) => {
     const dbEvent: JsinfoSchema.InsertEvent = {
@@ -34,6 +34,6 @@ export const ParseEventUnidentified = (
 
     dbEvent.t1 = JSONStringify(parsedAttributes);
 
-    SetTx(lavaBlock.dbTxs, txHash, height)
+
     lavaBlock.dbEvents.push(dbEvent)
 }

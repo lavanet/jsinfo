@@ -37,7 +37,14 @@ export async function AutoCompleteLinksPaginatedHandler(request: FastifyRequest,
     };
 
     // Fetch all providers, consumers, and specs
-    const providers = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.providers).where(isNotNull(JsinfoSchema.providers.address));
+    const providers = await QueryGetJsinfoReadDbInstance()
+        .select({
+            address: JsinfoSchema.providerSpecMoniker.provider
+        })
+        .from(JsinfoSchema.providerSpecMoniker)
+        .where(isNotNull(JsinfoSchema.providerSpecMoniker.provider))
+        .groupBy(JsinfoSchema.providerSpecMoniker.provider);
+
     const consumers = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.consumers);
     const specs = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.specs);
 
@@ -51,6 +58,7 @@ export async function AutoCompleteLinksPaginatedHandler(request: FastifyRequest,
             moniker: MonikerCache.GetMonikerForProvider(provider.address)
         }))
     );
+
     const consumerItems = consumers.flatMap(consumer =>
         baseUrls.consumers.map(baseUrl => ({
             id: 'consumer-' + consumer.address,
@@ -60,6 +68,7 @@ export async function AutoCompleteLinksPaginatedHandler(request: FastifyRequest,
             moniker: MonikerCache.GetMonikerForProvider(consumer.address)
         }))
     );
+
     const specItems = specs.flatMap(spec =>
         baseUrls.specs.map(baseUrl => ({
             id: 'spec-' + spec.id,

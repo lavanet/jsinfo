@@ -37,8 +37,8 @@ export const ParseEventRedelegateBetweenProviders = (
   height: number,
   txHash: string | null,
   lavaBlock: LavaBlock,
-  blockchainEntitiesProviders: Map<string, JsinfoSchema.Provider>,
-  blockchainEntitiesSpecs: Map<string, JsinfoSchema.Spec>,
+
+
   blockchainEntitiesStakes: Map<string, JsinfoSchema.InsertProviderStake[]>,
 ) => {
   let delegator: string | null = null;
@@ -99,7 +99,7 @@ export const ParseEventRedelegateBetweenProviders = (
       ...dbEvent,
       provider: from_provider,
     };
-    GetOrSetProvider(lavaBlock.dbProviders, blockchainEntitiesProviders, fromProviderEvent.provider!, '')
+
     lavaBlock.dbEvents.push(fromProviderEvent);
   }
 
@@ -108,12 +108,12 @@ export const ParseEventRedelegateBetweenProviders = (
       ...dbEvent,
       provider: to_provider,
     };
-    GetOrSetProvider(lavaBlock.dbProviders, blockchainEntitiesProviders, toProviderEvent.provider!, '')
+
     lavaBlock.dbEvents.push(toProviderEvent);
   }
 
-  SetTx(lavaBlock.dbTxs, txHash, height);
-  GetOrSetProvider(lavaBlock.dbProviders, blockchainEntitiesProviders, dbEvent.provider!, '');
+  ;
+  GetOrSetProvider(lavaBlock.dbProviders, dbEvent.provider!, '');
   lavaBlock.dbEvents.push(dbEvent);
 
 }

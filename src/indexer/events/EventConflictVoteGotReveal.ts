@@ -25,8 +25,8 @@ export const ParseEventConflictVoteGotReveal = (
   height: number,
   txHash: string | null,
   lavaBlock: LavaBlock,
-  blockchainEntitiesProviders: Map<string, JsinfoSchema.Provider>,
-  blockchainEntitiesSpecs: Map<string, JsinfoSchema.Spec>,
+
+
   blockchainEntitiesStakes: Map<string, JsinfoSchema.InsertProviderStake[]>,
 ) => {
   const dbEvent: JsinfoSchema.InsertEvent = {
@@ -57,7 +57,7 @@ export const ParseEventConflictVoteGotReveal = (
     verifyFunction: () => !!dbEvent.provider
   })) return;
 
-  SetTx(lavaBlock.dbTxs, txHash, height)
-  GetOrSetProvider(lavaBlock.dbProviders, blockchainEntitiesProviders, dbEvent.provider!, '')
+
+  GetOrSetProvider(lavaBlock.dbProviders, dbEvent.provider!, '')
   lavaBlock.dbEvents.push(dbEvent)
 }

@@ -55,8 +55,8 @@ export const GetOneLavaBlock = async (
     height: number,
     client: StargateClient,
     clientTm: Tendermint37Client,
-    blockchainEntitiesProviders: Map<string, JsinfoSchema.Provider>,
-    blockchainEntitiesSpecs: Map<string, JsinfoSchema.Spec>,
+
+
     blockchainEntitiesStakes: Map<string, JsinfoSchema.InsertProviderStake[]>,
 ): Promise<LavaBlock> => {
 
@@ -114,7 +114,7 @@ export const GetOneLavaBlock = async (
             height,
             tx.hash,
             blockchainEntitiesProviders,
-            blockchainEntitiesSpecs,
+
             blockchainEntitiesStakes
         ))
     });
@@ -125,7 +125,7 @@ export const GetOneLavaBlock = async (
         height,
         null,
         blockchainEntitiesProviders,
-        blockchainEntitiesSpecs,
+
         blockchainEntitiesStakes
     ))
 

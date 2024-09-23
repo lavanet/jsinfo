@@ -3,7 +3,6 @@
 import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import { StakeEntry } from '@lavanet/lavajs/dist/codegen/lavanet/lava/epochstorage/stake_entry';
 import { AppendUniqueItems, ToSignedBigIntOrMinusOne, ToSignedIntOrMinusOne } from '../indexerUtils';
-import { GetOrSetProvider, GetOrSetSpec } from './blockchainEntitiesGettersAndSetters';
 import { LavaClient } from '../types';
 import { logger } from '../../utils/utils';
 
@@ -128,12 +127,10 @@ jailEndTime: 0n,
 
 function processStakeEntry(
     height: number,
-    dbProviders: Map<string, JsinfoSchema.Provider>,
     dbStakes: Map<string, JsinfoSchema.InsertProviderStake[]>,
     providerStake: StakeEntry,
     isUnstaking: boolean,
 ) {
-    GetOrSetProvider(dbProviders, null, providerStake.address, providerStake.moniker)
 
     // init if needed
     if (dbStakes.get(providerStake.address) == undefined) {
@@ -184,7 +181,7 @@ function processStakeEntry(
 export async function UpdateStakeInformation(
     client: LavaClient,
     height: number,
-    dbProviders: Map<string, JsinfoSchema.Provider>,
+
     dbSpecs: Map<string, JsinfoSchema.Spec>,
     dbStakes: Map<string, JsinfoSchema.InsertProviderStake[]>,
 ) {
@@ -195,11 +192,11 @@ export async function UpdateStakeInformation(
         const lavaClient = client.lavanet.lava;
         dbStakes.clear();
 
-        await processRegularStakes(lavaClient, height, dbProviders, dbSpecs, dbStakes);
+        await processRegularStakes(lavaClient, height, dbStakes);
         const processRegularTime = Date.now();
         logger.info(`UpdateStakeInformation: processRegularStakes completed, elapsed time: ${processRegularTime - startTime}ms`);
 
-        await processUnstakingStakes(lavaClient, height, dbProviders, dbStakes);
+        await processUnstakingStakes(lavaClient, height, dbStakes);
         const processUnstakingTime = Date.now();
         logger.info(`UpdateStakeInformation: processUnstakingStakes completed, elapsed time: ${processUnstakingTime - processRegularTime}ms`);
     } catch (error) {
@@ -215,16 +212,13 @@ export async function UpdateStakeInformation(
 async function processRegularStakes(
     lavaClient: any,
     height: number,
-    dbProviders: Map<string, JsinfoSchema.Provider>,
-    dbSpecs: Map<string, JsinfoSchema.Spec>,
     dbStakes: Map<string, JsinfoSchema.InsertProviderStake[]>,
 ) {
     let specs = await lavaClient.spec.showAllChains();
     await Promise.all(specs.chainInfoList.map(async (spec) => {
-        GetOrSetSpec(dbSpecs, null, spec.chainID);
         let providers = await lavaClient.pairing.providers({ chainID: spec.chainID, showFrozen: true });
         providers.stakeEntry.forEach((stake) => {
-            processStakeEntry(height, dbProviders, dbStakes, stake, false);
+            processStakeEntry(height, dbStakes, stake, false);
         });
     }));
 }
@@ -232,7 +226,7 @@ async function processRegularStakes(
 async function processUnstakingStakes(
     lavaClient: any,
     height: number,
-    dbProviders: Map<string, JsinfoSchema.Provider>,
+
     dbStakes: Map<string, JsinfoSchema.InsertProviderStake[]>,
 ) {
     let unstaking;

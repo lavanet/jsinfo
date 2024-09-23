@@ -31,14 +31,14 @@ export async function SyncBlockchainEntities(
     db: PostgresJsDatabase,
     client: LavaClient,
     height: number,
-    blockchainEntitiesProviders: Map<string, JsinfoSchema.Provider>,
-    blockchainEntitiesSpecs: Map<string, JsinfoSchema.Spec>,
+
+
     blockchainEntitiesStakes: Map<string, JsinfoSchema.InsertProviderStake[]>
 ) {
     // console.log("SyncBlockchainEntities: Starting SyncBlockchainEntities at height", height);
     const startTime = Date.now();
 
-    await UpdateStakeInformation(client, height, blockchainEntitiesProviders, blockchainEntitiesSpecs, blockchainEntitiesStakes)
+    await UpdateStakeInformation(client, height, blockchainEntitiesStakes)
     // await getLatestPlans(client, blockchainEntitiesPlans)
 
     await db.transaction(async (tx) => {
@@ -50,25 +50,6 @@ export async function SyncBlockchainEntities(
                 .values(arr)
                 .onConflictDoNothing();
         })
-
-        // The monikers are coming from relayserver now - and this also sometimes sets the monikers to empty values
-        // Find / create all providers
-        // const arrProviders = Array.from(blockchainEntitiesProviders.values())
-        // console.log("SyncBlockchainEntities: Processing", arrProviders.length, "providers");
-        // await DoInChunks(JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, arrProviders, async (arr: any) => {
-        //     return arr.map(async (provider: any) => {
-        //         return await tx.insert(JsinfoSchema.providers)
-        //             .values(provider)
-        //             .onConflictDoUpdate(
-        //                 {
-        //                     target: [JsinfoSchema.providers.address],
-        //                     set: {
-        //                         moniker: provider.moniker
-        //                     },
-        //                 }
-        //             );
-        //     })
-        // })
 
         const uniqueStakesMap = new Map<string, any>();
 

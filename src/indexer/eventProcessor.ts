@@ -59,8 +59,8 @@ export const ProcessOneEvent = (
     lavaBlock: LavaBlock,
     height: number,
     txHash: string | null,
-    blockchainEntitiesProviders: Map<string, JsinfoSchema.Provider>,
-    blockchainEntitiesSpecs: Map<string, JsinfoSchema.Spec>,
+
+
     blockchainEntitiesStakes: Map<string, JsinfoSchema.InsertProviderStake[]>,
 ) => {
 
@@ -82,40 +82,40 @@ export const ProcessOneEvent = (
         */
         // a successful relay payment
         case 'lava_relay_payment':
-            ParseEventRelayPayment(evt, height, txHash, lavaBlock, blockchainEntitiesProviders, blockchainEntitiesSpecs, blockchainEntitiesStakes)
+            ParseEventRelayPayment(evt, height, txHash, lavaBlock, blockchainEntitiesStakes)
             break
         case 'lava_stake_new_provider':
-            ParseEventStakeNewProvider(evt, height, txHash, lavaBlock, blockchainEntitiesProviders, blockchainEntitiesSpecs, blockchainEntitiesStakes)
+            ParseEventStakeNewProvider(evt, height, txHash, lavaBlock, blockchainEntitiesStakes)
             break
         // a successful provider stake entry modification
         case 'lava_stake_update_provider':
-            ParseEventStakeUpdateProvider(evt, height, txHash, lavaBlock, blockchainEntitiesProviders, blockchainEntitiesSpecs, blockchainEntitiesStakes)
+            ParseEventStakeUpdateProvider(evt, height, txHash, lavaBlock, blockchainEntitiesStakes)
             break
         // a successful provider stake entry modification
         case 'lava_provider_unstake_commit':
-            ParseEventProviderUnstakeCommit(evt, height, txHash, lavaBlock, blockchainEntitiesProviders, blockchainEntitiesSpecs, blockchainEntitiesStakes)
+            ParseEventProviderUnstakeCommit(evt, height, txHash, lavaBlock, blockchainEntitiesStakes)
             break
         // freeze a provider in multiple chains
         case 'lava_freeze_provider':
-            ParseEventFreezeProvider(evt, height, txHash, lavaBlock, blockchainEntitiesProviders, blockchainEntitiesSpecs, blockchainEntitiesStakes)
+            ParseEventFreezeProvider(evt, height, txHash, lavaBlock, blockchainEntitiesStakes)
             break
         // unfreeze a provider in multiple chains 
         case 'lava_unfreeze_provider':
-            ParseEventUnfreezeProvider(evt, height, txHash, lavaBlock, blockchainEntitiesProviders, blockchainEntitiesSpecs, blockchainEntitiesStakes)
+            ParseEventUnfreezeProvider(evt, height, txHash, lavaBlock, blockchainEntitiesStakes)
             break
         // a successful provider report for unresponsiveness
         case 'lava_provider_reported':
-            ParseEventProviderReported(evt, height, txHash, lavaBlock, blockchainEntitiesProviders, blockchainEntitiesSpecs, blockchainEntitiesStakes)
+            ParseEventProviderReported(evt, height, txHash, lavaBlock, blockchainEntitiesStakes)
             break
         case 'lava_provider_jailed':
-            ParseEventProviderJailed(evt, height, txHash, lavaBlock, blockchainEntitiesProviders, blockchainEntitiesSpecs, blockchainEntitiesStakes)
+            ParseEventProviderJailed(evt, height, txHash, lavaBlock, blockchainEntitiesStakes)
             break
         case 'lava_provider_temporary_jailed':
-            ParseEventProviderTemporaryJailed(evt, height, txHash, lavaBlock, blockchainEntitiesProviders, blockchainEntitiesSpecs, blockchainEntitiesStakes)
+            ParseEventProviderTemporaryJailed(evt, height, txHash, lavaBlock, blockchainEntitiesStakes)
             break
         // a successful report of latest block of a provider per chain
         case 'lava_provider_latest_block_report':
-            ParseEventProviderLatestBlockReport(evt, height, txHash, lavaBlock, blockchainEntitiesProviders, blockchainEntitiesSpecs, blockchainEntitiesStakes)
+            ParseEventProviderLatestBlockReport(evt, height, txHash, lavaBlock, blockchainEntitiesStakes)
             break
 
         //
@@ -133,19 +133,19 @@ export const ProcessOneEvent = (
             RemainingCreditEventName                = "subscription_remaining_credit"
         */
         case 'lava_buy_subscription_event':
-            ParseEventBuySubscription(evt, height, txHash, lavaBlock, blockchainEntitiesProviders, blockchainEntitiesSpecs, blockchainEntitiesStakes)
+            ParseEventBuySubscription(evt, height, txHash, lavaBlock, blockchainEntitiesStakes)
             break
         case 'lava_add_project_to_subscription_event':
-            ParseEventAddProjectToSubscription(evt, height, txHash, lavaBlock, blockchainEntitiesProviders, blockchainEntitiesSpecs, blockchainEntitiesStakes)
+            ParseEventAddProjectToSubscription(evt, height, txHash, lavaBlock, blockchainEntitiesStakes)
             break
         case 'lava_del_project_to_subscription_event':
-            ParseEventDelProjectToSubscription(evt, height, txHash, lavaBlock, blockchainEntitiesProviders, blockchainEntitiesSpecs, blockchainEntitiesStakes)
+            ParseEventDelProjectToSubscription(evt, height, txHash, lavaBlock, blockchainEntitiesStakes)
             break
         case 'lava_expire_subscription_event':
-            ParseEventExpireSubscrption(evt, height, txHash, lavaBlock, blockchainEntitiesProviders, blockchainEntitiesSpecs, blockchainEntitiesStakes)
+            ParseEventExpireSubscrption(evt, height, txHash, lavaBlock, blockchainEntitiesStakes)
             break
         case 'lava_set_subscription_policy_event':
-            ParseEventSetSubscriptionPolicyEvent(evt, height, txHash, lavaBlock, blockchainEntitiesProviders, blockchainEntitiesSpecs, blockchainEntitiesStakes)
+            ParseEventSetSubscriptionPolicyEvent(evt, height, txHash, lavaBlock, blockchainEntitiesStakes)
             break
 
 
@@ -162,12 +162,12 @@ export const ProcessOneEvent = (
 
         // a successful addition of a project key
         case 'lava_add_key_to_project_event':
-            ParseEventAddKeyToProject(evt, height, txHash, lavaBlock, blockchainEntitiesProviders, blockchainEntitiesSpecs, blockchainEntitiesStakes)
+            ParseEventAddKeyToProject(evt, height, txHash, lavaBlock, blockchainEntitiesStakes)
             break
 
         // a successful deletion of a project key 
         case 'lava_del_key_from_project_event':
-            ParseEventDelKeyFromProject(evt, height, txHash, lavaBlock, blockchainEntitiesProviders, blockchainEntitiesSpecs, blockchainEntitiesStakes)
+            ParseEventDelKeyFromProject(evt, height, txHash, lavaBlock, blockchainEntitiesStakes)
             break
 
         // case 'lava_set_subscription_policy_event':
@@ -182,39 +182,39 @@ export const ProcessOneEvent = (
 
         // sealed vote by provider
         case 'lava_conflict_vote_got_commit':
-            ParseEventConflictVoteGotCommit(evt, height, txHash, lavaBlock, blockchainEntitiesProviders, blockchainEntitiesSpecs, blockchainEntitiesStakes)
+            ParseEventConflictVoteGotCommit(evt, height, txHash, lavaBlock, blockchainEntitiesStakes)
             break
 
         // consumer sent 2 conflicting proofs, start conflict resolution
         // A new conflict has been opened, which involves all of the jury providers. It is now entering the commit stage
         case 'lava_response_conflict_detection':
-            ParseEventResponseConflictDetection(evt, height, txHash, lavaBlock, blockchainEntitiesProviders, blockchainEntitiesSpecs, blockchainEntitiesStakes)
+            ParseEventResponseConflictDetection(evt, height, txHash, lavaBlock, blockchainEntitiesStakes)
             break
 
         // redundant
         case 'lava_conflict_detection_received':
-            ParseEventConflictDetectionReceived(evt, height, txHash, lavaBlock, blockchainEntitiesProviders, blockchainEntitiesSpecs, blockchainEntitiesStakes)
+            ParseEventConflictDetectionReceived(evt, height, txHash, lavaBlock, blockchainEntitiesStakes)
             break
 
         // provider revealed his vote
         case 'lava_conflict_vote_got_reveal':
-            ParseEventConflictVoteGotReveal(evt, height, txHash, lavaBlock, blockchainEntitiesProviders, blockchainEntitiesSpecs, blockchainEntitiesStakes)
+            ParseEventConflictVoteGotReveal(evt, height, txHash, lavaBlock, blockchainEntitiesStakes)
             break
 
         // conflict has transitioned to reveal state
         case 'lava_conflict_vote_reveal_started':
-            ParseEventConflictVoteRevealStarted(evt, height, txHash, lavaBlock, blockchainEntitiesProviders, blockchainEntitiesSpecs, blockchainEntitiesStakes)
+            ParseEventConflictVoteRevealStarted(evt, height, txHash, lavaBlock, blockchainEntitiesStakes)
             break
 
         // conflict was succesfully resolved
         case 'lava_conflict_detection_vote_resolved':
-            ParseEventConflictDetectionVoteResolved(evt, height, txHash, lavaBlock, blockchainEntitiesProviders, blockchainEntitiesSpecs, blockchainEntitiesStakes)
+            ParseEventConflictDetectionVoteResolved(evt, height, txHash, lavaBlock, blockchainEntitiesStakes)
             break
 
         // conflict was not resolved (did not reach majority)
         // ConflictVoteUnresolvedEventName = "conflict_detection_vote_unresolved"
         case 'lava_conflict_detection_vote_unresolved':
-            ParseEventConflictDetectionVoteUnresolved(evt, height, txHash, lavaBlock, blockchainEntitiesProviders, blockchainEntitiesSpecs, blockchainEntitiesStakes)
+            ParseEventConflictDetectionVoteUnresolved(evt, height, txHash, lavaBlock, blockchainEntitiesStakes)
             break
 
         // // provider was unstaked due to conflict
@@ -230,22 +230,22 @@ export const ProcessOneEvent = (
         // a successful provider delegation
         case 'lava_delegate_to_provider':
             // this is the only event i saw on chain
-            ParseEventDelegateToProvider(evt, height, txHash, lavaBlock, blockchainEntitiesProviders, blockchainEntitiesSpecs, blockchainEntitiesStakes)
+            ParseEventDelegateToProvider(evt, height, txHash, lavaBlock, blockchainEntitiesStakes)
             break
 
         // a successful provider delegation unbond
         case 'lava_unbond_from_provider':
-            ParseEventUbondFromProvider(evt, height, txHash, lavaBlock, blockchainEntitiesProviders, blockchainEntitiesSpecs, blockchainEntitiesStakes)
+            ParseEventUbondFromProvider(evt, height, txHash, lavaBlock, blockchainEntitiesStakes)
             break
 
         // // a successful provider redelegation
         case 'lava_redelegate_between_providers':
-            ParseEventRedelegateBetweenProviders(evt, height, txHash, lavaBlock, blockchainEntitiesProviders, blockchainEntitiesSpecs, blockchainEntitiesStakes)
+            ParseEventRedelegateBetweenProviders(evt, height, txHash, lavaBlock, blockchainEntitiesStakes)
             break
 
         // // a successful provider delegator reward claim
         case 'lava_delegator_claim_rewards':
-            ParseEventDelegatorClaimRewards(evt, height, txHash, lavaBlock, blockchainEntitiesProviders, blockchainEntitiesSpecs, blockchainEntitiesStakes)
+            ParseEventDelegatorClaimRewards(evt, height, txHash, lavaBlock, blockchainEntitiesStakes)
 
         // // spec contributor got new rewards
         // case 'lava_contributor_rewards':
@@ -253,15 +253,15 @@ export const ProcessOneEvent = (
 
         // validator slashed happened, providers slashed accordingly
         case 'lava_validator_slash':
-            ParseEventValidatorSlash(evt, height, txHash, lavaBlock, blockchainEntitiesProviders, blockchainEntitiesSpecs, blockchainEntitiesStakes)
+            ParseEventValidatorSlash(evt, height, txHash, lavaBlock, blockchainEntitiesStakes)
             break
 
         case 'lava_freeze_from_unbond':
-            ParseEventLavaFreezeFromUnbound(evt, height, txHash, lavaBlock, blockchainEntitiesProviders, blockchainEntitiesSpecs, blockchainEntitiesStakes)
+            ParseEventLavaFreezeFromUnbound(evt, height, txHash, lavaBlock, blockchainEntitiesStakes)
             break
 
         case 'lava_unstake_from_unbond':
-            ParseEventUnstakeFromUnbound(evt, height, txHash, lavaBlock, blockchainEntitiesProviders, blockchainEntitiesSpecs, blockchainEntitiesStakes)
+            ParseEventUnstakeFromUnbound(evt, height, txHash, lavaBlock, blockchainEntitiesStakes)
             break
 
         //
@@ -270,18 +270,18 @@ export const ProcessOneEvent = (
         //
 
         case "lava_provider_bonus_rewards":
-            ParseEventProviderBonusRewards(evt, height, txHash, lavaBlock, blockchainEntitiesProviders, blockchainEntitiesSpecs, blockchainEntitiesStakes)
+            ParseEventProviderBonusRewards(evt, height, txHash, lavaBlock, blockchainEntitiesStakes)
             break
 
         // a successful distribution of IPRPC bonus rewards
         case "lava_iprpc-pool-emmission":
         case "lava_iprpc_pool_emmission":
-            ParseEventIPRPCPoolEmission(evt, height, txHash, lavaBlock, blockchainEntitiesProviders, blockchainEntitiesSpecs, blockchainEntitiesStakes)
+            ParseEventIPRPCPoolEmission(evt, height, txHash, lavaBlock, blockchainEntitiesStakes)
             break
 
         // a successful distribution rewards pools refill     
         case "lava_distribution_pools_refill":
-            ParseEventDistributionPoolsRefill(evt, height, txHash, lavaBlock, blockchainEntitiesProviders, blockchainEntitiesSpecs, blockchainEntitiesStakes)
+            ParseEventDistributionPoolsRefill(evt, height, txHash, lavaBlock, blockchainEntitiesStakes)
             break
 
         //
@@ -366,7 +366,7 @@ export const ProcessOneEvent = (
             break
 
         default:
-            ParseEventUnidentified(evt, height, txHash, lavaBlock, blockchainEntitiesProviders, blockchainEntitiesSpecs, blockchainEntitiesStakes)
+            ParseEventUnidentified(evt, height, txHash, lavaBlock, blockchainEntitiesStakes)
             logger.error(`ProcessOneEvent: Unknown event detected at height ${height} with event type ${evt.type} and event details:`, evt);
             break
     }

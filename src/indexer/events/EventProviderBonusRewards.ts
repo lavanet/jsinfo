@@ -14,8 +14,8 @@ export const ParseEventProviderBonusRewards = (
   height: number,
   txHash: string | null,
   lavaBlock: LavaBlock,
-  blockchainEntitiesProviders: Map<string, JsinfoSchema.Provider>,
-  blockchainEntitiesSpecs: Map<string, JsinfoSchema.Spec>,
+
+
   blockchainEntitiesStakes: Map<string, JsinfoSchema.InsertProviderStake[]>,
 ) => {
 
@@ -43,7 +43,7 @@ export const ParseEventProviderBonusRewards = (
     verifyFunction: () => !!dbEvent.provider
   })) return;
 
-  SetTx(lavaBlock.dbTxs, txHash, height)
+
 
   // Loop for each provider parsed
   for (const [provider, { chain, amount }] of Object.entries(providerInfo)) {
@@ -55,7 +55,7 @@ export const ParseEventProviderBonusRewards = (
       fulltext: JSONStringify({ chain: chain, amount: amount }),
     };
 
-    GetOrSetProvider(lavaBlock.dbProviders, blockchainEntitiesProviders, provider, '');
+
     lavaBlock.dbEvents.push(dbEventInstance);
   }
 }

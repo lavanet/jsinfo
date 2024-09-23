@@ -26,8 +26,8 @@ export const ParseEventBuySubscription = (
     height: number,
     txHash: string | null,
     lavaBlock: LavaBlock,
-    blockchainEntitiesProviders: Map<string, JsinfoSchema.Provider>,
-    blockchainEntitiesSpecs: Map<string, JsinfoSchema.Spec>,
+
+
     blockchainEntitiesStakes: Map<string, JsinfoSchema.InsertProviderStake[]>,
 ) => {
     const dbEvent: JsinfoSchema.InsertSubscriptionBuy = {
@@ -58,7 +58,7 @@ export const ParseEventBuySubscription = (
         verifyFunction: () => !!dbEvent.consumer
     })) return;
 
-    SetTx(lavaBlock.dbTxs, txHash, height)
+
     GetOrSetConsumer(lavaBlock.dbConsumers, dbEvent.consumer!)
     lavaBlock.dbSubscriptionBuys.push(dbEvent)
 }

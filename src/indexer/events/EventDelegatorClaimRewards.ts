@@ -30,8 +30,8 @@ export const ParseEventDelegatorClaimRewards = (
   height: number,
   txHash: string | null,
   lavaBlock: LavaBlock,
-  blockchainEntitiesProviders: Map<string, JsinfoSchema.Provider>,
-  blockchainEntitiesSpecs: Map<string, JsinfoSchema.Spec>,
+
+
   blockchainEntitiesStakes: Map<string, JsinfoSchema.InsertProviderStake[]>,
 ) => {
   let delegator: string | null = null;
@@ -66,7 +66,7 @@ export const ParseEventDelegatorClaimRewards = (
 
   dbEvent.provider = delegator;
 
-  SetTx(lavaBlock.dbTxs, txHash, height);
-  GetOrSetProvider(lavaBlock.dbProviders, blockchainEntitiesProviders, dbEvent.provider!, '');
+  ;
+  GetOrSetProvider(lavaBlock.dbProviders, dbEvent.provider!, '');
   lavaBlock.dbEvents.push(dbEvent);
 }

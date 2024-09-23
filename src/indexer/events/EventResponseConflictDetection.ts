@@ -1,7 +1,7 @@
 import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import { Event } from "@cosmjs/stargate"
 import { LavaBlock } from "../types";
-import { GetOrSetConsumer, SetTx, GetOrSetSpec } from "../blockchainEntities/blockchainEntitiesGettersAndSetters";
+
 import { EventProcessAttributes, EventParseProviderAddress, EventParseInt } from "../eventUtils";
 
 /*
@@ -82,8 +82,8 @@ export const ParseEventResponseConflictDetection = (
   height: number,
   txHash: string | null,
   lavaBlock: LavaBlock,
-  blockchainEntitiesProviders: Map<string, JsinfoSchema.Provider>,
-  blockchainEntitiesSpecs: Map<string, JsinfoSchema.Spec>,
+
+
   blockchainEntitiesStakes: Map<string, JsinfoSchema.InsertProviderStake[]>,
 ) => {
   const dbEvent: JsinfoSchema.InsertConflictResponse = {
@@ -138,8 +138,6 @@ export const ParseEventResponseConflictDetection = (
     skipKeys: ['requestData']
   })) return;
 
-  SetTx(lavaBlock.dbTxs, txHash, height)
-  GetOrSetSpec(lavaBlock.dbSpecs, blockchainEntitiesSpecs, dbEvent.specId!)
-  GetOrSetConsumer(lavaBlock.dbConsumers, dbEvent.consumer!)
+
   lavaBlock.dbConflictResponses.push(dbEvent)
 }

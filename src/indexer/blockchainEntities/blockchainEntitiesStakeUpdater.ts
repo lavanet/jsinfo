@@ -249,6 +249,6 @@ async function processUnstakingStakes(
                 }
             });
         }
-        processStakeEntry(height, dbProviders, dbStakes, stake, true);
+        processStakeEntry(height, dbStakes, stake, true);
     });
 }

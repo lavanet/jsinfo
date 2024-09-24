@@ -1,6 +1,5 @@
 // ./src/jsinfo/src/schemas/jsinfoSchema/providerRelayPaymentsAgregation.ts
 
-import * as jsinfoSchema from './jsinfoSchema';
 import { pgTable, text, bigint, uniqueIndex, timestamp, doublePrecision } from 'drizzle-orm/pg-core';
 
 export const aggHourlyRelayPayments = pgTable(

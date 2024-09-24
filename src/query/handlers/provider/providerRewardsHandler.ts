@@ -1,5 +1,5 @@
 
-// src/query/handlers/providerRewardsHandler.ts
+// src/query/handlers/provider/providerRewardsHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../../queryDb';
@@ -136,22 +136,35 @@ class ProviderRewardsData extends RequestHandlerBase<ProviderRewardsResponse> {
         return `ProviderRewards_${this.addr}.csv`;
     }
 
+    private getThirtyDaysAgo(): Date {
+        let thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        return thirtyDaysAgo;
+    }
+
     protected async fetchAllRecords(): Promise<ProviderRewardsResponse[]> {
         await QueryCheckJsinfoReadDbInstance();
 
-        let thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        const thirtyDaysAgo = this.getThirtyDaysAgo();
 
-        const paymentsRes: ProviderRewardsResponse[] = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.relayPayments).
-            leftJoin(JsinfoSchema.blocks, eq(JsinfoSchema.relayPayments.blockId, JsinfoSchema.blocks.height)).
-            where(
+        const paymentsRes: ProviderRewardsResponse[] = await QueryGetJsinfoReadDbInstance()
+            .select({
+                relay_payments: JsinfoSchema.relayPayments,
+                blocks: {
+                    height: JsinfoSchema.relayPayments.blockId,
+                    datetime: JsinfoSchema.relayPayments.datetime
+                }
+            })
+            .from(JsinfoSchema.relayPayments)
+            .where(
                 and(
                     eq(JsinfoSchema.relayPayments.provider, this.addr),
                     gte(JsinfoSchema.relayPayments.datetime, thirtyDaysAgo)
-                )).
-            orderBy(desc(JsinfoSchema.relayPayments.id)).
-            offset(0).
-            limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION)
+                )
+            )
+            .orderBy(desc(JsinfoSchema.relayPayments.id))
+            .offset(0)
+            .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
 
         paymentsRes.forEach((payment) => {
             payment.relay_payments.pay = payment.relay_payments.pay ? BigInt(payment.relay_payments.pay).toString() : null;
@@ -163,12 +176,19 @@ class ProviderRewardsData extends RequestHandlerBase<ProviderRewardsResponse> {
     protected async fetchRecordCountFromDb(): Promise<number> {
         await QueryCheckJsinfoReadDbInstance();
 
+        const thirtyDaysAgo = this.getThirtyDaysAgo();
+
         const countResult = await QueryGetJsinfoReadDbInstance()
             .select({
                 count: sql<number>`COUNT(*)`
             })
             .from(JsinfoSchema.relayPayments)
-            .where(eq(JsinfoSchema.relayPayments.provider, this.addr));
+            .where(
+                and(
+                    eq(JsinfoSchema.relayPayments.provider, this.addr),
+                    gte(JsinfoSchema.relayPayments.datetime, thirtyDaysAgo)
+                )
+            );
 
         return Math.min(countResult[0].count || 0, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION - 1);
     }
@@ -193,7 +213,7 @@ class ProviderRewardsData extends RequestHandlerBase<ProviderRewardsResponse> {
             "relay_payments.id": JsinfoSchema.relayPayments.id,
             "relay_payments.specId": JsinfoSchema.relayPayments.specId,
             "relay_payments.blockId": JsinfoSchema.relayPayments.blockId,
-            "blocks.datetime": JsinfoSchema.relayPayments.datetime, // this is faster
+            "blocks.datetime": JsinfoSchema.relayPayments.datetime,
             "relay_payments.consumer": JsinfoSchema.relayPayments.consumer,
             "relay_payments.relays": JsinfoSchema.relayPayments.relays,
             "relay_payments.cu": JsinfoSchema.relayPayments.cu,
@@ -211,10 +231,23 @@ class ProviderRewardsData extends RequestHandlerBase<ProviderRewardsResponse> {
         const sortColumn = keyToColumnMap[finalPagination.sortKey];
         const orderFunction = finalPagination.direction === 'ascending' ? asc : desc;
 
+        const thirtyDaysAgo = this.getThirtyDaysAgo();
+
         const paymentsRes: ProviderRewardsResponse[] = await QueryGetJsinfoReadDbInstance()
-            .select()
+            .select({
+                relay_payments: JsinfoSchema.relayPayments,
+                blocks: {
+                    height: JsinfoSchema.relayPayments.blockId,
+                    datetime: JsinfoSchema.relayPayments.datetime
+                }
+            })
             .from(JsinfoSchema.relayPayments)
-            .leftJoin(JsinfoSchema.blocks, eq(JsinfoSchema.relayPayments.blockId, JsinfoSchema.blocks.height))
+            .where(
+                and(
+                    eq(JsinfoSchema.relayPayments.provider, this.addr),
+                    gte(JsinfoSchema.relayPayments.datetime, thirtyDaysAgo)
+                )
+            )
             .orderBy(orderFunction(sortColumn))
             .offset((finalPagination.page - 1) * finalPagination.count)
             .limit(finalPagination.count);

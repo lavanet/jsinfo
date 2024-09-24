@@ -18,16 +18,17 @@ export const queryServerMain = async (): Promise<void> => {
     await QueryInitRelaysReadDbInstance()
 
     try {
-        try {
-            const { latestHeight, latestDatetime } = await GetLatestBlock()
-            logger.info(`block ${latestHeight} block time ${latestDatetime}`)
-        } catch (err) {
-            logger.error('failed to connect get block from db')
-            logger.error(String(err))
-            logger.error('Sleeping one second before exit')
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            process.exit(1)
-        }
+        // TODO: uncomment
+        // try {
+        //     const { latestHeight, latestDatetime } = await GetLatestBlock()
+        //     logger.info(`block ${latestHeight} block time ${latestDatetime}`)
+        // } catch (err) {
+        //     logger.error('failed to connect get block from db')
+        //     logger.error(String(err))
+        //     logger.error('Sleeping one second before exit')
+        //     await new Promise(resolve => setTimeout(resolve, 1000));
+        //     process.exit(1)
+        // }
 
         logger.info(`listening on ${consts.JSINFO_QUERY_PORT} ${consts.JSINFO_QUERY_HOST}`)
         await GetServerInstance().listen({ port: consts.JSINFO_QUERY_PORT, host: consts.JSINFO_QUERY_HOST })

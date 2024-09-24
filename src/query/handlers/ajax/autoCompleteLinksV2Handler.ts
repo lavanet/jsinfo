@@ -1,10 +1,8 @@
 // src/query/handlers/autoCompleteLinksV2Handler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../../queryDb';
-import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
-import { isNotNull } from 'drizzle-orm';
 import { MonikerCache } from '../../classes/MonikerCache';
+import { SpecAndConsumerCache } from '../../classes/SpecAndConsumerCache';
 
 export const AutoCompleteLinksV2PaginatedHandlerOpts: RouteShorthandOptions = {
     schema: {
@@ -22,7 +20,6 @@ export const AutoCompleteLinksV2PaginatedHandlerOpts: RouteShorthandOptions = {
 }
 
 export async function AutoCompleteLinksV2PaginatedHandler(request: FastifyRequest, reply: FastifyReply) {
-    await QueryCheckJsinfoReadDbInstance()
 
     const baseUrls = {
         providers: [
@@ -37,43 +34,37 @@ export async function AutoCompleteLinksV2PaginatedHandler(request: FastifyReques
     };
 
     // Fetch all providers, consumers, and specs
-    const providers = await QueryGetJsinfoReadDbInstance()
-        .select({
-            address: JsinfoSchema.providerSpecMoniker.provider
-        })
-        .from(JsinfoSchema.providerSpecMoniker)
-        .where(isNotNull(JsinfoSchema.providerSpecMoniker.provider))
-        .groupBy(JsinfoSchema.providerSpecMoniker.provider);
-
-
-    const consumers = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.consumers);
-    const specs = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.specs);
+    const providers = MonikerCache.GetAllProviders();
+    const consumers = SpecAndConsumerCache.GetAllConsumers();
+    const specs = SpecAndConsumerCache.GetAllSpecs();
 
     // Generate URLs for each provider, consumer, and spec
     const providerItems = providers.flatMap(provider =>
         baseUrls.providers.map(baseUrl => ({
-            id: 'provider-' + provider.address,
-            name: provider.address,
+            id: 'provider-' + provider,
+            name: provider,
             type: 'provider',
-            link: `${baseUrl}/${provider.address}`,
-            moniker: MonikerCache.GetMonikerForProvider(provider.address)
+            link: `${baseUrl}/${provider}`,
+            moniker: MonikerCache.GetMonikerForProvider(provider)
         }))
     );
+
     const consumerItems = consumers.flatMap(consumer =>
         baseUrls.consumers.map(baseUrl => ({
-            id: 'consumer-' + consumer.address,
-            name: consumer.address,
+            id: 'consumer-' + consumer,
+            name: consumer,
             type: 'consumer',
-            link: `${baseUrl}/${consumer.address}`,
-            moniker: MonikerCache.GetMonikerForProvider(consumer.address)
+            link: `${baseUrl}/${consumer}`,
+            moniker: MonikerCache.GetMonikerForProvider(consumer)
         }))
     );
+
     const specItems = specs.flatMap(spec =>
         baseUrls.specs.map(baseUrl => ({
-            id: 'spec-' + spec.id,
-            name: spec.id,
+            id: 'spec-' + spec,
+            name: spec,
             type: 'spec',
-            link: `${baseUrl}/${spec.id}`,
+            link: `${baseUrl}/${spec}`,
             moniker: ''
         }))
     );

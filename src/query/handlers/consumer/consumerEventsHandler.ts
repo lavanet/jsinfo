@@ -4,7 +4,7 @@
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../../queryDb';
 import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
-import { asc, desc, eq, sql } from "drizzle-orm";
+import { asc, desc, eq, sql, gte, and } from "drizzle-orm";
 import { Pagination, ParsePaginationFromString } from '../../utils/queryPagination';
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '../../queryConsts';
 import { CSVEscape } from '../../utils/queryUtils';
@@ -105,13 +105,54 @@ class ConsumerEventsData extends RequestHandlerBase<ConsumerEventsResponse> {
         return `ConsumerEvents_${this.addr}.csv`;
     }
 
+    private getThirtyDaysAgo(): Date {
+        let thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        return thirtyDaysAgo;
+    }
+
     protected async fetchAllRecords(): Promise<ConsumerEventsResponse[]> {
         await QueryCheckJsinfoReadDbInstance();
 
-        const eventsRes: ConsumerEventsResponse[] = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.events).
-            leftJoin(JsinfoSchema.blocks, eq(JsinfoSchema.events.blockId, JsinfoSchema.blocks.height)).
-            where(eq(JsinfoSchema.events.consumer, this.addr)).
-            orderBy(desc(JsinfoSchema.events.id)).offset(0).limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION)
+        const thirtyDaysAgo = this.getThirtyDaysAgo();
+
+        const eventsRes: ConsumerEventsResponse[] = await QueryGetJsinfoReadDbInstance()
+            .select({
+                events: {
+                    id: JsinfoSchema.events.id,
+                    eventType: JsinfoSchema.events.eventType,
+                    t1: JsinfoSchema.events.t1,
+                    t2: JsinfoSchema.events.t2,
+                    t3: JsinfoSchema.events.t3,
+                    b1: JsinfoSchema.events.b1,
+                    b2: JsinfoSchema.events.b2,
+                    b3: JsinfoSchema.events.b3,
+                    i1: JsinfoSchema.events.i1,
+                    i2: JsinfoSchema.events.i2,
+                    i3: JsinfoSchema.events.i3,
+                    r1: JsinfoSchema.events.r1,
+                    r2: JsinfoSchema.events.r2,
+                    r3: JsinfoSchema.events.r3,
+                    provider: JsinfoSchema.events.provider,
+                    consumer: JsinfoSchema.events.consumer,
+                    blockId: JsinfoSchema.events.blockId,
+                    tx: JsinfoSchema.events.tx,
+                },
+                blocks: {
+                    height: JsinfoSchema.events.blockId,
+                    datetime: JsinfoSchema.events.timestamp,
+                }
+            })
+            .from(JsinfoSchema.events)
+            .where(
+                and(
+                    eq(JsinfoSchema.events.consumer, this.addr),
+                    gte(JsinfoSchema.events.timestamp, thirtyDaysAgo)
+                )
+            )
+            .orderBy(desc(JsinfoSchema.events.id))
+            .offset(0)
+            .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
 
         eventsRes.forEach((event) => {
             event.events.b1 = event.events.b1?.toString() || null;
@@ -125,12 +166,19 @@ class ConsumerEventsData extends RequestHandlerBase<ConsumerEventsResponse> {
     protected async fetchRecordCountFromDb(): Promise<number> {
         await QueryCheckJsinfoReadDbInstance();
 
+        const thirtyDaysAgo = this.getThirtyDaysAgo();
+
         const countResult = await QueryGetJsinfoReadDbInstance()
             .select({
                 count: sql<number>`COUNT(*)`
             })
             .from(JsinfoSchema.events)
-            .where(eq(JsinfoSchema.events.consumer, this.addr));
+            .where(
+                and(
+                    eq(JsinfoSchema.events.consumer, this.addr),
+                    gte(JsinfoSchema.events.timestamp, thirtyDaysAgo)
+                )
+            );
 
         return Math.min(countResult[0].count || 0, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION - 1);
     }
@@ -147,7 +195,6 @@ class ConsumerEventsData extends RequestHandlerBase<ConsumerEventsResponse> {
             );
         }
 
-        // If sortKey is null, set it to the defaultSortKey
         if (finalPagination.sortKey === null) {
             finalPagination.sortKey = defaultSortKey;
         }
@@ -155,8 +202,8 @@ class ConsumerEventsData extends RequestHandlerBase<ConsumerEventsResponse> {
         const keyToColumnMap = {
             "events.id": JsinfoSchema.events.id,
             "events.eventType": JsinfoSchema.events.eventType,
-            "blocks.height": JsinfoSchema.blocks.height,
-            "blocks.datetime": JsinfoSchema.events.id, // ugly hack
+            "blocks.height": JsinfoSchema.events.blockId,
+            "blocks.datetime": JsinfoSchema.events.id,
             "events.b1": JsinfoSchema.events.b1,
             "events.b2": JsinfoSchema.events.b2,
             "events.b3": JsinfoSchema.events.b3,
@@ -178,11 +225,42 @@ class ConsumerEventsData extends RequestHandlerBase<ConsumerEventsResponse> {
         const sortColumn = keyToColumnMap[finalPagination.sortKey];
         const orderFunction = finalPagination.direction === 'ascending' ? asc : desc;
 
+        const thirtyDaysAgo = this.getThirtyDaysAgo();
+
         const eventsRes: ConsumerEventsResponse[] = await QueryGetJsinfoReadDbInstance()
-            .select()
+            .select({
+                events: {
+                    id: JsinfoSchema.events.id,
+                    eventType: JsinfoSchema.events.eventType,
+                    t1: JsinfoSchema.events.t1,
+                    t2: JsinfoSchema.events.t2,
+                    t3: JsinfoSchema.events.t3,
+                    b1: JsinfoSchema.events.b1,
+                    b2: JsinfoSchema.events.b2,
+                    b3: JsinfoSchema.events.b3,
+                    i1: JsinfoSchema.events.i1,
+                    i2: JsinfoSchema.events.i2,
+                    i3: JsinfoSchema.events.i3,
+                    r1: JsinfoSchema.events.r1,
+                    r2: JsinfoSchema.events.r2,
+                    r3: JsinfoSchema.events.r3,
+                    provider: JsinfoSchema.events.provider,
+                    consumer: JsinfoSchema.events.consumer,
+                    blockId: JsinfoSchema.events.blockId,
+                    tx: JsinfoSchema.events.tx,
+                },
+                blocks: {
+                    height: JsinfoSchema.events.blockId,
+                    datetime: JsinfoSchema.events.timestamp,
+                }
+            })
             .from(JsinfoSchema.events)
-            .where(eq(JsinfoSchema.events.consumer, this.addr))
-            .leftJoin(JsinfoSchema.blocks, eq(JsinfoSchema.events.blockId, JsinfoSchema.blocks.height))
+            .where(
+                and(
+                    eq(JsinfoSchema.events.consumer, this.addr),
+                    gte(JsinfoSchema.events.timestamp, thirtyDaysAgo)
+                )
+            )
             .orderBy(orderFunction(sortColumn))
             .offset((finalPagination.page - 1) * finalPagination.count)
             .limit(finalPagination.count);

@@ -3,29 +3,9 @@
 import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { and, eq, ne } from "drizzle-orm";
-import { DoInChunks, IsMeaningfulText, logger } from "../../utils/utils";
-import { JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE } from '../indexerConsts';
+import { IsMeaningfulText, logger } from "../../utils/utils";
 import { LavaClient } from '../types';
 import { UpdateStakeInformation } from './blockchainEntitiesStakeUpdater';
-
-// async function getLatestPlans(client: LavaClient, dbPlans: Map<string, JsinfoSchema.Plan>) {
-//     try {
-//         const lavaClient = client.lavanet.lava;
-
-//         let plans = await lavaClient.plans.list()
-//         plans.plansInfo.forEach((plan) => {
-//             dbPlans.set(plan.index, {
-//                 desc: plan.description,
-//                 id: plan.index,
-//                 price: parseInt(plan.price.amount),
-//                 plan.terms.map((term) => {
-//             } as JsinfoSchema.Plan)
-//         })
-//     } catch (error) {
-//         logger.error(`An error occurred: ${error}`);
-//         throw error;
-//     }
-// }
 
 export async function SyncBlockchainEntities(
     db: PostgresJsDatabase,
@@ -35,21 +15,11 @@ export async function SyncBlockchainEntities(
 
     blockchainEntitiesStakes: Map<string, JsinfoSchema.InsertProviderStake[]>
 ) {
-    // console.log("SyncBlockchainEntities: Starting SyncBlockchainEntities at height", height);
     const startTime = Date.now();
 
     await UpdateStakeInformation(client, height, blockchainEntitiesStakes)
-    // await getLatestPlans(client, blockchainEntitiesPlans)
 
     await db.transaction(async (tx) => {
-        // Insert all specs
-        const arrSpecs = Array.from(blockchainEntitiesSpecs.values())
-        // console.log("SyncBlockchainEntities: Inserting", arrSpecs.length, "specs");
-        await DoInChunks(JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, arrSpecs, async (arr: any) => {
-            await tx.insert(JsinfoSchema.specs)
-                .values(arr)
-                .onConflictDoNothing();
-        })
 
         const uniqueStakesMap = new Map<string, any>();
 

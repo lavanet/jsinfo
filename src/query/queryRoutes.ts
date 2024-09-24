@@ -21,12 +21,9 @@ import { SpecsPaginatedHandler, SpecsPaginatedHandlerOpts } from './handlers/aja
 import { ConsumersPaginatedHandler, ConsumersPaginatedHandlerOpts } from './handlers/ajax/consumersHandler';
 
 // -- All pages ajax --
-import { CacheLinksPaginatedHandler, CacheLinksPaginatedHandlerOpts } from './handlers/ajax/cacheLinksHandler';
-import { AutoCompleteLinksPaginatedHandler, AutoCompleteLinksPaginatedHandlerOpts } from './handlers/ajax/autoCompleteLinksHandler';
 import { AutoCompleteLinksV2PaginatedHandler, AutoCompleteLinksV2PaginatedHandlerOpts } from './handlers/ajax/autoCompleteLinksV2Handler';
 
 // -- Index page ajax -- 
-import { IndexHandler, IndexHandlerOpts } from './handlers/index/indexHandler';
 import { Index30DayCuHandlerOpts, Index30DayCuHandler } from './handlers/index/index30DayCuHandler';
 import { IndexCachedMetricsHandlerOpts, IndexCachedMetricsHandler } from './handlers/index/indexCachedMetricsHandler';
 import { IndexLatestBlockHandlerOpts, IndexLatestBlockHandler } from './handlers/index/indexLatestBlockHandler';
@@ -38,11 +35,7 @@ import { IndexStakesHandlerOpts, IndexStakesHandler } from './handlers/index/ind
 
 import { IndexProvidersPaginatedHandler, IndexProvidersPaginatedHandlerOpts, IndexProvidersItemCountPaginatiedHandler, IndexProvidersCSVRawHandler } from './handlers/index/indexProvidersHandler';
 import { IndexProvidersActivePaginatedHandler, IndexProvidersActivePaginatedHandlerOpts, IndexProvidersActiveItemCountPaginatiedHandler, IndexProvidersActiveCSVRawHandler } from './handlers/index/indexProvidersActiveHandler';
-
-import { IndexChartsRawHandler, IndexChartsRawHandlerOpts } from './handlers/index/indexChartsHandler';
-import { IndexChartsV2RawHandler, IndexChartsV2RawHandlerOpts } from './handlers/index/indexChartsV2Handler';
 import { IndexChartsV3RawHandler, IndexChartsV3RawHandlerOpts } from './handlers/index/indexChartsV3Handler';
-import { IndexUniqueVisitorsChartRawHandler, IndexUniqueVisitorsChartRawHandlerOpts } from './handlers/index/indexUniqueVisitorsChartHandler';
 
 // -- Provider page ajax --
 import { ProviderPaginatedHandler, ProviderPaginatedHandlerOpts } from './handlers/provider/providerHandler';
@@ -127,12 +120,9 @@ RegisterRedisBackedHandler('/specs', SpecsPaginatedHandlerOpts, SpecsPaginatedHa
 RegisterRedisBackedHandler('/consumers', ConsumersPaginatedHandlerOpts, ConsumersPaginatedHandler, { cache_ttl: 30 });
 
 // -- All pages ajax --
-RegisterRedisBackedHandler('/cacheLinks', CacheLinksPaginatedHandlerOpts, CacheLinksPaginatedHandler, { cache_ttl: 60 * 60 });
-RegisterRedisBackedHandler('/autoCompleteLinksHandler', AutoCompleteLinksPaginatedHandlerOpts, AutoCompleteLinksPaginatedHandler, { cache_ttl: 10 * 60 });
 RegisterRedisBackedHandler('/autoCompleteLinksV2Handler', AutoCompleteLinksV2PaginatedHandlerOpts, AutoCompleteLinksV2PaginatedHandler, { cache_ttl: 10 * 60 });
 
 // -- Index page ajax -- 
-RegisterRedisBackedHandler('/index', IndexHandlerOpts, IndexHandler, { cache_ttl: 10 });
 RegisterRedisBackedHandler('/index30DayCu', Index30DayCuHandlerOpts, Index30DayCuHandler, { cache_ttl: 10 });
 RegisterRedisBackedHandler('/indexCachedMetrics', IndexCachedMetricsHandlerOpts, IndexCachedMetricsHandler, { cache_ttl: 10 });
 RegisterRedisBackedHandler('/indexLatestBlock', IndexLatestBlockHandlerOpts, IndexLatestBlockHandler, { cache_ttl: 10 });
@@ -145,10 +135,7 @@ RegisterPaginationServerHandler('/indexProviders', IndexProvidersPaginatedHandle
 RegisterPaginationServerHandler('/indexProvidersActive', IndexProvidersActivePaginatedHandlerOpts, IndexProvidersActivePaginatedHandler, IndexProvidersActiveItemCountPaginatiedHandler);
 GetServerInstance().get('/indexProvidersCsv', IndexProvidersCSVRawHandler);
 GetServerInstance().get('/indexProvidersActiveCsv', IndexProvidersActiveCSVRawHandler);
-GetServerInstance().get('/indexCharts', IndexChartsRawHandlerOpts, IndexChartsRawHandler);
-GetServerInstance().get('/indexChartsV2', IndexChartsV2RawHandlerOpts, IndexChartsV2RawHandler);
 GetServerInstance().get('/indexChartsV3', IndexChartsV3RawHandlerOpts, IndexChartsV3RawHandler);
-RegisterRedisBackedHandler('/indexUniqueVisitorsChart', IndexUniqueVisitorsChartRawHandlerOpts, IndexUniqueVisitorsChartRawHandler, { cache_ttl: 60 * 60 });
 
 // -- Provider page ajax --
 RegisterRedisBackedHandler('/provider/:addr', ProviderPaginatedHandlerOpts, ProviderPaginatedHandler);

@@ -49,11 +49,13 @@ class ProviderSpecMonikerCache {
             return '';
         }
 
-        this.verifyLavaId(lavaid);
+        lavaid = this.verifyLavaId(lavaid);
 
         if (!spec) {
             return this.GetMonikerForProvider(lavaid);
         }
+
+        spec = spec.toUpperCase();
 
         if (this.psmCache.length === 0) {
             this.refreshCache()
@@ -75,7 +77,7 @@ class ProviderSpecMonikerCache {
             return '';
         }
 
-        this.verifyLavaId(lavaid);
+        lavaid = this.verifyLavaId(lavaid);
 
         if (this.psmCache.length === 0) {
             this.refreshCache()
@@ -112,13 +114,14 @@ class ProviderSpecMonikerCache {
 
         const result = this.sanitizeAndTrimMoniker(highestCountMoniker);
 
-        this.monikerForProviderCache.set(lavaid, result);
+        this.monikerForProviderCache.set(lavaid.toLowerCase(), result);
         return result;
     }
 
     public GetMonikerFullDescription(lavaid: string | null): string {
         if (!lavaid) return '';
-        this.verifyLavaId(lavaid);
+
+        lavaid = this.verifyLavaId(lavaid);
 
         if (this.psmCache.length === 0) {
             this.refreshCache()
@@ -171,15 +174,32 @@ class ProviderSpecMonikerCache {
             if (this.psmCacheIsEmpty) return 0;
         }
         if (!lavaid) return 0;
-        this.verifyLavaId(lavaid);
+        lavaid = this.verifyLavaId(lavaid);
         return this.psmCache.filter(item => item.provider === lavaid).length;
     }
 
-    private verifyLavaId(input: string): string {
-        if (!input.startsWith('lava@')) {
+    public GetAllProviders(): string[] {
+        if (this.psmCache.length === 0) {
+            this.refreshCache();
+            if (this.psmCacheIsEmpty) return [];
+        }
+
+        const uniqueProviders = new Set<string>();
+        this.psmCache.forEach(item => {
+            if (item.provider) {
+                uniqueProviders.add(item.provider.toLowerCase());
+            }
+        });
+
+        return Array.from(uniqueProviders);
+    }
+
+    private verifyLavaId(lavaid: string): string {
+        lavaid = lavaid.toLowerCase();
+        if (!lavaid.startsWith('lava@')) {
             throw new Error('Input must start with "lava@".');
         }
-        return input;
+        return lavaid;
     }
 
     private sanitizeAndTrimMoniker(moniker: string): string {
@@ -193,7 +213,17 @@ class ProviderSpecMonikerCache {
     }
 
     private async fetchProviderSpecMonikerTable(): Promise<ProviderSpecMoniker[]> {
-        return await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.providerSpecMoniker)
+        const results = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.providerSpecMoniker);
+        return results.map(item => ({
+            ...item,
+            provider: item.provider.toLowerCase(),
+            specId: item.specId ? item.specId.toUpperCase() : null
+        }));
+    }
+
+    public IsValidProvider(lavaid: string): boolean {
+        lavaid = this.verifyLavaId(lavaid);
+        return this.psmCache.some(item => item.provider === lavaid);
     }
 }
 

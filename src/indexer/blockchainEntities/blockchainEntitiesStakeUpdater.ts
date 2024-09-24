@@ -181,8 +181,6 @@ function processStakeEntry(
 export async function UpdateStakeInformation(
     client: LavaClient,
     height: number,
-
-    dbSpecs: Map<string, JsinfoSchema.Spec>,
     dbStakes: Map<string, JsinfoSchema.InsertProviderStake[]>,
 ) {
     const startTime = Date.now();

@@ -23,7 +23,12 @@ export const aggProviderRelayPayments = async (db: PostgresJsDatabase) => {
         const executionTime = Date.now() - start;
         logger.info(`Successfully executed aggProviderHourlyRelayPayments. Execution time: ${executionTime} ms`);
     } catch (e) {
-        logger.error(`Failed to update aggProviderHourlyRelayPayments. Error: ${(e as Error).message}`, { stack: (e as Error).stack });
+        const error = e as Error;
+        logger.error(`Failed to update aggProviderHourlyRelayPayments. Error: ${error.message}`, {
+            name: error.name,
+            message: error.message,
+            stack: error.stack,
+        });
         isRunning = false;
         return;
     }

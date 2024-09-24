@@ -314,10 +314,9 @@ export const supply = pgTable('supply', {
 export type Supply = typeof supply.$inferSelect;
 export type InsertSupply = typeof supply.$inferInsert;
 
-export const latestblock = pgTable('latestblock', {
-  blockId: integer('block_id').primaryKey(),
-  timestamp: timestamp('timestamp', { mode: "date" }).notNull(),
+export const blocks = pgTable('blocks', {
+  height: integer('height').unique(),
+  datetime: timestamp('datetime', { mode: "date" }),
 });
-
-export type LatestBlock = typeof latestblock.$inferSelect;
-export type InsertLatestBlock = typeof latestblock.$inferInsert;
+export type Block = typeof blocks.$inferSelect
+export type InsertBlock = typeof blocks.$inferInsert

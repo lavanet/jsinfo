@@ -35,7 +35,7 @@ class RedisCacheClass {
         });
         this.client.on('error', (err) => this.logError('Redis Client Error', err));
         this.client.connect().catch((err) => {
-            this.logError('Failed to connect to Redis', err);
+            this.logError('Failed to connect to Redis', err, this.redisUrl);
             this.client = null;
         });
     }

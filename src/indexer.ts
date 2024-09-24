@@ -22,12 +22,24 @@ let static_blockchainEntitiesStakes: Map<string, JsinfoSchema.InsertProviderStak
 
 const globakWorkList: number[] = []
 
+async function isBlockInDb(
+    db: PostgresJsDatabase,
+    height: number,
+): Promise<boolean> {
+    // Is in DB already?
+    const dbBlock = await db.select().from(JsinfoSchema.blocks).where(eq(JsinfoSchema.blocks.height, height));
+    return dbBlock.length != 0;
+}
+
 async function InsertBlock(
     block: LavaBlock,
     db: PostgresJsDatabase,
 ) {
     logger.info(`Starting InsertBlock for block height: ${block.height}`);
     await db.transaction(async (tx) => {
+        logger.debug(`Starting transaction for block height: ${block.height}`);
+        await tx.insert(JsinfoSchema.blocks).values({ height: block.height, datetime: new Date(block.datetime) })
+        logger.debug(`Inserted block height: ${block.height} into blocks`);
         // Create
         await DoInChunks(consts.JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, block.dbEvents, async (arr: any) => {
             await tx.insert(JsinfoSchema.events).values(arr)
@@ -87,6 +99,10 @@ const doBatch = async (
             .withConcurrency(consts.JSINFO_INDEXER_N_WORKERS)
             .for(tmpList)
             .process(async (height) => {
+                if (await isBlockInDb(db, height)) {
+                    logger.info(`doBatch: Block ${height} already in DB, skipping`);
+                    return
+                }
 
                 let block: null | LavaBlock = null;
                 block = await GetOneLavaBlock(height, client, clientTm, static_blockchainEntitiesStakes)
@@ -131,6 +147,29 @@ const indexer = async (): Promise<void> => {
     }
 
     const db = await migrateAndFetchDb();
+
+    // Verify the output returned at least one entry
+    try {
+        logger.info('Attempting to retrieve the latest block from the database...');
+        const latestBlock = await db.select().from(JsinfoSchema.blocks).orderBy(desc(JsinfoSchema.blocks.height)).limit(1);
+        logger.info(`Query executed. Result: ${JSON.stringify(latestBlock)}`);
+
+        if (latestBlock.length > 0) {
+            logger.info(`Latest block: ${JSON.stringify(latestBlock[0])}`);
+        } else {
+            logger.warn('No latest block found.');
+        }
+    } catch (e) {
+        const error = e as Error;
+        logger.error(`Failed to retrieve the latest block. Error: ${error.message}`, {
+            name: error.name,
+            message: error.message,
+            stack: error.stack,
+            originalError: e, // Log the original error object
+        });
+        return;
+    }
+
     logger.info('Done migrateAndFetchDb');
     await aggProviderAndConsumerRelayPaymentsSync(db);
     logger.info('Done aggProviderAndConsumerRelayPaymentsSync');

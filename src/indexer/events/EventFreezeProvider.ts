@@ -1,7 +1,6 @@
 import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import { Event } from "@cosmjs/stargate"
 import { LavaBlock } from "../types";
-import { GetOrSetProvider, SetTx } from "../blockchainEntities/blockchainEntitiesGettersAndSetters";
 import { EventProcessAttributes, EventParseProviderAddress, EventParseInt } from "../eventUtils";
 
 /*

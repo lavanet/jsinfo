@@ -83,7 +83,19 @@ redis_connect:
 	docker exec -it redis-stack redis-cli -a mypassword
 
 macos_psql_start:
-	brew services start postgresql; brew services list
+	@echo "Checking if PostgreSQL@14 is installed..."
+	@if ! brew list postgresql@14 &>/dev/null; then \
+		echo "Installing PostgreSQL@14..."; \
+		brew install postgresql@14; \
+	else \
+		echo "PostgreSQL@14 is already installed."; \
+	fi
+	@echo "Stopping any running PostgreSQL services..."
+	-brew services stop postgresql@16
+	@echo "Starting PostgreSQL@14 service..."
+	brew services start postgresql@14
+	@echo "Listing all services..."
+	brew services list
 
 macos_kill_query_port:
 	@echo "Querying PID for the process on port 8081..."

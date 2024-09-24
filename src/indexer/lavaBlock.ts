@@ -85,12 +85,6 @@ export const GetOneLavaBlock = async (
     const lavaBlock: LavaBlock = {
         height: height,
         datetime: Date.parse(block!.header.time),
-
-        dbProviders: new Map(),
-        dbSpecs: new Map(),
-        dbConsumers: new Map(),
-        dbPlans: new Map(),
-        dbTxs: new Map(),
         dbEvents: [],
         dbPayments: [],
         dbConflictResponses: [],
@@ -113,8 +107,6 @@ export const GetOneLavaBlock = async (
             lavaBlock,
             height,
             tx.hash,
-            blockchainEntitiesProviders,
-
             blockchainEntitiesStakes
         ))
     });
@@ -124,8 +116,6 @@ export const GetOneLavaBlock = async (
         lavaBlock,
         height,
         null,
-        blockchainEntitiesProviders,
-
         blockchainEntitiesStakes
     ))
 

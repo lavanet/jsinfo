@@ -27,8 +27,6 @@ import { AutoCompleteLinksV2PaginatedHandler, AutoCompleteLinksV2PaginatedHandle
 import { Index30DayCuHandlerOpts, Index30DayCuHandler } from './handlers/index/index30DayCuHandler';
 import { IndexCachedMetricsHandlerOpts, IndexCachedMetricsHandler } from './handlers/index/indexCachedMetricsHandler';
 import { IndexLatestBlockHandlerOpts, IndexLatestBlockHandler } from './handlers/index/indexLatestBlockHandler';
-import { IndexMonthlyUsersHandlerOpts, IndexMonthlyUsersHandler } from './handlers/index/indexMonthlyUsersHandler';
-import { IndexMonthlyUsersAvgHandlerOpts, IndexMonthlyUsersAvgHandler } from './handlers/index/indexMonthlyUsersAvgHandler';
 import { IndexTopChainsHandlerOpts, IndexTopChainsHandler } from './handlers/index/indexTopChainsHandler';
 import { IndexTotalCuHandlerOpts, IndexTotalCuHandler } from './handlers/index/indexTotalCuHandler';
 import { IndexStakesHandlerOpts, IndexStakesHandler } from './handlers/index/indexStakesHandler';
@@ -126,8 +124,6 @@ RegisterRedisBackedHandler('/autoCompleteLinksV2Handler', AutoCompleteLinksV2Pag
 RegisterRedisBackedHandler('/index30DayCu', Index30DayCuHandlerOpts, Index30DayCuHandler, { cache_ttl: 10 });
 RegisterRedisBackedHandler('/indexCachedMetrics', IndexCachedMetricsHandlerOpts, IndexCachedMetricsHandler, { cache_ttl: 10 });
 RegisterRedisBackedHandler('/indexLatestBlock', IndexLatestBlockHandlerOpts, IndexLatestBlockHandler, { cache_ttl: 10 });
-RegisterRedisBackedHandler('/indexMonthlyUsers', IndexMonthlyUsersHandlerOpts, IndexMonthlyUsersHandler, { cache_ttl: 10 });
-RegisterRedisBackedHandler('/indexMonthlyUsersAvg', IndexMonthlyUsersAvgHandlerOpts, IndexMonthlyUsersAvgHandler, { cache_ttl: 10 });
 RegisterRedisBackedHandler('/indexTopChains', IndexTopChainsHandlerOpts, IndexTopChainsHandler, { cache_ttl: 10 });
 RegisterRedisBackedHandler('/indexTotalCu', IndexTotalCuHandlerOpts, IndexTotalCuHandler, { cache_ttl: 10 });
 RegisterRedisBackedHandler('/indexStakesHandler', IndexStakesHandlerOpts, IndexStakesHandler, { cache_ttl: 10 });

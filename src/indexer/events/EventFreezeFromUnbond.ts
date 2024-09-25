@@ -136,7 +136,5 @@ export const ParseEventLavaFreezeFromUnbound = (
     verifyFunction: () => !!dbEvent.provider
   })) return;
 
-
-  GetOrSetProvider(lavaBlock.dbProviders, dbEvent.provider!, moniker)
   lavaBlock.dbEvents.push(dbEvent)
 }

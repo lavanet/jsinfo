@@ -53,6 +53,6 @@ export const ParseEventAddProjectToSubscription = (
     })) return;
 
 
-    GetOrSetConsumer(lavaBlock.dbConsumers, dbEvent.consumer!)
+
     lavaBlock.dbEvents.push(dbEvent)
 }

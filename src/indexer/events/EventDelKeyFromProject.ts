@@ -64,6 +64,6 @@ export const ParseEventDelKeyFromProject = (
     })) return;
 
 
-    GetOrSetConsumer(lavaBlock.dbConsumers, dbEvent.consumer!)
+
     lavaBlock.dbEvents.push(dbEvent)
 }

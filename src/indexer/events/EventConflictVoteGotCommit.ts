@@ -67,6 +67,6 @@ export const ParseEventConflictVoteGotCommit = (
   })) return;
 
 
-  GetOrSetProvider(lavaBlock.dbProviders, dbEvent.provider!, '')
+
   lavaBlock.dbConflictVote.push(dbEvent)
 }

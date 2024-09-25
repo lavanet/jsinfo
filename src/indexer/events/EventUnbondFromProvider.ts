@@ -104,6 +104,6 @@ export const ParseEventUbondFromProvider = (
   dbEvent.t1 = delegator ? `delegator: ${delegator}` : null
 
 
-  GetOrSetProvider(lavaBlock.dbProviders, dbEvent.provider!, '')
+
   lavaBlock.dbEvents.push(dbEvent)
 }

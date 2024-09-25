@@ -79,6 +79,6 @@ export const ParseEventProviderReported = (
   })) return;
 
 
-  GetOrSetProvider(lavaBlock.dbProviders, dbEvent.provider!, '')
+
   lavaBlock.dbProviderReports.push(dbEvent)
 }

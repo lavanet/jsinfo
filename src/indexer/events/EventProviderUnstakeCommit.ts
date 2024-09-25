@@ -113,6 +113,6 @@ export const ParseEventProviderUnstakeCommit = (
   if (!dbEvent.provider) return;
 
 
-  GetOrSetProvider(lavaBlock.dbProviders, dbEvent.provider!, '')
+
   lavaBlock.dbEvents.push(dbEvent)
 }

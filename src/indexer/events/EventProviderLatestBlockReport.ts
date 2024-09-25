@@ -78,7 +78,7 @@ export const ParseEventProviderLatestBlockReport = (
   })) return;
 
 
-  GetOrSetProvider(lavaBlock.dbProviders, dbEvent.provider!, '')
+
 
   for (const [chainId, chainBlockHeight] of Object.entries(chainToBlockDict)) {
     const newEvent: JsinfoSchema.InsertProviderLatestBlockReports = {

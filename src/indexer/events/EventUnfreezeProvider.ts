@@ -57,6 +57,6 @@ export const ParseEventUnfreezeProvider = (
 
 
 
-  GetOrSetProvider(lavaBlock.dbProviders, dbEvent.provider!, '')
+
   lavaBlock.dbEvents.push(dbEvent)
 }

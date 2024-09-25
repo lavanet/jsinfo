@@ -66,7 +66,5 @@ export const ParseEventAddKeyToProject = (
         verifyFunction: () => !!dbEvent.consumer
     })) return;
 
-
-    GetOrSetConsumer(lavaBlock.dbConsumers, dbEvent.consumer!)
     lavaBlock.dbEvents.push(dbEvent)
 }

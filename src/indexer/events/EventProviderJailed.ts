@@ -61,6 +61,6 @@ export const ParseEventProviderJailed = (
   })) return;
 
 
-  GetOrSetProvider(lavaBlock.dbProviders, dbEvent.provider!, '')
+
   lavaBlock.dbEvents.push(dbEvent)
 }

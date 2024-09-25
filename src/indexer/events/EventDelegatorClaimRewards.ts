@@ -66,6 +66,6 @@ export const ParseEventDelegatorClaimRewards = (
   dbEvent.provider = delegator;
 
   ;
-  GetOrSetProvider(lavaBlock.dbProviders, dbEvent.provider!, '');
+  ;
   lavaBlock.dbEvents.push(dbEvent);
 }

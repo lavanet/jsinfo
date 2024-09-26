@@ -109,7 +109,7 @@ async function batchInsert(db: PostgresJsDatabase): Promise<void> {
                 set: { moniker: sql`${JsinfoSchema.providerSpecMoniker.moniker}` }
             });
 
-        logger.info('ProviderSpecMoniker::Successfully executed upsert query on provider_spec_moniker');
+        // logger.info('ProviderSpecMoniker::Successfully executed upsert query on provider_spec_moniker');
 
         // Upsert into providers table
         await db.insert(JsinfoSchema.providers)
@@ -119,7 +119,7 @@ async function batchInsert(db: PostgresJsDatabase): Promise<void> {
                 set: { moniker: sql`${JsinfoSchema.providers.moniker}` }
             });
 
-        logger.info('ProviderSpecMoniker:: Successfully executed update query on providers');
+        // logger.info('ProviderSpecMoniker:: Successfully executed update query on providers');
 
         // After successful insert, reset the batch
         batchData = [];

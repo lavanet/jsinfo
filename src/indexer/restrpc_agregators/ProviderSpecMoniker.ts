@@ -90,7 +90,7 @@ async function batchInsert(db: PostgresJsDatabase): Promise<void> {
         return;
     }
 
-    logger.info(`ProviderSpecMoniker:: Processing batch insert for ${batchData.length} records`);
+    // logger.info(`ProviderSpecMoniker:: Processing batch insert for ${batchData.length} records`);
 
     const uniqueEntriesByProviderSpec = new Map<string, ProviderMonikerSpec>();
     const uniqueEntriesByProvider = new Map<string, ProviderMonikerSpec>();

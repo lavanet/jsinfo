@@ -15,8 +15,9 @@ import { SyncBlockchainEntities } from './indexer/blockchainEntities/blockchainE
 import { DoInChunks, logger, BackoffRetry } from "./utils/utils";
 import { ConnectToRpc, RpcConnection } from "./utils/rpc";
 import { MigrateDb, GetJsinfoDb } from "./utils/dbUtils";
-import { aggProviderAndConsumerRelayPayments, aggProviderAndConsumerRelayPaymentsSync } from './indexer/agregators/aggProviderAndConsumerRelayPayments';
+import { AggProviderAndConsumerRelayPayments, AggProviderAndConsumerRelayPaymentsSync } from './indexer/agregators/AggProviderAndConsumerRelayPayments';
 import { SaveTokenSupplyToDB } from './indexer/supply/syncSupply';
+import { RestRpcAgreagorsCaller } from './indexer/restrpc_agregators/RestRpcAgreagorsCaller';
 
 let static_blockchainEntitiesProviders: Map<string, JsinfoSchema.Provider> = new Map()
 let static_blockchainEntitiesSpecs: Map<string, JsinfoSchema.Spec> = new Map()
@@ -197,8 +198,10 @@ const indexer = async (): Promise<void> => {
 
     const db = await migrateAndFetchDb();
     logger.info('Done migrateAndFetchDb');
-    await aggProviderAndConsumerRelayPaymentsSync(db);
-    logger.info('Done aggProviderAndConsumerRelayPaymentsSync');
+    await AggProviderAndConsumerRelayPaymentsSync(db);
+    logger.info('Done AggProviderAndConsumerRelayPaymentsSync');
+    await RestRpcAgreagorsCaller(db);
+    logger.info('Done RestRpcAgreagorsCaller');
     await SaveTokenSupplyToDB(db, rpcConnection.lavajsClient);
     logger.info('Done SaveTokenSupplyToDB');
 
@@ -365,8 +368,8 @@ const fillUp = async (db: PostgresJsDatabase, rpcConnection: RpcConnection) => {
         logger.info(`fillUp: Error in SyncBlockchainEntities: ${e}`);
     }
 
-    aggProviderAndConsumerRelayPayments(db);
-    logger.info('fillUp: Aggregated provider and consumer relay payments');
+    AggProviderAndConsumerRelayPayments(db);
+    RestRpcAgreagorsCaller(db);
 
     await SaveTokenSupplyToDB(db, rpcConnection.lavajsClient);
 

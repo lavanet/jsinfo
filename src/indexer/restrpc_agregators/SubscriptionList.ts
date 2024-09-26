@@ -3,7 +3,7 @@ import { EnsureConsumerVerified, QueryLavaRPC, ReplaceForCompare } from "./utils
 import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import { eq, desc } from "drizzle-orm";
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-import RedisCache from '../../utils/redisCache';
+import { RedisCache } from "../../query/classes/RedisCache";
 
 interface Credit {
     denom: string;

@@ -135,9 +135,50 @@ async function checkAndCacheReward(provider: string, chain_id: string, reward: R
 
 let batchData: JsinfoSchema.InsertDualStackingDelegatorRewards[] = [];
 let batchStartTime: Date = new Date();
-let batchInsertTimeout: NodeJS.Timeout | null = null;
 const BATCH_SIZE = 100;
 const BATCH_INTERVAL = 60000; // 1 minute in milliseconds
+
+function batchAppend(db: PostgresJsDatabase, newReward: JsinfoSchema.InsertDualStackingDelegatorRewards): void {
+    batchData.push(newReward);
+
+    if (batchData.length >= BATCH_SIZE || Date.now() - batchStartTime.getTime() >= BATCH_INTERVAL) {
+        batchInsert(db);
+    }
+}
+
+async function batchInsert(db: PostgresJsDatabase): Promise<void> {
+    if (batchData.length === 0) return;
+
+    const startTime = performance.now();
+    try {
+        await db.insert(JsinfoSchema.dualStackingDelegatorRewards).values(batchData);
+
+        const endTime = performance.now();
+        logger.info(`Batch insert of ${batchData.length} records took ${(endTime - startTime) / 1000} seconds`);
+
+        // After successful insert, reset the batch
+        batchData = [];
+        batchStartTime = new Date();
+    } catch (error) {
+        logger.error('DualStakingDelegatorRewards:: Error in batch insert operation', { error });
+    }
+}
+
+async function ProcessReward(db: PostgresJsDatabase, reward: Reward): Promise<void> {
+    const startTime = performance.now();
+    const { provider, chain_id } = reward;
+
+    const shouldProceedToDB = await checkAndCacheReward(provider, chain_id, reward);
+
+    if (shouldProceedToDB) {
+        await insertRewardToDB(db, reward);
+    }
+
+    const endTime = performance.now();
+    if ((endTime - startTime) > 1000) {
+        logger.info(`ProcessReward for provider ${provider}, chain ${chain_id} took ${(endTime - startTime) / 1000} seconds`);
+    }
+}
 
 async function insertRewardToDB(db: PostgresJsDatabase, reward: Reward): Promise<void> {
     const startTime = performance.now();
@@ -189,55 +230,6 @@ async function insertRewardToDB(db: PostgresJsDatabase, reward: Reward): Promise
     const endTime = performance.now();
     if ((endTime - startTime) > 1000) {
         logger.info(`insertRewardToDB for provider ${provider}, chain ${chain_id} took ${(endTime - startTime) / 1000} seconds`);
-    }
-}
-
-function batchAppend(db: PostgresJsDatabase, newReward: JsinfoSchema.InsertDualStackingDelegatorRewards): void {
-    batchData.push(newReward);
-
-    if (batchData.length >= BATCH_SIZE) {
-        if (batchInsertTimeout) clearTimeout(batchInsertTimeout);
-        batchInsert(db);
-    } else if (!batchInsertTimeout) {
-        batchInsertTimeout = setTimeout(() => batchInsert(db), BATCH_INTERVAL);
-    }
-}
-
-async function batchInsert(db: PostgresJsDatabase): Promise<void> {
-    if (batchData.length === 0) return;
-
-    const startTime = performance.now();
-    try {
-        await db.insert(JsinfoSchema.dualStackingDelegatorRewards).values(batchData);
-
-        const endTime = performance.now();
-        logger.info(`Batch insert of ${batchData.length} records took ${(endTime - startTime) / 1000} seconds`);
-
-        // After successful insert, reset the batch
-        batchData = [];
-        batchStartTime = new Date();
-        if (batchInsertTimeout) {
-            clearTimeout(batchInsertTimeout);
-            batchInsertTimeout = null;
-        }
-    } catch (error) {
-        logger.error('DualStakingDelegatorRewards:: Error in batch insert operation', { error });
-    }
-}
-
-async function ProcessReward(db: PostgresJsDatabase, reward: Reward): Promise<void> {
-    const startTime = performance.now();
-    const { provider, chain_id } = reward;
-
-    const shouldProceedToDB = await checkAndCacheReward(provider, chain_id, reward);
-
-    if (shouldProceedToDB) {
-        await insertRewardToDB(db, reward);
-    }
-
-    const endTime = performance.now();
-    if ((endTime - startTime) > 1000) {
-        logger.info(`ProcessReward for provider ${provider}, chain ${chain_id} took ${(endTime - startTime) / 1000} seconds`);
     }
 }
 

@@ -15,7 +15,7 @@ import { SyncBlockchainEntities } from './indexer/blockchainEntities/blockchainE
 import { DoInChunks, logger, BackoffRetry } from "./utils/utils";
 import { ConnectToRpc, RpcConnection } from "./utils/rpc";
 import { MigrateDb, GetJsinfoDb } from "./utils/dbUtils";
-import { AggProviderAndConsumerRelayPayments, AggProviderAndConsumerRelayPaymentsSync } from './indexer/agregators/AggProviderAndConsumerRelayPayments';
+import { AggProviderAndConsumerRelayPayments, AggProviderAndConsumerRelayPaymentsSync } from "./indexer/agregators/aggProviderAndConsumerRelayPayments";
 import { SaveTokenSupplyToDB } from './indexer/supply/syncSupply';
 import { RestRpcAgreagorsCaller } from './indexer/restrpc_agregators/RestRpcAgreagorsCaller';
 

@@ -138,12 +138,23 @@ let batchStartTime: Date = new Date();
 const BATCH_SIZE = 100;
 const BATCH_INTERVAL = 60000; // 1 minute in milliseconds
 
-function batchAppend(db: PostgresJsDatabase, newReward: JsinfoSchema.InsertDualStackingDelegatorRewards): void {
+async function batchAppend(db: PostgresJsDatabase, newReward: JsinfoSchema.InsertDualStackingDelegatorRewards): Promise<void> {
+    const cacheKey = `dualStackingDelegatorRewards-batchAppend-${newReward.provider}-${newReward.chainId}`;
+
+    const cachedValue = await RedisCache.getDict(cacheKey);
+    if (cachedValue && cachedValue.amount === newReward.amount.toString() && cachedValue.denom === newReward.denom) {
+        // Skip appending duplicate record
+        return;
+    }
+
     batchData.push(newReward);
 
     if (batchData.length >= BATCH_SIZE || Date.now() - batchStartTime.getTime() >= BATCH_INTERVAL) {
-        batchInsert(db);
+        await batchInsert(db);
     }
+
+    // Update the cache after appending
+    await RedisCache.setDict(cacheKey, { amount: newReward.amount.toString(), denom: newReward.denom }, 3600);
 }
 
 async function batchInsert(db: PostgresJsDatabase): Promise<void> {

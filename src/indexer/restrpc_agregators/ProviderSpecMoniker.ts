@@ -3,7 +3,7 @@ import { EnsureProviderVerified, QueryLavaRPC } from "./utils";
 import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { sql } from 'drizzle-orm';
-
+import { RedisCache } from "../../query/classes/RedisCache";
 interface ProviderMonikerSpec {
     provider: string;
     moniker: string;
@@ -77,12 +77,23 @@ let batchStartTime: Date = new Date();
 const BATCH_SIZE = 100;
 const BATCH_INTERVAL = 60000; // 1 minute in milliseconds
 
-function batchAppend(db: PostgresJsDatabase, psmEntry: ProviderMonikerSpec): void {
+async function batchAppend(db: PostgresJsDatabase, psmEntry: ProviderMonikerSpec): Promise<void> {
+    const cacheKey = `providerSpecMoniker-batchAppend-${psmEntry.provider}-${psmEntry.spec}`;
+
+    const cachedValue = await RedisCache.getDict(cacheKey);
+    if (cachedValue && cachedValue.moniker === psmEntry.moniker) {
+        // Skip appending duplicate record
+        return;
+    }
+
     batchData.push(psmEntry);
 
     if (batchData.length >= BATCH_SIZE || Date.now() - batchStartTime.getTime() >= BATCH_INTERVAL) {
-        batchInsert(db);
+        await batchInsert(db);
     }
+
+    // Update the cache after appending
+    await RedisCache.setDict(cacheKey, { moniker: psmEntry.moniker }, 3600);
 }
 
 async function batchInsert(db: PostgresJsDatabase): Promise<void> {

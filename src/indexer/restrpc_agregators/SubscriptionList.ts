@@ -3,6 +3,7 @@ import { EnsureConsumerVerified, QueryLavaRPC, ReplaceForCompare } from "./utils
 import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import { eq, desc } from "drizzle-orm";
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import RedisCache from '../../utils/redisCache';
 
 interface Credit {
     denom: string;
@@ -52,6 +53,13 @@ async function ProcessSubscription(db: PostgresJsDatabase, sub: SubInfo): Promis
         return;
     }
 
+    const cacheKey = `subscription-${consumer}-${plan}`;
+    const cachedValue = await RedisCache.getDict(cacheKey);
+    if (cachedValue && cachedValue.processed) {
+        // Skip processing duplicate subscription
+        return;
+    }
+
     try {
         await EnsureConsumerVerified(db, consumer);
     } catch (error) {
@@ -81,6 +89,9 @@ async function ProcessSubscription(db: PostgresJsDatabase, sub: SubInfo): Promis
         await db.insert(JsinfoSchema.consumerSubscriptionList).values(newSubscription);
         logger.info('New subscription record inserted');
     }
+
+    // Update the cache after processing
+    await RedisCache.setDict(cacheKey, { processed: true }, 3600);
 }
 
 

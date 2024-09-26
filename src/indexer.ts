@@ -213,7 +213,7 @@ const indexer = async (): Promise<void> => {
 const establishRpcConnection = async (): Promise<RpcConnection> => {
     logger.info('Establishing RPC connection...');
     const rpcConnection: RpcConnection = await BackoffRetry<RpcConnection>("ConnectToRpc", () => ConnectToRpc(consts.JSINFO_INDEXER_LAVA_RPC));
-    logger.info('RPC connection established.', rpcConnection);
+    logger.info('RPC connection established.');
     return rpcConnection;
 }
 

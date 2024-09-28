@@ -1,11 +1,11 @@
-DROP TABLE "consumers";--> statement-breakpoint
-DROP TABLE "plans";--> statement-breakpoint
-DROP TABLE "provider_accountinfo";--> statement-breakpoint
-DROP TABLE "providers";--> statement-breakpoint
-DROP TABLE "specs";--> statement-breakpoint
-DROP TABLE "txs";--> statement-breakpoint
-DROP TABLE "unique_visitors";--> statement-breakpoint
-DROP TABLE "visitor_metrics";--> statement-breakpoint
+-- DROP TABLE "consumers";--> statement-breakpoint
+-- DROP TABLE "plans";--> statement-breakpoint
+-- DROP TABLE "provider_accountinfo";--> statement-breakpoint
+-- DROP TABLE "providers";--> statement-breakpoint
+-- DROP TABLE "specs";--> statement-breakpoint
+-- DROP TABLE "txs";--> statement-breakpoint
+-- DROP TABLE "unique_visitors";--> statement-breakpoint
+-- DROP TABLE "visitor_metrics";--> statement-breakpoint
 ALTER TABLE "agg_consumer_alltime_relay_payments" DROP CONSTRAINT "agg_consumer_alltime_relay_payments_consumer_consumers_address_fk";
 --> statement-breakpoint
 ALTER TABLE "agg_consumer_alltime_relay_payments" DROP CONSTRAINT "agg_consumer_alltime_relay_payments_spec_id_specs_id_fk";

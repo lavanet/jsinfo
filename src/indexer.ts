@@ -15,8 +15,9 @@ import { SyncBlockchainEntities } from './indexer/blockchainEntities/blockchainE
 import { DoInChunks, logger, BackoffRetry } from "./utils/utils";
 import { ConnectToRpc, RpcConnection } from "./utils/rpc";
 import { MigrateDb, GetJsinfoDb } from "./utils/dbUtils";
-import { aggProviderAndConsumerRelayPayments, aggProviderAndConsumerRelayPaymentsSync } from './indexer/agregators/aggProviderAndConsumerRelayPayments';
+import { AggProviderAndConsumerRelayPayments, AggProviderAndConsumerRelayPaymentsSync } from "./indexer/agregators/aggProviderAndConsumerRelayPayments";
 import { SaveTokenSupplyToDB } from './indexer/supply/syncSupply';
+import { RestRpcAgreagorsCaller } from './indexer/restrpc_agregators/RestRpcAgreagorsCaller';
 
 let static_blockchainEntitiesStakes: Map<string, JsinfoSchema.InsertProviderStake[]> = new Map()
 
@@ -171,8 +172,10 @@ const indexer = async (): Promise<void> => {
     }
 
     logger.info('Done migrateAndFetchDb');
-    await aggProviderAndConsumerRelayPaymentsSync(db);
-    logger.info('Done aggProviderAndConsumerRelayPaymentsSync');
+    await AggProviderAndConsumerRelayPaymentsSync(db);
+    logger.info('Done AggProviderAndConsumerRelayPaymentsSync');
+    await RestRpcAgreagorsCaller(db);
+    logger.info('Done RestRpcAgreagorsCaller');
     await SaveTokenSupplyToDB(db, rpcConnection.lavajsClient);
     logger.info('Done SaveTokenSupplyToDB');
 
@@ -183,7 +186,7 @@ const indexer = async (): Promise<void> => {
 const establishRpcConnection = async (): Promise<RpcConnection> => {
     logger.info('Establishing RPC connection...');
     const rpcConnection: RpcConnection = await BackoffRetry<RpcConnection>("ConnectToRpc", () => ConnectToRpc(consts.JSINFO_INDEXER_LAVA_RPC));
-    logger.info('RPC connection established.', rpcConnection);
+    logger.info('RPC connection established.');
     return rpcConnection;
 }
 
@@ -320,8 +323,8 @@ const fillUp = async (db: PostgresJsDatabase, rpcConnection: RpcConnection) => {
         logger.info(`fillUp: Error in SyncBlockchainEntities: ${e}`);
     }
 
-    aggProviderAndConsumerRelayPayments(db);
-    logger.info('fillUp: Aggregated provider and consumer relay payments');
+    AggProviderAndConsumerRelayPayments(db);
+    RestRpcAgreagorsCaller(db);
 
     await SaveTokenSupplyToDB(db, rpcConnection.lavajsClient);
 

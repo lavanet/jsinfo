@@ -4,6 +4,7 @@ import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { sql } from 'drizzle-orm';
 import { RedisCache } from "../../query/classes/RedisCache";
+import { SpecAndConsumerCache } from "../../query/classes/SpecAndConsumerCache";
 interface ProviderMonikerSpec {
     provider: string;
     moniker: string;
@@ -30,19 +31,16 @@ export async function GetProviderMonikerSpecs(spec: string): Promise<ProviderRes
 
 export async function ProcessProviderMonikerSpecs(db: PostgresJsDatabase): Promise<void> {
     try {
-        let specs = await db.select().from(JsinfoSchema.specs);
+        const specs = SpecAndConsumerCache.GetAllSpecs();
 
-        // Filter out null or empty specs
-        specs = specs.filter(specRow => specRow.id != null && specRow.id.trim() !== '');
-
-        for (const specRow of specs) {
-            const providerResponse = await GetProviderMonikerSpecs(specRow.id!);
+        for (const spec of specs) {
+            const providerResponse = await GetProviderMonikerSpecs(spec);
 
             for (const provider of providerResponse.stakeEntry) {
                 await ProcessProviderMonikerSpec(db, {
                     provider: provider.address,
                     moniker: provider.moniker,
-                    spec: specRow.id!
+                    spec: spec
                 });
             }
         }
@@ -101,14 +99,10 @@ async function batchInsert(db: PostgresJsDatabase): Promise<void> {
         return;
     }
 
-    // logger.info(`ProviderSpecMoniker:: Processing batch insert for ${batchData.length} records`);
-
     const uniqueEntriesByProviderSpec = new Map<string, ProviderMonikerSpec>();
-    const uniqueEntriesByProvider = new Map<string, ProviderMonikerSpec>();
 
     for (const entry of batchData) {
         uniqueEntriesByProviderSpec.set(entry.provider + entry.spec, entry);
-        uniqueEntriesByProvider.set(entry.provider, entry);
     }
 
     try {
@@ -119,18 +113,6 @@ async function batchInsert(db: PostgresJsDatabase): Promise<void> {
                 target: [JsinfoSchema.providerSpecMoniker.provider, JsinfoSchema.providerSpecMoniker.specId],
                 set: { moniker: sql`${JsinfoSchema.providerSpecMoniker.moniker}` }
             });
-
-        // logger.info('ProviderSpecMoniker::Successfully executed upsert query on provider_spec_moniker');
-
-        // Upsert into providers table
-        await db.insert(JsinfoSchema.providers)
-            .values(Array.from(uniqueEntriesByProvider.values()).map(({ provider, moniker }) => ({ address: provider, moniker })))
-            .onConflictDoUpdate({
-                target: JsinfoSchema.providers.address,
-                set: { moniker: sql`${JsinfoSchema.providers.moniker}` }
-            });
-
-        // logger.info('ProviderSpecMoniker:: Successfully executed update query on providers');
 
         // After successful insert, reset the batch
         batchData = [];

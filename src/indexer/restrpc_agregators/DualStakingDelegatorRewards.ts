@@ -1,10 +1,11 @@
 import { IsMeaningfulText, logger } from "../../utils/utils";
 import { EnsureProviderVerified, QueryLavaRPC } from "./utils";
 import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
-import { eq, and, desc, isNotNull } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { RedisCache } from "../../query/classes/RedisCache";
 import { performance } from 'perf_hooks';
+import { MonikerCache } from "../../query/classes/MonikerCache";
 
 interface Delegation {
     provider: string;
@@ -50,21 +51,13 @@ export async function ProcessDualStackingDelegatorRewards(db: PostgresJsDatabase
         let delegatorsArray: string[];
 
         if (cachedDelegators) {
-            // logger.info('Cache hit: Using cached delegators from Redis.');
             delegatorsArray = cachedDelegators;
         } else {
-            const providers = await db.select()
-                .from(JsinfoSchema.providers)
-                .where(isNotNull(JsinfoSchema.providers.address));
-
-            const filteredProviders = providers.filter(provider =>
-                provider.address && provider.address.trim() !== ""
-            );
-
+            const providers = MonikerCache.GetAllProviders();
             const uniqueDelegators = new Set<string>();
 
-            for (const provider of filteredProviders) {
-                const delegators = await GetProviderDelegators(provider.address as string);
+            for (const provider of providers) {
+                const delegators = await GetProviderDelegators(provider);
 
                 for (const delegation of delegators.delegations) {
                     if (!IsMeaningfulText(delegation.delegator)) {

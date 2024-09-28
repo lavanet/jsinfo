@@ -1,5 +1,5 @@
 import { IsMeaningfulText, logger } from "../../utils/utils";
-import { EnsureProviderVerified, QueryLavaRPC } from "./utils";
+import { QueryLavaRPC } from "./utils";
 import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { sql } from 'drizzle-orm';
@@ -57,13 +57,6 @@ async function ProcessProviderMonikerSpec(db: PostgresJsDatabase, psmEntry: Prov
     const { provider, moniker, spec: specValue } = psmEntry;
 
     if (!IsMeaningfulText(provider) || !IsMeaningfulText(moniker) || !IsMeaningfulText(specValue)) {
-        return;
-    }
-
-    try {
-        await EnsureProviderVerified(db, provider, moniker);
-    } catch (error) {
-        logger.error('ProviderSpecMoniker:: Failed to verify provider or spec', { provider, spec: specValue, error });
         return;
     }
 

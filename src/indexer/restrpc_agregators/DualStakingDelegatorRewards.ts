@@ -1,5 +1,5 @@
 import { IsMeaningfulText, logger } from "../../utils/utils";
-import { EnsureProviderVerified, QueryLavaRPC } from "./utils";
+import { QueryLavaRPC } from "./utils";
 import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import { eq, and, desc } from "drizzle-orm";
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
@@ -216,7 +216,6 @@ async function insertRewardToDB(db: PostgresJsDatabase, reward: Reward): Promise
                 latestEntry[0].amount !== newReward.amount ||
                 latestEntry[0].denom !== newReward.denom) {
 
-                await EnsureProviderVerified(db, provider, '');
                 batchAppend(db, newReward);
             }
         } catch (error) {

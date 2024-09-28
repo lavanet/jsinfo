@@ -1,5 +1,5 @@
 import { IsMeaningfulText, logger } from "../../utils/utils";
-import { EnsureConsumerVerified, QueryLavaRPC, ReplaceForCompare } from "./utils";
+import { QueryLavaRPC, ReplaceForCompare } from "./utils";
 import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import { eq, desc } from "drizzle-orm";
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
@@ -57,13 +57,6 @@ async function ProcessSubscription(db: PostgresJsDatabase, sub: SubInfo): Promis
     const cachedValue = await RedisCache.getDict(cacheKey);
     if (cachedValue && cachedValue.processed) {
         // Skip processing duplicate subscription
-        return;
-    }
-
-    try {
-        await EnsureConsumerVerified(db, consumer);
-    } catch (error) {
-        logger.error('Failed to verify consumer', { consumer, error });
         return;
     }
 

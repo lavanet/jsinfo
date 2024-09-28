@@ -218,6 +218,13 @@
       "when": 1724438521394,
       "tag": "0030_rapid_roughhouse",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "5",
+      "when": 1727522422484,
+      "tag": "0031_glossy_lionheart",
+      "breakpoints": true
     }
   ]
 }

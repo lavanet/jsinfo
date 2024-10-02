@@ -37,6 +37,7 @@
     "fastify": "^4.23.2",
     "http-proxy": "^1.18.1",
     "nock": "^13.5.4",
+    "node-cache": "^5.1.2",
     "node-fetch": "^3.3.2",
     "pako": "^2.1.0",
     "pino-pretty": "^10.3.1",

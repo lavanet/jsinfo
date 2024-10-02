@@ -2,7 +2,7 @@ import axios from 'axios';
 import { GetEnvVar, logger, BackoffRetry } from "../../utils/utils";
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
-import { RedisCache } from '../../query/classes/RedisCache';
+import { MemoryCache } from "../classes/MemoryCache";
 
 export async function QueryLavaRPC<T>(path: string): Promise<T> {
     const baseUrl = GetEnvVar("JSINFO_INDEXER_LAVA_REST_RPC_URL");
@@ -69,19 +69,17 @@ export async function EnsureConsumerVerified(db: PostgresJsDatabase, consumer: s
     const verifiedConsumerKey = `verified_consumer_${consumer}`;
 
     try {
-        // Check Redis cache first
-        const verified = await RedisCache.get(verifiedConsumerKey);
+        const verified = await MemoryCache.get(verifiedConsumerKey);
         if (verified && verified.toLowerCase() === 'valid') {
             return;
         }
 
-        // If not in cache, insert into database
         await db.insert(JsinfoSchema.consumers)
             .values({ address: consumer })
             .onConflictDoNothing();
 
-        // Set Redis cache
-        await RedisCache.set(verifiedConsumerKey, 'valid', 86400); // 86400 seconds = 1 day
+
+        await MemoryCache.set(verifiedConsumerKey, 'valid', 86400); // 86400 seconds = 1 day
 
     } catch (error) {
         logger.error('Error ensuring consumer exists', { consumer, error });
@@ -93,13 +91,11 @@ export async function EnsureProviderVerified(db: PostgresJsDatabase, provider: s
     const verifiedProviderKey = `verified_provider_${provider}`;
 
     try {
-        // Check Redis cache first
-        const verified = await RedisCache.get(verifiedProviderKey);
+        const verified = await MemoryCache.get(verifiedProviderKey);
         if (verified && verified.toLowerCase() === 'valid') {
             return;
         }
 
-        // If not in cache, insert into database
         await db.insert(JsinfoSchema.providers)
             .values({ address: provider, moniker })
             .onConflictDoUpdate({
@@ -107,8 +103,8 @@ export async function EnsureProviderVerified(db: PostgresJsDatabase, provider: s
                 set: { moniker }
             });
 
-        // Set Redis cache
-        await RedisCache.set(verifiedProviderKey, 'valid', 86400); // 86400 seconds = 1 day
+
+        await MemoryCache.set(verifiedProviderKey, 'valid', 86400); // 86400 seconds = 1 day
 
     } catch (error) {
         logger.error('Error ensuring provider exists', { provider, moniker, error });

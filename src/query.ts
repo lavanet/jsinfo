@@ -53,3 +53,18 @@ try {
         console.error('An unknown error occurred while running the queryserver:', error);
     }
 }
+
+// import { heapStats } from "bun:jsc";
+
+// import { generateHeapSnapshot } from "bun";
+
+// function logHeapStats() {
+//     console.log("Heap Stats:", JSON.stringify(heapStats(), null, 2));
+//     const snapshot = generateHeapSnapshot();
+//     Bun.write("heap.json", JSON.stringify(snapshot, null, 2));
+// }
+
+// const HEAP_STATS_INTERVAL = 30000; // 30 seconds in milliseconds
+// setInterval(logHeapStats, HEAP_STATS_INTERVAL);
+
+// logHeapStats();

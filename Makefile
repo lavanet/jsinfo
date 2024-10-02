@@ -58,10 +58,13 @@ indexer_debug_events:
 	JSINFO_INDEXER_DEBUG_DUMP_EVENTS=true NODE_TLS_REJECT_UNAUTHORIZED=0 bun run src/indexer.ts
 
 query:
-	npx nodemon --watch src --ext ts --exec "JSINFO_QUERY_IS_DEBUG_MODE=true bun run src/query.ts"
+	npx --yes nodemon --watch src --ext ts --exec "JSINFO_QUERY_IS_DEBUG_MODE=true bun run src/query.ts"
 
 query_no_nodemon:
 	JSINFO_QUERY_IS_DEBUG_MODE=true bun run src/query.ts
+
+query_inspect:
+	JSINFO_QUERY_IS_DEBUG_MODE=true bun --inspect run src/query.ts
 
 query_port8090:
 	JSINFO_QUERY_PORT=8090 make query
@@ -83,7 +86,19 @@ redis_connect:
 	docker exec -it redis-stack redis-cli -a mypassword
 
 macos_psql_start:
-	brew services start postgresql; brew services list
+	@echo "Checking if PostgreSQL@14 is installed..."
+	@if ! brew list postgresql@14 &>/dev/null; then \
+		echo "Installing PostgreSQL@14..."; \
+		brew install postgresql@14; \
+	else \
+		echo "PostgreSQL@14 is already installed."; \
+	fi
+	@echo "Stopping any running PostgreSQL services..."
+	-brew services stop postgresql@16
+	@echo "Starting PostgreSQL@14 service..."
+	brew services start postgresql@14
+	@echo "Listing all services..."
+	brew services list
 
 macos_kill_query_port:
 	@echo "Querying PID for the process on port 8081..."

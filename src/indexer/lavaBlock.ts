@@ -64,21 +64,36 @@ export const GetOneLavaBlock = async (
     const block = await GetRpcBlock(height, client);
     const endTimeBlock = Date.now();
     if (endTimeBlock - startTimeBlock > 30000) {
-        logger.info('GetRpcBlock took', endTimeBlock - startTimeBlock, 'milliseconds. It returned', block, 'items at block height', height);
+        logger.info('GetRpcBlock took', {
+            duration: endTimeBlock - startTimeBlock,
+            unit: 'milliseconds',
+            returnedItems: block,
+            blockHeight: height
+        });
     }
 
     const startTimeTxs = Date.now();
     const txs = await GetRpcTxs(height, client, block);
     const endTimeTxs = Date.now();
     if (endTimeTxs - startTimeTxs > 30000) {
-        logger.info('GetRpcTxs took', endTimeTxs - startTimeTxs, 'milliseconds. It returned', txs.length, 'items at block height', height);
+        logger.info('GetRpcTxs took', {
+            duration: endTimeTxs - startTimeTxs,
+            unit: 'milliseconds',
+            returnedItems: txs.length,
+            blockHeight: height
+        });
     }
 
     const startTimeEvts = Date.now();
     const evts = await GetRpcBlockResultEvents(height, clientTm);
     const endTimeEvts = Date.now();
     if (endTimeEvts - startTimeEvts > 30000) {
-        logger.info('GetRpcBlockResultEvents took', endTimeEvts - startTimeEvts, 'milliseconds. It returned', evts.length, 'items at block height', height);
+        logger.info('GetRpcBlockResultEvents took', {
+            duration: endTimeEvts - startTimeEvts,
+            unit: 'milliseconds',
+            returnedItems: evts.length,
+            blockHeight: height
+        });
     }
 
     // Block object to return

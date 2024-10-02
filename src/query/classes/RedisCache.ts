@@ -1,7 +1,11 @@
 // src/query/classes/RedisCache.ts
 
 import { createClient, RedisClientType } from 'redis';
-import { JSONStringify, logger } from '../../utils/utils';
+import { GetIsIndexerProcess, JSONStringify, logger } from '../../utils/utils';
+
+if (GetIsIndexerProcess()) {
+    throw new Error('RedisCache should not be used in the indexer - use MemoryCache instead');
+}
 
 class RedisCacheClass {
     private client: RedisClientType | null = null;

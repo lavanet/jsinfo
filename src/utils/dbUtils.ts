@@ -102,5 +102,6 @@ export const MigrateDb = async () => {
     const migrationClient = postgres(await GetPostgresUrl(), { max: 1 });
     logger.info(`MigrateDb:: Migration client created. ${new Date().toISOString()}`);
     await migrate(drizzle(migrationClient), { migrationsFolder: "drizzle" });
+
     logger.info(`MigrateDb:: Database migration completed. ${new Date().toISOString()}`);
 }

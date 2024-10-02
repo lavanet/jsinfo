@@ -186,3 +186,13 @@ export const IsMeaningfulText = (text: string | null | undefined): boolean => {
 
     return true;
 };
+
+let _isIndexerProcess: boolean = false;
+
+export function SetIsIndexerProcess(value: boolean): void {
+    _isIndexerProcess = value;
+}
+
+export function GetIsIndexerProcess(): boolean {
+    return _isIndexerProcess;
+}

@@ -1,8 +1,8 @@
 // src/query/handlers/specsHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../../queryDb';
-import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
+import { QueryCheckJsinfoReadDbInstance } from '../../queryDb';
+import { SpecAndConsumerCache } from '../../classes/SpecAndConsumerCache';
 
 export const SpecsPaginatedHandlerOpts: RouteShorthandOptions = {
     schema: {
@@ -22,7 +22,7 @@ export const SpecsPaginatedHandlerOpts: RouteShorthandOptions = {
 export async function SpecsPaginatedHandler(request: FastifyRequest, reply: FastifyReply) {
     await QueryCheckJsinfoReadDbInstance()
 
-    const res = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.specs)
+    const res = await SpecAndConsumerCache.GetAllSpecs();
 
     return {
         specs: res,

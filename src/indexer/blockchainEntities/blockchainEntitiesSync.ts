@@ -3,72 +3,23 @@
 import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { and, eq, ne } from "drizzle-orm";
-import { DoInChunks, IsMeaningfulText, logger } from "../../utils/utils";
-import { JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE } from '../indexerConsts';
+import { IsMeaningfulText, logger } from "../../utils/utils";
 import { LavaClient } from '../types';
 import { UpdateStakeInformation } from './blockchainEntitiesStakeUpdater';
-
-// async function getLatestPlans(client: LavaClient, dbPlans: Map<string, JsinfoSchema.Plan>) {
-//     try {
-//         const lavaClient = client.lavanet.lava;
-
-//         let plans = await lavaClient.plans.list()
-//         plans.plansInfo.forEach((plan) => {
-//             dbPlans.set(plan.index, {
-//                 desc: plan.description,
-//                 id: plan.index,
-//                 price: parseInt(plan.price.amount),
-//                 plan.terms.map((term) => {
-//             } as JsinfoSchema.Plan)
-//         })
-//     } catch (error) {
-//         logger.error(`An error occurred: ${error}`);
-//         throw error;
-//     }
-// }
 
 export async function SyncBlockchainEntities(
     db: PostgresJsDatabase,
     client: LavaClient,
     height: number,
-    blockchainEntitiesProviders: Map<string, JsinfoSchema.Provider>,
-    blockchainEntitiesSpecs: Map<string, JsinfoSchema.Spec>,
+
+
     blockchainEntitiesStakes: Map<string, JsinfoSchema.InsertProviderStake[]>
 ) {
-    // console.log("SyncBlockchainEntities: Starting SyncBlockchainEntities at height", height);
     const startTime = Date.now();
 
-    await UpdateStakeInformation(client, height, blockchainEntitiesProviders, blockchainEntitiesSpecs, blockchainEntitiesStakes)
-    // await getLatestPlans(client, blockchainEntitiesPlans)
+    await UpdateStakeInformation(client, height, blockchainEntitiesStakes)
 
     await db.transaction(async (tx) => {
-        // Insert all specs
-        const arrSpecs = Array.from(blockchainEntitiesSpecs.values())
-        // console.log("SyncBlockchainEntities: Inserting", arrSpecs.length, "specs");
-        await DoInChunks(JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, arrSpecs, async (arr: any) => {
-            await tx.insert(JsinfoSchema.specs)
-                .values(arr)
-                .onConflictDoNothing();
-        })
-
-        // The monikers are coming from relayserver now - and this also sometimes sets the monikers to empty values
-        // Find / create all providers
-        // const arrProviders = Array.from(blockchainEntitiesProviders.values())
-        // console.log("SyncBlockchainEntities: Processing", arrProviders.length, "providers");
-        // await DoInChunks(JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, arrProviders, async (arr: any) => {
-        //     return arr.map(async (provider: any) => {
-        //         return await tx.insert(JsinfoSchema.providers)
-        //             .values(provider)
-        //             .onConflictDoUpdate(
-        //                 {
-        //                     target: [JsinfoSchema.providers.address],
-        //                     set: {
-        //                         moniker: provider.moniker
-        //                     },
-        //                 }
-        //             );
-        //     })
-        // })
 
         const uniqueStakesMap = new Map<string, any>();
 

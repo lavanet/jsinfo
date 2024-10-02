@@ -56,8 +56,6 @@ export const SpecPaginatedHandlerOpts: RouteShorthandOptions = {
 }
 
 export async function SpecPaginatedHandler(request: FastifyRequest, reply: FastifyReply) {
-    const startTime = performance.now();
-
     let spec = await GetAndValidateSpecIdFromRequest(request, reply);
     if (spec === '') {
         return null;

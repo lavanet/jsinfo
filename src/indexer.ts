@@ -3,6 +3,9 @@
 import * as consts from './indexer/indexerConsts';
 import * as JsinfoSchema from "./schemas/jsinfoSchema/jsinfoSchema";
 
+import { DoInChunks, logger, BackoffRetry, SetIsIndexerProcess } from "./utils/utils";
+SetIsIndexerProcess(true);
+
 import { StargateClient } from "@cosmjs/stargate"
 import { Tendermint37Client } from "@cosmjs/tendermint-rpc";
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
@@ -12,15 +15,12 @@ import { GetOneLavaBlock } from './indexer/lavaBlock'
 import { EventDebug } from './indexer/eventDebug'
 import { LavaBlock } from './indexer/types'
 import { SyncBlockchainEntities } from './indexer/blockchainEntities/blockchainEntitiesSync'
-import { DoInChunks, logger, BackoffRetry } from "./utils/utils";
 import { ConnectToRpc, RpcConnection } from "./utils/rpc";
 import { MigrateDb, GetJsinfoDb } from "./utils/dbUtils";
 import { AggProviderAndConsumerRelayPayments, AggProviderAndConsumerRelayPaymentsSync } from "./indexer/agregators/aggProviderAndConsumerRelayPayments";
 import { SaveTokenSupplyToDB } from './indexer/supply/syncSupply';
 import { RestRpcAgreagorsCaller } from './indexer/restrpc_agregators/RestRpcAgreagorsCaller';
 
-let static_blockchainEntitiesProviders: Map<string, JsinfoSchema.Provider> = new Map()
-let static_blockchainEntitiesSpecs: Map<string, JsinfoSchema.Spec> = new Map()
 let static_blockchainEntitiesStakes: Map<string, JsinfoSchema.InsertProviderStake[]> = new Map()
 
 const globakWorkList: number[] = []
@@ -43,53 +43,6 @@ async function InsertBlock(
         logger.debug(`Starting transaction for block height: ${block.height}`);
         await tx.insert(JsinfoSchema.blocks).values({ height: block.height, datetime: new Date(block.datetime) })
         logger.debug(`Inserted block height: ${block.height} into blocks`);
-
-        const arrSpecs = Array.from(block.dbSpecs.values())
-        logger.debug(`Inserting ${arrSpecs.length} specs for block height: ${block.height}`);
-        await DoInChunks(consts.JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, arrSpecs, async (arr: any) => {
-            await tx.insert(JsinfoSchema.specs)
-                .values(arr)
-                .onConflictDoNothing();
-        })
-        logger.debug(`Inserted specs for block height: ${block.height}`);
-
-        const arrTxs = Array.from(block.dbTxs.values())
-        logger.debug(`Inserting ${arrTxs.length} txs for block height: ${block.height}`);
-        await DoInChunks(consts.JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, arrTxs, async (arr: any) => {
-            await tx.insert(JsinfoSchema.txs)
-                .values(arr)
-                .onConflictDoNothing();
-        })
-        logger.debug(`Inserted txs for block height: ${block.height}`);
-
-        const arrProviders = Array.from(block.dbProviders.values())
-        logger.debug(`Inserting ${arrProviders.length} providers for block height: ${block.height}`);
-        await DoInChunks(consts.JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, arrProviders, async (arr: any) => {
-            await tx.insert(JsinfoSchema.providers)
-                .values(arr)
-                .onConflictDoNothing();
-        })
-        logger.debug(`Inserted providers for block height: ${block.height}`);
-
-        // const arrPlans = Array.from(block.dbPlans.values())
-        // // logger.debug(`Inserting ${arrPlans.length} plans for block height: ${block.height}`);
-        // await DoInChunks(consts.JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, arrPlans, async (arr: any) => {
-        //     await tx.insert(JsinfoSchema.plans)
-        //         .values(arr)
-        //         .onConflictDoNothing();
-        // })
-        // //logger.debug(`Inserted plans for block height: ${block.height}`);
-
-        const arrConsumers = Array.from(block.dbConsumers.values())
-
-        // logger.debug(`Inserting ${arrConsumers.length} consumers for block height: ${block.height}`);
-        await DoInChunks(consts.JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, arrConsumers, async (arr: any) => {
-            await tx.insert(JsinfoSchema.consumers)
-                .values(arr)
-                .onConflictDoNothing();
-        })
-        // logger.debug(`Inserted consumers for block height: ${block.height}`);
-
         // Create
         await DoInChunks(consts.JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, block.dbEvents, async (arr: any) => {
             await tx.insert(JsinfoSchema.events).values(arr)
@@ -155,7 +108,7 @@ const doBatch = async (
                 }
 
                 let block: null | LavaBlock = null;
-                block = await GetOneLavaBlock(height, client, clientTm, static_blockchainEntitiesProviders, static_blockchainEntitiesSpecs, static_blockchainEntitiesStakes)
+                block = await GetOneLavaBlock(height, client, clientTm, static_blockchainEntitiesStakes)
                 if (block != null) {
                     await InsertBlock(block, db)
                     logger.info(`doBatch: Inserted block ${height} into DB`);
@@ -198,6 +151,28 @@ const indexer = async (): Promise<void> => {
 
     const db = await migrateAndFetchDb();
 
+    // Verify the output returned at least one entry
+    try {
+        logger.info('Attempting to retrieve the latest block from the database...');
+        const latestBlock = await db.select().from(JsinfoSchema.blocks).orderBy(desc(JsinfoSchema.blocks.height)).limit(1);
+        logger.info(`Query executed. Result: ${JSON.stringify(latestBlock)}`);
+
+        if (latestBlock.length > 0) {
+            logger.info(`Latest block: ${JSON.stringify(latestBlock[0])}`);
+        } else {
+            logger.warn('No latest block found.');
+        }
+    } catch (e) {
+        const error = e as Error;
+        logger.error(`Failed to retrieve the latest block. Error: ${error.message}`, {
+            name: error.name,
+            message: error.message,
+            stack: error.stack,
+            originalError: e, // Log the original error object
+        });
+        return;
+    }
+
     logger.info('Done migrateAndFetchDb');
     await AggProviderAndConsumerRelayPaymentsSync(db);
     logger.info('Done AggProviderAndConsumerRelayPaymentsSync');
@@ -227,23 +202,6 @@ const migrateAndFetchDb = async (): Promise<PostgresJsDatabase> => {
     logger.info('DB fetched.');
     return db;
 }
-
-// const syncBlockchainEntitiesInDb = async (db: PostgresJsDatabase, rpcConnection: RpcConnection) => {
-//     try {
-//         logger.info('syncBlockchainEntitiesInDb:: syncing blockchain entities in db...');
-//         await SyncBlockchainEntities(
-//             db,
-//             rpcConnection.lavajsClient,
-//             rpcConnection.height,
-//             static_blockchainEntitiesProviders,
-//             static_blockchainEntitiesSpecs,
-//             static_blockchainEntitiesStakes
-//         );
-//         logger.info('syncBlockchainEntitiesInDb:: Blockchain entities synced in db.');
-//     } catch (error) {
-//         logger.error(`syncBlockchainEntitiesInDb:: Failed to sync blockchain entities in db: ${error}`);
-//     }
-// }
 
 const fillUpBackoffRetry = async (db: PostgresJsDatabase, rpcConnection: RpcConnection) => {
     logger.info('fillUpBackoffRetry:: Filling up blocks...');
@@ -360,8 +318,6 @@ const fillUp = async (db: PostgresJsDatabase, rpcConnection: RpcConnection) => {
             db,
             rpcConnection.lavajsClient,
             latestHeight,
-            static_blockchainEntitiesProviders,
-            static_blockchainEntitiesSpecs,
             static_blockchainEntitiesStakes
         );
         logger.info('fillUp: Successfully synced blockchain entities');

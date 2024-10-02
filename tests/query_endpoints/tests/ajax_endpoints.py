@@ -67,7 +67,6 @@ check_keys(f"{server_address}/providers", "providers:[address,moniker]")
 check_keys(f"{server_address}/specs", "specs:[id]")
 check_keys(f"{server_address}/consumers", "consumers:[address]")
 check_keys(f"{server_address}/cacheLinks", "urls")
-check_keys(f"{server_address}/autoCompleteLinksHandler", "data:[id,name,type,link,moniker]")
 
 if any_missing:
     sys.exit(1)

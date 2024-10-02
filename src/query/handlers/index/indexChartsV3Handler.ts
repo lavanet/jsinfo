@@ -5,7 +5,7 @@ import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '..
 import * as JsinfoProviderAgrSchema from '../../../schemas/jsinfoSchema/providerRelayPaymentsAgregation';
 
 import { sql, desc, gt, and, inArray, lt } from "drizzle-orm";
-import { DateToDayDateString, FormatDateItems } from '../../utils/queryDateUtils';
+import { DateToDayDateString } from '../../utils/queryDateUtils';
 import { RequestHandlerBase } from '../../classes/RequestHandlerBase';
 import { GetDataLength } from '../../utils/queryUtils';
 import { PgColumn } from 'drizzle-orm/pg-core';

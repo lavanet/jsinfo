@@ -24,9 +24,15 @@ export const ProvidersPaginatedHandlerOpts: RouteShorthandOptions = {
 export async function ProvidersPaginatedHandler(request: FastifyRequest, reply: FastifyReply) {
     await QueryCheckJsinfoReadDbInstance()
 
-    const res = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.providers).where(isNotNull(JsinfoSchema.providers.address))
+    const providers = await QueryGetJsinfoReadDbInstance()
+        .select({
+            address: JsinfoSchema.providerSpecMoniker.provider
+        })
+        .from(JsinfoSchema.providerSpecMoniker)
+        .where(isNotNull(JsinfoSchema.providerSpecMoniker.provider))
+        .groupBy(JsinfoSchema.providerSpecMoniker.provider);
 
     return {
-        providers: res,
+        providers: providers,
     }
 }

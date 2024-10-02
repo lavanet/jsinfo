@@ -1,7 +1,6 @@
 import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import { Event } from "@cosmjs/stargate"
 import { LavaBlock } from "../types";
-import { GetOrSetProvider, SetTx } from "../blockchainEntities/blockchainEntitiesGettersAndSetters";
 import { EventParseUlava, EventProcessAttributes, EventParseProviderAddress } from "../eventUtils";
 
 /* sample form 2aug24:
@@ -89,8 +88,8 @@ export const ParseEventLavaFreezeFromUnbound = (
   height: number,
   txHash: string | null,
   lavaBlock: LavaBlock,
-  blockchainEntitiesProviders: Map<string, JsinfoSchema.Provider>,
-  blockchainEntitiesSpecs: Map<string, JsinfoSchema.Spec>,
+
+
   blockchainEntitiesStakes: Map<string, JsinfoSchema.InsertProviderStake[]>,
 ) => {
   const dbEvent: JsinfoSchema.InsertEvent = {
@@ -137,7 +136,5 @@ export const ParseEventLavaFreezeFromUnbound = (
     verifyFunction: () => !!dbEvent.provider
   })) return;
 
-  SetTx(lavaBlock.dbTxs, txHash, height)
-  GetOrSetProvider(lavaBlock.dbProviders, blockchainEntitiesProviders, dbEvent.provider!, moniker)
   lavaBlock.dbEvents.push(dbEvent)
 }

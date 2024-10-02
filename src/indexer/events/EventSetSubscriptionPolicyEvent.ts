@@ -2,7 +2,6 @@ import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import { Event } from "@cosmjs/stargate"
 import { LavaBlock } from "../types";
 import { EventProcessAttributes, EventParseProviderAddress } from "../eventUtils";
-import { GetOrSetProvider, SetTx } from '../blockchainEntities/blockchainEntitiesGettersAndSetters';
 
 /*
 SELECT * FROM events  WHERE event_type >= 1000 AND t1 not like '%lava_provider_temporary_jailed%'  AND t1 not like '%set_withdraw_address%' AND t1 not like '%lava_delegator_claim_rewards%' AND t1 not like '%cosmos.authz.v1beta1.EventGrant%' AND t1 not like '%lava_set_subscription_policy_event%' AND t1 not like '%lava_unstake_from_unbond%' ORDER BY "id" desc LIMIT 100
@@ -34,8 +33,8 @@ export const ParseEventSetSubscriptionPolicyEvent = (
   height: number,
   txHash: string | null,
   lavaBlock: LavaBlock,
-  blockchainEntitiesProviders: Map<string, JsinfoSchema.Provider>,
-  blockchainEntitiesSpecs: Map<string, JsinfoSchema.Spec>,
+
+
   blockchainEntitiesStakes: Map<string, JsinfoSchema.InsertProviderStake[]>,
 ) => {
 
@@ -70,7 +69,7 @@ export const ParseEventSetSubscriptionPolicyEvent = (
     verifyFunction: () => !!dbEvent.provider
   })) return;
 
-  SetTx(lavaBlock.dbTxs, txHash, height)
-  GetOrSetProvider(lavaBlock.dbProviders, blockchainEntitiesProviders, dbEvent.provider!, '')
+
+
   lavaBlock.dbEvents.push(dbEvent)
 }

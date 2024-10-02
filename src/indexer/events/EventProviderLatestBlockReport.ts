@@ -1,7 +1,6 @@
 import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import { Event } from "@cosmjs/stargate"
 import { LavaBlock } from "../types";
-import { GetOrSetProvider, SetTx } from "../blockchainEntities/blockchainEntitiesGettersAndSetters";
 import { EventProcessAttributes, EventParseProviderAddress, EventParseInt, EventParseAlphaNumericString } from "../eventUtils";
 
 /*
@@ -46,8 +45,8 @@ export const ParseEventProviderLatestBlockReport = (
   height: number,
   txHash: string | null,
   lavaBlock: LavaBlock,
-  blockchainEntitiesProviders: Map<string, JsinfoSchema.Provider>,
-  blockchainEntitiesSpecs: Map<string, JsinfoSchema.Spec>,
+
+
   blockchainEntitiesStakes: Map<string, JsinfoSchema.InsertProviderStake[]>,
 ) => {
 
@@ -78,8 +77,8 @@ export const ParseEventProviderLatestBlockReport = (
     verifyFunction: () => !!dbEvent.provider
   })) return;
 
-  SetTx(lavaBlock.dbTxs, txHash, height)
-  GetOrSetProvider(lavaBlock.dbProviders, blockchainEntitiesProviders, dbEvent.provider!, '')
+
+
 
   for (const [chainId, chainBlockHeight] of Object.entries(chainToBlockDict)) {
     const newEvent: JsinfoSchema.InsertProviderLatestBlockReports = {

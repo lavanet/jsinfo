@@ -1,7 +1,7 @@
 import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import { Attribute, Event } from "@cosmjs/stargate"
 import { LavaBlock } from "../types";
-import { SetTx } from "../blockchainEntities/blockchainEntitiesGettersAndSetters";
+
 import { EventExtractKeyFromAttribute } from '../eventUtils';
 import { JSINFO_INDEXER_EVENT_ATTRIBUTE_KEY_COUNT_MAX, JSINFO_INDEXER_EVENT_ATTRIBUTE_VALUE_MAX_LENGTH } from '../indexerConsts';
 import { JSONStringify } from '../../utils/utils';
@@ -56,6 +56,6 @@ export const ParseEventError = (
     dbEvent.t1 = JSONStringify(parsedAttributes);
     dbEvent.fulltext = JSONStringify(eventAttributes).substring(0, 10000);
 
-    SetTx(lavaBlock.dbTxs, txHash, height)
+
     lavaBlock.dbEvents.push(dbEvent)
 }

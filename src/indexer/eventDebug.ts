@@ -10,18 +10,17 @@ import { LavaBlock } from "./types";
 const EVENT_DEBUG_EXECUTE_PROCESS_ONE_EVENT = true;
 const EVENT_DEBUG_SHOULD_PRINT_EVENT = (eventType: string) => {
     return false;
-    return eventType.includes("latest_block_report");
 };
 
 export const processEvent = (evt: any, height: number, lavaBlock: LavaBlock, source: string,
-    blockchainEntitiesProviders: Map<string, JsinfoSchema.Provider>, blockchainEntitiesSpecs: Map<string, JsinfoSchema.Spec>,
+
     blockchainEntitiesStakes: Map<string, JsinfoSchema.InsertProviderStake[]>) => {
     if (EVENT_DEBUG_SHOULD_PRINT_EVENT(evt.type)) {
         logger.info('EventDebug event', height, 'Source:', source, "type:", evt.type, "\n", evt);
     }
 
     if (EVENT_DEBUG_EXECUTE_PROCESS_ONE_EVENT) {
-        ProcessOneEvent(evt, lavaBlock, height, "0xEventDebugHash", blockchainEntitiesProviders, blockchainEntitiesSpecs, blockchainEntitiesStakes);
+        ProcessOneEvent(evt, lavaBlock, height, "0xEventDebugHash", blockchainEntitiesStakes);
     }
 }
 
@@ -31,19 +30,11 @@ export const EventDebugProcessBlock = async (startHeight: number, rpcConnection:
         const block = await GetRpcBlock(height, rpcConnection.client);
         const txs = await GetRpcTxs(height, rpcConnection.client, block);
 
-        let blockchainEntitiesProviders: Map<string, JsinfoSchema.Provider> = new Map();
-        let blockchainEntitiesSpecs: Map<string, JsinfoSchema.Spec> = new Map();
         let blockchainEntitiesStakes: Map<string, JsinfoSchema.InsertProviderStake[]> = new Map();
 
         const lavaBlock: LavaBlock = {
             height: height,
             datetime: Date.parse(block!.header.time),
-
-            dbProviders: new Map(),
-            dbSpecs: new Map(),
-            dbConsumers: new Map(),
-            dbPlans: new Map(),
-            dbTxs: new Map(),
             dbEvents: [],
             dbPayments: [],
             dbConflictResponses: [],
@@ -59,16 +50,13 @@ export const EventDebugProcessBlock = async (startHeight: number, rpcConnection:
             }
 
             tx.events.forEach((evt) => {
-                // if (EVENT_DEBUG_SHOULD_PRINT_EVENT(evt.type)) {
-                //     logger.info('EventDebug txs event', height, evt.type, "\ntx:", tx);
-                // }
-                processEvent(evt, height, lavaBlock, 'Tx events', blockchainEntitiesProviders, blockchainEntitiesSpecs, blockchainEntitiesStakes);
+                processEvent(evt, height, lavaBlock, 'Tx events', blockchainEntitiesStakes);
             });
         });
 
         const evts = await GetRpcBlockResultEvents(height, rpcConnection.clientTm);
         evts.forEach((evt) => {
-            processEvent(evt, height, lavaBlock, 'Block events', blockchainEntitiesProviders, blockchainEntitiesSpecs, blockchainEntitiesStakes);
+            processEvent(evt, height, lavaBlock, 'Block events', blockchainEntitiesStakes);
         });
     }
 }

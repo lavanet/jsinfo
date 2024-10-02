@@ -1,4 +1,4 @@
-// ./src/query/dbUtils.ts
+// src/query/queryDb.ts
 
 import { logger } from '../utils/utils';
 import { GetJsinfoDb, GetJsinfoReadDb, GetRelaysReadDb } from '../utils/dbUtils';

@@ -125,7 +125,7 @@ class EventsReportsData extends RequestHandlerBase<EventsReportsResponse> {
         const keyToColumnMap = {
             id: JsinfoSchema.providerReported.id,
             provider: JsinfoSchema.providerReported.provider,
-            moniker: JsinfoSchema.providers.moniker,
+            moniker: sql`MAX(${JsinfoSchema.providerSpecMoniker.moniker})`,
             blockId: JsinfoSchema.providerReported.blockId,
             cu: JsinfoSchema.providerReported.cu,
             disconnections: JsinfoSchema.providerReported.disconnections,
@@ -151,11 +151,11 @@ class EventsReportsData extends RequestHandlerBase<EventsReportsResponse> {
 
         const offset = (finalPagination.page - 1) * finalPagination.count;
 
-        if (sortColumn == JsinfoSchema.providers.moniker) {
+        if (sortColumn === keyToColumnMap["moniker"]) {
             const reportsRes = await QueryGetJsinfoReadDbInstance()
                 .select()
                 .from(JsinfoSchema.providerReported)
-                .leftJoin(JsinfoSchema.providers, eq(JsinfoSchema.providerReported.provider, JsinfoSchema.providers.address))
+                .leftJoin(JsinfoSchema.providerSpecMoniker, eq(JsinfoSchema.providerReported.provider, JsinfoSchema.providerSpecMoniker.provider))
                 .orderBy(orderFunction(sortColumn))
                 .offset(offset)
                 .limit(finalPagination.count);

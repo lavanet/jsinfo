@@ -1,10 +1,9 @@
 // src/query/utils/queryRequestArgParser.ts
 
 import { FastifyReply, FastifyRequest } from "fastify";
-import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from "../queryDb";
-import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
-import { eq } from "drizzle-orm";
 import { WriteErrorToFastifyReply } from "./queryServerUtils";
+import { MonikerCache } from '../classes/MonikerCache';
+import { SpecAndConsumerCache } from "../classes/SpecAndConsumerCache";
 
 let GetAndValidateConsumerAddressFromRequest_cache = {};
 
@@ -20,11 +19,7 @@ export async function GetAndValidateConsumerAddressFromRequest(request: FastifyR
         return addr;
     }
 
-    await QueryCheckJsinfoReadDbInstance();
-
-    res = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.consumers).where(eq(JsinfoSchema.consumers.address, addr)).limit(1);
-
-    if (res.length != 1) {
+    if (SpecAndConsumerCache.IsValidConsumer(addr)) {
         WriteErrorToFastifyReply(reply, 'Consumer does not exist');
         return '';
     }
@@ -48,11 +43,7 @@ export async function GetAndValidateProviderAddressFromRequest(endpoint: string,
         return addr;
     }
 
-    await QueryCheckJsinfoReadDbInstance();
-
-    res = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.providers).where(eq(JsinfoSchema.providers.address, addr)).limit(1);
-
-    if (res.length != 1) {
+    if (!MonikerCache.IsValidProvider(addr)) {
         WriteErrorToFastifyReply(reply, 'Provider does not exist on ' + endpoint);
         return '';
     }
@@ -79,11 +70,7 @@ export async function GetAndValidateProviderAddressFromRequestWithAll(endpoint: 
         return addr;
     }
 
-    await QueryCheckJsinfoReadDbInstance();
-
-    res = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.providers).where(eq(JsinfoSchema.providers.address, addr)).limit(1);
-
-    if (res.length != 1) {
+    if (!MonikerCache.IsValidProvider(addr)) {
         WriteErrorToFastifyReply(reply, 'Provider does not exist on ' + endpoint);
         return '';
     }
@@ -109,12 +96,8 @@ export async function GetAndValidateSpecIdFromRequest(request: FastifyRequest, r
         return upSpecId;
     }
 
-    await QueryCheckJsinfoReadDbInstance();
-
-    res = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.specs).where(eq(JsinfoSchema.specs.id, upSpecId)).limit(1);
-
-    if (res.length != 1) {
-        WriteErrorToFastifyReply(reply, 'specId does not exist');
+    if (SpecAndConsumerCache.IsValidSpec(upSpecId)) {
+        WriteErrorToFastifyReply(reply, 'Spec does not exist');
         return '';
     }
 
@@ -142,12 +125,8 @@ export async function GetAndValidateSpecIdFromRequestWithAll(request: FastifyReq
         return upSpecId;
     }
 
-    await QueryCheckJsinfoReadDbInstance();
-
-    res = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.specs).where(eq(JsinfoSchema.specs.id, upSpecId)).limit(1);
-
-    if (res.length != 1) {
-        WriteErrorToFastifyReply(reply, 'specId does not exist');
+    if (SpecAndConsumerCache.IsValidSpec(upSpecId)) {
+        WriteErrorToFastifyReply(reply, 'Spec does not exist');
         return '';
     }
 

@@ -136,7 +136,7 @@ class EventsRewardsData extends RequestHandlerBase<EventsRewardsResponse> {
         const keyToColumnMap = {
             id: JsinfoSchema.relayPayments.id,
             provider: JsinfoSchema.relayPayments.provider,
-            moniker: JsinfoSchema.providers.moniker,
+            moniker: sql`MAX(${JsinfoSchema.providerSpecMoniker.moniker})`,
             relays: JsinfoSchema.relayPayments.relays,
             cu: JsinfoSchema.relayPayments.cu,
             pay: JsinfoSchema.relayPayments.pay,
@@ -165,20 +165,42 @@ class EventsRewardsData extends RequestHandlerBase<EventsRewardsResponse> {
 
         const offset = (finalPagination.page - 1) * finalPagination.count;
 
-        if (sortColumn == JsinfoSchema.providers.moniker) {
+        if (sortColumn == keyToColumnMap.moniker) {
             const paymentsRes = await QueryGetJsinfoReadDbInstance()
-                .select()
+                .select({
+                    id: JsinfoSchema.relayPayments.id,
+                    provider: JsinfoSchema.relayPayments.provider,
+                    relays: JsinfoSchema.relayPayments.relays,
+                    cu: JsinfoSchema.relayPayments.cu,
+                    pay: JsinfoSchema.relayPayments.pay,
+                    datetime: JsinfoSchema.relayPayments.datetime,
+                    qosSync: JsinfoSchema.relayPayments.qosSync,
+                    qosAvailability: JsinfoSchema.relayPayments.qosAvailability,
+                    qosLatency: JsinfoSchema.relayPayments.qosLatency,
+                    qosSyncExc: JsinfoSchema.relayPayments.qosSyncExc,
+                    qosAvailabilityExc: JsinfoSchema.relayPayments.qosAvailabilityExc,
+                    qosLatencyExc: JsinfoSchema.relayPayments.qosLatencyExc,
+                    specId: JsinfoSchema.relayPayments.specId,
+                    blockId: JsinfoSchema.relayPayments.blockId,
+                    consumer: JsinfoSchema.relayPayments.consumer,
+                    tx: JsinfoSchema.relayPayments.tx,
+                    moniker: sql`MAX(${JsinfoSchema.providerSpecMoniker.moniker})`
+                })
                 .from(JsinfoSchema.relayPayments)
-                .leftJoin(JsinfoSchema.providers, eq(JsinfoSchema.relayPayments.provider, JsinfoSchema.providers.address))
+                .leftJoin(
+                    JsinfoSchema.providerSpecMoniker,
+                    eq(JsinfoSchema.relayPayments.provider, JsinfoSchema.providerSpecMoniker.provider)
+                )
+                .groupBy(JsinfoSchema.relayPayments.id)
                 .orderBy(orderFunction(sortColumn))
                 .offset(offset)
                 .limit(finalPagination.count);
 
             const flattenedRewards = paymentsRes.map(data => ({
-                ...data.relay_payments,
-                pay: data.relay_payments.pay?.toString() || null,
-                moniker: MonikerCache.GetMonikerForProvider(data.relay_payments.provider),
-                monikerfull: MonikerCache.GetMonikerFullDescription(data.relay_payments.provider),
+                ...data,
+                pay: data.pay?.toString() || null,
+                moniker: MonikerCache.GetMonikerForProvider(data.provider),
+                monikerfull: MonikerCache.GetMonikerFullDescription(data.provider),
             }));
 
             return flattenedRewards;

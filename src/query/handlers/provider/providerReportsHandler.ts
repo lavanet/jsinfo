@@ -114,36 +114,58 @@ class ProviderReportsData extends RequestHandlerBase<ProviderReportsResponse> {
         return `ProviderReports_${this.addr}.csv`;
     }
 
+    private getThirtyDaysAgo(): Date {
+        let thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        return thirtyDaysAgo;
+    }
+
     protected async fetchAllRecords(): Promise<ProviderReportsResponse[]> {
         await QueryCheckJsinfoReadDbInstance();
 
-        let thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        const thirtyDaysAgo = this.getThirtyDaysAgo();
 
-        let reportsRes = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.providerReported).
-            leftJoin(JsinfoSchema.blocks, eq(JsinfoSchema.providerReported.blockId, JsinfoSchema.blocks.height)).
-            where(
+        let reportsRes = await QueryGetJsinfoReadDbInstance()
+            .select({
+                providerReported: JsinfoSchema.providerReported,
+                blocks: {
+                    height: JsinfoSchema.providerReported.blockId,
+                    datetime: JsinfoSchema.providerReported.datetime
+                }
+            })
+            .from(JsinfoSchema.providerReported)
+            .where(
                 and(
                     eq(JsinfoSchema.providerReported.provider, this.addr),
                     gte(JsinfoSchema.providerReported.datetime, thirtyDaysAgo)
                 )
-            ).
-            orderBy(desc(JsinfoSchema.providerReported.id)).
-            offset(0).
-            limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
+            )
+            .orderBy(desc(JsinfoSchema.providerReported.id))
+            .offset(0)
+            .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
 
-        return reportsRes;
+        return reportsRes.map(row => ({
+            provider_reported: row.providerReported,
+            blocks: row.blocks
+        }));
     }
 
     protected async fetchRecordCountFromDb(): Promise<number> {
         await QueryCheckJsinfoReadDbInstance();
+
+        const thirtyDaysAgo = this.getThirtyDaysAgo();
 
         const countResult = await QueryGetJsinfoReadDbInstance()
             .select({
                 count: sql<number>`COUNT(*)`
             })
             .from(JsinfoSchema.providerReported)
-            .where(eq(JsinfoSchema.providerReported.provider, this.addr));
+            .where(
+                and(
+                    eq(JsinfoSchema.providerReported.provider, this.addr),
+                    gte(JsinfoSchema.providerReported.datetime, thirtyDaysAgo)
+                )
+            );
 
         return Math.min(countResult[0].count || 0, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION - 1);
     }
@@ -184,8 +206,7 @@ class ProviderReportsData extends RequestHandlerBase<ProviderReportsResponse> {
         const sortColumn = keyToColumnMap[finalPagination.sortKey];
         const orderFunction = finalPagination.direction === 'ascending' ? asc : desc;
 
-        let thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        const thirtyDaysAgo = this.getThirtyDaysAgo();
 
         const reportsRes = await QueryGetJsinfoReadDbInstance()
             .select({
@@ -203,8 +224,8 @@ class ProviderReportsData extends RequestHandlerBase<ProviderReportsResponse> {
                     tx: JsinfoSchema.providerReported.tx
                 },
                 blocks: {
-                    height: JsinfoSchema.blocks.height,
-                    datetime: JsinfoSchema.blocks.datetime
+                    height: JsinfoSchema.providerReported.blockId,
+                    datetime: JsinfoSchema.providerReported.datetime
                 }
             })
             .from(JsinfoSchema.providerReported)
@@ -214,7 +235,6 @@ class ProviderReportsData extends RequestHandlerBase<ProviderReportsResponse> {
                     gte(JsinfoSchema.providerReported.datetime, thirtyDaysAgo)
                 )
             )
-            .leftJoin(JsinfoSchema.blocks, eq(JsinfoSchema.providerReported.blockId, JsinfoSchema.blocks.height))
             .orderBy(orderFunction(sortColumn))
             .offset((finalPagination.page - 1) * finalPagination.count)
             .limit(finalPagination.count);
@@ -228,14 +248,14 @@ class ProviderReportsData extends RequestHandlerBase<ProviderReportsResponse> {
                 epoch: row.providerReported.epoch,
                 errors: row.providerReported.errors,
                 project: row.providerReported.project,
-                datetime: row.blocks?.datetime ?? null,
+                datetime: row.providerReported.datetime,
                 totalComplaintEpoch: row.providerReported.totalComplaintEpoch,
                 tx: row.providerReported.tx
             },
-            blocks: row.blocks ? {
+            blocks: {
                 height: row.blocks.height,
                 datetime: row.blocks.datetime
-            } : null
+            }
         }));
     }
 

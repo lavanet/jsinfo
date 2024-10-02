@@ -5,47 +5,6 @@
 import { sql } from 'drizzle-orm'
 import { pgTable, index, text, integer, serial, bigint, real, timestamp, varchar, uniqueIndex } from 'drizzle-orm/pg-core';
 
-export const blocks = pgTable('blocks', {
-  height: integer('height').unique(),
-  datetime: timestamp('datetime', { mode: "date" }),
-});
-export type Block = typeof blocks.$inferSelect
-export type InsertBlock = typeof blocks.$inferInsert
-
-export const txs = pgTable('txs', {
-  hash: text('tx_hash').unique(),
-  blockId: integer('block_id').references(() => blocks.height),
-});
-export type Tx = typeof txs.$inferSelect
-export type InsertTx = typeof txs.$inferInsert
-
-export const consumers = pgTable('consumers', {
-  address: text('address').unique(),
-});
-export type Consumer = typeof consumers.$inferSelect
-export type InsertConsumer = typeof consumers.$inferInsert
-
-export const plans = pgTable('plans', {
-  id: text('id').unique(),
-  desc: text('desc'),
-  price: bigint('pay', { mode: 'number' }),
-});
-export type Plan = typeof plans.$inferSelect
-export type InsertPlan = typeof plans.$inferInsert
-
-export const providers = pgTable('providers', {
-  address: text('address').unique(),
-  moniker: text('moniker'),
-});
-export type Provider = typeof providers.$inferSelect
-export type InsertProvider = typeof providers.$inferInsert
-
-export const specs = pgTable('specs', {
-  id: text('id').unique(),
-});
-export type Spec = typeof specs.$inferSelect
-export type InsertSpec = typeof specs.$inferInsert
-
 export enum LavaProviderStakeStatus {
   Active = 1,
   Frozen,
@@ -64,9 +23,9 @@ export const providerStakes = pgTable('provider_stakes', {
   extensions: text('extensions'),
   status: integer('status'), // LavaProviderStakeStatus
 
-  provider: text('provider').references(() => providers.address),
-  specId: text('spec_id').references(() => specs.id),
-  blockId: integer('block_id').references(() => blocks.height),
+  provider: text('provider'),
+  specId: text('spec_id'),
+  blockId: integer('block_id'),
 }, (table) => {
   return {
     providerStakesIdx: uniqueIndex("providerStakesIdx").on(
@@ -94,11 +53,11 @@ export const relayPayments = pgTable('relay_payments', {
   qosAvailabilityExc: real('qos_availability_exc'),
   qosLatencyExc: real('qos_latency_exc'),
 
-  provider: text('provider').references(() => providers.address),
-  specId: text('spec_id').references(() => specs.id),
-  blockId: integer('block_id').references(() => blocks.height),
-  consumer: text('consumer').references(() => consumers.address),
-  tx: text('tx').references(() => txs.hash),
+  provider: text('provider'),
+  specId: text('spec_id'),
+  blockId: integer('block_id'),
+  consumer: text('consumer'),
+  tx: text('tx'),
 }, (table) => {
   return {
     nameIdx: index("name_idx").on(table.specId),
@@ -160,10 +119,10 @@ export const events = pgTable('events', {
   r2: real('r2'),
   r3: real('r3'),
 
-  provider: text('provider').references(() => providers.address),
-  consumer: text('consumer').references(() => consumers.address),
-  blockId: integer('block_id').references(() => blocks.height),
-  tx: text('tx').references(() => txs.hash),
+  provider: text('provider'),
+  consumer: text('consumer'),
+  blockId: integer('block_id'),
+  tx: text('tx'),
 
   fulltext: text('fulltext'),
   timestamp: timestamp("timestamp")
@@ -180,10 +139,10 @@ export type InsertEvent = typeof events.$inferInsert
 export const conflictResponses = pgTable('conflict_responses', {
   id: serial('id').primaryKey(),
 
-  blockId: integer('block_id').references(() => blocks.height),
-  consumer: text('consumer').references(() => consumers.address),
-  specId: text('spec_id').references(() => specs.id),
-  tx: text('tx').references(() => txs.hash),
+  blockId: integer('block_id'),
+  consumer: text('consumer'),
+  specId: text('spec_id'),
+  tx: text('tx'),
 
   voteId: text('vote_id'),
   requestBlock: integer('request_block'),
@@ -200,9 +159,9 @@ export const conflictVotes = pgTable('conflict_votes', {
   id: serial('id').primaryKey(),
   voteId: text('vote_id'),
 
-  blockId: integer('block_id').references(() => blocks.height),
-  provider: text('provider').references(() => providers.address),
-  tx: text('tx').references(() => txs.hash),
+  blockId: integer('block_id'),
+  provider: text('provider'),
+  tx: text('tx'),
 }, (table) => {
   return {
     providerIdx: index("conflict_votes_provider_idx").on(table.provider),
@@ -213,11 +172,11 @@ export type ConflictVote = typeof conflictVotes.$inferSelect
 export type InsertConflictVote = typeof conflictVotes.$inferInsert
 
 export const subscriptionBuys = pgTable('subscription_buys', {
-  blockId: integer('block_id').references(() => blocks.height),
-  consumer: text('consumer').references(() => consumers.address),
+  blockId: integer('block_id'),
+  consumer: text('consumer'),
   duration: integer('number'),
-  plan: text('plan').references(() => plans.id),
-  tx: text('tx').references(() => txs.hash),
+  plan: text('plan'),
+  tx: text('tx'),
 });
 export type SubscriptionBuy = typeof subscriptionBuys.$inferSelect
 export type InsertSubscriptionBuy = typeof subscriptionBuys.$inferInsert
@@ -225,8 +184,8 @@ export type InsertSubscriptionBuy = typeof subscriptionBuys.$inferInsert
 export const providerReported = pgTable('provider_reported', {
   id: serial('id').primaryKey(),
 
-  provider: text('provider').references(() => providers.address),
-  blockId: integer('block_id').references(() => blocks.height),
+  provider: text('provider'),
+  blockId: integer('block_id'),
 
   cu: bigint('cu', { mode: 'number' }),
   disconnections: integer('disconnections'),
@@ -235,7 +194,7 @@ export const providerReported = pgTable('provider_reported', {
   project: text('project'),
   datetime: timestamp('datetime', { mode: "date" }),
   totalComplaintEpoch: integer('total_complaint_this_epoch'),
-  tx: text('tx').references(() => txs.hash),
+  tx: text('tx'),
 }, (table) => {
   return {
     providerIdx: index("provider_reported_provider_idx").on(table.provider),
@@ -246,9 +205,9 @@ export type InsertProviderReported = typeof providerReported.$inferInsert
 
 export const providerLatestBlockReports = pgTable('provider_latest_block_reports', {
   id: serial('id').primaryKey(),
-  provider: text('provider').references(() => providers.address),
-  blockId: integer('block_id').references(() => blocks.height),
-  tx: text('tx').references(() => txs.hash),
+  provider: text('provider'),
+  blockId: integer('block_id'),
+  tx: text('tx'),
   timestamp: timestamp('timestamp').notNull(),
   chainId: text('chain_id').notNull(),
   chainBlockHeight: bigint('chain_block_height', { mode: 'number' }),
@@ -263,7 +222,7 @@ export type InsertProviderLatestBlockReports = typeof providerLatestBlockReports
 
 export const providerHealth = pgTable('provider_health2', {
   id: serial('id'),
-  provider: text('provider').references(() => providers.address),
+  provider: text('provider'),
   timestamp: timestamp('timestamp').notNull(),
   guid: text('guid'),
   spec: varchar("spec", { length: 50 }).notNull(),
@@ -288,47 +247,9 @@ export const providerHealth = pgTable('provider_health2', {
 export type ProviderHealth = typeof providerHealth.$inferSelect;
 export type InsertProviderHealth = typeof providerHealth.$inferInsert;
 
-export const uniqueVisitors = pgTable('unique_visitors', {
-  id: serial('id').primaryKey(),
-  timestamp: timestamp('timestamp').notNull(),
-  value: integer('value'),
-});
-
-export type UniqueVisitors = typeof uniqueVisitors.$inferSelect;
-export type InsertUniqueVisitors = typeof uniqueVisitors.$inferInsert;
-
-export const visitorMetrics = pgTable('visitor_metrics', {
-  key: text('key').notNull().primaryKey(),
-  value: text('value'),
-}, (table) => {
-  return {
-    vmidx: index("vmidx").on(
-      table.key,
-    )
-  };
-});
-
-export type VisitorMetrics = typeof visitorMetrics.$inferSelect;
-export type InsertVisitorMetrics = typeof visitorMetrics.$inferInsert;
-
-export const providerAccountInfo = pgTable('provider_accountinfo', {
-  id: serial('id').primaryKey(),
-  provider: text('provider').references(() => providers.address),
-  timestamp: timestamp('timestamp').notNull(),
-  data: text("data").default(sql`NULL`),
-}, (table) => {
-  return {
-    providerIdx: index("provider_accountinfo_provider_idx").on(table.provider),
-    timestampIdx: index("provider_accountinfo_timestamp_idx").on(table.timestamp),
-  };
-});
-
-export type ProviderAccountInfo = typeof providerAccountInfo.$inferSelect;
-export type InsertProviderAccountInfo = typeof providerAccountInfo.$inferInsert;
-
 export const dualStackingDelegatorRewards = pgTable('dual_stacking_delegator_rewards', {
   id: serial('id').primaryKey(),
-  provider: text('provider').notNull().references(() => providers.address),
+  provider: text('provider').notNull(),
   timestamp: timestamp('timestamp').notNull(),
   chainId: text('chain_id').notNull(),
   amount: bigint('amount', { mode: 'bigint' }).notNull(),
@@ -344,9 +265,9 @@ export type InsertDualStackingDelegatorRewards = typeof dualStackingDelegatorRew
 
 export const providerSpecMoniker = pgTable('provider_spec_moniker', {
   id: serial('id').primaryKey(),
-  provider: text('provider').notNull().references(() => providers.address),
+  provider: text('provider').notNull(),
   moniker: text('moniker'),
-  specId: text('spec').references(() => specs.id),
+  specId: text('spec'),
   createdAt: timestamp("createdat").defaultNow().notNull(),
   updatedAt: timestamp('updatedat').default(sql`CURRENT_TIMESTAMP(3)`),
 }, (table) => {
@@ -363,7 +284,7 @@ export type InsertProviderSpecMoniker = typeof providerSpecMoniker.$inferInsert;
 
 export const consumerSubscriptionList = pgTable('consumer_subscription_list', {
   id: serial('id').primaryKey(),
-  consumer: text('consumer').notNull().references(() => consumers.address),
+  consumer: text('consumer').notNull(),
   plan: text('plan'),
   fulltext: text('fulltext'),
   createdAt: timestamp("createdat").defaultNow().notNull(),
@@ -392,3 +313,10 @@ export const supply = pgTable('supply', {
 
 export type Supply = typeof supply.$inferSelect;
 export type InsertSupply = typeof supply.$inferInsert;
+
+export const blocks = pgTable('blocks', {
+  height: integer('height').unique(),
+  datetime: timestamp('datetime', { mode: "date" }),
+});
+export type Block = typeof blocks.$inferSelect
+export type InsertBlock = typeof blocks.$inferInsert

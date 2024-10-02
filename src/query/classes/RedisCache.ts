@@ -1,7 +1,11 @@
 // src/query/classes/RedisCache.ts
 
 import { createClient, RedisClientType } from 'redis';
-import { JSONStringify, logger } from '../../utils/utils';
+import { GetIsIndexerProcess, JSONStringify, logger } from '../../utils/utils';
+
+if (GetIsIndexerProcess()) {
+    throw new Error('RedisCache should not be used in the indexer - use MemoryCache instead');
+}
 
 class RedisCacheClass {
     private client: RedisClientType | null = null;
@@ -35,7 +39,7 @@ class RedisCacheClass {
         });
         this.client.on('error', (err) => this.logError('Redis Client Error', err));
         this.client.connect().catch((err) => {
-            this.logError('Failed to connect to Redis', err);
+            this.logError('Failed to connect to Redis', { error: err, url: this.redisUrl });
             this.client = null;
         });
     }

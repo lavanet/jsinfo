@@ -2,7 +2,6 @@ import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import { Event } from "@cosmjs/stargate"
 import { LavaBlock } from "../types";
 import { EventProcessAttributes, EventParseProviderAddress } from "../eventUtils";
-import { GetOrSetConsumer, SetTx } from '../blockchainEntities/blockchainEntitiesGettersAndSetters';
 
 /*
 https://github.com/lavanet/lava/blob/976bbd1063c66742b2f49465d39fe57ef6edff8a/x/subscription/keeper/subscription.go#L694
@@ -28,8 +27,8 @@ export const ParseEventExpireSubscrption = (
   height: number,
   txHash: string | null,
   lavaBlock: LavaBlock,
-  blockchainEntitiesProviders: Map<string, JsinfoSchema.Provider>,
-  blockchainEntitiesSpecs: Map<string, JsinfoSchema.Spec>,
+
+
   blockchainEntitiesStakes: Map<string, JsinfoSchema.InsertProviderStake[]>,
 ) => {
 
@@ -58,7 +57,7 @@ export const ParseEventExpireSubscrption = (
     verifyFunction: () => !!dbEvent.consumer
   })) return;
 
-  SetTx(lavaBlock.dbTxs, txHash, height)
-  GetOrSetConsumer(lavaBlock.dbConsumers, dbEvent.consumer!)
+
+
   lavaBlock.dbEvents.push(dbEvent)
 }

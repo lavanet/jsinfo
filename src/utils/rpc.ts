@@ -15,9 +15,9 @@ export interface RpcConnection {
 export async function ConnectToRpc(rpc: string): Promise<RpcConnection> {
     try {
         await axios.get(rpc);
-        logger.info(`ConnectToRpc:: http tested successfully connected to ${rpc}`);
+        logger.info(`ConnectToRpc:: http tested successfully connected to ${rpc}`.slice(0, 1000));
     } catch (error) {
-        logger.error(`ConnectToRpc:: error connecting to ${rpc}: ${error}`);
+        logger.error(`ConnectToRpc:: error connecting to ${rpc}: ${error}`.slice(0, 1000));
         throw error;
     }
 

@@ -1,5 +1,4 @@
-
-// src/query/handlers/eventsEventsHandler.ts
+// src/query/handlers/events/eventsEventsHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryGetJsinfoReadDbInstance, QueryCheckJsinfoReadDbInstance } from '../../queryDb';
@@ -97,19 +96,20 @@ class EventsEventsData extends RequestHandlerBase<EventsEventsResponse> {
         const eventsRes = await QueryGetJsinfoReadDbInstance()
             .select()
             .from(JsinfoSchema.events)
-            .leftJoin(JsinfoSchema.blocks, eq(JsinfoSchema.events.blockId, JsinfoSchema.blocks.height))
+            .where(sql`timestamp >= NOW() - INTERVAL '30 days'`) // Add this line to filter by the last 30 days
             .orderBy(desc(JsinfoSchema.events.id))
             .offset(0)
             .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
 
         const flattenedEvents = eventsRes.map(event => ({
-            ...event.events,
-            b1: event.events.b1?.toString() ?? null,
-            b2: event.events.b1?.toString() ?? null,
-            b3: event.events.b1?.toString() ?? null,
-            moniker: MonikerCache.GetMonikerForProvider(event.events.provider),
-            monikerfull: MonikerCache.GetMonikerFullDescription(event.events.provider),
-            datetime: event.blocks?.datetime?.toISOString() ?? null
+            ...event,
+            b1: event.b1?.toString() ?? null,
+            b2: event.b2?.toString() ?? null,
+            b3: event.b3?.toString() ?? null,
+            moniker: MonikerCache.GetMonikerForProvider(event.provider),
+            monikerfull: MonikerCache.GetMonikerFullDescription(event.provider),
+            datetime: event.timestamp?.toISOString() ?? null,
+            fulltext: event.fulltext ?? null // Ensure fulltext is included
         }));
 
         return flattenedEvents;
@@ -161,10 +161,10 @@ class EventsEventsData extends RequestHandlerBase<EventsEventsResponse> {
             r2: JsinfoSchema.events.r2,
             r3: JsinfoSchema.events.r3,
             provider: JsinfoSchema.events.provider,
-            moniker: JsinfoSchema.providers.moniker,
+            moniker: sql`MAX(${JsinfoSchema.providerSpecMoniker.moniker})`,
             consumer: JsinfoSchema.events.consumer,
             blockId: JsinfoSchema.events.blockId,
-            datetime: JsinfoSchema.blocks.datetime,
+            datetime: JsinfoSchema.events.timestamp, // Use timestamp from events table
             tx: JsinfoSchema.events.tx,
             fulltext: JsinfoSchema.events.fulltext
         };
@@ -185,12 +185,12 @@ class EventsEventsData extends RequestHandlerBase<EventsEventsResponse> {
         const offset = (finalPagination.page - 1) * finalPagination.count;
 
         let eventsRes: any | null = null;
-        if (sortColumn == JsinfoSchema.providers.moniker) {
+        if (sortColumn === keyToColumnMap["moniker"]) {
             eventsRes = await QueryGetJsinfoReadDbInstance()
                 .select()
                 .from(JsinfoSchema.events)
-                .leftJoin(JsinfoSchema.blocks, eq(JsinfoSchema.events.blockId, JsinfoSchema.blocks.height))
-                .leftJoin(JsinfoSchema.providers, eq(JsinfoSchema.events.provider, JsinfoSchema.providers.address))
+                .leftJoin(JsinfoSchema.providerSpecMoniker, eq(JsinfoSchema.events.provider, JsinfoSchema.providerSpecMoniker.provider))
+                .where(sql`timestamp >= NOW() - INTERVAL '30 days'`) // Add this line to filter by the last 30 days
                 .orderBy(orderFunction(sortColumn))
                 .offset(offset)
                 .limit(finalPagination.count);
@@ -198,20 +198,21 @@ class EventsEventsData extends RequestHandlerBase<EventsEventsResponse> {
             eventsRes = await QueryGetJsinfoReadDbInstance()
                 .select()
                 .from(JsinfoSchema.events)
-                .leftJoin(JsinfoSchema.blocks, eq(JsinfoSchema.events.blockId, JsinfoSchema.blocks.height))
+                .where(sql`timestamp >= NOW() - INTERVAL '30 days'`) // Add this line to filter by the last 30 days
                 .orderBy(orderFunction(sortColumn))
                 .offset(offset)
                 .limit(finalPagination.count);
         }
 
         const flattenedEvents = eventsRes.map(event => ({
-            ...event.events,
-            b1: event.events.b1?.toString() ?? null,
-            b2: event.events.b1?.toString() ?? null,
-            b3: event.events.b1?.toString() ?? null,
-            moniker: MonikerCache.GetMonikerForProvider(event.events.provider),
-            monikerfull: MonikerCache.GetMonikerFullDescription(event.events.provider),
-            datetime: event.blocks?.datetime?.toISOString() ?? null
+            ...event,
+            b1: event.b1?.toString() ?? null,
+            b2: event.b2?.toString() ?? null,
+            b3: event.b3?.toString() ?? null,
+            moniker: MonikerCache.GetMonikerForProvider(event.provider),
+            monikerfull: MonikerCache.GetMonikerFullDescription(event.provider),
+            datetime: event.timestamp?.toISOString() ?? null,
+            fulltext: event.fulltext ?? null // Ensure fulltext is included
         }));
 
         return flattenedEvents;

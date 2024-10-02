@@ -1,6 +1,5 @@
 // src/jsinfo/src/schemas/jsinfoSchemaConsumerRelayPaymentsAgregation.ts
 
-import * as jsinfoSchema from "./jsinfoSchema";
 import {
   pgTable,
   text,
@@ -13,9 +12,9 @@ import {
 export const aggConsumerHourlyRelayPayments = pgTable(
   "agg_consumer_hourly_relay_payments",
   {
-    consumer: text("consumer").references(() => jsinfoSchema.consumers.address),
+    consumer: text("consumer"),
     datehour: timestamp("datehour", { mode: "string" }),
-    specId: text("spec_id").references(() => jsinfoSchema.specs.id),
+    specId: text("spec_id"),
     cuSum: bigint("cusum", { mode: "number" }),
     relaySum: bigint("relaysum", { mode: "number" }),
     rewardSum: bigint("rewardsum", { mode: "number" }),
@@ -44,9 +43,9 @@ export type InsertAggConsumerHorulyRelayPayment =
 export const aggConsumerDailyRelayPayments = pgTable(
   "agg_consumer_daily_relay_payments",
   {
-    consumer: text("consumer").references(() => jsinfoSchema.consumers.address),
+    consumer: text("consumer"),
     dateday: timestamp("dateday", { mode: "string" }),
-    specId: text("spec_id").references(() => jsinfoSchema.specs.id),
+    specId: text("spec_id"),
     cuSum: bigint("cusum", { mode: "number" }),
     relaySum: bigint("relaysum", { mode: "number" }),
     rewardSum: bigint("rewardsum", { mode: "number" }),
@@ -75,8 +74,8 @@ export type InsertAggConsumerDailyRelayPayment =
 export const aggConsumerAllTimeRelayPayments = pgTable(
   "agg_consumer_alltime_relay_payments",
   {
-    consumer: text("consumer").references(() => jsinfoSchema.consumers.address),
-    specId: text("spec_id").references(() => jsinfoSchema.specs.id),
+    consumer: text("consumer"),
+    specId: text("spec_id"),
     cuSum: bigint("cusum", { mode: "number" }),
     relaySum: bigint("relaysum", { mode: "number" }),
     rewardSum: bigint("rewardsum", { mode: "number" }),

@@ -36,20 +36,15 @@ class SpecAndConsumerCacheClass {
     }
 
     private async _refreshCache(): Promise<void> {
-        logger.info('Starting SpecAndConsumerCache refresh');
-
         await QueryCheckJsinfoReadDbInstance();
 
         let newSpecCache = await RedisCache.getArray("SpecTable") as string[] | null;
         let newConsumerCache = await RedisCache.getArray("ConsumerTable") as string[] | null;
 
         if (!newSpecCache || newSpecCache.length === 0 || this.specCache.length === 0) {
-            logger.info('Fetching new spec data from database');
             this.specCache = await this.fetchSpecTable();
             RedisCache.setArray("SpecTable", this.specCache, this.refreshInterval);
-            logger.info(`Updated spec cache with ${this.specCache.length} items`);
         } else {
-            logger.info(`Using existing Redis spec cache with ${newSpecCache.length} items`);
             this.specCache = newSpecCache;
         }
 
@@ -57,13 +52,9 @@ class SpecAndConsumerCacheClass {
             logger.info('Fetching new consumer data from database');
             this.consumerCache = await this.fetchConsumerTable();
             RedisCache.setArray("ConsumerTable", this.consumerCache, this.refreshInterval);
-            logger.info(`Updated consumer cache with ${this.consumerCache.length} items`);
         } else {
-            logger.info(`Using existing Redis consumer cache with ${newConsumerCache.length} items`);
             this.consumerCache = newConsumerCache;
         }
-
-        console.log("newConsumerCache", this.consumerCache);
 
         logger.info('SpecAndConsumerCache refresh completed');
     }

@@ -63,6 +63,9 @@ query:
 query_no_nodemon:
 	JSINFO_QUERY_IS_DEBUG_MODE=true bun run src/query.ts
 
+query_inspect:
+	JSINFO_QUERY_IS_DEBUG_MODE=true bun --inspect run src/query.ts
+
 query_port8090:
 	JSINFO_QUERY_PORT=8090 make query
 

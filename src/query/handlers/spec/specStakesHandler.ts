@@ -109,7 +109,7 @@ export const SpecStakesPaginatedHandlerOpts: RouteShorthandOptions = {
 export async function SpecStakesPaginatedHandler(request: FastifyRequest, reply: FastifyReply) {
     let spec = await GetAndValidateSpecIdFromRequest(request, reply);
     if (spec === '') {
-        return null;
+        return reply;
     }
 
     await QueryCheckJsinfoReadDbInstance();

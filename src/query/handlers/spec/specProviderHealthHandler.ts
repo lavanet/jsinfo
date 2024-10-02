@@ -50,12 +50,12 @@ export async function SpecProviderHealthHandler(request: FastifyRequest, reply: 
 
     let provider = await GetAndValidateProviderAddressFromRequest("specProviderHealth", request, reply);
     if (provider === '') {
-        return null;
+        return reply;
     }
 
     let spec = await GetAndValidateSpecIdFromRequest(request, reply);
     if (spec === '') {
-        return null;
+        return reply;
     }
 
     const twoDaysAgo = new Date();

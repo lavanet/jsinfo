@@ -27,7 +27,7 @@ export const SpecCuRelayRewardsHandlerOpts: RouteShorthandOptions = {
 export async function SpecCuRelayRewardsHandler(request: FastifyRequest, reply: FastifyReply) {
     const spec = await GetAndValidateSpecIdFromRequest(request, reply);
     if (spec === '') {
-        return null;
+        return reply;
     }
 
     const cuRelayAndRewardsTotalRes = await QueryGetJsinfoReadDbInstance()
@@ -59,7 +59,7 @@ export const SpecProviderCountHandlerOpts: RouteShorthandOptions = {
 export async function SpecProviderCountHandler(request: FastifyRequest, reply: FastifyReply) {
     const spec = await GetAndValidateSpecIdFromRequest(request, reply);
     if (spec === '') {
-        return null;
+        return reply;
     }
 
     const providerCount = await QueryGetJsinfoReadDbInstance()
@@ -93,7 +93,7 @@ export const SpecEndpointHealthHandlerOpts: RouteShorthandOptions = {
 export async function SpecEndpointHealthHandler(request: FastifyRequest, reply: FastifyReply) {
     const spec = await GetAndValidateSpecIdFromRequest(request, reply);
     if (spec === '') {
-        return null;
+        return reply;
     }
 
     await QueryCheckJsinfoReadDbInstance();
@@ -168,7 +168,7 @@ export const SpecCacheHitRateHandlerOpts: RouteShorthandOptions = {
 export async function SpecCacheHitRateHandler(request: FastifyRequest, reply: FastifyReply) {
     const spec = await GetAndValidateSpecIdFromRequest(request, reply);
     if (spec === '') {
-        return null;
+        return reply;
     }
 
     const cacheHitRateData = await RedisCache.getDictNoKeyPrefix("jsinfo-healthp-cachedmetrics") || {};

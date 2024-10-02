@@ -3,7 +3,11 @@
 import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../queryDb';
 import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import { RedisCache } from './RedisCache';
+import { GetIsIndexerProcess } from '../../utils/utils';
 
+if (GetIsIndexerProcess()) {
+    throw new Error('MonikerCache should not be used in the indexer');
+}
 interface ProviderSpecMoniker {
     provider: string;
     moniker: string | null;

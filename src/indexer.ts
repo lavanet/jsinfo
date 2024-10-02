@@ -3,6 +3,9 @@
 import * as consts from './indexer/indexerConsts';
 import * as JsinfoSchema from "./schemas/jsinfoSchema/jsinfoSchema";
 
+import { DoInChunks, logger, BackoffRetry, SetIsIndexerProcess } from "./utils/utils";
+SetIsIndexerProcess(true);
+
 import { StargateClient } from "@cosmjs/stargate"
 import { Tendermint37Client } from "@cosmjs/tendermint-rpc";
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
@@ -12,14 +15,11 @@ import { GetOneLavaBlock } from './indexer/lavaBlock'
 import { EventDebug } from './indexer/eventDebug'
 import { LavaBlock } from './indexer/types'
 import { SyncBlockchainEntities } from './indexer/blockchainEntities/blockchainEntitiesSync'
-import { DoInChunks, logger, BackoffRetry, SetIsIndexerProcess } from "./utils/utils";
 import { ConnectToRpc, RpcConnection } from "./utils/rpc";
 import { MigrateDb, GetJsinfoDb } from "./utils/dbUtils";
 import { AggProviderAndConsumerRelayPayments, AggProviderAndConsumerRelayPaymentsSync } from "./indexer/agregators/aggProviderAndConsumerRelayPayments";
 import { SaveTokenSupplyToDB } from './indexer/supply/syncSupply';
 import { RestRpcAgreagorsCaller } from './indexer/restrpc_agregators/RestRpcAgreagorsCaller';
-
-SetIsIndexerProcess(true);
 
 let static_blockchainEntitiesStakes: Map<string, JsinfoSchema.InsertProviderStake[]> = new Map()
 

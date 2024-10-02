@@ -135,16 +135,38 @@ async function getAllDataNoRedis(addr: string): Promise<ConsumerSubscriptionEntr
             ret.createdAt = item.createdAt;
             ret.id = item.id;
 
+            let creditParsed = false;
+            // this is the previous format
             try {
                 const credit = JSON.parse(ret.credit.replace(/'/g, '"'));
                 ret.credit = credit.amount + " " + credit.denom.toUpperCase();
-            } catch (creditError) {
-                console.error(`Error parsing credit for item at index ${idx}:`, creditError);
+                creditParsed = true;
+            } catch (e) {
+            }
+
+
+            if (!creditParsed) {
+                try {
+                    const credit = JSON.parse(JSON.stringify(ret.credit))
+                    ret.credit = credit["amount"] + " " + credit["denom"].toUpperCase();
+                    creditParsed = true;
+                } catch (e) {
+                }
+            }
+
+            // this is the worst case
+            if (!creditParsed) {
+                try {
+                    ret.credit = JSON.stringify(ret.credit); // or some default value
+                } catch (creditParseError) {
+                    console.error(`Error parsing credit for item ${item.id}:`, creditParseError);
+                    ret.credit = "Error parsing credit: " + ret.credit;
+                }
             }
 
             rets.push(ret);
         } catch (error) {
-            console.error(`Error processing item at index ${idx}:`, error);
+            console.error(`Error processing item ${item.id}:`, error);
             rets.push(item);
         }
     });

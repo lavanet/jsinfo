@@ -63,7 +63,6 @@ export async function SpecPaginatedHandler(request: FastifyRequest, reply: Fasti
 
     const { latestHeight, latestDatetime } = await GetLatestBlock()
 
-
     let cuSum = 0
     let relaySum = 0
     let rewardSum = 0

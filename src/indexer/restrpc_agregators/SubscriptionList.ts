@@ -3,8 +3,7 @@ import { QueryLavaRPC, ReplaceForCompare } from "./utils";
 import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import { eq, desc } from "drizzle-orm";
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-import { RedisCache } from "../../query/classes/RedisCache";
-
+import { MemoryCache } from "../classes/MemoryCache";
 interface Credit {
     denom: string;
     amount: string;
@@ -54,7 +53,7 @@ async function ProcessSubscription(db: PostgresJsDatabase, sub: SubInfo): Promis
     }
 
     const cacheKey = `subscription-${consumer}-${plan}`;
-    const cachedValue = await RedisCache.getDict(cacheKey);
+    const cachedValue = await MemoryCache.getDict(cacheKey);
     if (cachedValue && cachedValue.processed) {
         // Skip processing duplicate subscription
         return;
@@ -84,7 +83,7 @@ async function ProcessSubscription(db: PostgresJsDatabase, sub: SubInfo): Promis
     }
 
     // Update the cache after processing
-    await RedisCache.setDict(cacheKey, { processed: true }, 3600);
+    await MemoryCache.setDict(cacheKey, { processed: true }, 3600);
 }
 
 

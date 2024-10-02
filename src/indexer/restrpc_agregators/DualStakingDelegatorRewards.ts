@@ -3,7 +3,7 @@ import { QueryLavaRPC } from "./utils";
 import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import { eq, and, desc } from "drizzle-orm";
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-import { RedisCache } from "../../query/classes/RedisCache";
+import { MemoryCache } from "../classes/MemoryCache";
 import { performance } from 'perf_hooks';
 import { MonikerCache } from "../../query/classes/MonikerCache";
 
@@ -46,7 +46,7 @@ async function GetDelegatorRewards(delegator: string): Promise<DelegatorRewardsR
 export async function ProcessDualStackingDelegatorRewards(db: PostgresJsDatabase): Promise<void> {
     const startTime = performance.now();
     try {
-        const cachedDelegators = await RedisCache.getArray('uniqueDelegators');
+        const cachedDelegators = await MemoryCache.getArray('uniqueDelegators');
 
         let delegatorsArray: string[];
 
@@ -68,7 +68,7 @@ export async function ProcessDualStackingDelegatorRewards(db: PostgresJsDatabase
             }
 
             delegatorsArray = Array.from(uniqueDelegators);
-            await RedisCache.setArray('uniqueDelegators', delegatorsArray, 3600); // Cache for 1 hour
+            await MemoryCache.setArray('uniqueDelegators', delegatorsArray, 3600); // Cache for 1 hour
         }
 
         for (const delegator of delegatorsArray) {
@@ -104,7 +104,7 @@ async function ProcessDelegatorRewards(db: PostgresJsDatabase, delegator: string
 async function checkAndCacheReward(provider: string, chain_id: string, reward: Reward): Promise<boolean> {
     const cacheKey = `dualStackingDelegatorRewards-${provider}-${chain_id}`;
 
-    const cachedValue = await RedisCache.getDict(cacheKey);
+    const cachedValue = await MemoryCache.getDict(cacheKey);
 
     for (const amount of reward.amount) {
         const rewardAmount = BigInt(amount.amount);
@@ -120,7 +120,7 @@ async function checkAndCacheReward(provider: string, chain_id: string, reward: R
             return false;
         }
 
-        await RedisCache.setDict(cacheKey, { amount: rewardAmount.toString(), denom: rewardDenom }, 3600);
+        await MemoryCache.setDict(cacheKey, { amount: rewardAmount.toString(), denom: rewardDenom }, 3600);
     }
 
     return true;
@@ -134,7 +134,7 @@ const BATCH_INTERVAL = 60000; // 1 minute in milliseconds
 async function batchAppend(db: PostgresJsDatabase, newReward: JsinfoSchema.InsertDualStackingDelegatorRewards): Promise<void> {
     const cacheKey = `dualStackingDelegatorRewards-batchAppend-${newReward.provider}-${newReward.chainId}`;
 
-    const cachedValue = await RedisCache.getDict(cacheKey);
+    const cachedValue = await MemoryCache.getDict(cacheKey);
     if (cachedValue && cachedValue.amount === newReward.amount.toString() && cachedValue.denom === newReward.denom) {
         // Skip appending duplicate record
         return;
@@ -147,7 +147,7 @@ async function batchAppend(db: PostgresJsDatabase, newReward: JsinfoSchema.Inser
     }
 
     // Update the cache after appending
-    await RedisCache.setDict(cacheKey, { amount: newReward.amount.toString(), denom: newReward.denom }, 3600);
+    await MemoryCache.setDict(cacheKey, { amount: newReward.amount.toString(), denom: newReward.denom }, 3600);
 }
 
 async function batchInsert(db: PostgresJsDatabase): Promise<void> {

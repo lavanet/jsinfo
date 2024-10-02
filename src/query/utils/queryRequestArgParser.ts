@@ -19,7 +19,7 @@ export async function GetAndValidateConsumerAddressFromRequest(request: FastifyR
         return addr;
     }
 
-    if (SpecAndConsumerCache.IsValidConsumer(addr)) {
+    if (!SpecAndConsumerCache.IsValidConsumer(addr)) {
         WriteErrorToFastifyReply(reply, 'Consumer does not exist');
         return '';
     }
@@ -96,7 +96,7 @@ export async function GetAndValidateSpecIdFromRequest(request: FastifyRequest, r
         return upSpecId;
     }
 
-    if (SpecAndConsumerCache.IsValidSpec(upSpecId)) {
+    if (!SpecAndConsumerCache.IsValidSpec(upSpecId)) {
         WriteErrorToFastifyReply(reply, 'Spec does not exist');
         return '';
     }
@@ -125,7 +125,7 @@ export async function GetAndValidateSpecIdFromRequestWithAll(request: FastifyReq
         return upSpecId;
     }
 
-    if (SpecAndConsumerCache.IsValidSpec(upSpecId)) {
+    if (!SpecAndConsumerCache.IsValidSpec(upSpecId)) {
         WriteErrorToFastifyReply(reply, 'Spec does not exist');
         return '';
     }

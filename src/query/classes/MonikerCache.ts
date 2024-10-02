@@ -8,6 +8,7 @@ import { GetIsIndexerProcess } from '../../utils/utils';
 if (GetIsIndexerProcess()) {
     throw new Error('MonikerCache should not be used in the indexer');
 }
+
 interface ProviderSpecMoniker {
     provider: string;
     moniker: string | null;
@@ -18,7 +19,7 @@ interface ProviderSpecMoniker {
 }
 
 class ProviderSpecMonikerCache {
-    private psmCache: ProviderSpecMoniker[] = [];
+    private psmCache: Map<string, ProviderSpecMoniker> = new Map();
     private psmCacheIsEmpty: boolean = false;
     private refreshInterval = 2 * 60 * 1000;
     private monikerForProviderCache: Map<string, string> = new Map();
@@ -32,20 +33,25 @@ class ProviderSpecMonikerCache {
     private async refreshCache() {
         await QueryCheckJsinfoReadDbInstance();
 
-        let new_psmCache = (await RedisCache.getArray("ProviderSpecMonikerTable") || []) as ProviderSpecMoniker[]
+        let new_psmCache = await RedisCache.getDict("ProviderSpecMonikerTable") as Record<string, ProviderSpecMoniker> | null;
 
-        if ((new_psmCache == null) || (Array.isArray(new_psmCache) && new_psmCache.length === 0) || this.psmCacheIsEmpty || (Array.isArray(this.psmCache) && this.psmCache.length === 0)) {
-            this.psmCache = await this.fetchProviderSpecMonikerTable();
-            if (Array.isArray(this.psmCache) && this.psmCache.length === 0) {
+        if (!new_psmCache || Object.keys(new_psmCache).length === 0 || this.psmCacheIsEmpty || this.psmCache.size === 0) {
+            const fetchedData = await this.fetchProviderSpecMonikerTable();
+            this.psmCache = new Map(fetchedData.map(item => [this.getCacheKey(item), item]));
+            if (this.psmCache.size === 0) {
                 this.psmCacheIsEmpty = true;
             }
-            RedisCache.setArray("ProviderSpecMonikerTable", this.psmCache, this.refreshInterval);
+            await RedisCache.setDict("ProviderSpecMonikerTable", Object.fromEntries(this.psmCache), this.refreshInterval);
         } else {
-            this.psmCache = new_psmCache
+            this.psmCache = new Map(Object.entries(new_psmCache));
         }
 
         this.monikerForProviderCache.clear();
         this.monikerFullDescriptionCache.clear();
+    }
+
+    private getCacheKey(item: ProviderSpecMoniker): string {
+        return `${item.provider}-${item.specId || ''}`;
     }
 
     public GetMonikerForSpec(lavaid: string | null, spec: string | null): string {
@@ -61,16 +67,17 @@ class ProviderSpecMonikerCache {
 
         spec = spec.toUpperCase();
 
-        if (this.psmCache.length === 0) {
-            this.refreshCache()
+        if (this.psmCache.size === 0) {
+            this.refreshCache();
             if (this.psmCacheIsEmpty) {
                 return '';
             }
         }
 
-        const filtered = this.psmCache.filter(item => item.provider === lavaid && item.specId === spec);
-        if (filtered.length === 1) {
-            return this.sanitizeAndTrimMoniker(filtered[0].moniker || '');
+        const key = `${lavaid}-${spec}`;
+        const item = this.psmCache.get(key);
+        if (item) {
+            return this.sanitizeAndTrimMoniker(item.moniker || '');
         }
 
         return this.GetMonikerForProvider(lavaid);
@@ -83,38 +90,33 @@ class ProviderSpecMonikerCache {
 
         lavaid = this.verifyLavaId(lavaid);
 
-        if (this.psmCache.length === 0) {
-            this.refreshCache()
+        if (this.psmCache.size === 0) {
+            this.refreshCache();
             if (this.psmCacheIsEmpty) {
                 return '';
             }
         }
 
         if (this.monikerForProviderCache.has(lavaid)) {
-            let ret = this.monikerForProviderCache.get(lavaid)
+            let ret = this.monikerForProviderCache.get(lavaid);
             if (ret) return ret;
         }
 
-        const filtered = this.psmCache.filter(item => item.provider === lavaid);
-        if (filtered.length === 0) {
-            return '';
-        }
-
+        const monikerCounts = new Map<string, number>();
         let highestCountMoniker = '';
         let highestCount = 0;
-        const monikerCounts = new Map<string, number>();
 
-        filtered.forEach(curr => {
-            if (!curr.moniker) return;
-            const moniker = curr.moniker;
-            const count = (monikerCounts.get(moniker) || 0) + 1;
-            monikerCounts.set(moniker, count);
+        for (const [key, item] of this.psmCache) {
+            if (item.provider === lavaid && item.moniker) {
+                const count = (monikerCounts.get(item.moniker) || 0) + 1;
+                monikerCounts.set(item.moniker, count);
 
-            if (count > highestCount) {
-                highestCount = count;
-                highestCountMoniker = moniker;
+                if (count > highestCount) {
+                    highestCount = count;
+                    highestCountMoniker = item.moniker;
+                }
             }
-        });
+        }
 
         const result = this.sanitizeAndTrimMoniker(highestCountMoniker);
 
@@ -127,7 +129,7 @@ class ProviderSpecMonikerCache {
 
         lavaid = this.verifyLavaId(lavaid);
 
-        if (this.psmCache.length === 0) {
+        if (this.psmCache.size === 0) {
             this.refreshCache()
             if (this.psmCacheIsEmpty) return '';
         }
@@ -137,7 +139,7 @@ class ProviderSpecMonikerCache {
             if (ret) return ret;
         }
 
-        const filtered = this.psmCache.filter(item => item.provider === lavaid);
+        const filtered = Array.from(this.psmCache.values()).filter(item => item.provider === lavaid);
         if (filtered.length === 0) {
             return '';
         }
@@ -173,23 +175,23 @@ class ProviderSpecMonikerCache {
     }
 
     public GetMonikerCountForProvider(lavaid: string): number {
-        if (this.psmCache.length === 0) {
+        if (this.psmCache.size === 0) {
             this.refreshCache()
             if (this.psmCacheIsEmpty) return 0;
         }
         if (!lavaid) return 0;
         lavaid = this.verifyLavaId(lavaid);
-        return this.psmCache.filter(item => item.provider === lavaid).length;
+        return Array.from(this.psmCache.values()).filter(item => item.provider === lavaid).length;
     }
 
     public GetAllProviders(): string[] {
-        if (this.psmCache.length === 0) {
+        if (this.psmCache.size === 0) {
             this.refreshCache();
             if (this.psmCacheIsEmpty) return [];
         }
 
         const uniqueProviders = new Set<string>();
-        this.psmCache.forEach(item => {
+        Array.from(this.psmCache.values()).forEach(item => {
             if (item.provider) {
                 uniqueProviders.add(item.provider.toLowerCase());
             }
@@ -227,7 +229,7 @@ class ProviderSpecMonikerCache {
 
     public IsValidProvider(lavaid: string): boolean {
         lavaid = this.verifyLavaId(lavaid);
-        return this.psmCache.some(item => item.provider === lavaid);
+        return Array.from(this.psmCache.values()).some(item => item.provider === lavaid);
     }
 }
 

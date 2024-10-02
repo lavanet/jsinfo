@@ -1,6 +1,7 @@
 // src/query/classes/SpecAndConsumerCache.ts
 
 import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../queryDb';
+import { sql } from 'drizzle-orm';
 import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import { RedisCache } from './RedisCache';
 
@@ -44,6 +45,7 @@ class SpecAndConsumerCacheClass {
     }
 
     public IsValidSpec(specId: string): boolean {
+        console.log("GetAllSpecs()", this.GetAllSpecs());
         specId = specId.toUpperCase();
         return this.specCache.some(item => item.specId === specId);
     }
@@ -62,14 +64,31 @@ class SpecAndConsumerCacheClass {
     }
 
     private async fetchSpecTable(): Promise<Spec[]> {
-        const specs = await QueryGetJsinfoReadDbInstance()
+        const db = QueryGetJsinfoReadDbInstance();
+
+        // Query for specs from providerStakes
+        const specsFromStakes = await db
             .select({ specId: JsinfoSchema.providerStakes.specId })
             .from(JsinfoSchema.providerStakes)
             .groupBy(JsinfoSchema.providerStakes.specId);
 
-        return specs
-            .filter(spec => spec.specId !== null)
-            .map(spec => ({ specId: (spec.specId as string).toUpperCase() }));
+        // Query for specs from providerHealth in the last 3 months
+        const threeMonthsAgo = new Date();
+        threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+
+        const specsFromHealth = await db
+            .select({ specId: JsinfoSchema.providerHealth.spec })
+            .from(JsinfoSchema.providerHealth)
+            .where(sql`${JsinfoSchema.providerHealth.timestamp} >= ${threeMonthsAgo}`)
+            .groupBy(JsinfoSchema.providerHealth.spec);
+
+        // Combine and deduplicate the results
+        const allSpecs = [...specsFromStakes, ...specsFromHealth];
+        const uniqueSpecs = Array.from(new Set(allSpecs.map(spec => spec.specId)))
+            .filter(specId => specId !== null)
+            .map(specId => ({ specId: specId!.toUpperCase() }));
+
+        return uniqueSpecs;
     }
 
     private async fetchConsumerTable(): Promise<Consumer[]> {

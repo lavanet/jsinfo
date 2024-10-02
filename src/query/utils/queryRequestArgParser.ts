@@ -101,11 +101,6 @@ export async function GetAndValidateSpecIdFromRequest(request: FastifyRequest, r
         return '';
     }
 
-    if (res.length != 1) {
-        WriteErrorToFastifyReply(reply, 'specId does not exist');
-        return '';
-    }
-
     GetAndValidateSpecIdFromRequest_cache[upSpecId] = true;
 
     return upSpecId;

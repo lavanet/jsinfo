@@ -5,6 +5,7 @@ import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../../queryDb';
 import { isNotNull } from "drizzle-orm";
 import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
+import { MonikerCache } from '../../classes/MonikerCache';
 
 export const ProvidersPaginatedHandlerOpts: RouteShorthandOptions = {
     schema: {
@@ -24,13 +25,7 @@ export const ProvidersPaginatedHandlerOpts: RouteShorthandOptions = {
 export async function ProvidersPaginatedHandler(request: FastifyRequest, reply: FastifyReply) {
     await QueryCheckJsinfoReadDbInstance()
 
-    const providers = await QueryGetJsinfoReadDbInstance()
-        .select({
-            address: JsinfoSchema.providerSpecMoniker.provider
-        })
-        .from(JsinfoSchema.providerSpecMoniker)
-        .where(isNotNull(JsinfoSchema.providerSpecMoniker.provider))
-        .groupBy(JsinfoSchema.providerSpecMoniker.provider);
+    const providers = MonikerCache.GetAllProviders();
 
     return {
         providers: providers,

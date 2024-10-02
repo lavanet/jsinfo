@@ -1,8 +1,8 @@
 // src/query/handlers/ConsumersHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../../queryDb';
-import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
+import { QueryCheckJsinfoReadDbInstance } from '../../queryDb';
+import { SpecAndConsumerCache } from '../../classes/SpecAndConsumerCache';
 
 export const ConsumersPaginatedHandlerOpts: RouteShorthandOptions = {
     schema: {
@@ -22,7 +22,7 @@ export const ConsumersPaginatedHandlerOpts: RouteShorthandOptions = {
 export async function ConsumersPaginatedHandler(request: FastifyRequest, reply: FastifyReply) {
     await QueryCheckJsinfoReadDbInstance()
 
-    const res = await QueryGetJsinfoReadDbInstance().select({ address: JsinfoSchema.consumerSubscriptionList.consumer }).from(JsinfoSchema.consumerSubscriptionList)
+    const res = SpecAndConsumerCache.GetAllConsumers();
 
     return {
         consumers: res,

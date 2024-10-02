@@ -4,75 +4,108 @@ import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '..
 import { sql } from 'drizzle-orm';
 import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import { RedisCache } from './RedisCache';
-
-interface Spec {
-    specId: string;
-}
-
-interface Consumer {
-    consumer: string;
-}
+import { logger } from '../../utils/utils'
 
 class SpecAndConsumerCacheClass {
-    private specCache: Spec[] = [];
-    private consumerCache: Consumer[] = [];
+    private specCache: string[] = [];
+    private consumerCache: string[] = [];
     private refreshInterval = 2 * 60 * 1000;
+    private isRefreshing: boolean = false;
+    private refreshPromise: Promise<void> | null = null;
 
     public constructor() {
         this.refreshCache();
         setInterval(() => this.refreshCache(), this.refreshInterval);
     }
 
-    private async refreshCache() {
+    private async refreshCache(): Promise<void> {
+        if (this.isRefreshing) {
+            // If a refresh is already in progress, wait for it to complete
+            return this.refreshPromise || Promise.resolve();
+        }
+
+        this.isRefreshing = true;
+        this.refreshPromise = this._refreshCache();
+
+        try {
+            await this.refreshPromise;
+        } finally {
+            this.isRefreshing = false;
+            this.refreshPromise = null;
+        }
+    }
+
+    private async _refreshCache(): Promise<void> {
+        logger.info('Starting SpecAndConsumerCache refresh');
+
         await QueryCheckJsinfoReadDbInstance();
 
-        let newSpecCache = (await RedisCache.getArray("SpecTable") || []) as Spec[];
-        let newConsumerCache = (await RedisCache.getArray("ConsumerTable") || []) as Consumer[];
+        let newSpecCache = await RedisCache.getArray("SpecTable") as string[] | null;
+        let newConsumerCache = await RedisCache.getArray("ConsumerTable") as string[] | null;
 
-        if ((newSpecCache == null || newSpecCache.length === 0) || (this.specCache.length === 0)) {
+        if (!newSpecCache || newSpecCache.length === 0 || this.specCache.length === 0) {
+            logger.info('Fetching new spec data from database');
             this.specCache = await this.fetchSpecTable();
             RedisCache.setArray("SpecTable", this.specCache, this.refreshInterval);
+            logger.info(`Updated spec cache with ${this.specCache.length} items`);
         } else {
+            logger.info(`Using existing Redis spec cache with ${newSpecCache.length} items`);
             this.specCache = newSpecCache;
         }
 
-        if ((newConsumerCache == null || newConsumerCache.length === 0) || (this.consumerCache.length === 0)) {
+        if (!newConsumerCache || newConsumerCache.length === 0 || this.consumerCache.length === 0) {
+            logger.info('Fetching new consumer data from database');
             this.consumerCache = await this.fetchConsumerTable();
             RedisCache.setArray("ConsumerTable", this.consumerCache, this.refreshInterval);
+            logger.info(`Updated consumer cache with ${this.consumerCache.length} items`);
         } else {
+            logger.info(`Using existing Redis consumer cache with ${newConsumerCache.length} items`);
             this.consumerCache = newConsumerCache;
         }
+
+        console.log("newConsumerCache", this.consumerCache);
+
+        logger.info('SpecAndConsumerCache refresh completed');
     }
 
     public IsValidSpec(specId: string): boolean {
-        console.log("GetAllSpecs()", this.GetAllSpecs());
-        specId = specId.toUpperCase();
-        return this.specCache.some(item => item.specId === specId);
+        if (!this.specCache.includes(specId.toUpperCase())) {
+            this.refreshCache();
+            return false;
+        }
+        return true;
     }
 
     public IsValidConsumer(consumer: string): boolean {
-        consumer = consumer.toLowerCase();
-        return this.consumerCache.some(item => item.consumer === consumer);
+        if (!this.consumerCache.includes(consumer.toLowerCase())) {
+            this.refreshCache();
+            return false;
+        }
+        return true;
     }
 
     public GetAllSpecs(): string[] {
-        return this.specCache.map(spec => spec.specId);
+        if (this.specCache.length === 0) {
+            this.refreshCache();
+        }
+        return this.specCache;
     }
 
     public GetAllConsumers(): string[] {
-        return this.consumerCache.map(consumer => consumer.consumer);
+        if (this.consumerCache.length === 0) {
+            this.refreshCache();
+        }
+        return this.consumerCache;
     }
 
-    private async fetchSpecTable(): Promise<Spec[]> {
+    private async fetchSpecTable(): Promise<string[]> {
         const db = QueryGetJsinfoReadDbInstance();
 
-        // Query for specs from providerStakes
         const specsFromStakes = await db
             .select({ specId: JsinfoSchema.providerStakes.specId })
             .from(JsinfoSchema.providerStakes)
             .groupBy(JsinfoSchema.providerStakes.specId);
 
-        // Query for specs from providerHealth in the last 3 months
         const threeMonthsAgo = new Date();
         threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
 
@@ -82,22 +115,23 @@ class SpecAndConsumerCacheClass {
             .where(sql`${JsinfoSchema.providerHealth.timestamp} >= ${threeMonthsAgo}`)
             .groupBy(JsinfoSchema.providerHealth.spec);
 
-        // Combine and deduplicate the results
-        const allSpecs = [...specsFromStakes, ...specsFromHealth];
-        const uniqueSpecs = Array.from(new Set(allSpecs.map(spec => spec.specId)))
-            .filter(specId => specId !== null)
-            .map(specId => ({ specId: specId!.toUpperCase() }));
+        const allSpecs = [...specsFromStakes, ...specsFromHealth]
+            .map(spec => spec.specId)
+            .filter((specId): specId is string => specId !== null)
+            .map(specId => specId.toUpperCase());
 
-        return uniqueSpecs;
+        return Array.from(new Set(allSpecs));
     }
 
-    private async fetchConsumerTable(): Promise<Consumer[]> {
+    private async fetchConsumerTable(): Promise<string[]> {
         const consumers = await QueryGetJsinfoReadDbInstance()
             .select({ consumer: JsinfoSchema.consumerSubscriptionList.consumer })
             .from(JsinfoSchema.consumerSubscriptionList)
             .groupBy(JsinfoSchema.consumerSubscriptionList.consumer);
 
-        return consumers.map(consumer => ({ consumer: consumer.consumer.toLowerCase() }));
+        const uniqueConsumers = new Set(consumers.map(c => c.consumer.toLowerCase()));
+
+        return Array.from(uniqueConsumers);
     }
 }
 

@@ -173,6 +173,7 @@ const indexer = async (): Promise<void> => {
         return;
     }
 
+
     logger.info('Done migrateAndFetchDb');
     await AggProviderAndConsumerRelayPaymentsSync(db);
     logger.info('Done AggProviderAndConsumerRelayPaymentsSync');

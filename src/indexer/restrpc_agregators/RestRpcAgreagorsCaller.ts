@@ -3,6 +3,7 @@ import { ProcessProviderMonikerSpecs } from "./ProviderSpecMoniker";
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { logger } from "../../utils/utils";
 import { ProcessDualStackingDelegatorRewards } from "./DualStakingDelegatorRewards";
+import { ProcessAPR } from "./apr/Apr";
 
 let isRunning = false;
 
@@ -13,6 +14,21 @@ export async function RestRpcAgreagorsCaller(db: PostgresJsDatabase): Promise<vo
     }
 
     isRunning = true;
+
+
+    logger.info(`ProcessAPR started at: ${new Date().toISOString()}`);
+    try {
+        const start = Date.now();
+        await ProcessAPR(db);
+        const executionTime = Date.now() - start;
+        logger.info(`Successfully executed ProcessAPR. Execution time: ${executionTime} ms`);
+    } catch (e) {
+        logger.error(`Failed to execute ProcessAPR. Error: ${(e as Error).message}`, { stack: (e as Error).stack });
+        isRunning = false;
+        return;
+    }
+
+
 
     logger.info(`ProcessSubscriptionList started at: ${new Date().toISOString()}`);
     try {
@@ -49,6 +65,8 @@ export async function RestRpcAgreagorsCaller(db: PostgresJsDatabase): Promise<vo
         isRunning = false;
         return;
     }
+
+
 
     isRunning = false;
 }

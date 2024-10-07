@@ -49,13 +49,20 @@ export const logger = winston.createLogger({
 });
 
 // Define the BackoffRetry function
-export const BackoffRetry = async <T>(title: string, fn: () => Promise<T>): Promise<T> => {
+export const BackoffRetry = async <T>(
+    title: string, 
+    fn: () => Promise<T>, 
+    retries: number = 8,
+    factor: number = 2,
+    minTimeout: number = 1000,
+    maxTimeout: number = 5000
+): Promise<T> => {
     return await retry(fn,
         {
-            retries: 8, // The maximum amount of times to retry the operation
-            factor: 2,  // The exponential factor to use
-            minTimeout: 1000, // The number of milliseconds before starting the first retry
-            maxTimeout: 5000, // The maximum number of milliseconds between two retries
+            retries: retries, // The maximum amount of times to retry the operation
+            factor: factor,  // The exponential factor to use
+            minTimeout: minTimeout, // The number of milliseconds before starting the first retry
+            maxTimeout: maxTimeout, // The maximum number of milliseconds between two retries
             randomize: true, // Randomizes the timeouts by multiplying with a factor between 1 to 2
             onRetry: (error: any, attempt: any) => {
                 let errorMessage = `[Backoff Retry] Function: ${title}\n`;

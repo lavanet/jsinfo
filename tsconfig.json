@@ -21,6 +21,7 @@
     "outDir": "dist",
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
+    "resolveJsonModule": true,
     "sourceMap": true,
     "types": [
       "bun-types",
@@ -28,9 +29,10 @@
     ],
   },
   "include": [
-    "src"
+    "src",
+    "src/**/*.json"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
   ]
 }

@@ -18,6 +18,7 @@ import { MigrateDb, GetJsinfoDb } from "./utils/dbUtils";
 import { AggProviderAndConsumerRelayPayments, AggProviderAndConsumerRelayPaymentsSync } from "./indexer/agregators/aggProviderAndConsumerRelayPayments";
 import { SaveTokenSupplyToDB } from './indexer/supply/syncSupply';
 import { RestRpcAgreagorsCaller } from './indexer/restrpc_agregators/RestRpcAgreagorsCaller';
+import { ProcessAPR } from './indexer/restrpc_agregators/apr/Apr';
 
 let static_blockchainEntitiesProviders: Map<string, JsinfoSchema.Provider> = new Map()
 let static_blockchainEntitiesSpecs: Map<string, JsinfoSchema.Spec> = new Map()
@@ -205,7 +206,8 @@ const indexer = async (): Promise<void> => {
     logger.info('Done RestRpcAgreagorsCaller');
     await SaveTokenSupplyToDB(db, rpcConnection.lavajsClient);
     logger.info('Done SaveTokenSupplyToDB');
-
+    await ProcessAPR(db);
+    logger.info('Done ProcessAPR');
     await fillUpBackoffRetry(db, rpcConnection);
     logger.info('Done fillUpBackoffRetry');
 }

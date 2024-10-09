@@ -8,7 +8,7 @@ import { QueryGetJsinfoReadDbInstance } from '../../queryDb';
 import { eq, and, gte, desc } from "drizzle-orm";
 import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
 import { GetAndValidateProviderAddressFromRequest } from '../../utils/queryRequestArgParser';
-import { WriteNot400ErrorToFastifyReplyNoLog } from '../../utils/queryServerUtils';
+import { WriteErrorToFastifyReplyNoLog } from '../../utils/queryServerUtils';
 import { ParseDateToUtc } from '../../utils/queryDateUtils';
 import { logger } from '../../../utils/utils';
 
@@ -162,7 +162,7 @@ export async function ProviderHealthLatestPaginatedHandler(request: FastifyReque
     }
 
     if (allHealthRecords.length === 0) {
-        WriteNot400ErrorToFastifyReplyNoLog(reply, 'No recent health records for provider');
+        WriteErrorToFastifyReplyNoLog(reply, 'No recent health records for provider');
         return null;
     }
 

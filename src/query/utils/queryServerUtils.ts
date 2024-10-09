@@ -73,7 +73,3 @@ export function WriteErrorToFastifyReply(reply: FastifyReply, message: string) {
 export function WriteErrorToFastifyReplyNoLog(reply: FastifyReply, message: string) {
     reply.code(400).send({ error: message });
 }
-
-export function WriteNot400ErrorToFastifyReplyNoLog(reply: FastifyReply, message: string) {
-    reply.code(200).send({ error: message });
-}

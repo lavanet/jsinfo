@@ -63,11 +63,12 @@ export const GetOneLavaBlock = async (
     const startTimeBlock = Date.now();
     const block = await GetRpcBlock(height, client);
     const endTimeBlock = Date.now();
+    const trimmedBlock = JSON.stringify(block).slice(0, 500) + (JSON.stringify(block).length > 500 ? '...' : '');
     if (endTimeBlock - startTimeBlock > 30000) {
         logger.info('GetRpcBlock took', {
             duration: endTimeBlock - startTimeBlock,
             unit: 'milliseconds',
-            returnedItems: block,
+            returnedItems: trimmedBlock,
             blockHeight: height
         });
     }

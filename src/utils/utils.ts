@@ -1,4 +1,3 @@
-
 import retry from 'async-retry';
 import util from 'util';
 
@@ -14,6 +13,11 @@ export function GetEnvVar(key: string, alt?: string): string {
 }
 
 const winston = require('winston');
+
+const truncate = (str: string, maxLength: number) => {
+    if (str.length <= maxLength) return str;
+    return str.slice(0, maxLength - 3) + '...';
+};
 
 export const logger = winston.createLogger({
     level: 'silly',
@@ -31,17 +35,18 @@ export const logger = winston.createLogger({
             format: winston.format.combine(
                 winston.format.colorize({ all: true }),
                 winston.format.printf(({ level, message, timestamp, service, ...metadata }) => {
-                    let msg = `${timestamp} ${level}: ${message}`;
+                    let msg = `${timestamp} ${level}: ${truncate(message, 1000)}`;
 
                     if (metadata.service === 'user-service') {
                         delete metadata.service;
                     }
 
                     if (Object.keys(metadata).length > 0) {
-                        msg += ' ' + JSON.stringify(metadata);
+                        const metadataString = truncate(JSON.stringify(metadata), 3900);
+                        msg += ' ' + metadataString;
                     }
 
-                    return msg;
+                    return truncate(msg, 5000);
                 })
             )
         })

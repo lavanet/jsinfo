@@ -3,7 +3,7 @@
 import { Pagination, ParsePaginationFromRequest, SerializePagination } from "../utils/queryPagination";
 import { FastifyReply, FastifyRequest } from "fastify";
 import { GetDataLength, GetDataLengthForPrints } from "../utils/queryUtils";
-import { subMonths, isAfter, isBefore, parseISO, startOfDay, differenceInCalendarDays } from 'date-fns';
+import { subMonths, isAfter, isBefore, startOfDay, differenceInCalendarDays } from 'date-fns';
 import { WriteErrorToFastifyReply } from '../utils/queryServerUtils';
 import { JSINFO_REQUEST_HANDLER_BASE_DEBUG } from '../queryConsts';
 import { RedisCache } from './RedisCache';

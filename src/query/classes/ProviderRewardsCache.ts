@@ -3,7 +3,7 @@
 import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../queryDb';
 import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import { and, like } from 'drizzle-orm';
-import { ParseUlavaToBigInt } from '../../utils/utils';
+import { IsIndexerProcess, ParseUlavaToBigInt } from '../../utils/utils';
 import { logger } from '../../utils/utils';
 import { JSONStringifySpaced } from '../../utils/utils';
 
@@ -83,4 +83,4 @@ export class RewardsCache {
     }
 }
 
-export const ProviderRewardsCache = new RewardsCache();
+export const ProviderRewardsCache = IsIndexerProcess() ? (null as unknown as RewardsCache) : new RewardsCache();

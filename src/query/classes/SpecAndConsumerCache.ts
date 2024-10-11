@@ -4,7 +4,7 @@ import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '..
 import { sql } from 'drizzle-orm';
 import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import { RedisCache } from './RedisCache';
-import { logger } from '../../utils/utils'
+import { IsIndexerProcess, logger } from '../../utils/utils'
 
 class SpecAndConsumerCacheClass {
     private specCache: string[] = [];
@@ -126,4 +126,5 @@ class SpecAndConsumerCacheClass {
     }
 }
 
-export const SpecAndConsumerCache = new SpecAndConsumerCacheClass();
+
+export const SpecAndConsumerCache = IsIndexerProcess() ? (null as unknown as SpecAndConsumerCacheClass) : new SpecAndConsumerCacheClass();

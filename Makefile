@@ -46,7 +46,7 @@ docker_compose_indexer:
 	docker-compose up indexer
 
 indexer:
-	NODE_TLS_REJECT_UNAUTHORIZED=0 bun run src/indexer.ts
+	IS_INDEXER_PROCESS=true NODE_TLS_REJECT_UNAUTHORIZED=0 bun run src/indexer.ts
 
 indexer_with_migrations:
 	JSINFO_INDEXER_RUN_MIGRATIONS=true NODE_TLS_REJECT_UNAUTHORIZED=0 bun run src/indexer.ts

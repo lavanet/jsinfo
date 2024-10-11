@@ -1,10 +1,13 @@
 // jsinfo/src/indexer.ts
 
+import { DoInChunks, logger, BackoffRetry, IsIndexerProcess } from "./utils/utils";
+if (!IsIndexerProcess()) {
+    console.log('indexer.ts', "not indexer process");
+    process.exit();
+}
+
 import * as consts from './indexer/indexerConsts';
 import * as JsinfoSchema from "./schemas/jsinfoSchema/jsinfoSchema";
-
-import { DoInChunks, logger, BackoffRetry, SetIsIndexerProcess } from "./utils/utils";
-SetIsIndexerProcess(true);
 
 import { StargateClient } from "@cosmjs/stargate"
 import { Tendermint37Client } from "@cosmjs/tendermint-rpc";

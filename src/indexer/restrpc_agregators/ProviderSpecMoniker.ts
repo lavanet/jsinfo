@@ -112,7 +112,12 @@ async function batchInsert(db: PostgresJsDatabase): Promise<void> {
     const uniqueEntriesByProviderSpec = new Map<string, ProviderMonikerSpec>();
 
     for (const entry of batchData) {
-        uniqueEntriesByProviderSpec.set(entry.provider + entry.spec, entry);
+        if (!IsMeaningfulText(entry.moniker) || !IsMeaningfulText(entry.spec)) {
+            console.log(`batchInsert: Skipping entry due to invalid text`, entry);
+            continue;
+        }
+        const key = `${entry.provider.toLowerCase()}-${entry.spec.toLowerCase()}`;
+        uniqueEntriesByProviderSpec.set(key, entry);
     }
 
     console.log(`batchInsert: Unique entries count: ${uniqueEntriesByProviderSpec.size}`);
@@ -122,8 +127,10 @@ async function batchInsert(db: PostgresJsDatabase): Promise<void> {
         await db.insert(JsinfoSchema.providerSpecMoniker)
             .values(Array.from(uniqueEntriesByProviderSpec.values()))
             .onConflictDoUpdate({
-                target: [JsinfoSchema.providerSpecMoniker.provider, JsinfoSchema.providerSpecMoniker.specId],
-                set: { moniker: sql`${JsinfoSchema.providerSpecMoniker.moniker}` }
+                target: [JsinfoSchema.providerSpecMoniker.provider, JsinfoSchema.providerSpecMoniker.spec],
+                set: {
+                    moniker: sql.raw('EXCLUDED.moniker')
+                }
             });
 
         console.log(`batchInsert: Upsert operation successful`);

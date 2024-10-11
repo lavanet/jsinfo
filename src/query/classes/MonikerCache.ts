@@ -1,18 +1,14 @@
 // src/query/classes/MonikerCache.ts
 
-import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../queryDb';
 import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import { RedisCache } from './RedisCache';
-import { GetIsIndexerProcess } from '../../utils/utils';
-
-if (GetIsIndexerProcess()) {
-    throw new Error('MonikerCache should not be used in the indexer');
-}
+import { IsIndexerProcess, Sleep } from '../../utils/utils'; // Assuming you have a sleep utility function
+import { GetJsinfoDb } from '../../utils/dbUtils';
 
 interface ProviderSpecMoniker {
     provider: string;
     moniker: string | null;
-    specId: string | null;
+    spec: string | null;
     id: number;
     createdAt: Date;
     updatedAt: Date | null;
@@ -24,15 +20,18 @@ class ProviderSpecMonikerCache {
     private refreshInterval = 2 * 60 * 1000;
     private monikerForProviderCache: Map<string, string> = new Map();
     private monikerFullDescriptionCache: Map<string, string> = new Map();
+    private isFetching: boolean = false;
 
     constructor() {
         this.refreshCache();
         setInterval(() => this.refreshCache(), this.refreshInterval);
     }
 
-    private async refreshCache() {
-        await QueryCheckJsinfoReadDbInstance();
+    private refreshCacheSync() {
+        setInterval(() => this.refreshCache(), 0);
+    }
 
+    private async refreshCache() {
         let new_psmCache = await RedisCache.getDict("ProviderSpecMonikerTable") as Record<string, ProviderSpecMoniker> | null;
 
         if (!new_psmCache || Object.keys(new_psmCache).length === 0 || this.psmCacheIsEmpty || this.psmCache.size === 0) {
@@ -51,7 +50,7 @@ class ProviderSpecMonikerCache {
     }
 
     private getCacheKey(item: ProviderSpecMoniker): string {
-        return `${item.provider}-${item.specId || ''}`;
+        return `${item.provider}-${item.spec || ''}`;
     }
 
     public GetMonikerForSpec(lavaid: string | null, spec: string | null): string {
@@ -65,14 +64,14 @@ class ProviderSpecMonikerCache {
             return this.GetMonikerForProvider(lavaid);
         }
 
-        spec = spec.toUpperCase();
-
         if (this.psmCache.size === 0) {
-            this.refreshCache();
+            this.refreshCacheSync();
             if (this.psmCacheIsEmpty) {
                 return '';
             }
         }
+
+        spec = spec.toUpperCase();
 
         const key = `${lavaid}-${spec}`;
         const item = this.psmCache.get(key);
@@ -91,7 +90,7 @@ class ProviderSpecMonikerCache {
         lavaid = this.verifyLavaId(lavaid);
 
         if (this.psmCache.size === 0) {
-            this.refreshCache();
+            this.refreshCacheSync();
             if (this.psmCacheIsEmpty) {
                 return '';
             }
@@ -130,7 +129,7 @@ class ProviderSpecMonikerCache {
         lavaid = this.verifyLavaId(lavaid);
 
         if (this.psmCache.size === 0) {
-            this.refreshCache()
+            this.refreshCacheSync()
             if (this.psmCacheIsEmpty) return '';
         }
 
@@ -144,27 +143,27 @@ class ProviderSpecMonikerCache {
             return '';
         }
 
-        const monikerToSpecIds = filtered.reduce((acc, item) => {
+        const monikerTospecs = filtered.reduce((acc, item) => {
             if (item.moniker && item.moniker.trim() !== '') {
                 const sanitizedMoniker = this.sanitizeAndTrimMoniker(item.moniker);
                 if (!acc[sanitizedMoniker]) {
                     acc[sanitizedMoniker] = [];
                 }
-                if (item.specId && !acc[sanitizedMoniker].includes(item.specId)) {
-                    acc[sanitizedMoniker].push(item.specId);
+                if (item.spec && !acc[sanitizedMoniker].includes(item.spec)) {
+                    acc[sanitizedMoniker].push(item.spec);
                 }
             }
             return acc;
         }, {} as { [moniker: string]: string[] });
 
-        if (Object.keys(monikerToSpecIds).length === 1) {
-            const result = Object.keys(monikerToSpecIds)[0];
+        if (Object.keys(monikerTospecs).length === 1) {
+            const result = Object.keys(monikerTospecs)[0];
             this.monikerFullDescriptionCache.set(lavaid, result);
             return result;
         }
 
-        const entries = Object.entries(monikerToSpecIds)
-            .map(([moniker, specIds]) => `${moniker} (${specIds.join(', ')})`);
+        const entries = Object.entries(monikerTospecs)
+            .map(([moniker, specs]) => `${moniker} (${specs.join(', ')})`);
 
         const result = entries.length > 5
             ? entries.slice(0, 5).join("\n") + "\n..."
@@ -176,7 +175,7 @@ class ProviderSpecMonikerCache {
 
     public GetMonikerCountForProvider(lavaid: string): number {
         if (this.psmCache.size === 0) {
-            this.refreshCache()
+            this.refreshCacheSync()
             if (this.psmCacheIsEmpty) return 0;
         }
         if (!lavaid) return 0;
@@ -186,7 +185,7 @@ class ProviderSpecMonikerCache {
 
     public GetAllProviders(): string[] {
         if (this.psmCache.size === 0) {
-            this.refreshCache();
+            this.refreshCacheSync();
             if (this.psmCacheIsEmpty) return [];
         }
 
@@ -219,12 +218,67 @@ class ProviderSpecMonikerCache {
     }
 
     private async fetchProviderSpecMonikerTable(): Promise<ProviderSpecMoniker[]> {
-        const results = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.providerSpecMoniker);
-        return results.map(item => ({
-            ...item,
-            provider: item.provider.toLowerCase(),
-            specId: item.specId ? item.specId.toUpperCase() : null
-        }));
+        if (this.isFetching) {
+            // console.log("Fetch already in progress, waiting...");
+            return [];
+        }
+
+        this.isFetching = true;
+        try {
+            const maxRetries = 3;
+            let retryCount = 0;
+            let lastError: Error | null = null;
+            let allResults: ProviderSpecMoniker[] = [];
+            const chunkSize = 500;
+            let offset = 0;
+
+            while (retryCount < maxRetries) {
+                let db = await GetJsinfoDb();
+                try {
+                    while (true) {
+                        const chunkResults = await db.select()
+                            .from(JsinfoSchema.providerSpecMoniker)
+                            .limit(chunkSize)
+                            .offset(offset);
+
+                        if (chunkResults.length === 0) {
+                            break; // No more results
+                        }
+
+                        allResults = allResults.concat(chunkResults);
+                        offset += chunkSize;
+                    }
+
+                    console.log(`Successfully fetched all ${allResults.length} ProviderSpecMoniker records`);
+                    break; // Exit retry loop if successful
+                } catch (error) {
+                    lastError = error as Error;
+                    console.error(`Error fetching ProviderSpecMoniker data (attempt ${retryCount + 1}/${maxRetries}):`, lastError);
+                    retryCount++;
+
+                    if (retryCount < maxRetries) {
+                        const delay = 1000 * retryCount; // Exponential backoff
+                        console.log(`Retrying in ${delay}ms...`);
+                        await Sleep(delay);
+                    }
+                }
+            }
+
+            if (allResults.length === 0 && lastError) {
+                console.error(`Failed to fetch ProviderSpecMoniker data after ${maxRetries} attempts`);
+                throw lastError;
+            }
+
+            let ret = allResults.map(item => ({
+                ...item,
+                provider: item.provider.toLowerCase(),
+                spec: item.spec ? item.spec.toUpperCase() : null
+            }));
+
+            return ret;
+        } finally {
+            this.isFetching = false;
+        }
     }
 
     public IsValidProvider(lavaid: string): boolean {
@@ -233,4 +287,4 @@ class ProviderSpecMonikerCache {
     }
 }
 
-export const MonikerCache = new ProviderSpecMonikerCache();
+export const MonikerCache = IsIndexerProcess() ? (null as unknown as ProviderSpecMonikerCache) : new ProviderSpecMonikerCache();

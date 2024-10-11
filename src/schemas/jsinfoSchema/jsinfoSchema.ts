@@ -267,14 +267,14 @@ export const providerSpecMoniker = pgTable('provider_spec_moniker', {
   id: serial('id').primaryKey(),
   provider: text('provider').notNull(),
   moniker: text('moniker'),
-  specId: text('spec'),
+  spec: text('spec'),
   createdAt: timestamp("createdat").defaultNow().notNull(),
   updatedAt: timestamp('updatedat').default(sql`CURRENT_TIMESTAMP(3)`),
 }, (table) => {
   return {
     psmIdx: uniqueIndex("psmidx").on(
       table.provider,
-      table.specId
+      table.spec
     )
   };
 });

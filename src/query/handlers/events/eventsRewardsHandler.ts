@@ -8,7 +8,7 @@ import { Pagination, ParsePaginationFromString } from '../../utils/queryPaginati
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '../../queryConsts';
 import { CSVEscape } from '../../utils/queryUtils';
 import { RequestHandlerBase } from '../../classes/RequestHandlerBase';
-import { MonikerCache } from '../../classes/MonikerCache';
+import { MonikerCache } from '../../classes/QueryProviderMonikerCache';
 
 export interface EventsRewardsResponse {
     id: number | null;

@@ -9,7 +9,7 @@ import { DateToISOString, FormatDateItems } from '../../utils/queryDateUtils';
 import { RequestHandlerBase } from '../../classes/RequestHandlerBase';
 import { GetDataLength } from '../../utils/queryUtils';
 import { GetAndValidateSpecIdFromRequest } from '../../utils/queryRequestArgParser';
-import { MonikerCache } from '../../classes/MonikerCache';
+import { MonikerCache } from '../../classes/QueryProviderMonikerCache';
 import { PgColumn } from 'drizzle-orm/pg-core';
 import { JSONStringifySpaced } from '../../../utils/utils';
 

@@ -1,7 +1,7 @@
 // src/query/handlers/spec/specV2Handlers.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { GetLatestBlock, QueryGetJsinfoReadDbInstance, QueryCheckJsinfoReadDbInstance } from '../../queryDb';
+import { QueryGetJsinfoReadDbInstance, QueryCheckJsinfoReadDbInstance } from '../../queryDb';
 import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
 import * as JsinfoProviderAgrSchema from '../../../schemas/jsinfoSchema/providerRelayPaymentsAgregation';
 import { sql, eq, count, and, gte, inArray } from "drizzle-orm";

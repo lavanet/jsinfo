@@ -1,4 +1,4 @@
-// src/query/classes/MemoryCache.ts
+// src/indexer/classes/MemoryCache.ts
 
 import NodeCache from 'node-cache';
 import { JSONStringify, logger } from '../../utils/utils';

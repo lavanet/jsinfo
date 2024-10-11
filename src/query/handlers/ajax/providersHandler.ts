@@ -5,7 +5,7 @@ import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../../queryDb';
 import { isNotNull } from "drizzle-orm";
 import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
-import { MonikerCache } from '../../classes/MonikerCache';
+import { MonikerCache } from '../../classes/QueryProviderMonikerCache';
 
 export const ProvidersPaginatedHandlerOpts: RouteShorthandOptions = {
     schema: {

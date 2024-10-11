@@ -22,7 +22,7 @@ selected_providers = random.sample(providers, 3) if len(providers) >= 3 else pro
 commands_and_expected_outputs = []
 
 for provider in selected_providers:
-    addr = provider['address']
+    addr = provider
     commands_and_expected_outputs += [
         (f"{server_address}/providerHealthCsv/{addr}", "time,chain,interface,status,region,message"),
         (f"{server_address}/providerErrorsCsv/{addr}", "date,chain,error"),

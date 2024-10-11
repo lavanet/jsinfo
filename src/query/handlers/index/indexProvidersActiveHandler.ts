@@ -11,7 +11,7 @@ import { Pagination, ParsePaginationFromString } from '../../utils/queryPaginati
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE } from '../../queryConsts';
 import { CSVEscape } from '../../utils/queryUtils';
 import { RequestHandlerBase } from '../../classes/RequestHandlerBase';
-import { MonikerCache } from '../../classes/MonikerCache';
+import { MonikerCache } from '../../classes/QueryProviderMonikerCache';
 
 /*
 v1

@@ -5,7 +5,7 @@ import { eq, and, desc } from "drizzle-orm";
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { MemoryCache } from "../classes/MemoryCache";
 import { performance } from 'perf_hooks';
-import { MonikerCache } from "../../query/classes/MonikerCache";
+import { ProviderMonikerCache } from "../classes/IndexerProviderMonikerCache";
 
 interface Delegation {
     provider: string;
@@ -53,7 +53,7 @@ export async function ProcessDualStackingDelegatorRewards(db: PostgresJsDatabase
         if (cachedDelegators) {
             delegatorsArray = cachedDelegators;
         } else {
-            const providers = MonikerCache.GetAllProviders();
+            const providers = await ProviderMonikerCache.GetAllProviders(db);
             const uniqueDelegators = new Set<string>();
 
             for (const provider of providers) {

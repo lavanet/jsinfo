@@ -10,7 +10,7 @@ import { GetAndValidateSpecIdFromRequest, GetAndValidateProviderAddressFromReque
 import { PgColumn } from 'drizzle-orm/pg-core';
 import { logger } from '../../../utils/utils';
 import { RedisCache } from '../../classes/RedisCache';
-import { MonikerCache } from '../../classes/MonikerCache';
+import { MonikerCache } from '../../classes/QueryProviderMonikerCache';
 
 type SpecChartDataPoint = {
     date: string;

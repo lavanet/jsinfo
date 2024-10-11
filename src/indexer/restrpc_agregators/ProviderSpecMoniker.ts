@@ -1,10 +1,12 @@
+// src/indexer/restrpc_agregators/ProviderSpecMoniker.ts
+
 import { IsMeaningfulText, logger } from "../../utils/utils";
 import { QueryLavaRPC } from "./utils";
 import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { sql } from 'drizzle-orm';
-import { MemoryCache } from "../../indexer/classes/MemoryCache";
-import { SpecAndConsumerCache } from "../../query/classes/SpecAndConsumerCache";
+import { MemoryCache } from "../classes/MemoryCache";
+import { SpecAndConsumerCache } from "../classes/IndexerSpecAndConsumerCache";
 
 interface ProviderMonikerSpec {
     provider: string;
@@ -36,7 +38,7 @@ export async function GetProviderMonikerSpecs(spec: string): Promise<ProviderRes
 export async function ProcessProviderMonikerSpecs(db: PostgresJsDatabase): Promise<void> {
     console.log('ProcessProviderMonikerSpecs: Starting');
     try {
-        const specs = await SpecAndConsumerCache.GetAllSpecs();
+        const specs = await SpecAndConsumerCache.GetAllSpecs(db);
         console.log(`ProcessProviderMonikerSpecs: Retrieved ${specs.length} specs`);
 
         for (const spec of specs) {

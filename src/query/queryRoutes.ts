@@ -77,7 +77,6 @@ import { ConsumerEventsPaginatedHandlerOpts, ConsumerEventsPaginatedHandler, Con
 import { ConsumerConflictsHandler, ConsumerConflictsHandlerOpts } from './handlers/consumer/consumerConflictsHandler';
 
 // -- Spec page ajax --
-import { SpecPaginatedHandler, SpecPaginatedHandlerOpts } from './handlers/spec/specHandler';
 import { SpecChartsRawHandler, SpecChartsRawHandlerOpts } from './handlers/spec/specChartsHandler';
 import { SpecChartsV2RawHandler, SpecChartsV2RawHandlerOpts } from './handlers/spec/specChartsV2Handler';
 import { SpecStakesPaginatedHandler, SpecStakesPaginatedHandlerOpts } from './handlers/spec/specStakesHandler';
@@ -189,7 +188,6 @@ GetServerInstance().get('/eventsRewardsCsv', EventsRewardsCSVRawHandler);
 GetServerInstance().get('/eventsReportsCsv', EventsReportsCSVRawHandler);
 
 // -- Spec page ajax --
-RegisterPaginationServerHandler('/spec/:specId', SpecPaginatedHandlerOpts, SpecPaginatedHandler);
 GetServerInstance().get('/specStakes/:specId', SpecStakesPaginatedHandlerOpts, SpecStakesPaginatedHandler);
 GetServerInstance().get('/specCharts/:specId', SpecChartsRawHandlerOpts, SpecChartsRawHandler);
 GetServerInstance().get('/specChartsV2/:specId/:addr', SpecChartsV2RawHandlerOpts, SpecChartsV2RawHandler);

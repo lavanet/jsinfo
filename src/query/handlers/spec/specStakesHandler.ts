@@ -8,7 +8,7 @@ import * as JsinfoProviderAgrSchema from '../../../schemas/jsinfoSchema/provider
 import { sql, desc, gt, and, eq } from "drizzle-orm";
 import { ReplaceArchive } from '../../../indexer/indexerUtils';
 import { GetAndValidateSpecIdFromRequest } from '../../utils/queryRequestArgParser';
-import { MonikerCache } from '../../classes/MonikerCache';
+import { MonikerCache } from '../../classes/QueryProviderMonikerCache';
 import { BigIntIsZero } from '../../../utils/utils';
 
 export type SpecSpecsResponse = {

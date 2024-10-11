@@ -26,7 +26,7 @@ class TestConsumerEndpoints(unittest.TestCase):
     def test_consumer_endpoint_structure(self):
         """Test the structure of the response from the consumer endpoint for random consumers."""
         for consumer in self.selected_consumers:
-            addr = consumer['address']
+            addr = consumer
             url = f"{server_address}/consumer/{addr}"
             response = requests.get(url)
             self.assertEqual(response.status_code, 200, "Expected status code 200")
@@ -47,7 +47,7 @@ class TestConsumerEndpoints(unittest.TestCase):
     # def test_consumer_charts_endpoint_structure(self):
     #     """Test the structure of the response from the consumerCharts endpoint for random consumers."""
     #     for consumer in self.selected_consumers:
-    #         addr = consumer['address']
+    #         addr = consumer
     #         url = f"{server_address}/consumerCharts/{addr}"
     #         response = requests.get(url)
     #         self.assertEqual(response.status_code, 200, "Expected status code 200")

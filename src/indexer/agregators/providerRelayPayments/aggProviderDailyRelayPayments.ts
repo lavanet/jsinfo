@@ -49,7 +49,7 @@ export async function aggProviderDailyRelayPayments(db: PostgresJsDatabase) {
 
     const qosMetricWeightedAvg = (metric: PgColumn) => sql<number>`SUM(${metric} * ${JsinfoProviderAgrSchema.aggHourlyRelayPayments.relaySum}) / SUM(CASE WHEN ${metric} IS NOT NULL THEN ${JsinfoProviderAgrSchema.aggHourlyRelayPayments.relaySum} ELSE 0 END)`;
 
-    console.log("ddddd");
+    // console.log("ddddd");
     const aggResults = await db.select({
         provider: sql<string>`${JsinfoProviderAgrSchema.aggHourlyRelayPayments.provider}`,
         dateday: sql<string>`DATE_TRUNC('day', ${JsinfoProviderAgrSchema.aggHourlyRelayPayments.datehour}) as dateday`,
@@ -80,7 +80,7 @@ export async function aggProviderDailyRelayPayments(db: PostgresJsDatabase) {
             sql`dateday`,
         )
 
-    console.log("ddd1222dd");
+    // console.log("ddd1222dd");
 
     if (aggResults.length === 0) {
         logger.error("aggProviderDailyRelayPayments: no agg results found")
@@ -97,7 +97,7 @@ export async function aggProviderDailyRelayPayments(db: PostgresJsDatabase) {
         (new Date(r.dateday)).getTime() > startTime!.getTime()
     );
 
-    console.log("ddd1222dd333333-1");
+    // console.log("ddd1222dd333333-1");
 
     await db.transaction(async (tx) => {
         const totalItems = latestHourData.length;
@@ -126,16 +126,16 @@ export async function aggProviderDailyRelayPayments(db: PostgresJsDatabase) {
                         } as any
                     }
                 )
-            counter++;
+            // counter++;
 
-            if (counter % 1000 === 0 || counter === totalItems) {
-                console.log(`Progress: ${counter} / ${totalItems}`);
-            }
+            // if (counter % 1000 === 0 || counter === totalItems) {
+            //     console.log(`Progress: ${counter} / ${totalItems}`);
+            // }
         }
 
-        console.log(`Completed: ${counter} / ${totalItems}`);
+        // console.log(`Completed: ${counter} / ${totalItems}`);
 
-        console.log("ddd1222dd333333");
+        // console.log("ddd1222dd333333");
 
         //
         // Insert new rows

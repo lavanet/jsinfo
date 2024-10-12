@@ -177,9 +177,9 @@ const indexer = async (): Promise<void> => {
     }
 
 
-    logger.info('Done migrateAndFetchDb');
-    await AggProviderAndConsumerRelayPaymentsSync(db);
-    logger.info('Done AggProviderAndConsumerRelayPaymentsSync');
+    // logger.info('Done migrateAndFetchDb');
+    // await AggProviderAndConsumerRelayPaymentsSync(db);
+    // logger.info('Done AggProviderAndConsumerRelayPaymentsSync');
     await RestRpcAgreagorsCaller(db);
     logger.info('Done RestRpcAgreagorsCaller');
     await SaveTokenSupplyToDB(db, rpcConnection.lavajsClient);

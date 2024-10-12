@@ -79,7 +79,7 @@ async function ProcessProviderMonikerSpec(db: PostgresJsDatabase, psmEntry: Prov
 
 let batchData: ProviderMonikerSpec[] = [];
 let batchStartTime: Date = new Date();
-const BATCH_SIZE = 100;
+const BATCH_SIZE = 10;
 const BATCH_INTERVAL = 60000; // 1 minute in milliseconds
 
 async function batchAppend(db: PostgresJsDatabase, psmEntry: ProviderMonikerSpec): Promise<void> {
@@ -124,9 +124,10 @@ async function batchInsert(db: PostgresJsDatabase): Promise<void> {
 
     console.log(`batchInsert: Unique entries count: ${uniqueEntriesByProviderSpec.size}`);
 
+    JsinfoSchema.providerSpecMoniker.$inferInsert
     try {
         console.log(`batchInsert: Attempting upsert operation`);
-        await db.insert(JsinfoSchema.providerSpecMoniker)
+        const query = db.insert(JsinfoSchema.providerSpecMoniker)
             .values(Array.from(uniqueEntriesByProviderSpec.values()))
             .onConflictDoUpdate({
                 target: [JsinfoSchema.providerSpecMoniker.provider, JsinfoSchema.providerSpecMoniker.spec],
@@ -134,6 +135,13 @@ async function batchInsert(db: PostgresJsDatabase): Promise<void> {
                     moniker: sql.raw('EXCLUDED.moniker')
                 }
             });
+
+        const { sql: sqlString, params } = query.toSQL();
+
+        console.log('Generated SQL:', sqlString);
+        console.log('SQL Parameters:', params);
+
+        await query;
 
         console.log(`batchInsert: Upsert operation successful`);
         batchData = [];

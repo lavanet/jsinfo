@@ -29,9 +29,9 @@ interface ProviderResponse {
 }
 
 export async function GetProviderMonikerSpecs(spec: string): Promise<ProviderResponse> {
-    console.log(`GetProviderMonikerSpecs: Querying for spec ${spec}`);
+    // console.log(`GetProviderMonikerSpecs: Querying for spec ${spec}`);
     const response = await QueryLavaRPC<ProviderResponse>(`/lavanet/lava/pairing/providers/${spec}`);
-    console.log(`GetProviderMonikerSpecs: Received response for spec ${spec}`, { providerCount: response.stakeEntry.length });
+    // console.log(`GetProviderMonikerSpecs: Received response for spec ${spec}`, { providerCount: response.stakeEntry.length });
     return response;
 }
 
@@ -39,14 +39,14 @@ export async function ProcessProviderMonikerSpecs(db: PostgresJsDatabase): Promi
     console.log('ProcessProviderMonikerSpecs: Starting');
     try {
         const specs = await SpecAndConsumerCache.GetAllSpecs(db);
-        console.log(`ProcessProviderMonikerSpecs: Retrieved ${specs.length} specs`);
+        // console.log(`ProcessProviderMonikerSpecs: Retrieved ${specs.length} specs`);
 
         for (const spec of specs) {
-            console.log(`ProcessProviderMonikerSpecs: Processing spec ${spec}`);
+            // console.log(`ProcessProviderMonikerSpecs: Processing spec ${spec}`);
             const providerResponse = await GetProviderMonikerSpecs(spec);
 
             for (const provider of providerResponse.stakeEntry) {
-                console.log(`ProcessProviderMonikerSpecs: Processing provider ${provider.address} for spec ${spec}`);
+                // console.log(`ProcessProviderMonikerSpecs: Processing provider ${provider.address} for spec ${spec}`);
                 await ProcessProviderMonikerSpec(db, {
                     provider: provider.address,
                     moniker: provider.moniker,
@@ -55,9 +55,9 @@ export async function ProcessProviderMonikerSpecs(db: PostgresJsDatabase): Promi
             }
         }
 
-        console.log('ProcessProviderMonikerSpecs: Processing remaining batch data');
+        // console.log('ProcessProviderMonikerSpecs: Processing remaining batch data');
         await batchInsert(db);
-        console.log('ProcessProviderMonikerSpecs: Completed');
+        // console.log('ProcessProviderMonikerSpecs: Completed');
     } catch (error) {
         console.error('ProcessProviderMonikerSpecs: Error occurred', error);
         logger.error('ProviderSpecMoniker:: Error processing provider moniker specs', { error });
@@ -66,11 +66,11 @@ export async function ProcessProviderMonikerSpecs(db: PostgresJsDatabase): Promi
 }
 
 async function ProcessProviderMonikerSpec(db: PostgresJsDatabase, psmEntry: ProviderMonikerSpec): Promise<void> {
-    console.log(`ProcessProviderMonikerSpec: Processing entry`, psmEntry);
+    // console.log(`ProcessProviderMonikerSpec: Processing entry`, psmEntry);
     const { provider, moniker, spec: specValue } = psmEntry;
 
     if (!IsMeaningfulText(provider) || !IsMeaningfulText(moniker) || !IsMeaningfulText(specValue)) {
-        console.log(`ProcessProviderMonikerSpec: Skipping entry due to invalid text`, psmEntry);
+        //console.log(`ProcessProviderMonikerSpec: Skipping entry due to invalid text`, psmEntry);
         return;
     }
 
@@ -83,31 +83,31 @@ const BATCH_SIZE = 100;
 const BATCH_INTERVAL = 60000; // 1 minute in milliseconds
 
 async function batchAppend(db: PostgresJsDatabase, psmEntry: ProviderMonikerSpec): Promise<void> {
-    console.log(`batchAppend: Appending entry`, psmEntry);
+    // console.log(`batchAppend: Appending entry`, psmEntry);
     const cacheKey = `providerSpecMoniker-batchAppend-${psmEntry.provider}-${psmEntry.spec}`;
 
     const cachedValue = await MemoryCache.getDict(cacheKey);
     if (cachedValue && cachedValue.moniker === psmEntry.moniker) {
-        console.log(`batchAppend: Skipping duplicate record`, psmEntry);
+        //console.log(`batchAppend: Skipping duplicate record`, psmEntry);
         return;
     }
 
     batchData.push(psmEntry);
-    console.log(`batchAppend: Current batch size: ${batchData.length}`);
+    // console.log(`batchAppend: Current batch size: ${batchData.length}`);
 
     if (batchData.length >= BATCH_SIZE || Date.now() - batchStartTime.getTime() >= BATCH_INTERVAL) {
-        console.log(`batchAppend: Triggering batch insert`);
+        // console.log(`batchAppend: Triggering batch insert`);
         await batchInsert(db);
     }
 
-    console.log(`batchAppend: Updating cache for`, psmEntry);
+    // console.log(`batchAppend: Updating cache for`, psmEntry);
     await MemoryCache.setDict(cacheKey, { moniker: psmEntry.moniker }, 3600);
 }
 
 async function batchInsert(db: PostgresJsDatabase): Promise<void> {
-    console.log(`batchInsert: Starting with ${batchData.length} entries`);
+    // console.log(`batchInsert: Starting with ${batchData.length} entries`);
     if (batchData.length === 0) {
-        console.log(`batchInsert: No data to insert, returning`);
+        // console.log(`batchInsert: No data to insert, returning`);
         return;
     }
 
@@ -115,17 +115,17 @@ async function batchInsert(db: PostgresJsDatabase): Promise<void> {
 
     for (const entry of batchData) {
         if (!IsMeaningfulText(entry.moniker) || !IsMeaningfulText(entry.spec)) {
-            console.log(`batchInsert: Skipping entry due to invalid text`, entry);
+            // console.log(`batchInsert: Skipping entry due to invalid text`, entry);
             continue;
         }
         const key = `${entry.provider.toLowerCase()}-${entry.spec.toLowerCase()}`;
         uniqueEntriesByProviderSpec.set(key, entry);
     }
 
-    console.log(`batchInsert: Unique entries count: ${uniqueEntriesByProviderSpec.size}`);
+    // console.log(`batchInsert: Unique entries count: ${uniqueEntriesByProviderSpec.size}`);
 
     try {
-        console.log(`batchInsert: Attempting upsert operation`);
+        // console.log(`batchInsert: Attempting upsert operation`);
         await db.insert(JsinfoSchema.providerSpecMoniker)
             .values(Array.from(uniqueEntriesByProviderSpec.values()))
             .onConflictDoUpdate({
@@ -135,12 +135,12 @@ async function batchInsert(db: PostgresJsDatabase): Promise<void> {
                 }
             });
 
-        console.log(`batchInsert: Upsert operation successful`);
+        // console.log(`batchInsert: Upsert operation successful`);
         batchData = [];
         batchStartTime = new Date();
-        console.log(`batchInsert: Batch data reset`);
+        // console.log(`batchInsert: Batch data reset`);
     } catch (error) {
-        console.error(`batchInsert: Error occurred during upsert`, error);
+        // console.error(`batchInsert: Error occurred during upsert`, error);
         logger.error('ProviderSpecMoniker:: Error in batch insert operation', { error });
     }
 }

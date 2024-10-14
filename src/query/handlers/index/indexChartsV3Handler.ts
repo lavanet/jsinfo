@@ -2,13 +2,10 @@
 
 import { FastifyReply, FastifyRequest, RouteShorthandOptions } from 'fastify';
 import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../../queryDb';
-import * as JsinfoProviderAgrSchema from '../../../schemas/jsinfoSchema/providerRelayPaymentsAgregation';
 
 import { sql, desc, gt, and, inArray, lt } from "drizzle-orm";
 import { DateToDayDateString } from '../../utils/queryDateUtils';
 import { RequestHandlerBase } from '../../classes/RequestHandlerBase';
-import { GetDataLength } from '../../utils/queryUtils';
-import { PgColumn } from 'drizzle-orm/pg-core';
 import { JSONStringifySpaced } from '../../../utils/utils';
 
 type CuRelayItem = {
@@ -96,11 +93,11 @@ class IndexChartsV3Data extends RequestHandlerBase<IndexChartResponse> {
         sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
         let topChainsQueryRes: { chainId: string | null; }[] = await QueryGetJsinfoReadDbInstance().select({
-            chainId: JsinfoProviderAgrSchema.aggDailyRelayPayments.specId,
-        }).from(JsinfoProviderAgrSchema.aggDailyRelayPayments)
-            .groupBy(sql`${JsinfoProviderAgrSchema.aggDailyRelayPayments.specId}`)
-            .where(gt(sql<Date>`DATE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday})`, sql<Date>`${sixMonthsAgo}`))
-            .orderBy(desc(sql<number>`SUM(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum})`));
+            chainId: sql<string>`spec_id`,
+        }).from(sql`agg_15min_provider_relay_payments`)
+            .groupBy(sql`spec_id`)
+            .where(gt(sql<Date>`DATE(bucket_15min)`, sql<Date>`${sixMonthsAgo}`))
+            .orderBy(desc(sql<number>`SUM(relaysum)`));
 
         const topChains: string[] = topChainsQueryRes
             .filter(chain => chain.chainId != null && chain.chainId.trim() !== '')
@@ -141,22 +138,22 @@ class IndexChartsV3Data extends RequestHandlerBase<IndexChartResponse> {
         let mainChartData: CuRelayQueryData[] = [];
 
         let monthlyData: CuRelayQueryData[] = await QueryGetJsinfoReadDbInstance().select({
-            date: JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday,
-            chainId: JsinfoProviderAgrSchema.aggDailyRelayPayments.specId,
-            cuSum: sql<number>`SUM(COALESCE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.cuSum}, 0))`,
-            relaySum: sql<number>`SUM(COALESCE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum}, 0))`,
-        }).from(JsinfoProviderAgrSchema.aggDailyRelayPayments).
-            where(
+            date: sql<string>`DATE(bucket_15min)`,
+            chainId: sql<string>`spec_id`,
+            cuSum: sql<number>`SUM(COALESCE(cusum, 0))`,
+            relaySum: sql<number>`SUM(COALESCE(relaysum, 0))`,
+        }).from(sql`agg_15min_provider_relay_payments`)
+            .where(
                 and(
                     and(
-                        gt(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday, sql<Date>`${from}`),
-                        lt(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday, sql<Date>`${to}`)
+                        gt(sql`bucket_15min`, sql<Date>`${from}`),
+                        lt(sql`bucket_15min`, sql<Date>`${to}`)
                     ),
-                    inArray(JsinfoProviderAgrSchema.aggDailyRelayPayments.specId, topChains)
+                    inArray(sql`spec_id`, topChains)
                 )
-            ).
-            groupBy(JsinfoProviderAgrSchema.aggDailyRelayPayments.specId, JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday).
-            orderBy(desc(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday));
+            )
+            .groupBy(sql`spec_id, DATE(bucket_15min)`)
+            .orderBy(desc(sql`DATE(bucket_15min)`));
 
         // Verify and format the data
         monthlyData.forEach(item => {
@@ -182,20 +179,20 @@ class IndexChartsV3Data extends RequestHandlerBase<IndexChartResponse> {
     private async getQosData(from: Date, to: Date): Promise<{ [key: string]: number }> {
         const qosDataFormatted: { [key: string]: number } = {};
 
-        const qosMetricWeightedAvg = (metric: PgColumn) => sql<number>`SUM(${metric} * ${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum}) / SUM(CASE WHEN ${metric} IS NOT NULL THEN ${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum} ELSE 0 END)`;
+        const qosMetricWeightedAvg = (metric: string) => sql<number>`SUM(${sql.raw(metric)} * relaysum) / SUM(CASE WHEN ${sql.raw(metric)} IS NOT NULL THEN relaysum ELSE 0 END)`;
 
         let monthlyData: QosQueryData[] = await QueryGetJsinfoReadDbInstance().select({
-            date: JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday,
-            qosSyncAvg: qosMetricWeightedAvg(JsinfoProviderAgrSchema.aggDailyRelayPayments.qosSyncAvg),
-            qosAvailabilityAvg: qosMetricWeightedAvg(JsinfoProviderAgrSchema.aggDailyRelayPayments.qosAvailabilityAvg),
-            qosLatencyAvg: qosMetricWeightedAvg(JsinfoProviderAgrSchema.aggDailyRelayPayments.qosLatencyAvg),
-        }).from(JsinfoProviderAgrSchema.aggDailyRelayPayments).
-            orderBy(desc(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday)).
-            where(and(
-                gt(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday, sql<Date>`${from}`),
-                lt(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday, sql<Date>`${to}`)
-            )).
-            groupBy(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday);
+            date: sql<string>`DATE(bucket_15min)`,
+            qosSyncAvg: qosMetricWeightedAvg('qossyncavg'),
+            qosAvailabilityAvg: qosMetricWeightedAvg('qosavailabilityavg'),
+            qosLatencyAvg: qosMetricWeightedAvg('qoslatencyavg'),
+        }).from(sql`agg_15min_provider_relay_payments`)
+            .orderBy(desc(sql`DATE(bucket_15min)`))
+            .where(and(
+                gt(sql`bucket_15min`, sql<Date>`${from}`),
+                lt(sql`bucket_15min`, sql<Date>`${to}`)
+            ))
+            .groupBy(sql`DATE(bucket_15min)`);
 
         // Verify and format the data
         monthlyData.forEach(item => {

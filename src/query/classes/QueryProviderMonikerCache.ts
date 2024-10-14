@@ -249,7 +249,7 @@ class ProviderSpecMonikerCache {
                         offset += chunkSize;
                     }
 
-                    console.log(`Successfully fetched all ${allResults.length} ProviderSpecMoniker records`);
+                    // console.log(`Successfully fetched all ${allResults.length} ProviderSpecMoniker records`);
                     break; // Exit retry loop if successful
                 } catch (error) {
                     lastError = error as Error;

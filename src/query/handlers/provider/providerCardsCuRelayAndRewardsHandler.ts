@@ -23,15 +23,25 @@ export const ProviderCardsCuRelayAndRewardsHandlerOpts: RouteShorthandOptions = 
 }
 
 async function getCuRelayAndRewardsTotal(addr: string) {
+    // const result = await QueryGetJsinfoReadDbInstance()
+    //     .select({
+    //         cuSum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggAllTimeRelayPayments.cuSum})`,
+    //         relaySum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggAllTimeRelayPayments.relaySum})`,
+    //         rewardSum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggAllTimeRelayPayments.rewardSum})`,
+    //     })
+    //     .from(JsinfoProviderAgrSchema.aggAllTimeRelayPayments)
+    //     .where(eq(JsinfoProviderAgrSchema.aggAllTimeRelayPayments.provider, addr))
+    //     .groupBy(JsinfoProviderAgrSchema.aggAllTimeRelayPayments.provider);
+
     const result = await QueryGetJsinfoReadDbInstance()
         .select({
-            cuSum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggAllTimeRelayPayments.cuSum})`,
-            relaySum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggAllTimeRelayPayments.relaySum})`,
-            rewardSum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggAllTimeRelayPayments.rewardSum})`,
+            cuSum: sql<number>`SUM(arp."total_cusum")`,
+            relaySum: sql<number>`SUM(arp."total_relaysum")`,
+            rewardSum: sql<number>`SUM(arp."total_rewardsum")`,
         })
-        .from(JsinfoProviderAgrSchema.aggAllTimeRelayPayments)
-        .where(eq(JsinfoProviderAgrSchema.aggAllTimeRelayPayments.provider, addr))
-        .groupBy(JsinfoProviderAgrSchema.aggAllTimeRelayPayments.provider);
+        .from(sql`agg_total_provider_relay_payments as arp`)
+        .where(eq(sql`arp."provider"`, addr))
+        .groupBy(sql`arp."provider"`);
 
     if (result.length === 1) {
         return {

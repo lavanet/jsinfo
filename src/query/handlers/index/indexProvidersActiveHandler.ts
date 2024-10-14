@@ -4,70 +4,12 @@
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../../queryDb';
-import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
-import * as JsinfoProviderAgrSchema from '../../../schemas/jsinfoSchema/providerRelayPaymentsAgregation';
-import { sql, desc, not, eq, asc, and, isNull, gt, inArray } from "drizzle-orm";
+import { asc, desc, sql } from "drizzle-orm";
 import { Pagination, ParsePaginationFromString } from '../../utils/queryPagination';
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE } from '../../queryConsts';
 import { CSVEscape } from '../../utils/queryUtils';
 import { RequestHandlerBase } from '../../classes/RequestHandlerBase';
 import { MonikerCache } from '../../classes/QueryProviderMonikerCache';
-
-/*
-v1
-SELECT "provider_stakes"."provider",
-    CONCAT(SUM(CASE WHEN "provider_stakes"."status" = 1 THEN 1 ELSE 0 END), ' / ', COUNT("provider_stakes"."spec_id")) AS "totalServices",
-    COALESCE(SUM(CAST("provider_stakes"."stake" AS BIGINT) + LEAST(CAST("provider_stakes"."delegate_total" AS BIGINT), CAST("provider_stakes"."delegate_limit" AS BIGINT))), 0) AS "totalStake",
-    COALESCE(SUM("agg_alltime_relay_payments"."rewardsum"), 0) AS "rewardSum",
-    COALESCE(SUM("agg_daily_relay_payments"."relaysum"), 0) AS "monthlyrelaysum"
-FROM "provider_stakes"
-LEFT JOIN "agg_alltime_relay_payments" ON ("provider_stakes"."provider" = "agg_alltime_relay_payments"."provider" AND "provider_stakes"."spec_id" = "agg_alltime_relay_payments"."spec_id")
-LEFT JOIN "agg_daily_relay_payments" ON ("provider_stakes"."provider" = "agg_daily_relay_payments"."provider" AND "provider_stakes"."spec_id" = "agg_daily_relay_payments"."spec_id")
-WHERE (NOT "provider_stakes"."status" = 2 AND NOT "provider_stakes"."provider" IS NULL AND NOT "provider_stakes"."provider" = '')
-GROUP BY "provider_stakes"."provider"
-HAVING SUM("agg_daily_relay_payments"."relaysum") >= 100 AND MAX("agg_daily_relay_payments"."dateday") > NOW() - INTERVAL '30 day'
-ORDER BY "totalStake" DESC
-LIMIT 20 OFFSET 80
-
-v2
-SELECT "provider_stakes"."provider",
-    CONCAT(COUNT(DISTINCT CASE WHEN "provider_stakes"."status" = 1 THEN "provider_stakes"."spec_id" ELSE NULL END), ' / ', COUNT(DISTINCT "provider_stakesprovider_stakes"."spec_id")) AS "totalServices",
-    COALESCE(SUM(CAST("provider_stakes"."stake" AS BIGINT) + LEAST(CAST("provider_stakes"."delegate_total" AS BIGINT), CAST("provider_stakes"."delegate_limit" AS BIGINT))), 0) AS "totalStake",
-    COALESCE(SUM("agg_alltime_relay_payments"."rewardsum"), 0) AS "rewardSum",
-    COALESCE(SUM("agg_daily_relay_payments"."relaysum"), 0) AS "monthlyrelaysum"
-FROM "provider_stakes"
-LEFT JOIN "agg_alltime_relay_payments" ON ("provider_stakes"."provider" = "agg_alltime_relay_payments"."provider" AND "provider_stakes"."spec_id" = "agg_alltime_relay_payments"."spec_id")
-LEFT JOIN "agg_daily_relay_payments" ON ("provider_stakes"."provider" = "agg_daily_relay_payments"."provider" AND "provider_stakes"."spec_id" = "agg_daily_relay_payments"."spec_id")
-WHERE (NOT "provider_stakes"."status" = 2 AND NOT "provider_stakes"."provider" IS NULL AND NOT "provider_stakes"."provider" = '')
-GROUP BY "provider_stakes"."provider"
-HAVING SUM("agg_daily_relay_payments"."relaysum") >= 100 AND MAX("agg_daily_relay_payments"."dateday") > NOW() - INTERVAL '30 day'
-ORDER BY "totalStake" DESC
-LIMIT 20 OFFSET 80
-
-v3
-SELECT 
-    ps."provider",
-    CONCAT(COUNT(DISTINCT CASE WHEN ps."status" = 1 THEN ps."spec_id" ELSE NULL END), ' / ', COUNT(DISTINCT ps."spec_id")) AS "totalServices",
-    COALESCE(SUM(CAST(ps."stake" AS BIGINT) + LEAST(CAST(ps."delegate_total" AS BIGINT), CAST(ps."delegate_limit" AS BIGINT))), 0) AS "totalStake",
-    COALESCE((
-        SELECT SUM(arp_sub.rewardSum)
-        FROM (
-            SELECT 
-                arp."provider", 
-                SUM(arp."rewardsum") AS rewardSum
-            FROM "agg_alltime_relay_payments" arp
-            GROUP BY arp."provider"
-        ) arp_sub
-        WHERE arp_sub."provider" = ps."provider"
-    ), 0) AS "rewardSum"
-FROM "provider_stakes" ps
-WHERE (NOT ps."status" = 2 AND NOT ps."provider" IS NULL AND NOT ps."provider" = '')
-GROUP BY ps."provider"
-ORDER BY "totalStake" DESC
-LIMIT 100
-*/
-
-const rewardSumSubQuery = sql`SELECT SUM(arp_sub.rewardSum) FROM(SELECT arp."provider", SUM(arp."rewardsum") AS rewardSum FROM ${JsinfoProviderAgrSchema.aggAllTimeRelayPayments} arp GROUP BY arp."provider") arp_sub WHERE arp_sub."provider" = ${JsinfoSchema.providerStakes.provider}`
 
 type IndexProvidersActiveResponse = {
     provider: string,
@@ -127,97 +69,51 @@ class IndexProvidersActiveData extends RequestHandlerBase<IndexProvidersActiveRe
     }
 
     protected getCSVFileName(): string {
-        return `LavaTopProviders.csv`;
+        return `LavaActiveProviders.csv`;
     }
 
-    protected async getActiveProviderAddresses(): Promise<string[]> {
-        const data = await QueryGetJsinfoReadDbInstance()
-            .select({
-                provider: JsinfoSchema.providerStakes.provider,
-            })
-            .from(JsinfoSchema.providerStakes)
-            .leftJoin(JsinfoProviderAgrSchema.aggDailyRelayPayments,
-                and(
-                    eq(JsinfoSchema.providerStakes.provider, JsinfoProviderAgrSchema.aggDailyRelayPayments.provider),
-                    eq(JsinfoSchema.providerStakes.specId, JsinfoProviderAgrSchema.aggDailyRelayPayments.specId)
-                )
-            )
-            .where(
-                and(
-                    and(
-                        not(eq(JsinfoSchema.providerStakes.status, JsinfoSchema.LavaProviderStakeStatus.Frozen)),
-                        not(isNull(JsinfoSchema.providerStakes.provider)),
-                    ),
-                    not(eq(JsinfoSchema.providerStakes.provider, ''))
-                ))
-            .groupBy(JsinfoSchema.providerStakes.provider)
-            .having(
-                and(
-                    gt(sql<number>`MAX(${JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday})`, sql`NOW() - INTERVAL '30 day'`),
-                    gt(sql<number>`COALESCE(SUM(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum}), 0)`, 1)
-                )
-            )
+    async fetchAllRecords(): Promise<IndexProvidersActiveResponse[]> {
+        // console.time('fetchAllRecords');
 
-        return data.map(item => item.provider).filter((provider): provider is string => provider !== null);
-    }
-
-    protected async fetchAllRecords(): Promise<IndexProvidersActiveResponse[]> {
         await QueryCheckJsinfoReadDbInstance();
 
-        let activeProviders = await this.getActiveProviderAddresses();
+        const query = QueryGetJsinfoReadDbInstance()
+            .select({
+                provider: sql<string>`provider`,
+                lastActive: sql<Date>`last_active`,
+                totalRelays: sql<string>`total_relays`,
+                totalServices: sql<string>`totalservices`,
+                totalStake: sql<string>`totalstake`,
+                rewardSum: sql<string>`rewardsum`,
+                moniker: sql<string>`moniker`
+            })
+            .from(sql`active_providers`)
+            .orderBy(desc(sql`totalstake`));
 
-        const res = await QueryGetJsinfoReadDbInstance().select({
-            provider: JsinfoSchema.providerStakes.provider,
-            totalServices: sql<string>`CONCAT(SUM(CASE WHEN ${JsinfoSchema.providerStakes.status} = ${JsinfoSchema.LavaProviderStakeStatus.Active} THEN 1 ELSE 0 END), ' / ', COUNT(${JsinfoSchema.providerStakes.specId})) as totalServices`,
-            totalStake: sql<bigint>`COALESCE(SUM(CAST(${JsinfoSchema.providerStakes.stake} AS BIGINT) + LEAST(CAST(${JsinfoSchema.providerStakes.delegateTotal} AS BIGINT), CAST(${JsinfoSchema.providerStakes.delegateLimit} AS BIGINT))), 0) AS totalStake`,
-            rewardSum: sql<number>`COALESCE((${rewardSumSubQuery}), 0) as rewardSum`,
-        }).from(JsinfoSchema.providerStakes)
-            .where(inArray(JsinfoSchema.providerStakes.provider, activeProviders))
-            .groupBy(JsinfoSchema.providerStakes.provider)
-            .orderBy(sql`rewardSum DESC`)
+        const result = await query;
 
-        const providersDetails: IndexProvidersActiveResponse[] = res.map(provider => ({
-            provider: provider.provider || "",
-            moniker: MonikerCache.GetMonikerForProvider(provider.provider),
-            monikerfull: MonikerCache.GetMonikerFullDescription(provider.provider),
-            rewardSum: provider.rewardSum,
-            totalServices: provider.totalServices || "",
-            totalStake: provider.totalStake.toString(),
-        }));
-
-        return providersDetails;
+        // console.timeEnd('fetchAllRecords');
+        return this.mapResultToResponse(result);
     }
 
     public async fetchPaginatedRecords(pagination: Pagination | null): Promise<IndexProvidersActiveResponse[]> {
-        let activeProviders = await this.getActiveProviderAddresses();
-
         const defaultSortKey = "totalStake";
+        const finalPagination = pagination || ParsePaginationFromString(
+            `${defaultSortKey},descending,1,${JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE}`
+        );
 
-        let finalPagination: Pagination;
+        finalPagination.sortKey = finalPagination.sortKey || defaultSortKey;
 
-        if (pagination) {
-            finalPagination = pagination;
-        } else {
-            finalPagination = ParsePaginationFromString(
-                `${defaultSortKey},descending,1,${JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE}`
-            );
-        }
-
-        // Ensure the sort key is valid or use the default
-        if (finalPagination.sortKey === null) {
-            finalPagination.sortKey = defaultSortKey;
-        }
-
-        // Define the key-to-column mapping based on the schema provided
         const keyToColumnMap = {
-            provider: JsinfoSchema.providerStakes.provider,
-            moniker: sql`MAX(${JsinfoSchema.providerSpecMoniker.moniker})`,
-            rewardSum: sql`rewardSum`,
-            totalServices: sql`totalServices`,
-            totalStake: sql`totalStake`
+            provider: sql<string>`provider`,
+            lastActive: sql<Date>`last_active`,
+            totalRelays: sql<string>`total_relays`,
+            totalServices: sql<string>`totalservices`,
+            totalStake: sql<string>`totalstake`,
+            rewardSum: sql<string>`rewardsum`,
+            moniker: sql<string>`moniker`
         };
 
-        // Check if the sort key is in the map, throw an error if not
         if (!Object.keys(keyToColumnMap).includes(finalPagination.sortKey)) {
             const trimmedSortKey = finalPagination.sortKey.substring(0, 500);
             throw new Error(`Invalid sort key: ${trimmedSortKey}`);
@@ -228,71 +124,48 @@ class IndexProvidersActiveData extends RequestHandlerBase<IndexProvidersActiveRe
         const sortColumn = keyToColumnMap[finalPagination.sortKey];
         const orderFunction = finalPagination.direction === 'ascending' ? asc : desc;
 
-        if (sortColumn === keyToColumnMap["moniker"]) {
-
-            const data = await QueryGetJsinfoReadDbInstance()
-                .select({
-                    provider: JsinfoSchema.providerStakes.provider,
-                    moniker: sql`MAX(${JsinfoSchema.providerSpecMoniker.moniker}) as moniker`,
-                    totalServices: sql<string>`CONCAT(SUM(CASE WHEN ${JsinfoSchema.providerStakes.status} = ${JsinfoSchema.LavaProviderStakeStatus.Active} THEN 1 ELSE 0 END), ' / ', COUNT(${JsinfoSchema.providerStakes.specId})) as totalServices`,
-                    totalStake: sql<bigint>`COALESCE(SUM(CAST(${JsinfoSchema.providerStakes.stake} AS BIGINT) + LEAST(CAST(${JsinfoSchema.providerStakes.delegateTotal} AS BIGINT), CAST(${JsinfoSchema.providerStakes.delegateLimit} AS BIGINT))), 0) AS totalStake`,
-                    rewardSum: sql<number>`COALESCE((${rewardSumSubQuery}), 0) as rewardSum`,
-                })
-                .from(JsinfoSchema.providerStakes)
-                .leftJoin(JsinfoSchema.providerSpecMoniker, eq(JsinfoSchema.providerStakes.provider, JsinfoSchema.providerSpecMoniker.provider))
-                .where(inArray(JsinfoSchema.providerStakes.provider, activeProviders))
-                .groupBy(JsinfoSchema.providerStakes.provider)
-                .orderBy(orderFunction(sortColumn))
-                .offset((finalPagination.page - 1) * finalPagination.count)
-                .limit(finalPagination.count);
-
-            return data.map(item => ({
-                provider: item.provider || "",
-                moniker: MonikerCache.GetMonikerForProvider(item.provider),
-                monikerfull: MonikerCache.GetMonikerFullDescription(item.provider),
-                rewardSum: item.rewardSum || 0,
-                totalServices: item.totalServices,
-                totalStake: item.totalStake.toString()
-            }));
-        }
-
-        const data = await QueryGetJsinfoReadDbInstance()
-            .select({
-                provider: JsinfoSchema.providerStakes.provider,
-                totalServices: sql<string>`CONCAT(SUM(CASE WHEN ${JsinfoSchema.providerStakes.status} = ${JsinfoSchema.LavaProviderStakeStatus.Active} THEN 1 ELSE 0 END), ' / ', COUNT(${JsinfoSchema.providerStakes.specId})) as totalServices`,
-                totalStake: sql<bigint>`COALESCE(SUM(CAST(${JsinfoSchema.providerStakes.stake} AS BIGINT) + LEAST(CAST(${JsinfoSchema.providerStakes.delegateTotal} AS BIGINT), CAST(${JsinfoSchema.providerStakes.delegateLimit} AS BIGINT))), 0) AS totalStake`,
-                rewardSum: sql<number>`COALESCE((${rewardSumSubQuery}), 0) as rewardSum`,
-            })
-            .from(JsinfoSchema.providerStakes)
-            .where(inArray(JsinfoSchema.providerStakes.provider, activeProviders))
-            .groupBy(JsinfoSchema.providerStakes.provider)
+        const query = QueryGetJsinfoReadDbInstance()
+            .select(keyToColumnMap)
+            .from(sql`active_providers`)
             .orderBy(orderFunction(sortColumn))
             .offset((finalPagination.page - 1) * finalPagination.count)
             .limit(finalPagination.count);
 
-        return data.map(item => ({
-            provider: item.provider || "",
-            moniker: MonikerCache.GetMonikerForProvider(item.provider),
-            monikerfull: MonikerCache.GetMonikerFullDescription(item.provider),
-            rewardSum: item.rewardSum || 0,
-            totalServices: item.totalServices,
-            totalStake: item.totalStake.toString()
-        }));
+        // Print the SQL query
+        const { sql: sqlString, params } = query.toSQL();
+        console.log('Generated SQL:', sqlString);
+        console.log('SQL Parameters:', params);
+
+        // Execute the query
+        const res = await query;
+        return this.mapResultToResponse(res);
     }
 
-    protected async fetchRecordCountFromDb(): Promise<number> {
+    async fetchRecordCountFromDb(): Promise<number> {
+        // console.time('fetchRecordCountFromDb');
         await QueryCheckJsinfoReadDbInstance();
 
-        let activeProviders = await this.getActiveProviderAddresses();
-
-        const res = await QueryGetJsinfoReadDbInstance()
+        const result = await QueryGetJsinfoReadDbInstance()
             .select({
-                count: sql<number>`COUNT(DISTINCT ${JsinfoSchema.providerStakes.provider})`,
+                count: sql<number>`count(*)`
             })
-            .from(JsinfoSchema.providerStakes)
-            .where(inArray(JsinfoSchema.providerStakes.provider, activeProviders))
+            .from(sql`active_providers`)
 
-        return res[0].count || 0;
+        // console.timeEnd('fetchRecordCountFromDb');
+        return result[0]?.count ?? 0;
+    }
+
+    private mapResultToResponse(result: any[]): IndexProvidersActiveResponse[] {
+        return result.map(row => ({
+            provider: row.provider,
+            lastActive: row.lastActive,
+            totalRelays: Number(row.totalRelays),
+            totalServices: row.totalServices,
+            totalStake: row.totalStake,
+            rewardSum: Number(row.rewardSum),
+            moniker: row.moniker,
+            monikerfull: MonikerCache.GetMonikerFullDescription(row.provider)
+        }));
     }
 
     protected async convertRecordsToCsv(data: IndexProvidersActiveResponse[]): Promise<string> {
@@ -329,4 +202,3 @@ export async function IndexProvidersActiveItemCountPaginatiedHandler(request: Fa
 export async function IndexProvidersActiveCSVRawHandler(request: FastifyRequest, reply: FastifyReply) {
     return await IndexProvidersActiveData.GetInstance().CSVRequestHandler(request, reply)
 }
-

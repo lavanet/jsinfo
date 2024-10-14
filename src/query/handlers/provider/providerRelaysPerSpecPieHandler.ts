@@ -37,15 +37,26 @@ export async function ProviderRelaysPerSpecPieHandler(request: FastifyRequest, r
 
     await QueryCheckJsinfoReadDbInstance();
 
+    // const relaysPerSpec = await QueryGetJsinfoReadDbInstance()
+    //     .select({
+    //         specId: JsinfoProviderAgrSchema.aggAllTimeRelayPayments.specId,
+    //         relaySum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggAllTimeRelayPayments.relaySum})`,
+    //     })
+    //     .from(JsinfoProviderAgrSchema.aggAllTimeRelayPayments)
+    //     .where(eq(JsinfoProviderAgrSchema.aggAllTimeRelayPayments.provider, addr))
+    //     .groupBy(JsinfoProviderAgrSchema.aggAllTimeRelayPayments.specId)
+    //     .orderBy(desc(sql<number>`SUM(${JsinfoProviderAgrSchema.aggAllTimeRelayPayments.relaySum})`));
+
     const relaysPerSpec = await QueryGetJsinfoReadDbInstance()
         .select({
-            specId: JsinfoProviderAgrSchema.aggAllTimeRelayPayments.specId,
-            relaySum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggAllTimeRelayPayments.relaySum})`,
+            specId: sql`arp."spec_id"`,
+            relaySum: sql<number>`SUM(arp."total_relaysum")`,
         })
-        .from(JsinfoProviderAgrSchema.aggAllTimeRelayPayments)
-        .where(eq(JsinfoProviderAgrSchema.aggAllTimeRelayPayments.provider, addr))
-        .groupBy(JsinfoProviderAgrSchema.aggAllTimeRelayPayments.specId)
-        .orderBy(desc(sql<number>`SUM(${JsinfoProviderAgrSchema.aggAllTimeRelayPayments.relaySum})`));
+        .from(sql`agg_total_provider_relay_payments as arp`)
+        .where(eq(sql`arp."provider"`, addr))
+        .groupBy(sql`arp."spec_id"`)
+        .orderBy(desc(sql<number>`SUM(arp."total_relaysum")`));
+
 
     const topSpecs = relaysPerSpec.slice(0, 4);
     const otherSpecs = relaysPerSpec.slice(4);

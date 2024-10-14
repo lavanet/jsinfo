@@ -30,6 +30,9 @@ async function refreshMaterializedViews(db: PostgresJsDatabase) {
         await db.execute(sql`REFRESH MATERIALIZED VIEW agg_total_provider_relay_payments`);
         await db.execute(sql`REFRESH MATERIALIZED VIEW agg_total_consumer_relay_payments`);
 
+        await db.execute(sql`REFRESH MATERIALIZED VIEW CONCURRENTLY active_providers;`);
+
+        await db.execute(sql`REFRESH MATERIALIZED VIEW CONCURRENTLY active_and_inactive_providers`);
         logger.info('Finished refreshing materialized views');
     } catch (error) {
         logger.error('Error refreshing materialized views:', error);

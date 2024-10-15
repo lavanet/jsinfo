@@ -56,7 +56,7 @@ class SpecAndConsumerCacheClass {
             this.consumerCache = newConsumerCache;
         }
 
-        logger.info('SpecAndConsumerCache refresh completed');
+        // logger.info('SpecAndConsumerCache refresh completed');
     }
 
     public IsValidSpec(specId: string): boolean {

@@ -1,0 +1,1 @@
+ALTER TABLE "supply" ALTER COLUMN "amount" SET DATA TYPE text;

@@ -38,17 +38,17 @@ export async function RestRpcAgreagorsCaller(db: PostgresJsDatabase): Promise<vo
         return;
     }
 
-    logger.info(`ProcessDualStackingDelegatorRewards started at: ${new Date().toISOString()}`);
-    try {
-        const start = Date.now();
-        await ProcessDualStackingDelegatorRewards(db);
-        const executionTime = Date.now() - start;
-        logger.info(`Successfully executed ProcessDualStackingDelegatorRewards. Execution time: ${executionTime} ms`);
-    } catch (e) {
-        logger.error(`Failed to execute ProcessDualStackingDelegatorRewards. Error: ${(e as Error).message}`, { stack: (e as Error).stack });
-        isRunning = false;
-        return;
-    }
+    // logger.info(`ProcessDualStackingDelegatorRewards started at: ${new Date().toISOString()}`);
+    // try {
+    //     const start = Date.now();
+    //     await ProcessDualStackingDelegatorRewards(db);
+    //     const executionTime = Date.now() - start;
+    //     logger.info(`Successfully executed ProcessDualStackingDelegatorRewards. Execution time: ${executionTime} ms`);
+    // } catch (e) {
+    //     logger.error(`Failed to execute ProcessDualStackingDelegatorRewards. Error: ${(e as Error).message}`, { stack: (e as Error).stack });
+    //     isRunning = false;
+    //     return;
+    // }
 
     isRunning = false;
 }

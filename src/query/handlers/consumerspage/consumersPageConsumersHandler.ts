@@ -6,7 +6,7 @@ import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../../queryDb';
 import { and, asc, desc, gte, max } from "drizzle-orm";
 import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
-import * as JsinfoConsumerAgrSchema from '../../../schemas/jsinfoSchema/consumerRelayPaymentsAgregation';
+import * as JsinfoConsumerAgrSchema from '../../../schemas/jsinfoSchema/consumerRelayPayments';
 
 export const ConsumersPageConsumersRawHandlerOpts = {
     schema: {
@@ -74,13 +74,13 @@ type ConsumerAgrEntry = {
 
 async function fetchConsumerAgrResultsEntries(): Promise<ConsumerAgrEntry[]> {
     return await QueryGetJsinfoReadDbInstance().select({
-        consumer: JsinfoConsumerAgrSchema.aggConsumerAllTimeRelayPayments.consumer,
-        cuSum: JsinfoConsumerAgrSchema.aggConsumerAllTimeRelayPayments.cuSum,
-        relaySum: JsinfoConsumerAgrSchema.aggConsumerAllTimeRelayPayments.relaySum,
-        rewardSum: JsinfoConsumerAgrSchema.aggConsumerAllTimeRelayPayments.rewardSum,
-        qosSyncAvg: JsinfoConsumerAgrSchema.aggConsumerAllTimeRelayPayments.qosSyncAvg,
-        qosSyncExcAvg: JsinfoConsumerAgrSchema.aggConsumerAllTimeRelayPayments.qosSyncExcAvg
-    }).from(JsinfoConsumerAgrSchema.aggConsumerAllTimeRelayPayments);
+        consumer: JsinfoConsumerAgrSchema.aggTotalConsumerRelayPayments.consumer,
+        cuSum: JsinfoConsumerAgrSchema.aggTotalConsumerRelayPayments.cuSum,
+        relaySum: JsinfoConsumerAgrSchema.aggTotalConsumerRelayPayments.relaySum,
+        rewardSum: JsinfoConsumerAgrSchema.aggTotalConsumerRelayPayments.rewardSum,
+        qosSyncAvg: JsinfoConsumerAgrSchema.aggTotalConsumerRelayPayments.qosSyncAvg,
+        qosSyncExcAvg: JsinfoConsumerAgrSchema.aggTotalConsumerRelayPayments.qosSyncExcAvg
+    }).from(JsinfoConsumerAgrSchema.aggTotalConsumerRelayPayments);
 }
 
 type CombinedConsumerEntry = {

@@ -2,7 +2,7 @@
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../../queryDb';
-import * as JsinfoProviderAgrSchema from '../../../schemas/jsinfoSchema/providerRelayPaymentsAgregation';
+import * as JsinfoProviderAgrSchema from '../../../schemas/jsinfoSchema/providerRelayPayments';
 import { sql, gt } from "drizzle-orm";
 
 export const IndexTopChainsHandlerOpts: RouteShorthandOptions = {
@@ -25,12 +25,12 @@ export async function IndexTopChainsHandler(request: FastifyRequest, reply: Fast
 
     // Get top chains
     let topSpecs = await QueryGetJsinfoReadDbInstance().select({
-        chainId: JsinfoProviderAgrSchema.aggDailyRelayPayments.specId,
-        relaySum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum}) as relaySum`,
-        cuSum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggDailyRelayPayments.cuSum}) as cuSum`,
-    }).from(JsinfoProviderAgrSchema.aggDailyRelayPayments).
-        groupBy(sql`${JsinfoProviderAgrSchema.aggDailyRelayPayments.specId}`).
-        where(gt(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday, sql<Date>`now() - interval '30 day'`)).
+        chainId: JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments.specId,
+        relaySum: sql<number>`SUM(${JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments.relaySum}) as relaySum`,
+        cuSum: sql<number>`SUM(${JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments.cuSum}) as cuSum`,
+    }).from(JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments).
+        groupBy(sql`${JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments.specId}`).
+        where(gt(JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments.dateday, sql<Date>`now() - interval '30 day'`)).
         orderBy(sql`relaySum DESC`)
 
     return {

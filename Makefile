@@ -13,7 +13,6 @@
 		query_no_cache \
 		query_test_health_handler \
 		query_test_lavap_provider_error_parsing \
-		scripts_local_startQueryProviderDualStackingDelegatorRewardsContainer \
 		redis_run \
 		redis_restart \
 		redis_connect \
@@ -74,9 +73,6 @@ query_test_lavap_prodiver_error_parsing:
 
 getblock:
 	JSINFO_QUERY_IS_DEBUG_MODE=true bun run src/executils/getblock.ts 1629704
-
-scripts_local_startQueryProviderDualStackingDelegatorRewardsContainer:
-	QUERY_PROVIDER_DUAL_STACKING_DELEGATOR_REWARDS_CONTAINER_DEBUG=true bash scripts/startQueryProviderDualStackingDelegatorRewardsContainer.sh
 
 redis_run:
 	docker rm -f redis-stack || true

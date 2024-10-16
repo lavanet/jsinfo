@@ -2,7 +2,7 @@
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../../queryDb';
-import * as JsinfoProviderAgrSchema from '../../../schemas/jsinfoSchema/providerRelayPaymentsAgregation';
+import * as JsinfoProviderAgrSchema from '../../../schemas/jsinfoSchema/providerRelayPayments';
 import { sql, eq, desc } from "drizzle-orm";
 import { GetAndValidateProviderAddressFromRequest } from '../../utils/queryRequestArgParser';
 
@@ -39,13 +39,15 @@ export async function ProviderRelaysPerSpecPieHandler(request: FastifyRequest, r
 
     // const relaysPerSpec = await QueryGetJsinfoReadDbInstance()
     //     .select({
-    //         specId: JsinfoProviderAgrSchema.aggAllTimeRelayPayments.specId,
-    //         relaySum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggAllTimeRelayPayments.relaySum})`,
+    //         specId: JsinfoProviderAgrSchema.aggTotalProviderRelayMvPayments.specId,
+    //         relaySum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggTotalProviderRelayMvPayments.relaySum})`,
     //     })
-    //     .from(JsinfoProviderAgrSchema.aggAllTimeRelayPayments)
-    //     .where(eq(JsinfoProviderAgrSchema.aggAllTimeRelayPayments.provider, addr))
-    //     .groupBy(JsinfoProviderAgrSchema.aggAllTimeRelayPayments.specId)
-    //     .orderBy(desc(sql<number>`SUM(${JsinfoProviderAgrSchema.aggAllTimeRelayPayments.relaySum})`));
+    //     .from(JsinfoProviderAgrSchema.aggTotalProviderRelayMvPayments)
+    //     .where(eq(JsinfoProviderAgrSchema.aggTotalProviderRelayMvPayments.provider, addr))
+    //     .groupBy(JsinfoProviderAgrSchema.aggTotalProviderRelayMvPayments.specId)
+    //     .orderBy(desc(sql<number>`SUM(${JsinfoProviderAgrSchema.aggTotalProviderRelayMvPayments.relaySum})`));
+
+    // TODO: come back here
 
     const relaysPerSpec = await QueryGetJsinfoReadDbInstance()
         .select({

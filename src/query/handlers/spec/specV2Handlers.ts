@@ -3,7 +3,7 @@
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryGetJsinfoReadDbInstance, QueryCheckJsinfoReadDbInstance } from '../../queryDb';
 import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
-import * as JsinfoProviderAgrSchema from '../../../schemas/jsinfoSchema/providerRelayPaymentsAgregation';
+import * as JsinfoProviderAgrSchema from '../../../schemas/jsinfoSchema/providerRelayPayments';
 import { sql, eq, count, and, gte, inArray } from "drizzle-orm";
 import { GetAndValidateSpecIdFromRequest } from '../../utils/queryRequestArgParser';
 import { RedisCache } from '../../classes/RedisCache';
@@ -32,12 +32,12 @@ export async function SpecCuRelayRewardsHandler(request: FastifyRequest, reply: 
 
     // const cuRelayAndRewardsTotalRes = await QueryGetJsinfoReadDbInstance()
     //     .select({
-    //         cuSum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggAllTimeRelayPayments.cuSum})`,
-    //         relaySum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggAllTimeRelayPayments.relaySum})`,
-    //         rewardSum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggAllTimeRelayPayments.rewardSum})`,
+    //         cuSum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggTotalProviderRelayMvPayments.cuSum})`,
+    //         relaySum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggTotalProviderRelayMvPayments.relaySum})`,
+    //         rewardSum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggTotalProviderRelayMvPayments.rewardSum})`,
     //     })
-    //     .from(JsinfoProviderAgrSchema.aggAllTimeRelayPayments)
-    //     .where(eq(JsinfoProviderAgrSchema.aggAllTimeRelayPayments.specId, spec));
+    //     .from(JsinfoProviderAgrSchema.aggTotalProviderRelayMvPayments)
+    //     .where(eq(JsinfoProviderAgrSchema.aggTotalProviderRelayMvPayments.specId, spec));
 
     const cuRelayAndRewardsTotalRes = await QueryGetJsinfoReadDbInstance()
         .select({

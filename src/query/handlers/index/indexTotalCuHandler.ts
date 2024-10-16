@@ -2,7 +2,7 @@
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryCheckJsinfoReadDbInstance, GetLatestBlock, QueryGetJsinfoReadDbInstance } from '../../queryDb';
-import * as JsinfoProviderAgrSchema from '../../../schemas/jsinfoSchema/providerRelayPaymentsAgregation';
+import * as JsinfoProviderAgrSchema from '../../../schemas/jsinfoSchema/providerRelayPayments';
 import { sql } from "drizzle-orm";
 import { logger } from '../../../utils/utils';
 
@@ -31,10 +31,11 @@ export async function IndexTotalCuHandler(request: FastifyRequest, reply: Fastif
     let cuSum = 0
     let relaySum = 0
     // let res = await QueryGetJsinfoReadDbInstance().select({
-    //     cuSum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggAllTimeRelayPayments.cuSum})`,
-    //     relaySum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggAllTimeRelayPayments.relaySum})`,
-    // }).from(JsinfoProviderAgrSchema.aggAllTimeRelayPayments)
+    //     cuSum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggTotalProviderRelayMvPayments.cuSum})`,
+    //     relaySum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggTotalProviderRelayMvPayments.relaySum})`,
+    // }).from(JsinfoProviderAgrSchema.aggTotalProviderRelayMvPayments)
 
+    // TODO: come back here
 
     const res = await QueryGetJsinfoReadDbInstance()
         .select({

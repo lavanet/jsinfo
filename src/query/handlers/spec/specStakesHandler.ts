@@ -4,7 +4,7 @@
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../../queryDb';
 import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
-import * as JsinfoProviderAgrSchema from '../../../schemas/jsinfoSchema/providerRelayPaymentsAgregation';
+import * as JsinfoProviderAgrSchema from '../../../schemas/jsinfoSchema/providerRelayPayments';
 import { sql, desc, gt, and, eq } from "drizzle-orm";
 import { ReplaceArchive } from '../../../indexer/indexerUtils';
 import { GetAndValidateSpecIdFromRequest } from '../../utils/queryRequestArgParser';
@@ -134,14 +134,14 @@ export async function SpecStakesPaginatedHandler(request: FastifyRequest, reply:
 
     let aggRes90Days = await QueryGetJsinfoReadDbInstance().select({
         provider: JsinfoSchema.providerStakes.provider,
-        cuSum90Days: sql<number>`SUM(${JsinfoProviderAgrSchema.aggDailyRelayPayments.cuSum})`,
-        relaySum90Days: sql<number>`SUM(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum})`,
+        cuSum90Days: sql<number>`SUM(${JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments.cuSum})`,
+        relaySum90Days: sql<number>`SUM(${JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments.relaySum})`,
     }).from(JsinfoSchema.providerStakes)
-        .leftJoin(JsinfoProviderAgrSchema.aggDailyRelayPayments, and(
-            eq(JsinfoSchema.providerStakes.provider, JsinfoProviderAgrSchema.aggDailyRelayPayments.provider),
+        .leftJoin(JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments, and(
+            eq(JsinfoSchema.providerStakes.provider, JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments.provider),
             and(
-                eq(JsinfoSchema.providerStakes.specId, JsinfoProviderAgrSchema.aggDailyRelayPayments.specId),
-                gt(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday, sql<Date>`now() - interval '90 day'`)
+                eq(JsinfoSchema.providerStakes.specId, JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments.specId),
+                gt(JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments.dateday, sql<Date>`now() - interval '90 day'`)
             )
         ))
         .where(eq(JsinfoSchema.providerStakes.specId, spec))
@@ -153,14 +153,14 @@ export async function SpecStakesPaginatedHandler(request: FastifyRequest, reply:
     // Query for 30 days
     let aggRes30Days = await QueryGetJsinfoReadDbInstance().select({
         provider: JsinfoSchema.providerStakes.provider,
-        cuSum30Days: sql<number>`SUM(${JsinfoProviderAgrSchema.aggDailyRelayPayments.cuSum})`,
-        relaySum30Days: sql<number>`SUM(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum})`,
+        cuSum30Days: sql<number>`SUM(${JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments.cuSum})`,
+        relaySum30Days: sql<number>`SUM(${JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments.relaySum})`,
     }).from(JsinfoSchema.providerStakes)
-        .leftJoin(JsinfoProviderAgrSchema.aggDailyRelayPayments, and(
-            eq(JsinfoSchema.providerStakes.provider, JsinfoProviderAgrSchema.aggDailyRelayPayments.provider),
+        .leftJoin(JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments, and(
+            eq(JsinfoSchema.providerStakes.provider, JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments.provider),
             and(
-                eq(JsinfoSchema.providerStakes.specId, JsinfoProviderAgrSchema.aggDailyRelayPayments.specId),
-                gt(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday, sql<Date>`now() - interval '30 day'`)
+                eq(JsinfoSchema.providerStakes.specId, JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments.specId),
+                gt(JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments.dateday, sql<Date>`now() - interval '30 day'`)
             )
         ))
         .where(eq(JsinfoSchema.providerStakes.specId, spec))

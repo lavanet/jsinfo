@@ -10,6 +10,7 @@ import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE } from '../../queryConsts';
 import { CSVEscape } from '../../utils/queryUtils';
 import { RequestHandlerBase } from '../../classes/RequestHandlerBase';
 import { MonikerCache } from '../../classes/QueryProviderMonikerCache';
+import * as JsinfoSchemaProviderMaterialViews from '../../schemas/jsinfoSchema/providerMaterialViews';
 
 type IndexProvidersResponse = {
     provider: string,
@@ -79,15 +80,16 @@ class IndexProvidersData extends RequestHandlerBase<IndexProvidersResponse> {
 
         const query = QueryGetJsinfoReadDbInstance()
             .select({
-                provider: sql<string>`provider`,
-                totalRelays: sql<string>`total_relays`,
-                totalServices: sql<string>`totalservices`,
-                totalStake: sql<string>`totalstake`,
-                rewardSum: sql<string>`rewardsum`,
-                moniker: sql<string>`moniker`
+                provider: JsinfoSchemaProviderMaterialViews.activeAndInactiveProviders.provider,
+                lastActive: JsinfoSchemaProviderMaterialViews.activeAndInactiveProviders.lastActive,
+                totalRelays: JsinfoSchemaProviderMaterialViews.activeAndInactiveProviders.totalRelays,
+                totalServices: JsinfoSchemaProviderMaterialViews.activeAndInactiveProviders.totalServices,
+                totalStake: JsinfoSchemaProviderMaterialViews.activeAndInactiveProviders.totalStake,
+                rewardSum: JsinfoSchemaProviderMaterialViews.activeAndInactiveProviders.rewardSum,
+                moniker: JsinfoSchemaProviderMaterialViews.activeAndInactiveProviders.moniker
             })
-            .from(sql`active_and_inactive_providers`)
-            .orderBy(desc(sql`totalstake`));
+            .from(JsinfoSchemaProviderMaterialViews.activeAndInactiveProviders)
+            .orderBy(desc(JsinfoSchemaProviderMaterialViews.activeAndInactiveProviders.totalStake));
 
         const result = await query;
 
@@ -104,12 +106,13 @@ class IndexProvidersData extends RequestHandlerBase<IndexProvidersResponse> {
         finalPagination.sortKey = finalPagination.sortKey || defaultSortKey;
 
         const keyToColumnMap = {
-            provider: sql<string>`provider`,
-            totalRelays: sql<string>`total_relays`,
-            totalServices: sql<string>`totalservices`,
-            totalStake: sql<string>`totalstake`,
-            rewardSum: sql<string>`rewardsum`,
-            moniker: sql<string>`moniker`
+            provider: JsinfoSchemaProviderMaterialViews.activeAndInactiveProviders.provider,
+            lastActive: JsinfoSchemaProviderMaterialViews.activeAndInactiveProviders.lastActive,
+            totalRelays: JsinfoSchemaProviderMaterialViews.activeAndInactiveProviders.totalRelays,
+            totalServices: JsinfoSchemaProviderMaterialViews.activeAndInactiveProviders.totalServices,
+            totalStake: JsinfoSchemaProviderMaterialViews.activeAndInactiveProviders.totalStake,
+            rewardSum: JsinfoSchemaProviderMaterialViews.activeAndInactiveProviders.rewardSum,
+            moniker: JsinfoSchemaProviderMaterialViews.activeAndInactiveProviders.moniker
         };
 
         if (!Object.keys(keyToColumnMap).includes(finalPagination.sortKey)) {
@@ -122,34 +125,25 @@ class IndexProvidersData extends RequestHandlerBase<IndexProvidersResponse> {
         const sortColumn = keyToColumnMap[finalPagination.sortKey];
         const orderFunction = finalPagination.direction === 'ascending' ? asc : desc;
 
-        const query = QueryGetJsinfoReadDbInstance()
+        const res = await QueryGetJsinfoReadDbInstance()
             .select(keyToColumnMap)
-            .from(sql`active_and_inactive_providers`)
+            .from(JsinfoSchemaProviderMaterialViews.activeAndInactiveProviders)
             .orderBy(orderFunction(sortColumn))
             .offset((finalPagination.page - 1) * finalPagination.count)
             .limit(finalPagination.count);
 
-        // Print the SQL query
-        const { sql: sqlString, params } = query.toSQL();
-        // console.log('Generated SQL:', sqlString);
-        // console.log('SQL Parameters:', params);
-
-        // Execute the query
-        const res = await query;
         return this.mapResultToResponse(res);
     }
 
     async fetchRecordCountFromDb(): Promise<number> {
-        // console.time('fetchRecordCountFromDb');
         await QueryCheckJsinfoReadDbInstance();
 
         const result = await QueryGetJsinfoReadDbInstance()
             .select({
                 count: sql<number>`count(*)`
             })
-            .from(sql`active_and_inactive_providers`)
+            .from(JsinfoSchemaProviderMaterialViews.activeAndInactiveProviders)
 
-        // console.timeEnd('fetchRecordCountFromDb');
         return result[0]?.count ?? 0;
     }
 

@@ -39,7 +39,7 @@ export const SpecProviderHealthHandlerOpts: RouteShorthandOptions = {
 };
 
 // SELECT DISTINCT ON(provider, spec, interface) *
-//     FROM provider_health2
+//     FROM provider_health
 // WHERE provider = 'lava@1lamrmq78w6dnw5ahpyflus5ps7pvlwrtn9rf83'
 // AND spec = 'NEAR'
 // AND timestamp >= '2024-08-24'

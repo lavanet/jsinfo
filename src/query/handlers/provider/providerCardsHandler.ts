@@ -5,7 +5,7 @@
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../../queryDb';
 import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
-import * as JsinfoProviderAgrSchema from '../../../schemas/jsinfoSchema/providerRelayPaymentsAgregation';
+import * as JsinfoProviderAgrSchema from '../../../schemas/jsinfoSchema/providerRelayPayments';
 import { sql, desc, and, eq, gte, isNotNull, like } from "drizzle-orm";
 import { GetAndValidateProviderAddressFromRequest } from '../../utils/queryRequestArgParser';
 import { JSONStringifySpaced, logger, MinBigInt, ParseUlavaToBigInt } from '../../../utils/utils';
@@ -50,13 +50,13 @@ export const ProviderCardsHandlerOpts: RouteShorthandOptions = {
 async function getCuRelayAndRewardsTotal(addr: string) {
     // const result = await QueryGetJsinfoReadDbInstance()
     //     .select({
-    //         cuSum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggAllTimeRelayPayments.cuSum})`,
-    //         relaySum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggAllTimeRelayPayments.relaySum})`,
-    //         rewardSum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggAllTimeRelayPayments.rewardSum})`,
+    //         cuSum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggTotalProviderRelayMvPayments.cuSum})`,
+    //         relaySum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggTotalProviderRelayMvPayments.relaySum})`,
+    //         rewardSum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggTotalProviderRelayMvPayments.rewardSum})`,
     //     })
-    //     .from(JsinfoProviderAgrSchema.aggAllTimeRelayPayments)
-    //     .where(eq(JsinfoProviderAgrSchema.aggAllTimeRelayPayments.provider, addr))
-    //     .groupBy(JsinfoProviderAgrSchema.aggAllTimeRelayPayments.provider);
+    //     .from(JsinfoProviderAgrSchema.aggTotalProviderRelayMvPayments)
+    //     .where(eq(JsinfoProviderAgrSchema.aggTotalProviderRelayMvPayments.provider, addr))
+    //     .groupBy(JsinfoProviderAgrSchema.aggTotalProviderRelayMvPayments.provider);
 
     const result = await QueryGetJsinfoReadDbInstance()
         .select({

@@ -1,1 +1,0 @@
-ALTER TABLE "supply" ADD PRIMARY KEY ("key");

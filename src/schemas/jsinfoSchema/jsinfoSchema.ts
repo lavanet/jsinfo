@@ -220,7 +220,7 @@ export const providerLatestBlockReports = pgTable('provider_latest_block_reports
 export type ProviderLatestBlockReports = typeof providerLatestBlockReports.$inferSelect;
 export type InsertProviderLatestBlockReports = typeof providerLatestBlockReports.$inferInsert;
 
-export const providerHealth = pgTable('provider_health2', {
+export const providerHealth = pgTable('provider_health', {
   id: serial('id'),
   provider: text('provider'),
   timestamp: timestamp('timestamp').notNull(),
@@ -239,8 +239,8 @@ export const providerHealth = pgTable('provider_health2', {
       table.interface,
       table.guid,
     ),
-    providerIdx: index("provider_health2_provider_idx").on(table.provider),
-    timestampIdx: index("provider_health2_timestamp_idx").on(table.timestamp),
+    providerIdx: index("provider_health_provider_idx").on(table.provider),
+    timestampIdx: index("provider_health_timestamp_idx").on(table.timestamp),
   };
 });
 
@@ -301,7 +301,7 @@ export type InsertConsumerSubscriptionList = typeof consumerSubscriptionList.$in
 
 export const supply = pgTable('supply', {
   key: text('key').notNull().primaryKey(),
-  amount: bigint('amount', { mode: 'bigint' }).notNull(),
+  amount: text('amount').notNull(),
   timestamp: timestamp('timestamp', { mode: "date" }).notNull(),
 }, (table) => {
   return {

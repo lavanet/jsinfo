@@ -2,7 +2,7 @@
 
 import { FastifyReply, FastifyRequest, RouteShorthandOptions } from 'fastify';
 import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../../queryDb';
-import * as JsinfoConsumerAgrSchema from '../../../schemas/jsinfoSchema/consumerRelayPaymentsAgregation';
+import * as JsinfoConsumerAgrSchema from '../../../schemas/jsinfoSchema/consumerRelayPayments';
 import { sql, gt, and, lt, desc, eq } from "drizzle-orm";
 import { DateToISOString, FormatDateItems } from '../../utils/queryDateUtils';
 import { RequestHandlerBase } from '../../classes/RequestHandlerBase';
@@ -100,22 +100,22 @@ class ConsumerChartsData extends RequestHandlerBase<ConsumerChartResponse> {
     private async getConsumerQosData(from: Date, to: Date): Promise<ConsumerQosData[]> {
         const formatedData: ConsumerQosData[] = [];
 
-        const qosMetricWeightedAvg = (metric: PgColumn) => sql<number>`SUM(${metric} * ${JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.relaySum}) / SUM(CASE WHEN ${metric} IS NOT NULL THEN ${JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.relaySum} ELSE 0 END)`;
+        const qosMetricWeightedAvg = (metric: PgColumn) => sql<number>`SUM(${metric} * ${JsinfoConsumerAgrSchema.agg15MinConsumerRelayTsPayments.relaySum}) / SUM(CASE WHEN ${metric} IS NOT NULL THEN ${JsinfoConsumerAgrSchema.agg15MinConsumerRelayTsPayments.relaySum} ELSE 0 END)`;
 
         let monthlyData: ConsumerQosQueryData[] = await QueryGetJsinfoReadDbInstance().select({
-            date: JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.dateday,
-            qosSyncAvg: qosMetricWeightedAvg(JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.qosSyncAvg),
-            qosAvailabilityAvg: qosMetricWeightedAvg(JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.qosAvailabilityAvg),
-            qosLatencyAvg: qosMetricWeightedAvg(JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.qosLatencyAvg),
-        }).from(JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments)
-            .groupBy(JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.dateday)
+            date: JsinfoConsumerAgrSchema.agg15MinConsumerRelayTsPayments.dateday,
+            qosSyncAvg: qosMetricWeightedAvg(JsinfoConsumerAgrSchema.agg15MinConsumerRelayTsPayments.qosSyncAvg),
+            qosAvailabilityAvg: qosMetricWeightedAvg(JsinfoConsumerAgrSchema.agg15MinConsumerRelayTsPayments.qosAvailabilityAvg),
+            qosLatencyAvg: qosMetricWeightedAvg(JsinfoConsumerAgrSchema.agg15MinConsumerRelayTsPayments.qosLatencyAvg),
+        }).from(JsinfoConsumerAgrSchema.agg15MinConsumerRelayTsPayments)
+            .groupBy(JsinfoConsumerAgrSchema.agg15MinConsumerRelayTsPayments.dateday)
             .where(and(
-                eq(JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.consumer, this.consumer),
+                eq(JsinfoConsumerAgrSchema.agg15MinConsumerRelayTsPayments.consumer, this.consumer),
                 and(
-                    gt(JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.dateday, sql<Date>`${from}`),
-                    lt(JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.dateday, sql<Date>`${to}`)
+                    gt(JsinfoConsumerAgrSchema.agg15MinConsumerRelayTsPayments.dateday, sql<Date>`${from}`),
+                    lt(JsinfoConsumerAgrSchema.agg15MinConsumerRelayTsPayments.dateday, sql<Date>`${to}`)
                 )))
-            .orderBy(desc(JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.dateday));
+            .orderBy(desc(JsinfoConsumerAgrSchema.agg15MinConsumerRelayTsPayments.dateday));
 
         monthlyData.forEach(item => {
             item.qosSyncAvg = Number(item.qosSyncAvg);
@@ -150,20 +150,20 @@ class ConsumerChartsData extends RequestHandlerBase<ConsumerChartResponse> {
         const formatedData: ConsumerCuRelayData[] = [];
 
         let monthlyData: ConsumerCuRelayQueryDataWithSpecId[] = await QueryGetJsinfoReadDbInstance().select({
-            date: JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.dateday,
-            specId: JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.specId,
-            cuSum: sql<number>`SUM(${JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.cuSum})`,
-            relaySum: sql<number>`SUM(${JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.relaySum})`,
-        }).from(JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments)
-            .groupBy(JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.dateday, JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.specId)
+            date: JsinfoConsumerAgrSchema.agg15MinConsumerRelayTsPayments.dateday,
+            specId: JsinfoConsumerAgrSchema.agg15MinConsumerRelayTsPayments.specId,
+            cuSum: sql<number>`SUM(${JsinfoConsumerAgrSchema.agg15MinConsumerRelayTsPayments.cuSum})`,
+            relaySum: sql<number>`SUM(${JsinfoConsumerAgrSchema.agg15MinConsumerRelayTsPayments.relaySum})`,
+        }).from(JsinfoConsumerAgrSchema.agg15MinConsumerRelayTsPayments)
+            .groupBy(JsinfoConsumerAgrSchema.agg15MinConsumerRelayTsPayments.dateday, JsinfoConsumerAgrSchema.agg15MinConsumerRelayTsPayments.specId)
             .where(and(
-                eq(JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.consumer, this.consumer),
+                eq(JsinfoConsumerAgrSchema.agg15MinConsumerRelayTsPayments.consumer, this.consumer),
                 and(
-                    gt(JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.dateday, sql<Date>`${from}`),
-                    lt(JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.dateday, sql<Date>`${to}`)
+                    gt(JsinfoConsumerAgrSchema.agg15MinConsumerRelayTsPayments.dateday, sql<Date>`${from}`),
+                    lt(JsinfoConsumerAgrSchema.agg15MinConsumerRelayTsPayments.dateday, sql<Date>`${to}`)
                 )
             ))
-            .orderBy(JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.dateday);
+            .orderBy(JsinfoConsumerAgrSchema.agg15MinConsumerRelayTsPayments.dateday);
 
         let dateSums: { [date: string]: { cuSum: number, relaySum: number } } = {};
 

@@ -1,9 +1,137 @@
 {
+  "id": "c180b4cf-2be4-4cfa-9cd4-a8e702a538f3",
+  "prevId": "4daf1e02-f5e3-4eb4-9fdd-f60a3879b0af",
   "version": "5",
   "dialect": "pg",
-  "id": "1a359e88-8a3d-485f-849f-534c85a5c5e5",
-  "prevId": "98855576-c9fb-416a-bfb8-38fbecf48307",
   "tables": {
+    "agg_15min_consumer_relay_payments": {
+      "name": "agg_15min_consumer_relay_payments",
+      "schema": "",
+      "columns": {
+        "bucket_15min": {
+          "name": "bucket_15min",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "consumer": {
+          "name": "consumer",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "spec_id": {
+          "name": "spec_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cusum": {
+          "name": "cusum",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "relaysum": {
+          "name": "relaysum",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "rewardsum": {
+          "name": "rewardsum",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "qossyncavg": {
+          "name": "qossyncavg",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "qosavailabilityavg": {
+          "name": "qosavailabilityavg",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "qoslatencyavg": {
+          "name": "qoslatencyavg",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
+    "agg_total_consumer_relay_payments": {
+      "name": "agg_total_consumer_relay_payments",
+      "schema": "",
+      "columns": {
+        "consumer": {
+          "name": "consumer",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "spec_id": {
+          "name": "spec_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "total_cusum": {
+          "name": "total_cusum",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "total_relaysum": {
+          "name": "total_relaysum",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "total_rewardsum": {
+          "name": "total_rewardsum",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "qossyncavg": {
+          "name": "qossyncavg",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "qossyncexcavg": {
+          "name": "qossyncexcavg",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "qosavailabilityavg": {
+          "name": "qosavailabilityavg",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "qoslatencyavg": {
+          "name": "qoslatencyavg",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
     "blocks": {
       "name": "blocks",
       "schema": "",
@@ -62,6 +190,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "tx": {
+          "name": "tx",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "vote_id": {
           "name": "vote_id",
           "type": "text",
@@ -106,47 +240,7 @@
         }
       },
       "indexes": {},
-      "foreignKeys": {
-        "conflict_responses_block_id_blocks_height_fk": {
-          "name": "conflict_responses_block_id_blocks_height_fk",
-          "tableFrom": "conflict_responses",
-          "tableTo": "blocks",
-          "columnsFrom": [
-            "block_id"
-          ],
-          "columnsTo": [
-            "height"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "conflict_responses_consumer_consumers_address_fk": {
-          "name": "conflict_responses_consumer_consumers_address_fk",
-          "tableFrom": "conflict_responses",
-          "tableTo": "consumers",
-          "columnsFrom": [
-            "consumer"
-          ],
-          "columnsTo": [
-            "address"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "conflict_responses_spec_id_specs_id_fk": {
-          "name": "conflict_responses_spec_id_specs_id_fk",
-          "tableFrom": "conflict_responses",
-          "tableTo": "specs",
-          "columnsFrom": [
-            "spec_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
+      "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
@@ -177,63 +271,129 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "conflict_votes_block_id_blocks_height_fk": {
-          "name": "conflict_votes_block_id_blocks_height_fk",
-          "tableFrom": "conflict_votes",
-          "tableTo": "blocks",
-          "columnsFrom": [
-            "block_id"
-          ],
-          "columnsTo": [
-            "height"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
         },
-        "conflict_votes_provider_providers_address_fk": {
-          "name": "conflict_votes_provider_providers_address_fk",
-          "tableFrom": "conflict_votes",
-          "tableTo": "providers",
-          "columnsFrom": [
-            "provider"
-          ],
-          "columnsTo": [
-            "address"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
-    },
-    "consumers": {
-      "name": "consumers",
-      "schema": "",
-      "columns": {
-        "address": {
-          "name": "address",
+        "tx": {
+          "name": "tx",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "conflict_votes_provider_idx": {
+          "name": "conflict_votes_provider_idx",
+          "columns": [
+            "provider"
+          ],
+          "isUnique": false
+        }
+      },
       "foreignKeys": {},
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "consumers_address_unique": {
-          "name": "consumers_address_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "address"
-          ]
+      "uniqueConstraints": {}
+    },
+    "consumer_subscription_list": {
+      "name": "consumer_subscription_list",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "consumer": {
+          "name": "consumer",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "plan": {
+          "name": "plan",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "fulltext": {
+          "name": "fulltext",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "createdat": {
+          "name": "createdat",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
         }
-      }
+      },
+      "indexes": {
+        "cslidx": {
+          "name": "cslidx",
+          "columns": [
+            "consumer"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
+    "dual_stacking_delegator_rewards": {
+      "name": "dual_stacking_delegator_rewards",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "provider": {
+          "name": "provider",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "timestamp": {
+          "name": "timestamp",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "chain_id": {
+          "name": "chain_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "amount": {
+          "name": "amount",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "denom": {
+          "name": "denom",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "dual_stacking_delegator_rewards_provider_idx": {
+          "name": "dual_stacking_delegator_rewards_provider_idx",
+          "columns": [
+            "provider"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
     },
     "events": {
       "name": "events",
@@ -251,6 +411,231 @@
           "primaryKey": false,
           "notNull": false
         },
+        "t1": {
+          "name": "t1",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "t2": {
+          "name": "t2",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "t3": {
+          "name": "t3",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "b1": {
+          "name": "b1",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "b2": {
+          "name": "b2",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "b3": {
+          "name": "b3",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "i1": {
+          "name": "i1",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "i2": {
+          "name": "i2",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "i3": {
+          "name": "i3",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "r1": {
+          "name": "r1",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "r2": {
+          "name": "r2",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "r3": {
+          "name": "r3",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "provider": {
+          "name": "provider",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "consumer": {
+          "name": "consumer",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "block_id": {
+          "name": "block_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tx": {
+          "name": "tx",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "fulltext": {
+          "name": "fulltext",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "timestamp": {
+          "name": "timestamp",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "events_provider_idx": {
+          "name": "events_provider_idx",
+          "columns": [
+            "provider"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
+    "provider_health": {
+      "name": "provider_health",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "provider": {
+          "name": "provider",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "timestamp": {
+          "name": "timestamp",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "guid": {
+          "name": "guid",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "spec": {
+          "name": "spec",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "geolocation": {
+          "name": "geolocation",
+          "type": "varchar(10)",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "NULL"
+        },
+        "interface": {
+          "name": "interface",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "NULL"
+        },
+        "status": {
+          "name": "status",
+          "type": "varchar(10)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "data": {
+          "name": "data",
+          "type": "varchar(1024)",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "NULL"
+        }
+      },
+      "indexes": {
+        "ph2idx": {
+          "name": "ph2idx",
+          "columns": [
+            "provider",
+            "spec",
+            "geolocation",
+            "interface",
+            "guid"
+          ],
+          "isUnique": true
+        },
+        "provider_health_provider_idx": {
+          "name": "provider_health_provider_idx",
+          "columns": [
+            "provider"
+          ],
+          "isUnique": false
+        },
+        "provider_health_timestamp_idx": {
+          "name": "provider_health_timestamp_idx",
+          "columns": [
+            "timestamp"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
+    "provider_latest_block_reports": {
+      "name": "provider_latest_block_reports",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
         "provider": {
           "name": "provider",
           "type": "text",
@@ -262,75 +647,185 @@
           "type": "integer",
           "primaryKey": false,
           "notNull": false
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "events_provider_providers_address_fk": {
-          "name": "events_provider_providers_address_fk",
-          "tableFrom": "events",
-          "tableTo": "providers",
-          "columnsFrom": [
-            "provider"
-          ],
-          "columnsTo": [
-            "address"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
         },
-        "events_block_id_blocks_height_fk": {
-          "name": "events_block_id_blocks_height_fk",
-          "tableFrom": "events",
-          "tableTo": "blocks",
-          "columnsFrom": [
-            "block_id"
-          ],
-          "columnsTo": [
-            "height"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
-    },
-    "plans": {
-      "name": "plans",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
+        "tx": {
+          "name": "tx",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "desc": {
-          "name": "desc",
+        "timestamp": {
+          "name": "timestamp",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "chain_id": {
+          "name": "chain_id",
           "type": "text",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
-        "pay": {
-          "name": "pay",
+        "chain_block_height": {
+          "name": "chain_block_height",
           "type": "bigint",
           "primaryKey": false,
           "notNull": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "provider_latest_block_reports_provider_idx": {
+          "name": "provider_latest_block_reports_provider_idx",
+          "columns": [
+            "provider"
+          ],
+          "isUnique": false
+        }
+      },
       "foreignKeys": {},
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "plans_id_unique": {
-          "name": "plans_id_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "id"
-          ]
+      "uniqueConstraints": {}
+    },
+    "provider_reported": {
+      "name": "provider_reported",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "provider": {
+          "name": "provider",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "block_id": {
+          "name": "block_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cu": {
+          "name": "cu",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "disconnections": {
+          "name": "disconnections",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "epoch": {
+          "name": "epoch",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "errors": {
+          "name": "errors",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "project": {
+          "name": "project",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "datetime": {
+          "name": "datetime",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "total_complaint_this_epoch": {
+          "name": "total_complaint_this_epoch",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tx": {
+          "name": "tx",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         }
-      }
+      },
+      "indexes": {
+        "provider_reported_provider_idx": {
+          "name": "provider_reported_provider_idx",
+          "columns": [
+            "provider"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
+    "provider_spec_moniker": {
+      "name": "provider_spec_moniker",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "provider": {
+          "name": "provider",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "moniker": {
+          "name": "moniker",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "spec": {
+          "name": "spec",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "createdat": {
+          "name": "createdat",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updatedat": {
+          "name": "updatedat",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "CURRENT_TIMESTAMP(3)"
+        }
+      },
+      "indexes": {
+        "psmidx": {
+          "name": "psmidx",
+          "columns": [
+            "provider",
+            "spec"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
     },
     "provider_stakes": {
       "name": "provider_stakes",
@@ -342,8 +837,50 @@
           "primaryKey": false,
           "notNull": false
         },
+        "delegate_limit": {
+          "name": "delegate_limit",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "delegate_total": {
+          "name": "delegate_total",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "delegate_commission": {
+          "name": "delegate_commission",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
         "applied_height": {
           "name": "applied_height",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "geolocation": {
+          "name": "geolocation",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "addons": {
+          "name": "addons",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "extensions": {
+          "name": "extensions",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
@@ -367,88 +904,19 @@
           "notNull": false
         }
       },
-      "indexes": {},
-      "foreignKeys": {
-        "provider_stakes_provider_providers_address_fk": {
-          "name": "provider_stakes_provider_providers_address_fk",
-          "tableFrom": "provider_stakes",
-          "tableTo": "providers",
-          "columnsFrom": [
-            "provider"
-          ],
-          "columnsTo": [
-            "address"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "provider_stakes_spec_id_specs_id_fk": {
-          "name": "provider_stakes_spec_id_specs_id_fk",
-          "tableFrom": "provider_stakes",
-          "tableTo": "specs",
-          "columnsFrom": [
-            "spec_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "provider_stakes_block_id_blocks_height_fk": {
-          "name": "provider_stakes_block_id_blocks_height_fk",
-          "tableFrom": "provider_stakes",
-          "tableTo": "blocks",
-          "columnsFrom": [
-            "block_id"
-          ],
-          "columnsTo": [
-            "height"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {
-        "provider_stakes_provider_spec_id": {
-          "name": "provider_stakes_provider_spec_id",
+      "indexes": {
+        "providerStakesIdx": {
+          "name": "providerStakesIdx",
           "columns": [
             "provider",
             "spec_id"
-          ]
+          ],
+          "isUnique": true
         }
       },
-      "uniqueConstraints": {}
-    },
-    "providers": {
-      "name": "providers",
-      "schema": "",
-      "columns": {
-        "address": {
-          "name": "address",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "moniker": {
-          "name": "moniker",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "providers_address_unique": {
-          "name": "providers_address_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "address"
-          ]
-        }
-      }
+      "uniqueConstraints": {}
     },
     "relay_payments": {
       "name": "relay_payments",
@@ -475,6 +943,12 @@
         "pay": {
           "name": "pay",
           "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "datetime": {
+          "name": "datetime",
+          "type": "timestamp",
           "primaryKey": false,
           "notNull": false
         },
@@ -537,6 +1011,12 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false
+        },
+        "tx": {
+          "name": "tx",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {
@@ -546,88 +1026,32 @@
             "spec_id"
           ],
           "isUnique": false
-        }
-      },
-      "foreignKeys": {
-        "relay_payments_provider_providers_address_fk": {
-          "name": "relay_payments_provider_providers_address_fk",
-          "tableFrom": "relay_payments",
-          "tableTo": "providers",
-          "columnsFrom": [
-            "provider"
-          ],
-          "columnsTo": [
-            "address"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
         },
-        "relay_payments_spec_id_specs_id_fk": {
-          "name": "relay_payments_spec_id_specs_id_fk",
-          "tableFrom": "relay_payments",
-          "tableTo": "specs",
-          "columnsFrom": [
-            "spec_id"
+        "ts_idx": {
+          "name": "ts_idx",
+          "columns": [
+            "datetime"
           ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
+          "isUnique": false
         },
-        "relay_payments_block_id_blocks_height_fk": {
-          "name": "relay_payments_block_id_blocks_height_fk",
-          "tableFrom": "relay_payments",
-          "tableTo": "blocks",
-          "columnsFrom": [
-            "block_id"
-          ],
-          "columnsTo": [
-            "height"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "relay_payments_consumer_consumers_address_fk": {
-          "name": "relay_payments_consumer_consumers_address_fk",
-          "tableFrom": "relay_payments",
-          "tableTo": "consumers",
-          "columnsFrom": [
+        "consumer_idx": {
+          "name": "consumer_idx",
+          "columns": [
             "consumer"
           ],
-          "columnsTo": [
-            "address"
+          "isUnique": false
+        },
+        "relay_payments_provider_idx": {
+          "name": "relay_payments_provider_idx",
+          "columns": [
+            "provider"
           ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
+          "isUnique": false
         }
       },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
-    },
-    "specs": {
-      "name": "specs",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "specs_id_unique": {
-          "name": "specs_id_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "id"
-          ]
-        }
-      }
+      "uniqueConstraints": {}
     },
     "subscription_buys": {
       "name": "subscription_buys",
@@ -656,50 +1080,294 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false
+        },
+        "tx": {
+          "name": "tx",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {},
-      "foreignKeys": {
-        "subscription_buys_block_id_blocks_height_fk": {
-          "name": "subscription_buys_block_id_blocks_height_fk",
-          "tableFrom": "subscription_buys",
-          "tableTo": "blocks",
-          "columnsFrom": [
-            "block_id"
-          ],
-          "columnsTo": [
-            "height"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
+    "supply": {
+      "name": "supply",
+      "schema": "",
+      "columns": {
+        "key": {
+          "name": "key",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
         },
-        "subscription_buys_consumer_consumers_address_fk": {
-          "name": "subscription_buys_consumer_consumers_address_fk",
-          "tableFrom": "subscription_buys",
-          "tableTo": "consumers",
-          "columnsFrom": [
-            "consumer"
-          ],
-          "columnsTo": [
-            "address"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
+        "amount": {
+          "name": "amount",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
         },
-        "subscription_buys_plan_plans_id_fk": {
-          "name": "subscription_buys_plan_plans_id_fk",
-          "tableFrom": "subscription_buys",
-          "tableTo": "plans",
-          "columnsFrom": [
-            "plan"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
+        "timestamp": {
+          "name": "timestamp",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true
         }
       },
+      "indexes": {
+        "supplyIdx": {
+          "name": "supplyIdx",
+          "columns": [
+            "key"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
+    "active_and_inactive_providers": {
+      "name": "active_and_inactive_providers",
+      "schema": "",
+      "columns": {
+        "provider": {
+          "name": "provider",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_active": {
+          "name": "last_active",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "total_relays": {
+          "name": "total_relays",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "totalServices": {
+          "name": "totalServices",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "totalStake": {
+          "name": "totalStake",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "rewardSum": {
+          "name": "rewardSum",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "moniker": {
+          "name": "moniker",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "activeAndInactiveProvidersIdx": {
+          "name": "activeAndInactiveProvidersIdx",
+          "columns": [
+            "provider"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
+    "active_providers": {
+      "name": "active_providers",
+      "schema": "",
+      "columns": {
+        "provider": {
+          "name": "provider",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_active": {
+          "name": "last_active",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "total_relays": {
+          "name": "total_relays",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "totalServices": {
+          "name": "totalServices",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "totalStake": {
+          "name": "totalStake",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "rewardSum": {
+          "name": "rewardSum",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "moniker": {
+          "name": "moniker",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "activeProvidersIdx": {
+          "name": "activeProvidersIdx",
+          "columns": [
+            "provider"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
+    "agg_15min_provider_relay_payments": {
+      "name": "agg_15min_provider_relay_payments",
+      "schema": "",
+      "columns": {
+        "bucket_15min": {
+          "name": "bucket_15min",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "provider": {
+          "name": "provider",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "spec_id": {
+          "name": "spec_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cusum": {
+          "name": "cusum",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "relaysum": {
+          "name": "relaysum",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "rewardsum": {
+          "name": "rewardsum",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "qossyncavg": {
+          "name": "qossyncavg",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "qosavailabilityavg": {
+          "name": "qosavailabilityavg",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "qoslatencyavg": {
+          "name": "qoslatencyavg",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
+    "agg_total_provider_relay_payments": {
+      "name": "agg_total_provider_relay_payments",
+      "schema": "",
+      "columns": {
+        "provider": {
+          "name": "provider",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "spec_id": {
+          "name": "spec_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "total_cusum": {
+          "name": "total_cusum",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "total_relaysum": {
+          "name": "total_relaysum",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "total_rewardsum": {
+          "name": "total_rewardsum",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "qossyncavg": {
+          "name": "qossyncavg",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "qosavailabilityavg": {
+          "name": "qosavailabilityavg",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "qoslatencyavg": {
+          "name": "qoslatencyavg",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     }
@@ -707,8 +1375,8 @@
   "enums": {},
   "schemas": {},
   "_meta": {
+    "columns": {},
     "schemas": {},
-    "tables": {},
-    "columns": {}
+    "tables": {}
   }
 }

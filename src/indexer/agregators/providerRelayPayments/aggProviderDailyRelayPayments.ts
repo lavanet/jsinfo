@@ -2,7 +2,7 @@
 
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { isNotNull, sql, and, ne } from "drizzle-orm";
-import * as JsinfoProviderAgrSchema from '../../../schemas/jsinfoSchema/providerRelayPaymentsAgregation';
+import * as JsinfoProviderAgrSchema from '../../../schemas/jsinfoSchema/providerRelayPayments';
 import { DoInChunks, logger } from "../../../utils/utils";
 import { PgColumn } from 'drizzle-orm/pg-core';
 

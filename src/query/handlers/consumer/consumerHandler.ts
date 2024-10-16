@@ -6,7 +6,7 @@
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../../queryDb';
 import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
-import * as JsinfoConsumerAgrSchema from '../../../schemas/jsinfoSchema/consumerRelayPaymentsAgregation';
+import * as JsinfoConsumerAgrSchema from '../../../schemas/jsinfoSchema/consumerRelayPayments';
 import { and, desc, eq, gt, sql } from "drizzle-orm";
 import { GetAndValidateConsumerAddressFromRequest } from '../../utils/queryRequestArgParser';
 
@@ -56,11 +56,11 @@ export async function ConsumerCahcedHandler(request: FastifyRequest, reply: Fast
     let relaySum = 0
     let rewardSum = 0
     const cuRelayAndRewardsTotalRes = await QueryGetJsinfoReadDbInstance().select({
-        cuSum: sql<number>`SUM(${JsinfoConsumerAgrSchema.aggConsumerAllTimeRelayPayments.cuSum})`,
-        relaySum: sql<number>`SUM(${JsinfoConsumerAgrSchema.aggConsumerAllTimeRelayPayments.relaySum})`,
-        rewardSum: sql<number>`SUM(${JsinfoConsumerAgrSchema.aggConsumerAllTimeRelayPayments.rewardSum})`,
-    }).from(JsinfoConsumerAgrSchema.aggConsumerAllTimeRelayPayments)
-        .where(eq(JsinfoConsumerAgrSchema.aggConsumerAllTimeRelayPayments.consumer, addr))
+        cuSum: sql<number>`SUM(${JsinfoConsumerAgrSchema.aggTotalConsumerRelayPayments.cuSum})`,
+        relaySum: sql<number>`SUM(${JsinfoConsumerAgrSchema.aggTotalConsumerRelayPayments.relaySum})`,
+        rewardSum: sql<number>`SUM(${JsinfoConsumerAgrSchema.aggTotalConsumerRelayPayments.rewardSum})`,
+    }).from(JsinfoConsumerAgrSchema.aggTotalConsumerRelayPayments)
+        .where(eq(JsinfoConsumerAgrSchema.aggTotalConsumerRelayPayments.consumer, addr))
 
     if (cuRelayAndRewardsTotalRes.length == 1) {
         cuSum = cuRelayAndRewardsTotalRes[0].cuSum || 0
@@ -76,17 +76,17 @@ export async function ConsumerCahcedHandler(request: FastifyRequest, reply: Fast
 
     // TODO: remvoe after new consumer is deployed
     let graphDataRet = await QueryGetJsinfoReadDbInstance().select({
-        date: JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.dateday,
-        cuSum: sql<number>`SUM(${JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.cuSum})`,
-        relaySum: sql<number>`SUM(${JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.relaySum})`,
-        rewardSum: sql<number>`SUM(${JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.rewardSum})`
-    }).from(JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments).
-        groupBy(JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.dateday).
+        date: JsinfoConsumerAgrSchema.agg15MinConsumerRelayTsPayments.dateday,
+        cuSum: sql<number>`SUM(${JsinfoConsumerAgrSchema.agg15MinConsumerRelayTsPayments.cuSum})`,
+        relaySum: sql<number>`SUM(${JsinfoConsumerAgrSchema.agg15MinConsumerRelayTsPayments.relaySum})`,
+        rewardSum: sql<number>`SUM(${JsinfoConsumerAgrSchema.agg15MinConsumerRelayTsPayments.rewardSum})`
+    }).from(JsinfoConsumerAgrSchema.agg15MinConsumerRelayTsPayments).
+        groupBy(JsinfoConsumerAgrSchema.agg15MinConsumerRelayTsPayments.dateday).
         where(and(
-            gt(JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.dateday, sql<Date>`now() - interval '30 day'`),
-            eq(JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.consumer, addr)
+            gt(JsinfoConsumerAgrSchema.agg15MinConsumerRelayTsPayments.dateday, sql<Date>`now() - interval '30 day'`),
+            eq(JsinfoConsumerAgrSchema.agg15MinConsumerRelayTsPayments.consumer, addr)
         )).
-        orderBy(JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.dateday)
+        orderBy(JsinfoConsumerAgrSchema.agg15MinConsumerRelayTsPayments.dateday)
 
     return {
         addr: addr,

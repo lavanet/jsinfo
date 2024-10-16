@@ -30,20 +30,11 @@ export async function IndexTotalCuHandler(request: FastifyRequest, reply: Fastif
     // Get total payments and more
     let cuSum = 0
     let relaySum = 0
-    // let res = await QueryGetJsinfoReadDbInstance().select({
-    //     cuSum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggTotalProviderRelayMvPayments.cuSum})`,
-    //     relaySum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggTotalProviderRelayMvPayments.relaySum})`,
-    // }).from(JsinfoProviderAgrSchema.aggTotalProviderRelayMvPayments)
 
-    // TODO: come back here
-
-    const res = await QueryGetJsinfoReadDbInstance()
-        .select({
-            cuSum: sql<number>`SUM(arp."total_cusum")`,
-            relaySum: sql<number>`SUM(arp."total_relaysum")`,
-        })
-        .from(sql`agg_total_provider_relay_payments as arp`);
-
+    const res = await QueryGetJsinfoReadDbInstance().select({
+        cuSum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggTotalProviderRelayMvPayments.cuSum})`,
+        relaySum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggTotalProviderRelayMvPayments.relaySum})`,
+    }).from(JsinfoProviderAgrSchema.aggTotalProviderRelayMvPayments)
 
     if (res.length != 0) {
         cuSum = res[0].cuSum

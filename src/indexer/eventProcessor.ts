@@ -171,7 +171,6 @@ export const ProcessOneEvent = (
             break
 
         // case 'lava_set_subscription_policy_event':
-        //     // TODO - maybe?
         //     break
 
 

@@ -14,12 +14,12 @@ import { Tendermint37Client } from "@cosmjs/tendermint-rpc";
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { eq, desc } from "drizzle-orm";
 import { PromisePool } from '@supercharge/promise-pool'
-import { GetOneLavaBlock } from './indexer/lavaBlock'
+import { GetOneLavaBlock } from './indexer/lavablock'
 import { EventDebug } from './indexer/eventDebug'
 import { LavaBlock } from './indexer/types'
 import { SyncBlockchainEntities } from './indexer/blockchainEntities/blockchainEntitiesSync'
 import { ConnectToRpc, RpcConnection } from "./utils/rpc";
-import { MigrateDb, GetJsinfoDb } from "./utils/dbUtils";
+import { MigrateDb, GetJsinfoDb, GetJsinfoDbForIndexer } from "./utils/dbUtils";
 import { AggProviderAndConsumerRelayPayments, AggProviderAndConsumerRelayPaymentsSync } from "./indexer/agregators/aggProviderAndConsumerRelayPayments";
 import { SaveTokenSupplyToDB } from './indexer/supply/syncSupply';
 import { RestRpcAgreagorsCaller } from './indexer/restrpc_agregators/RestRpcAgreagorsCaller';
@@ -202,7 +202,7 @@ const migrateAndFetchDb = async (): Promise<PostgresJsDatabase> => {
         await MigrateDb();
         logger.info('DB migrated.');
     }
-    const db = GetJsinfoDb();
+    const db = GetJsinfoDbForIndexer();
     logger.info('DB fetched.');
     return db;
 }

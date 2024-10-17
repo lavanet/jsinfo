@@ -10,7 +10,7 @@ import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE } from '../../queryConsts';
 import { CSVEscape } from '../../utils/queryUtils';
 import { RequestHandlerBase } from '../../classes/RequestHandlerBase';
 import { MonikerCache } from '../../classes/QueryProviderMonikerCache';
-import * as JsinfoSchemaProviderMaterialViews from '../../schemas/jsinfoSchema/providerMaterialViews';
+import * as JsinfoSchemaProviderMaterialViews from '../../../schemas/jsinfoSchema/providerMaterialViews';
 
 type IndexProvidersActiveResponse = {
     provider: string,
@@ -62,7 +62,7 @@ export const IndexProvidersActivePaginatedHandlerOpts: RouteShorthandOptions = {
 class IndexProvidersActiveData extends RequestHandlerBase<IndexProvidersActiveResponse> {
 
     constructor() {
-        super("IndexProvidersActiveData");
+        super("IndexProvidersActive");
     }
 
     public static GetInstance(): IndexProvidersActiveData {

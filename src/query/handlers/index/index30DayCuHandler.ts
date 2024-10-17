@@ -32,7 +32,7 @@ export async function Index30DayCuHandler(request: FastifyRequest, reply: Fastif
         cuSum: sql<number>`SUM(${JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments.cuSum})`,
         relaySum: sql<number>`SUM(${JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments.relaySum})`,
     }).from(JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments).
-        where(gt(JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments.dateday, sql<Date>`now() - interval '30 day'`))
+        where(gt(JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments.bucket15min, sql<Date>`now() - interval '30 day'`))
 
     if (res30Days.length != 0) {
         cuSum30Days = res30Days[0].cuSum

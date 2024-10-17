@@ -58,10 +58,12 @@ async function getCuRelayAndRewardsTotal(addr: string) {
     //     .where(eq(JsinfoProviderAgrSchema.aggTotalProviderRelayMvPayments.provider, addr))
     //     .groupBy(JsinfoProviderAgrSchema.aggTotalProviderRelayMvPayments.provider);
 
+    // TODO: check if this is correct
+
     const result = await QueryGetJsinfoReadDbInstance()
         .select({
             cuSum: sql<number>`SUM(arp."total_cusum")`,
-            relaySum: sql<number>`SUM(arp."total_relaysum")`,
+            relaySum: sql<number>`SUM(arp."totalrelaysum")`,
             rewardSum: sql<number>`SUM(arp."total_rewardsum")`,
         })
         .from(sql`agg_total_provider_relay_payments as arp`)

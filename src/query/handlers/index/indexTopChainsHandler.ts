@@ -30,7 +30,7 @@ export async function IndexTopChainsHandler(request: FastifyRequest, reply: Fast
         cuSum: sql<number>`SUM(${JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments.cuSum}) as cuSum`,
     }).from(JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments).
         groupBy(sql`${JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments.specId}`).
-        where(gt(JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments.dateday, sql<Date>`now() - interval '30 day'`)).
+        where(gt(JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments.bucket15min, sql<Date>`now() - interval '30 day'`)).
         orderBy(sql`relaySum DESC`)
 
     return {

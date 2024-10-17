@@ -141,7 +141,7 @@ export async function SpecStakesPaginatedHandler(request: FastifyRequest, reply:
             eq(JsinfoSchema.providerStakes.provider, JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments.provider),
             and(
                 eq(JsinfoSchema.providerStakes.specId, JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments.specId),
-                gt(JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments.dateday, sql<Date>`now() - interval '90 day'`)
+                gt(JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments.bucket15min, sql<Date>`now() - interval '90 day'`)
             )
         ))
         .where(eq(JsinfoSchema.providerStakes.specId, spec))
@@ -160,7 +160,7 @@ export async function SpecStakesPaginatedHandler(request: FastifyRequest, reply:
             eq(JsinfoSchema.providerStakes.provider, JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments.provider),
             and(
                 eq(JsinfoSchema.providerStakes.specId, JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments.specId),
-                gt(JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments.dateday, sql<Date>`now() - interval '30 day'`)
+                gt(JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments.bucket15min, sql<Date>`now() - interval '30 day'`)
             )
         ))
         .where(eq(JsinfoSchema.providerStakes.specId, spec))

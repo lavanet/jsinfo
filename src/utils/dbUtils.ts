@@ -74,6 +74,15 @@ export async function GetJsinfoDb(): Promise<PostgresJsDatabase> {
     return db;
 }
 
+export async function GetJsinfoDbForIndexer(): Promise<PostgresJsDatabase> {
+    const queryClient = postgres(await GetPostgresUrl(), {
+        idle_timeout: 60 * 2,
+        connect_timeout: 60 * 10,
+    });
+    const db: PostgresJsDatabase = drizzle(queryClient/*, { logger: true }*/);
+    return db;
+}
+
 export async function GetJsinfoReadDb(): Promise<PostgresJsDatabase> {
     // use one db
     const queryClient = postgres(await GetReadPostgresUrl(), {

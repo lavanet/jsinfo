@@ -113,8 +113,8 @@ class ProviderChartsV2Data extends RequestHandlerBase<ProviderChartsV2Response> 
 
             let conditions = and(
                 eq(JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments.provider, this.provider),
-                gt(JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments.dateday, sql<Date>`${from}`),
-                lt(JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments.dateday, sql<Date>`${to}`)
+                gt(JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments.bucket15min, sql<Date>`${from}`),
+                lt(JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments.bucket15min, sql<Date>`${to}`)
             );
 
             if (this.chain !== 'all') {
@@ -122,16 +122,16 @@ class ProviderChartsV2Data extends RequestHandlerBase<ProviderChartsV2Response> 
             }
 
             let query = QueryGetJsinfoReadDbInstance().select({
-                date: JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments.dateday,
+                date: JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments.bucket15min,
                 qosSyncAvg: qosMetricWeightedAvg(JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments.qosSyncAvg),
                 qosAvailabilityAvg: qosMetricWeightedAvg(JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments.qosAvailabilityAvg),
                 qosLatencyAvg: qosMetricWeightedAvg(JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments.qosLatencyAvg),
                 cus: sql<number>`SUM(${JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments.cuSum})`,
                 relays: sql<number>`SUM(${JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments.relaySum})`,
             }).from(JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments)
-                .groupBy(JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments.dateday)
+                .groupBy(JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments.bucket15min)
                 .where(conditions)
-                .orderBy(desc(JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments.dateday));
+                .orderBy(desc(JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments.bucket15min));
 
             let data = await query;
 

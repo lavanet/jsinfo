@@ -94,12 +94,12 @@ class SpecChartsV2Data extends RequestHandlerBase<SpecChartsV2Response> {
             const query = QueryGetJsinfoReadDbInstance()
                 .select({
                     provider: JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments.provider,
-                    latestDate: sql<Date>`MAX(${JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments.dateday})`
+                    latestDate: sql<Date>`MAX(${JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments.bucket15min})`
                 })
                 .from(JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments)
                 .where(eq(JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments.specId, this.spec))
                 .groupBy(JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments.provider)
-                .having(gt(sql<Date>`MAX(${JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments.dateday})`, sixMonthsAgo));
+                .having(gt(sql<Date>`MAX(${JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments.bucket15min})`, sixMonthsAgo));
 
             const providers = await query;
             const result: { [key: string]: string } = { 'all': 'All Providers' };
@@ -130,8 +130,8 @@ class SpecChartsV2Data extends RequestHandlerBase<SpecChartsV2Response> {
 
             let conditions = and(
                 eq(JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments.specId, this.spec),
-                gt(JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments.dateday, sql<Date>`${from}`),
-                lt(JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments.dateday, sql<Date>`${to}`)
+                gt(JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments.bucket15min, sql<Date>`${from}`),
+                lt(JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments.bucket15min, sql<Date>`${to}`)
             );
 
             if (this.provider !== 'all') {
@@ -139,16 +139,16 @@ class SpecChartsV2Data extends RequestHandlerBase<SpecChartsV2Response> {
             }
 
             let query = QueryGetJsinfoReadDbInstance().select({
-                date: JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments.dateday,
+                date: JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments.bucket15min,
                 qosSyncAvg: qosMetricWeightedAvg(JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments.qosSyncAvg),
                 qosAvailabilityAvg: qosMetricWeightedAvg(JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments.qosAvailabilityAvg),
                 qosLatencyAvg: qosMetricWeightedAvg(JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments.qosLatencyAvg),
                 cus: sql<number>`SUM(${JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments.cuSum})`,
                 relays: sql<number>`SUM(${JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments.relaySum})`,
             }).from(JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments)
-                .groupBy(JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments.dateday)
+                .groupBy(JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments.bucket15min)
                 .where(conditions)
-                .orderBy(desc(JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments.dateday));
+                .orderBy(desc(JsinfoProviderAgrSchema.agg15MinProviderRelayTsPayments.bucket15min));
 
             let data = await query;
 

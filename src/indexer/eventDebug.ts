@@ -1,6 +1,6 @@
 // src/indexer/eventDebug.ts
 
-import { GetRpcBlock, GetRpcTxs, GetRpcBlockResultEvents } from "./lavaBlock";
+import { GetRpcBlock, GetRpcTxs, GetRpcBlockResultEvents } from "./lavablock";
 import { logger } from "../utils/utils";
 import { RpcConnection } from "../utils/rpc";
 import { ProcessOneEvent } from "./eventProcessor";

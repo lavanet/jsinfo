@@ -172,6 +172,11 @@ async function ProcessReward(db: PostgresJsDatabase, reward: Reward): Promise<vo
     const startTime = performance.now();
     const { provider, chain_id } = reward;
 
+    if (!IsMeaningfulText(chain_id) || !IsMeaningfulText(provider)) {
+        logger.error('ProcessReward:: Invalid chain_id or provider', { provider, chain_id });
+        return; // Exit the function early
+    }
+
     const shouldProceedToDB = await checkAndCacheReward(provider, chain_id, reward);
 
     if (shouldProceedToDB) {
@@ -187,6 +192,19 @@ async function ProcessReward(db: PostgresJsDatabase, reward: Reward): Promise<vo
 async function insertRewardToDB(db: PostgresJsDatabase, reward: Reward): Promise<void> {
     const startTime = performance.now();
     const { provider, chain_id } = reward;
+
+    // Check if chain_id and provider are undefined or not meaningful
+    if (!IsMeaningfulText(chain_id) || !IsMeaningfulText(provider)) {
+        logger.error('insertRewardToDB:: Invalid chain_id or provider', { provider, chain_id });
+        return; // Exit the function early
+    }
+
+    // Check and cache the reward
+    const shouldProceedToDB = await checkAndCacheReward(provider, chain_id, reward);
+    if (!shouldProceedToDB) {
+        // logger.info('Skipping DB insertion due to cache check', { provider, chain_id });
+        return; // Exit the function if we shouldn't proceed
+    }
 
     for (const amount of reward.amount) {
         const newReward: JsinfoSchema.InsertDualStackingDelegatorRewards = {

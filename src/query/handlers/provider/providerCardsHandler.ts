@@ -9,7 +9,7 @@ import * as JsinfoProviderAgrSchema from '../../../schemas/jsinfoSchema/provider
 import { sql, desc, and, eq, gte, isNotNull, like } from "drizzle-orm";
 import { GetAndValidateProviderAddressFromRequest } from '../../utils/queryRequestArgParser';
 import { JSONStringifySpaced, logger, MinBigInt, ParseUlavaToBigInt } from '../../../utils/utils';
-import { ProviderRewardsCache } from '../../classes/ProviderRewardsCache';
+import { ProviderRewardsCache } from '../../classes/QueryProviderRewardsCache';
 
 export const ProviderCardsHandlerOpts: RouteShorthandOptions = {
     schema: {

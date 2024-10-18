@@ -5,7 +5,7 @@ import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '..
 import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
 import { sql, and, eq, gte, isNotNull } from "drizzle-orm";
 import { GetAndValidateProviderAddressFromRequest } from '../../utils/queryRequestArgParser';
-import { ProviderRewardsCache } from '../../classes/ProviderRewardsCache';
+import { ProviderRewardsCache } from '../../classes/QueryProviderRewardsCache';
 
 export const ProviderCardsClaimedRewards30DaysHandlerOpts: RouteShorthandOptions = {
     schema: {

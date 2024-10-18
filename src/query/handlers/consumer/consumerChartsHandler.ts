@@ -103,19 +103,19 @@ class ConsumerChartsData extends RequestHandlerBase<ConsumerChartResponse> {
         const qosMetricWeightedAvg = (metric: PgColumn) => sql<number>`SUM(${metric} * ${JsinfoConsumerAgrSchema.agg15MinConsumerRelayTsPayments.relaySum}) / SUM(CASE WHEN ${metric} IS NOT NULL THEN ${JsinfoConsumerAgrSchema.agg15MinConsumerRelayTsPayments.relaySum} ELSE 0 END)`;
 
         let monthlyData: ConsumerQosQueryData[] = await QueryGetJsinfoReadDbInstance().select({
-            date: JsinfoConsumerAgrSchema.agg15MinConsumerRelayTsPayments.dateday,
+            date: JsinfoConsumerAgrSchema.agg15MinConsumerRelayTsPayments.bucket15min,
             qosSyncAvg: qosMetricWeightedAvg(JsinfoConsumerAgrSchema.agg15MinConsumerRelayTsPayments.qosSyncAvg),
             qosAvailabilityAvg: qosMetricWeightedAvg(JsinfoConsumerAgrSchema.agg15MinConsumerRelayTsPayments.qosAvailabilityAvg),
             qosLatencyAvg: qosMetricWeightedAvg(JsinfoConsumerAgrSchema.agg15MinConsumerRelayTsPayments.qosLatencyAvg),
         }).from(JsinfoConsumerAgrSchema.agg15MinConsumerRelayTsPayments)
-            .groupBy(JsinfoConsumerAgrSchema.agg15MinConsumerRelayTsPayments.dateday)
+            .groupBy(JsinfoConsumerAgrSchema.agg15MinConsumerRelayTsPayments.bucket15min)
             .where(and(
                 eq(JsinfoConsumerAgrSchema.agg15MinConsumerRelayTsPayments.consumer, this.consumer),
                 and(
-                    gt(JsinfoConsumerAgrSchema.agg15MinConsumerRelayTsPayments.dateday, sql<Date>`${from}`),
-                    lt(JsinfoConsumerAgrSchema.agg15MinConsumerRelayTsPayments.dateday, sql<Date>`${to}`)
+                    gt(JsinfoConsumerAgrSchema.agg15MinConsumerRelayTsPayments.bucket15min, sql<Date>`${from}`),
+                    lt(JsinfoConsumerAgrSchema.agg15MinConsumerRelayTsPayments.bucket15min, sql<Date>`${to}`)
                 )))
-            .orderBy(desc(JsinfoConsumerAgrSchema.agg15MinConsumerRelayTsPayments.dateday));
+            .orderBy(desc(JsinfoConsumerAgrSchema.agg15MinConsumerRelayTsPayments.bucket15min));
 
         monthlyData.forEach(item => {
             item.qosSyncAvg = Number(item.qosSyncAvg);
@@ -150,20 +150,20 @@ class ConsumerChartsData extends RequestHandlerBase<ConsumerChartResponse> {
         const formatedData: ConsumerCuRelayData[] = [];
 
         let monthlyData: ConsumerCuRelayQueryDataWithSpecId[] = await QueryGetJsinfoReadDbInstance().select({
-            date: JsinfoConsumerAgrSchema.agg15MinConsumerRelayTsPayments.dateday,
+            date: JsinfoConsumerAgrSchema.agg15MinConsumerRelayTsPayments.bucket15min,
             specId: JsinfoConsumerAgrSchema.agg15MinConsumerRelayTsPayments.specId,
             cuSum: sql<number>`SUM(${JsinfoConsumerAgrSchema.agg15MinConsumerRelayTsPayments.cuSum})`,
             relaySum: sql<number>`SUM(${JsinfoConsumerAgrSchema.agg15MinConsumerRelayTsPayments.relaySum})`,
         }).from(JsinfoConsumerAgrSchema.agg15MinConsumerRelayTsPayments)
-            .groupBy(JsinfoConsumerAgrSchema.agg15MinConsumerRelayTsPayments.dateday, JsinfoConsumerAgrSchema.agg15MinConsumerRelayTsPayments.specId)
+            .groupBy(JsinfoConsumerAgrSchema.agg15MinConsumerRelayTsPayments.bucket15min, JsinfoConsumerAgrSchema.agg15MinConsumerRelayTsPayments.specId)
             .where(and(
                 eq(JsinfoConsumerAgrSchema.agg15MinConsumerRelayTsPayments.consumer, this.consumer),
                 and(
-                    gt(JsinfoConsumerAgrSchema.agg15MinConsumerRelayTsPayments.dateday, sql<Date>`${from}`),
-                    lt(JsinfoConsumerAgrSchema.agg15MinConsumerRelayTsPayments.dateday, sql<Date>`${to}`)
+                    gt(JsinfoConsumerAgrSchema.agg15MinConsumerRelayTsPayments.bucket15min, sql<Date>`${from}`),
+                    lt(JsinfoConsumerAgrSchema.agg15MinConsumerRelayTsPayments.bucket15min, sql<Date>`${to}`)
                 )
             ))
-            .orderBy(JsinfoConsumerAgrSchema.agg15MinConsumerRelayTsPayments.dateday);
+            .orderBy(JsinfoConsumerAgrSchema.agg15MinConsumerRelayTsPayments.bucket15min);
 
         let dateSums: { [date: string]: { cuSum: number, relaySum: number } } = {};
 

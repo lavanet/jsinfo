@@ -207,6 +207,11 @@ async function insertRewardToDB(db: PostgresJsDatabase, reward: Reward): Promise
     }
 
     for (const amount of reward.amount) {
+        if (!IsMeaningfulText(String(amount))) {
+            logger.error('insertRewardToDB:: Invalid amount', { amount: amount });
+            continue;
+        }
+
         const newReward: JsinfoSchema.InsertDualStackingDelegatorRewards = {
             timestamp: new Date(),
             provider,
@@ -214,6 +219,21 @@ async function insertRewardToDB(db: PostgresJsDatabase, reward: Reward): Promise
             amount: BigInt(amount.amount),
             denom: amount.denom
         };
+
+        if (!IsMeaningfulText(String(newReward.provider))) {
+            logger.error('insertRewardToDB:: Invalid provider', { provider: newReward.provider });
+            continue;
+        }
+
+        if (!IsMeaningfulText(String(newReward.chainId))) {
+            logger.error('insertRewardToDB:: Invalid chainId', { chainId: newReward.chainId });
+            continue;
+        }
+
+        if (!IsMeaningfulText(String(newReward.denom))) {
+            logger.error('insertRewardToDB:: Invalid denom', { denom: newReward.denom });
+            continue;
+        }
 
         try {
             const queryStartTime = performance.now();

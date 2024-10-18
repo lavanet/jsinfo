@@ -6,9 +6,9 @@ export const activeProviders = pgTable(
         provider: text("provider"),
         lastActive: timestamp("last_active", { mode: "string" }), // MAX(bucket_15min) as last_active
         totalRelays: bigint("total_relays", { mode: "number" }), // COALESCE(SUM(relaysum), 0) as total_relays
-        totalServices: text("totalServices"), // CONCAT(SUM(CASE WHEN ps.status = 1 THEN 1 ELSE 0 END), ' / ', COUNT(ps.spec_id)) as totalServices
-        totalStake: bigint("totalStake", { mode: "number" }), // COALESCE(SUM(ps.stake + LEAST(ps.delegate_total, ps.delegate_limit)), 0) AS totalStake
-        rewardSum: doublePrecision("rewardSum"), // COALESCE(SUM(rewardsum), 0) as rewardSum
+        totalServices: text("totalservices"), // CONCAT(SUM(CASE WHEN ps.status = 1 THEN 1 ELSE 0 END), ' / ', COUNT(ps.spec_id)) as totalservices
+        totalStake: bigint("totalstake", { mode: "number" }), // COALESCE(SUM(ps.stake + LEAST(ps.delegate_total, ps.delegate_limit)), 0) AS totalstake
+        rewardSum: doublePrecision("rewardsum"), // COALESCE(SUM(rewardsum), 0) as rewardsum
         moniker: text("moniker"), // (SELECT MAX(moniker) FROM provider_spec_moniker WHERE provider = ps.provider) as moniker
     },
     (table) => {
@@ -27,9 +27,9 @@ export const activeAndInactiveProviders = pgTable(
         provider: text("provider"),
         lastActive: timestamp("last_active", { mode: "string" }), // MAX(bucket_15min) as last_active
         totalRelays: bigint("total_relays", { mode: "number" }), // COALESCE(SUM(relaysum), 0) as total_relays
-        totalServices: text("totalServices"), // CONCAT(SUM(CASE WHEN ps.status = 1 THEN 1 ELSE 0 END), ' / ', COUNT(ps.spec_id)) as totalServices
-        totalStake: bigint("totalStake", { mode: "number" }), // COALESCE(SUM(ps.stake + LEAST(ps.delegate_total, ps.delegate_limit)), 0) AS totalStake
-        rewardSum: doublePrecision("rewardSum"), // COALESCE(SUM(rewardsum), 0) as rewardSum
+        totalServices: text("totalservices"), // CONCAT(SUM(CASE WHEN ps.status = 1 THEN 1 ELSE 0 END), ' / ', COUNT(ps.spec_id)) as totalservices
+        totalStake: bigint("totalstake", { mode: "number" }), // COALESCE(SUM(ps.stake + LEAST(ps.delegate_total, ps.delegate_limit)), 0) AS totalstake
+        rewardSum: doublePrecision("rewardsum"), // COALESCE(SUM(rewardsum), 0) as rewardsum
         moniker: text("moniker"), // (SELECT MAX(moniker) FROM provider_spec_moniker WHERE provider = ps.provider) as moniker
     },
     (table) => {

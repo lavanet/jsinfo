@@ -30,6 +30,7 @@ async function refreshMaterializedViews(db: PostgresJsDatabase) {
             "Refreshing agg_15min_provider_relay_payments",
             "CALL refresh_continuous_aggregate('agg_15min_provider_relay_payments', NULL, NULL)"
         );
+
         await measureExecutionTime(
             "Refreshing agg_15min_consumer_relay_payments",
             "CALL refresh_continuous_aggregate('agg_15min_consumer_relay_payments', NULL, NULL)"

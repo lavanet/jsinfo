@@ -53,7 +53,7 @@ SELECT
     spec_id,
     SUM(cu) AS cuSum,
     SUM(relays) AS relaySum,
-    SUM(pay) AS rewardSum,
+    SUM(pay) AS rewardsum,
     SUM(qos_sync * relays) / NULLIF(SUM(CASE WHEN qos_sync IS NOT NULL THEN relays ELSE 0 END), 0) AS qosSyncAvg,
     SUM(qos_availability * relays) / NULLIF(SUM(CASE WHEN qos_availability IS NOT NULL THEN relays ELSE 0 END), 0) AS qosAvailabilityAvg,
     SUM(qos_latency * relays) / NULLIF(SUM(CASE WHEN qos_latency IS NOT NULL THEN relays ELSE 0 END), 0) AS qosLatencyAvg

@@ -153,9 +153,8 @@ class IndexProvidersActiveData extends RequestHandlerBase<IndexProvidersActiveRe
         return result.map(row => ({
             provider: row.provider,
             lastActive: row.lastActive,
-            totalRelays: Number(row.totalRelays),
             totalServices: row.totalServices,
-            totalStake: row.totalStake,
+            totalStake: row.totalStake.toString(),
             rewardSum: Number(row.rewardSum),
             moniker: row.moniker,
             monikerfull: MonikerCache.GetMonikerFullDescription(row.provider)

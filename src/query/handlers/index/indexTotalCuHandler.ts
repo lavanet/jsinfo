@@ -31,10 +31,14 @@ export async function IndexTotalCuHandler(request: FastifyRequest, reply: Fastif
     let cuSum = 0
     let relaySum = 0
 
-    const res = await QueryGetJsinfoReadDbInstance().select({
+    const query = QueryGetJsinfoReadDbInstance().select({
         cuSum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggTotalProviderRelayMvPayments.cuSum})`,
         relaySum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggTotalProviderRelayMvPayments.relaySum})`,
     }).from(JsinfoProviderAgrSchema.aggTotalProviderRelayMvPayments)
+
+    logger.info('Generat111111ed SQL query:', { sql: query.toSQL() });
+
+    const res = await query;
 
     if (res.length != 0) {
         cuSum = res[0].cuSum

@@ -1151,20 +1151,20 @@
           "primaryKey": false,
           "notNull": false
         },
-        "totalServices": {
-          "name": "totalServices",
+        "totalservices": {
+          "name": "totalservices",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "totalStake": {
-          "name": "totalStake",
+        "totalstake": {
+          "name": "totalstake",
           "type": "bigint",
           "primaryKey": false,
           "notNull": false
         },
-        "rewardSum": {
-          "name": "rewardSum",
+        "rewardsum": {
+          "name": "rewardsum",
           "type": "double precision",
           "primaryKey": false,
           "notNull": false
@@ -1211,20 +1211,20 @@
           "primaryKey": false,
           "notNull": false
         },
-        "totalServices": {
-          "name": "totalServices",
+        "totalservices": {
+          "name": "totalservices",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "totalStake": {
-          "name": "totalStake",
+        "totalstake": {
+          "name": "totalstake",
           "type": "bigint",
           "primaryKey": false,
           "notNull": false
         },
-        "rewardSum": {
-          "name": "rewardSum",
+        "rewardsum": {
+          "name": "rewardsum",
           "type": "double precision",
           "primaryKey": false,
           "notNull": false

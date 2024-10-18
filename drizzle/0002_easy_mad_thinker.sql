@@ -10,9 +10,9 @@ SELECT
         SUM(CASE WHEN ps.status = 1 THEN 1 ELSE 0 END), 
         ' / ', 
         COUNT(ps.spec_id)
-    ) as totalServices,
-    COALESCE(SUM(ps.stake + LEAST(ps.delegate_total, ps.delegate_limit)), 0) AS totalStake,
-    agg_data.rewardSum,
+    ) as totalservices,
+    COALESCE(SUM(ps.stake + LEAST(ps.delegate_total, ps.delegate_limit)), 0) AS totalstake,
+    agg_data.rewardsum,
     (SELECT MAX(moniker) FROM provider_spec_moniker WHERE provider = ps.provider) as moniker
 FROM 
     provider_stakes ps
@@ -21,7 +21,7 @@ LEFT JOIN LATERAL (
         provider,
         MAX(bucket_15min) as last_active,
         COALESCE(SUM(relaysum), 0) as total_relays,
-        COALESCE(SUM(rewardsum), 0) as rewardSum
+        COALESCE(SUM(rewardsum), 0) as rewardsum
     FROM 
         agg_15min_provider_relay_payments
     WHERE 
@@ -40,7 +40,7 @@ GROUP BY
     ps.provider,
     agg_data.last_active,
     agg_data.total_relays,
-    agg_data.rewardSum
+    agg_data.rewardsum
 HAVING 
     agg_data.last_active IS NOT NULL;
 
@@ -58,9 +58,9 @@ SELECT
         SUM(CASE WHEN ps.status = 1 THEN 1 ELSE 0 END), 
         ' / ', 
         COUNT(ps.spec_id)
-    ) as totalServices,
-    COALESCE(SUM(ps.stake + LEAST(ps.delegate_total, ps.delegate_limit)), 0) AS totalStake,
-    agg_data.rewardSum,
+    ) as totalservices,
+    COALESCE(SUM(ps.stake + LEAST(ps.delegate_total, ps.delegate_limit)), 0) AS totalstake,
+    agg_data.rewardsum,
     (SELECT MAX(moniker) FROM provider_spec_moniker WHERE provider = ps.provider) as moniker
 FROM 
     provider_stakes ps
@@ -68,7 +68,7 @@ LEFT JOIN LATERAL (
     SELECT 
         provider,
         COALESCE(SUM(relaysum), 0) as total_relays,
-        COALESCE(SUM(rewardsum), 0) as rewardSum
+        COALESCE(SUM(rewardsum), 0) as rewardsum
     FROM 
         agg_15min_provider_relay_payments
     WHERE 
@@ -82,6 +82,6 @@ WHERE
 GROUP BY 
     ps.provider,
     agg_data.total_relays,
-    agg_data.rewardSum
+    agg_data.rewardsum
 
 CREATE UNIQUE INDEX ON active_and_inactive_providers (provider);

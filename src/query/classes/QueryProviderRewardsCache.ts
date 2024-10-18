@@ -1,8 +1,7 @@
 // src/query/classes/ProviderRewardsCache.ts
 
-import { QueryCheckJsinfoReadDbInstance } from '../queryDb';
 import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
-import { and, like, sql } from 'drizzle-orm';
+import { and, like } from 'drizzle-orm';
 import { IsIndexerProcess, ParseUlavaToBigInt, logger, Sleep } from '../../utils/utils';
 import { JSONStringifySpaced } from '../../utils/utils';
 import { GetJsinfoDb } from '../../utils/dbUtils';
@@ -44,8 +43,6 @@ export class RewardsCache {
     }
 
     private async _refreshCache(): Promise<void> {
-        await QueryCheckJsinfoReadDbInstance();
-
         const maxRetries = 3;
         let retryCount = 0;
         let lastError: Error | null = null;

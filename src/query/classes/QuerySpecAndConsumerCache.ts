@@ -1,6 +1,5 @@
 // src/query/classes/SpecAndConsumerCache.ts
 
-import { QueryCheckJsinfoReadDbInstance } from '../queryDb';
 import { sql } from 'drizzle-orm';
 import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import { RedisCache } from './RedisCache';
@@ -36,8 +35,6 @@ class SpecAndConsumerCacheClass {
     }
 
     private async _refreshCache(): Promise<void> {
-        await QueryCheckJsinfoReadDbInstance();
-
         const newSpecCache = await RedisCache.getArray('SpecTable') as string[] | null;
         const newConsumerCache = await RedisCache.getArray('ConsumerTable') as string[] | null;
 

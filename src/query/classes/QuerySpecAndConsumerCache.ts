@@ -3,7 +3,7 @@
 import { sql } from 'drizzle-orm';
 import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import { RedisCache } from './RedisCache';
-import { IsIndexerProcess, logger, Sleep } from '../../utils/utils'; // Assuming you have a Sleep function
+import { GetUtcNow, IsIndexerProcess, logger, Sleep } from '../../utils/utils'; // Assuming you have a Sleep function
 import { GetJsinfoDb } from '../../utils/dbUtils';
 
 class SpecAndConsumerCacheClass {
@@ -117,7 +117,7 @@ class SpecAndConsumerCacheClass {
 
                 // Include specs from providerHealth table
                 offset = 0;
-                const threeMonthsAgo = new Date();
+                const threeMonthsAgo = GetUtcNow();
                 threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
 
                 while (true) {

@@ -59,8 +59,6 @@ export const ProcessOneEvent = (
     lavaBlock: LavaBlock,
     height: number,
     txHash: string | null,
-
-
     blockchainEntitiesStakes: Map<string, JsinfoSchema.InsertProviderStake[]>,
 ) => {
 

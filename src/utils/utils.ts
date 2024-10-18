@@ -195,3 +195,17 @@ export const IsMeaningfulText = (text: string | null | undefined): boolean => {
 export function IsIndexerProcess(): boolean {
     return GetEnvVar("IS_INDEXER_PROCESS", "false") === "true";
 }
+
+export function GetUtcNow(): Date {
+    const now = new Date();
+    const utcNow = new Date(Date.UTC(
+        now.getUTCFullYear(),
+        now.getUTCMonth(),
+        now.getUTCDate(),
+        now.getUTCHours(),
+        now.getUTCMinutes(),
+        now.getUTCSeconds(),
+        now.getUTCMilliseconds()
+    ));
+    return utcNow;
+}

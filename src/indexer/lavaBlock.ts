@@ -96,10 +96,16 @@ export const GetOneLavaBlock = async (
         });
     }
 
+    const blockTime = new Date(block!.header.time);
+
+    console.log('Block time in local timezone:', blockTime.toString());
+    console.log('Block time in UTC:', blockTime.toUTCString());
+    console.log('ISO 8601 UTC time:', blockTime.toISOString());
+
     // Block object to return
     const lavaBlock: LavaBlock = {
         height: height,
-        datetime: Date.parse(block!.header.time),
+        datetime: blockTime.getTime(),
         dbEvents: [],
         dbPayments: [],
         dbConflictResponses: [],

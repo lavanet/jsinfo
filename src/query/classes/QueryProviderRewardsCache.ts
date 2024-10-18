@@ -2,7 +2,7 @@
 
 import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import { and, like } from 'drizzle-orm';
-import { IsIndexerProcess, ParseUlavaToBigInt, logger, Sleep } from '../../utils/utils';
+import { IsIndexerProcess, ParseUlavaToBigInt, logger, Sleep, GetUtcNow } from '../../utils/utils';
 import { JSONStringifySpaced } from '../../utils/utils';
 import { GetJsinfoDb } from '../../utils/dbUtils';
 
@@ -50,7 +50,7 @@ export class RewardsCache {
         while (retryCount < maxRetries) {
             try {
                 const db = await GetJsinfoDb();
-                const thirtyDaysAgo = new Date();
+                const thirtyDaysAgo = GetUtcNow();
                 thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
                 const allRewards: Record<string, bigint> = {};

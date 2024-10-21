@@ -151,11 +151,11 @@ BEGIN
     END IF;
 END $$;
 
- --> statement-breakpoint
+--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS relay_payments_specid_idx ON public.relay_payments USING btree (spec_id);
- --> statement-breakpoint
+--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS relay_payments_consumer_idx ON public.relay_payments USING btree (consumer);
- --> statement-breakpoint
+--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS relay_payments_provider_idx ON public.relay_payments USING btree (provider);
  
 --> --------- public.provider_latest_block_reports -------- 
@@ -170,7 +170,7 @@ CREATE TABLE IF NOT EXISTS "provider_latest_block_reports" (
     chain_block_height bigint,
     PRIMARY KEY (id, timestamp)
 );
- --> statement-breakpoint
+--> statement-breakpoint
 
 -- SELECT create_hypertable('provider_latest_block_reports', 'timestamp');
 DO $$
@@ -186,7 +186,7 @@ BEGIN
     END IF;
 END $$;
 
- --> statement-breakpoint
+--> statement-breakpoint
 
 CREATE INDEX IF NOT EXISTS "provider_latest_block_reports_provider_idx" ON "provider_latest_block_reports" ("provider");
 
@@ -205,7 +205,7 @@ CREATE TABLE IF NOT EXISTS "provider_reported" (
 	"tx" text,
 	PRIMARY KEY (id, datetime)
 );
- --> statement-breakpoint
+--> statement-breakpoint
 -- SELECT create_hypertable('provider_reported', 'datetime');
 DO $$
 BEGIN
@@ -219,7 +219,7 @@ BEGIN
         RAISE NOTICE 'Table "provider_reported" is already a hypertable. Skipping hypertable creation.';
     END IF;
 END $$;
- --> statement-breakpoint
+--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "provider_reported_provider_idx" ON "provider_reported" ("provider");
 
 --> --------- public.conflict_responses -------- 
@@ -240,7 +240,7 @@ CREATE TABLE IF NOT EXISTS "conflict_responses" (
 	PRIMARY KEY (id, timestamp)
 );
 
- --> statement-breakpoint
+--> statement-breakpoint
 -- SELECT create_hypertable('conflict_responses', 'timestamp');
 DO $$
 BEGIN
@@ -255,7 +255,7 @@ BEGIN
     END IF;
 END $$;
 
- --> statement-breakpoint
+--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "conflict_responses_consumer_idx" ON "conflict_responses" ("consumer");
 
 --> --------- public.dual_stacking_delegator_rewards -------- 
@@ -271,7 +271,7 @@ CREATE TABLE IF NOT EXISTS "dual_stacking_delegator_rewards" (
 	PRIMARY KEY (id, timestamp)
 );
 
- --> statement-breakpoint
+--> statement-breakpoint
 -- SELECT create_hypertable('dual_stacking_delegator_rewards', 'timestamp');
 DO $$
 BEGIN
@@ -286,7 +286,7 @@ BEGIN
     END IF;
 END $$;
 
- --> statement-breakpoint
+--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "dual_stacking_delegator_rewards_provider_idx" ON "dual_stacking_delegator_rewards" ("provider");
 
 --> --------- public.conflict_votes -------- 
@@ -302,7 +302,7 @@ CREATE TABLE IF NOT EXISTS conflict_votes (
     PRIMARY KEY (id, timestamp)
 );
 
- --> statement-breakpoint
+--> statement-breakpoint
 -- SELECT create_hypertable('conflict_votes', 'timestamp');
 DO $$
 BEGIN
@@ -317,7 +317,7 @@ BEGIN
     END IF;
 END $$;
 
- --> statement-breakpoint
+--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "conflict_votes_provider_idx" ON "conflict_votes" ("provider");
 
 --> --------- public.events -------- 
@@ -346,7 +346,7 @@ CREATE TABLE IF NOT EXISTS "events" (
     PRIMARY KEY (id, timestamp)
 );
 
- --> statement-breakpoint
+--> statement-breakpoint
 -- SELECT create_hypertable('events', 'timestamp');
 DO $$
 BEGIN
@@ -361,5 +361,5 @@ BEGIN
     END IF;
 END $$;
 
- --> statement-breakpoint
+--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "events_provider_idx" ON "events" ("provider");

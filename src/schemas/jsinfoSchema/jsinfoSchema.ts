@@ -58,13 +58,6 @@ export const relayPayments = pgTable('relay_payments', {
   blockId: integer('block_id'),
   consumer: text('consumer'),
   tx: text('tx'),
-}, (table) => {
-  return {
-    nameIdx: index("name_idx").on(table.specId),
-    tsIdx: index("ts_idx").on(table.datetime),
-    constumerIdx: index("consumer_idx").on(table.consumer),
-    providerIdx: index("relay_payments_provider_idx").on(table.provider),
-  };
 });
 export type RelayPayment = typeof relayPayments.$inferSelect
 export type InsertRelayPayment = typeof relayPayments.$inferInsert
@@ -126,11 +119,6 @@ export const events = pgTable('events', {
 
   fulltext: text('fulltext'),
   timestamp: timestamp("timestamp")
-
-}, (table) => {
-  return {
-    providerIdx: index("events_provider_idx").on(table.provider),
-  };
 });
 
 export type Event = typeof events.$inferSelect
@@ -138,12 +126,10 @@ export type InsertEvent = typeof events.$inferInsert
 
 export const conflictResponses = pgTable('conflict_responses', {
   id: serial('id').primaryKey(),
-
   blockId: integer('block_id'),
   consumer: text('consumer'),
   specId: text('spec_id'),
   tx: text('tx'),
-
   voteId: text('vote_id'),
   requestBlock: integer('request_block'),
   voteDeadline: integer('vote_deadline'),
@@ -151,6 +137,7 @@ export const conflictResponses = pgTable('conflict_responses', {
   apiURL: text('api_URL'),
   connectionType: text('connection_type'),
   requestData: text('request_data'),
+  timestamp: timestamp("timestamp").notNull()
 });
 export type ConflictResponse = typeof conflictResponses.$inferSelect
 export type InsertConflictResponse = typeof conflictResponses.$inferInsert
@@ -158,14 +145,10 @@ export type InsertConflictResponse = typeof conflictResponses.$inferInsert
 export const conflictVotes = pgTable('conflict_votes', {
   id: serial('id').primaryKey(),
   voteId: text('vote_id'),
-
   blockId: integer('block_id'),
   provider: text('provider'),
   tx: text('tx'),
-}, (table) => {
-  return {
-    providerIdx: index("conflict_votes_provider_idx").on(table.provider),
-  };
+  timestamp: timestamp("timestamp").notNull()
 });
 
 export type ConflictVote = typeof conflictVotes.$inferSelect
@@ -183,10 +166,8 @@ export type InsertSubscriptionBuy = typeof subscriptionBuys.$inferInsert
 
 export const providerReported = pgTable('provider_reported', {
   id: serial('id').primaryKey(),
-
   provider: text('provider'),
   blockId: integer('block_id'),
-
   cu: bigint('cu', { mode: 'number' }),
   disconnections: integer('disconnections'),
   epoch: integer('epoch'),
@@ -195,10 +176,6 @@ export const providerReported = pgTable('provider_reported', {
   datetime: timestamp('datetime', { mode: "date" }),
   totalComplaintEpoch: integer('total_complaint_this_epoch'),
   tx: text('tx'),
-}, (table) => {
-  return {
-    providerIdx: index("provider_reported_provider_idx").on(table.provider),
-  };
 });
 export type ProviderReported = typeof providerReported.$inferSelect
 export type InsertProviderReported = typeof providerReported.$inferInsert
@@ -211,10 +188,6 @@ export const providerLatestBlockReports = pgTable('provider_latest_block_reports
   timestamp: timestamp('timestamp').notNull(),
   chainId: text('chain_id').notNull(),
   chainBlockHeight: bigint('chain_block_height', { mode: 'number' }),
-}, (table) => {
-  return {
-    providerIdx: index("provider_latest_block_reports_provider_idx").on(table.provider),
-  };
 });
 
 export type ProviderLatestBlockReports = typeof providerLatestBlockReports.$inferSelect;
@@ -254,12 +227,7 @@ export const dualStackingDelegatorRewards = pgTable('dual_stacking_delegator_rew
   chainId: text('chain_id').notNull(),
   amount: bigint('amount', { mode: 'bigint' }).notNull(),
   denom: text('denom').notNull(),
-}, (table) => {
-  return {
-    providerIdx: index("dual_stacking_delegator_rewards_provider_idx").on(table.provider),
-  };
 });
-
 export type DualStackingDelegatorRewards = typeof dualStackingDelegatorRewards.$inferSelect;
 export type InsertDualStackingDelegatorRewards = typeof dualStackingDelegatorRewards.$inferInsert;
 

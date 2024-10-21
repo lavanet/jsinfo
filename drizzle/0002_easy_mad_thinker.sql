@@ -82,6 +82,6 @@ WHERE
 GROUP BY 
     ps.provider,
     agg_data.total_relays,
-    agg_data.rewardsum
+    agg_data.rewardsum;
 
 CREATE UNIQUE INDEX ON active_and_inactive_providers (provider);

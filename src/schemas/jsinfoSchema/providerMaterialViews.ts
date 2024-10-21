@@ -1,4 +1,4 @@
-import { pgTable, text, doublePrecision, bigint, uniqueIndex, timestamp } from 'drizzle-orm/pg-core';
+import { pgTable, text, doublePrecision, bigint, timestamp } from 'drizzle-orm/pg-core';
 
 export const activeProviders = pgTable(
     "active_providers",
@@ -10,11 +10,6 @@ export const activeProviders = pgTable(
         totalStake: bigint("totalstake", { mode: "number" }), // COALESCE(SUM(ps.stake + LEAST(ps.delegate_total, ps.delegate_limit)), 0) AS totalstake
         rewardSum: doublePrecision("rewardsum"), // COALESCE(SUM(rewardsum), 0) as rewardsum
         moniker: text("moniker"), // (SELECT MAX(moniker) FROM provider_spec_moniker WHERE provider = ps.provider) as moniker
-    },
-    (table) => {
-        return {
-            activeProvidersIdx: uniqueIndex("activeProvidersIdx").on(table.provider), // CREATE UNIQUE INDEX ON active_providers (provider)
-        };
     }
 );
 
@@ -31,11 +26,6 @@ export const activeAndInactiveProviders = pgTable(
         totalStake: bigint("totalstake", { mode: "number" }), // COALESCE(SUM(ps.stake + LEAST(ps.delegate_total, ps.delegate_limit)), 0) AS totalstake
         rewardSum: doublePrecision("rewardsum"), // COALESCE(SUM(rewardsum), 0) as rewardsum
         moniker: text("moniker"), // (SELECT MAX(moniker) FROM provider_spec_moniker WHERE provider = ps.provider) as moniker
-    },
-    (table) => {
-        return {
-            activeAndInactiveProvidersIdx: uniqueIndex("activeAndInactiveProvidersIdx").on(table.provider), // CREATE UNIQUE INDEX ON active_and_inactive_providers (provider)
-        };
     }
 );
 

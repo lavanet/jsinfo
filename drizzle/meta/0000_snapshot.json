@@ -109,6 +109,12 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false
+        },
+        "timestamp": {
+          "name": "timestamp",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true
         }
       },
       "indexes": {},
@@ -149,17 +155,15 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false
+        },
+        "timestamp": {
+          "name": "timestamp",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true
         }
       },
-      "indexes": {
-        "conflict_votes_provider_idx": {
-          "name": "conflict_votes_provider_idx",
-          "columns": [
-            "provider"
-          ],
-          "isUnique": false
-        }
-      },
+      "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
@@ -254,15 +258,7 @@
           "notNull": true
         }
       },
-      "indexes": {
-        "dual_stacking_delegator_rewards_provider_idx": {
-          "name": "dual_stacking_delegator_rewards_provider_idx",
-          "columns": [
-            "provider"
-          ],
-          "isUnique": false
-        }
-      },
+      "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
@@ -392,15 +388,7 @@
           "notNull": false
         }
       },
-      "indexes": {
-        "events_provider_idx": {
-          "name": "events_provider_idx",
-          "columns": [
-            "provider"
-          ],
-          "isUnique": false
-        }
-      },
+      "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
@@ -545,15 +533,7 @@
           "notNull": false
         }
       },
-      "indexes": {
-        "provider_latest_block_reports_provider_idx": {
-          "name": "provider_latest_block_reports_provider_idx",
-          "columns": [
-            "provider"
-          ],
-          "isUnique": false
-        }
-      },
+      "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
@@ -629,15 +609,7 @@
           "notNull": false
         }
       },
-      "indexes": {
-        "provider_reported_provider_idx": {
-          "name": "provider_reported_provider_idx",
-          "columns": [
-            "provider"
-          ],
-          "isUnique": false
-        }
-      },
+      "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
@@ -891,36 +863,7 @@
           "notNull": false
         }
       },
-      "indexes": {
-        "name_idx": {
-          "name": "name_idx",
-          "columns": [
-            "spec_id"
-          ],
-          "isUnique": false
-        },
-        "ts_idx": {
-          "name": "ts_idx",
-          "columns": [
-            "datetime"
-          ],
-          "isUnique": false
-        },
-        "consumer_idx": {
-          "name": "consumer_idx",
-          "columns": [
-            "consumer"
-          ],
-          "isUnique": false
-        },
-        "relay_payments_provider_idx": {
-          "name": "relay_payments_provider_idx",
-          "columns": [
-            "provider"
-          ],
-          "isUnique": false
-        }
-      },
+      "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}

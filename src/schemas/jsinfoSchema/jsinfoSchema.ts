@@ -137,7 +137,7 @@ export const conflictResponses = pgTable('conflict_responses', {
   apiURL: text('api_URL'),
   connectionType: text('connection_type'),
   requestData: text('request_data'),
-  timestamp: timestamp("timestamp").notNull()
+  timestamp: timestamp("timestamp").notNull().default(sql`CURRENT_TIMESTAMP(3)`),
 });
 export type ConflictResponse = typeof conflictResponses.$inferSelect
 export type InsertConflictResponse = typeof conflictResponses.$inferInsert
@@ -148,7 +148,7 @@ export const conflictVotes = pgTable('conflict_votes', {
   blockId: integer('block_id'),
   provider: text('provider'),
   tx: text('tx'),
-  timestamp: timestamp("timestamp").notNull()
+  timestamp: timestamp("timestamp").notNull().default(sql`CURRENT_TIMESTAMP(3)`),
 });
 
 export type ConflictVote = typeof conflictVotes.$inferSelect

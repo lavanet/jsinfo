@@ -242,8 +242,9 @@
           "name": "timestamp",
           "type": "timestamp",
           "primaryKey": false,
-          "notNull": true
-        }
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP(3)"
+       }
       },
       "indexes": {},
       "foreignKeys": {},
@@ -288,7 +289,8 @@
           "name": "timestamp",
           "type": "timestamp",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP(3)"
         }
       },
       "indexes": {},

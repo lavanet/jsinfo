@@ -1,6 +1,6 @@
 // jsinfo/src/indexer.ts
 
-import { DoInChunks, logger, BackoffRetry, IsIndexerProcess } from "./utils/utils";
+import { DoInChunks, logger, BackoffRetry, IsIndexerProcess, IsMeaningfulText } from "./utils/utils";
 if (!IsIndexerProcess()) {
     console.log('indexer.ts', "not indexer process");
     process.exit();
@@ -255,10 +255,10 @@ const fillUp = async (db: PostgresJsDatabase, rpcConnection: RpcConnection) => {
         return;
     }
 
-    let dbHeight = consts.JSINFO_INDEXER_START_BLOCK;
-    let latestDbBlock;
+    let latestDbBlock = 0;
     try {
-        latestDbBlock = await db.select().from(JsinfoSchema.blocks).orderBy(desc(JsinfoSchema.blocks.height)).limit(1);
+        const latestDbBlockRes = await db.select().from(JsinfoSchema.blocks).orderBy(desc(JsinfoSchema.blocks.height)).limit(1);
+        latestDbBlock = latestDbBlockRes[0]?.height || 0;
         logger.info('fillUp: Successfully retrieved latest DB block');
     } catch (e) {
         logger.error(`fillUp: Error in getting latestDbBlock: ${e}`);
@@ -268,25 +268,24 @@ const fillUp = async (db: PostgresJsDatabase, rpcConnection: RpcConnection) => {
         return;
     }
 
+    let cBlockHeight = 0;
     try {
-        const tHeight = latestDbBlock[0]?.height;
-        if (tHeight != null) {
-            dbHeight = tHeight;
-            logger.info(`fillUp: DB height set to latest DB block height: ${dbHeight}`);
-        }
+        cBlockHeight = latestDbBlock != 0 ? Math.max(consts.JSINFO_INDEXER_START_BLOCK, latestDbBlock) : consts.JSINFO_INDEXER_START_BLOCK;
+        logger.info(`fillUp: Heights (pre fillup):: latestDbBlock: ${latestDbBlock}, cBlockHeight: ${cBlockHeight}`);
     } catch (error) {
         logger.error(`Error accessing height: ${error}`);
         logger.error(`Type of latestDbBlock[0]: ${typeof latestDbBlock}`);
         logger.error(`Value of latestDbBlock[0]: ${JSON.stringify(latestDbBlock)}`);
     }
 
-    logger.info(`fillUp: Starting batch process for DB height ${dbHeight} and blockchain height ${latestHeight}`);
-    await doBatch(db, rpcConnection.client, rpcConnection.clientTm, dbHeight, latestHeight);
+    logger.info(`fillUp: Starting batch process for DB height ${cBlockHeight} and blockchain height ${latestHeight}`);
+    await doBatch(db, rpcConnection.client, rpcConnection.clientTm, cBlockHeight, latestHeight);
     logger.info('fillUp: Batch process completed');
 
-    let latestDbBlock2;
+    let latestDbBlock2 = 0;
     try {
-        latestDbBlock2 = await db.select().from(JsinfoSchema.blocks).orderBy(desc(JsinfoSchema.blocks.height)).limit(1);
+        const latestDbBlock2Res = await db.select().from(JsinfoSchema.blocks).orderBy(desc(JsinfoSchema.blocks.height)).limit(1);
+        latestDbBlock2 = latestDbBlock2Res[0]?.height || 0;
         logger.info('fillUp: Successfully retrieved latest DB block');
     } catch (e) {
         logger.error(`fillUp: Error in getting latestDbBlock: ${e}`);
@@ -296,20 +295,15 @@ const fillUp = async (db: PostgresJsDatabase, rpcConnection: RpcConnection) => {
         return;
     }
 
-    let dbHeight2 = consts.JSINFO_INDEXER_START_BLOCK;
-    try {
-        const tHeight2 = latestDbBlock2[0]?.height;
-        if (tHeight2 != null) {
-            dbHeight2 = tHeight2;
-            logger.info(`fillUp: DB height set to latest DB block height: ${dbHeight2}`);
-        }
-    } catch (error) {
-        logger.error(`Error accessing height: ${error}`);
-        logger.error(`Type of latestDbBlock2[0]: ${typeof latestDbBlock2}`);
-        logger.error(`Value of latestDbBlock2[0]: ${JSON.stringify(latestDbBlock2)}`);
+    if (latestDbBlock2 == 0) {
+        logger.error(`fillUp: Error calling doBatch to fill db with new blocks. latestDbBlock2 == 0`);
+        logger.error('fillUp: Restarting DB connection');
+        db = await GetJsinfoDb();
+        fillUpBackoffRetryWTimeout(db, rpcConnection);
+        return;
     }
 
-    if (latestHeight != dbHeight2) {
+    if (latestHeight != latestDbBlock2) {
         logger.error(`fillUp: latestHeight ${latestHeight} != latestDbBlock2[0].height ${latestDbBlock2[0].height}`);
         db = await GetJsinfoDb();
         fillUpBackoffRetryWTimeout(db, rpcConnection);

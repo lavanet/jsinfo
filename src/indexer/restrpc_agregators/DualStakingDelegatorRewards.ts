@@ -195,7 +195,7 @@ async function insertRewardToDB(db: PostgresJsDatabase, reward: Reward): Promise
 
     // Check if chain_id and provider are undefined or not meaningful
     if (!IsMeaningfulText(chain_id) || !IsMeaningfulText(provider)) {
-        logger.error('insertRewardToDB:: Invalid chain_id or provider', { provider, chain_id });
+        logger.error('insertRewardToDB:: Invalid chain_id or provider', { provider: provider, chain_id: chain_id });
         return; // Exit the function early
     }
 

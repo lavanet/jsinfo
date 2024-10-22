@@ -33,6 +33,7 @@ export async function IndexTopChainsHandler(request: FastifyRequest, reply: Fast
         where(gt(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday, sql<Date>`now() - interval '30 day'`)).
         orderBy(sql`relaySum DESC`)
 
+    console.log("topSpecs", topSpecs)
     return {
         allSpecs: topSpecs,
     }

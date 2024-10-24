@@ -12,7 +12,7 @@ class MemoryCacheClass {
         this.debugLogs = debugLogs;
     }
 
-    async get(key: string): Promise<string | null> {
+    async get<T = string>(key: string): Promise<T | null> {
         const startTime = Date.now();
 
         const value = this.cache.get<string>(key);
@@ -23,52 +23,35 @@ class MemoryCacheClass {
 
         const timeTaken = Date.now() - startTime;
         this.log(`Cache hit for key ${key}. Time taken: ${timeTaken}ms`);
-        return value;
+
+        try {
+            return JSON.parse(value) as T;
+        } catch {
+            // If parsing fails, return the value directly if it's a simple string
+            return value as unknown as T;
+        }
     }
 
-    async set(key: string, value: string, ttl: number = 30): Promise<void> {
-        this.cache.set(key, value, ttl);
+    async set<T = string>(key: string, value: T, ttl: number = 30): Promise<void> {
+        const stringValue = typeof value === 'string' ? value : JSONStringify(value);
+        this.cache.set(key, stringValue, ttl);
         this.log(`Set key ${key} with TTL ${ttl}s.`);
     }
 
-    async getArray(key: string): Promise<any[] | null> {
-        const result = await this.get(key);
-        if (!result) return null;
-        try {
-            return JSON.parse(result);
-        } catch (error) {
-            this.logError(`Error parsing JSON for key ${key}`, error);
-            return null;
-        }
+    async getArray<T = any>(key: string): Promise<T[] | null> {
+        return this.get<T[]>(key);
     }
 
-    async setArray(key: string, value: any[], ttl: number = 30): Promise<void> {
-        try {
-            const stringValue = JSONStringify(value);
-            await this.set(key, stringValue, ttl);
-        } catch (error) {
-            this.logError(`Error serializing array for key ${key}`, error);
-        }
+    async setArray<T = any>(key: string, value: T[], ttl: number = 30): Promise<void> {
+        await this.set(key, value, ttl);
     }
 
-    async getDict(key: string): Promise<{ [key: string]: any } | null> {
-        const result = await this.get(key);
-        if (!result) return null;
-        try {
-            return JSON.parse(result);
-        } catch (error) {
-            this.logError(`Error parsing JSON for key ${key}`, error);
-            return null;
-        }
+    async getDict<T = { [key: string]: any }>(key: string): Promise<T | null> {
+        return this.get<T>(key);
     }
 
-    async setDict(key: string, value: { [key: string]: any }, ttl: number = 30): Promise<void> {
-        try {
-            const stringValue = JSON.stringify(value);
-            await this.set(key, stringValue, ttl);
-        } catch (error) {
-            this.logError(`Error serializing dictionary for key ${key}`, error);
-        }
+    async setDict<T = { [key: string]: any }>(key: string, value: T, ttl: number = 30): Promise<void> {
+        await this.set(key, value, ttl);
     }
 
     async IsAlive(): Promise<boolean> {

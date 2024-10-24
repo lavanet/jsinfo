@@ -2,7 +2,7 @@ import { ProcessSubscriptionList } from "./SubscriptionList";
 import { ProcessProviderMonikerSpecs } from "./ProviderSpecMoniker";
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { logger } from "../../utils/utils";
-import { ProcessDualStackingDelegatorRewards } from "./DualStakingDelegatorRewards";
+// import { ProcessDualStackingDelegatorRewards } from "./DualStakingDelegatorRewards";
 
 let isRunning = false;
 

@@ -1,240 +1,182 @@
-import { IsMeaningfulText, logger } from "../../utils/utils";
-import { QueryLavaRPC } from "./utils";
-import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
-import { eq, and, desc } from "drizzle-orm";
-import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-import { MemoryCache } from "../classes/MemoryCache";
-import { performance } from 'perf_hooks';
-import { MonikerCache } from "../../query/classes/MonikerCache";
+// import { IsMeaningfulText, logger } from "../../utils/utils";
+// import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
+// import { eq, and, desc } from "drizzle-orm";
+// import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+// import { MemoryCache } from "../classes/MemoryCache";
+// import { performance } from 'perf_hooks';
+// import { RpcEndpointCache } from "../classes/RpcEndpointCahce";
 
-interface Delegation {
-    provider: string;
-    chainID: string;
-    delegator: string;
-    amount: {
-        denom: string;
-        amount: string;
-    };
-    timestamp: string;
-}
+// async function ProcessDualStackingDelegatorRewards(db: PostgresJsDatabase): Promise<void> {
+//     const startTime = performance.now();
+//     try {
+//         const cachedDelegators = await MemoryCache.getArray<string>('uniqueDelegators');
+//         let delegatorsArray: string[];
 
-interface ProviderDelegatorsResponse {
-    delegations: Delegation[];
-}
+//         if (cachedDelegators) {
+//             delegatorsArray = cachedDelegators;
+//         } else {
+//             const providerMetadata = await RpcEndpointCache.GetProviderMetadata();
+//             const providers = providerMetadata.MetaData.map(meta => meta.provider);
+//             const uniqueDelegators = new Set<string>();
 
-interface Reward {
-    provider: string;
-    chain_id: string;
-    amount: {
-        denom: string;
-        amount: string;
-    }[];
-}
+//             for (const provider of providers) {
+//                 const delegatorsResponse = await RpcEndpointCache.GetProviderDelegators(provider);
+//                 for (const delegation of delegatorsResponse.delegations) {
+//                     if (IsMeaningfulText(delegation.delegator)) {
+//                         uniqueDelegators.add(delegation.delegator);
+//                     }
+//                 }
+//             }
 
-interface DelegatorRewardsResponse {
-    rewards: Reward[];
-}
+//             delegatorsArray = Array.from(uniqueDelegators);
+//             await MemoryCache.setArray('uniqueDelegators', delegatorsArray, 1200); // Cache for 20 minutes
+//         }
 
-async function GetProviderDelegators(provider: string): Promise<ProviderDelegatorsResponse> {
-    return QueryLavaRPC<ProviderDelegatorsResponse>(`/lavanet/lava/dualstaking/provider_delegators/${provider}`);
-}
+//         for (const delegator of delegatorsArray) {
+//             await ProcessDelegatorRewards(db, delegator);
+//         }
 
-async function GetDelegatorRewards(delegator: string): Promise<DelegatorRewardsResponse> {
-    return QueryLavaRPC<DelegatorRewardsResponse>(`/lavanet/lava/dualstaking/delegator_rewards/${delegator}`);
-}
+//         const endTime = performance.now();
+//         logger.info(`Successfully processed dual stacking delegator rewards for all unique delegators. Time taken: ${(endTime - startTime) / 1000} seconds`);
+//     } catch (error) {
+//         logger.error('Error processing dual stacking delegator rewards', { error });
+//         throw error;
+//     }
+// }
 
-export async function ProcessDualStackingDelegatorRewards(db: PostgresJsDatabase): Promise<void> {
-    const startTime = performance.now();
-    try {
-        const cachedDelegators = await MemoryCache.getArray('uniqueDelegators');
+// async function ProcessDelegatorRewards(db: PostgresJsDatabase, delegator: string): Promise<void> {
+//     const startTime = performance.now();
+//     try {
+//         const rewardsResponse = await RpcEndpointCache.GetDelegatorRewards(delegator);
 
-        let delegatorsArray: string[];
+//         for (const reward of rewardsResponse.rewards) {
+//             await ProcessReward(db, reward);
+//         }
 
-        if (cachedDelegators) {
-            delegatorsArray = cachedDelegators;
-        } else {
-            const providers = MonikerCache.GetAllProviders();
-            const uniqueDelegators = new Set<string>();
+//         const endTime = performance.now();
+//         if ((endTime - startTime) > 1000) {
+//             logger.info(`ProcessDelegatorRewards for ${delegator} took ${(endTime - startTime) / 1000} seconds`);
+//         }
+//     } catch (error) {
+//         logger.error('Failed to process delegator rewards', { delegator, error });
+//     }
+// }
 
-            for (const provider of providers) {
-                const delegators = await GetProviderDelegators(provider);
+// async function checkAndCacheReward(provider: string, chain_id: string, reward: JsinfoSchema.InsertDualStackingDelegatorRewards): Promise<boolean> {
+//     const cacheKey = `dualStackingDelegatorRewards-${provider}-${chain_id}`;
+//     const cachedValue = await MemoryCache.getDict<{ amount: string; denom: string }>(cacheKey);
 
-                for (const delegation of delegators.delegations) {
-                    if (!IsMeaningfulText(delegation.delegator)) {
-                        continue;
-                    }
-                    uniqueDelegators.add(delegation.delegator);
-                }
-            }
+//     if (cachedValue && cachedValue.amount === reward.amount.toString() && cachedValue.denom === reward.denom) {
+//         return false;
+//     }
 
-            delegatorsArray = Array.from(uniqueDelegators);
-            await MemoryCache.setArray('uniqueDelegators', delegatorsArray, 3600); // Cache for 1 hour
-        }
+//     await MemoryCache.setDict(cacheKey, { amount: reward.amount.toString(), denom: reward.denom }, 1200); // Cache for 20 minutes
+//     return true;
+// }
 
-        for (const delegator of delegatorsArray) {
-            await ProcessDelegatorRewards(db, delegator);
-        }
+// let batchData: JsinfoSchema.InsertDualStackingDelegatorRewards[] = [];
+// let batchStartTime: Date = new Date();
+// const BATCH_SIZE = 100;
+// const BATCH_INTERVAL = 60000; // 1 minute in milliseconds
 
-        const endTime = performance.now();
-        logger.info(`Successfully processed dual stacking delegator rewards for all unique delegators. Time taken: ${(endTime - startTime) / 1000} seconds`);
-    } catch (error) {
-        logger.error('Error processing dual stacking delegator rewards', { error });
-        throw error;
-    }
-}
+// async function batchAppend(db: PostgresJsDatabase, newReward: JsinfoSchema.InsertDualStackingDelegatorRewards): Promise<void> {
+//     const cacheKey = `dualStackingDelegatorRewards-batchAppend-${newReward.provider}-${newReward.chainId}`;
+//     const cachedValue = await MemoryCache.getDict<{ amount: string; denom: string }>(cacheKey);
 
-async function ProcessDelegatorRewards(db: PostgresJsDatabase, delegator: string): Promise<void> {
-    const startTime = performance.now();
-    try {
-        const rewardsResponse = await GetDelegatorRewards(delegator);
+//     if (cachedValue && cachedValue.amount === newReward.amount.toString() && cachedValue.denom === newReward.denom) {
+//         return; // Skip appending duplicate record
+//     }
 
-        for (const reward of rewardsResponse.rewards) {
-            await ProcessReward(db, reward);
-        }
+//     batchData.push(newReward);
 
-        const endTime = performance.now();
-        if ((endTime - startTime) > 1000) {
-            logger.info(`ProcessDelegatorRewards for ${delegator} took ${(endTime - startTime) / 1000} seconds`);
-        }
-    } catch (error) {
-        logger.error('Failed to process delegator rewards', { delegator, error });
-    }
-}
+//     if (batchData.length >= BATCH_SIZE || Date.now() - batchStartTime.getTime() >= BATCH_INTERVAL) {
+//         await batchInsert(db);
+//     }
 
-async function checkAndCacheReward(provider: string, chain_id: string, reward: Reward): Promise<boolean> {
-    const cacheKey = `dualStackingDelegatorRewards-${provider}-${chain_id}`;
+//     await MemoryCache.setDict(cacheKey, { amount: newReward.amount.toString(), denom: newReward.denom }, 1200);
+// }
 
-    const cachedValue = await MemoryCache.getDict(cacheKey);
+// async function batchInsert(db: PostgresJsDatabase): Promise<void> {
+//     if (batchData.length === 0) return;
 
-    for (const amount of reward.amount) {
-        const rewardAmount = BigInt(amount.amount);
-        const rewardDenom = amount.denom;
+//     const startTime = performance.now();
+//     try {
+//         await db.insert(JsinfoSchema.dualStackingDelegatorRewards).values(batchData);
 
-        if (cachedValue && cachedValue.amount === rewardAmount.toString() && cachedValue.denom === rewardDenom) {
-            // logger.info('Skipped inserting duplicate dual stacking delegator reward record (cache hit)', {
-            //     provider,
-            //     chain_id,
-            //     amount: amount.amount,
-            //     denom: amount.denom
-            // });
-            return false;
-        }
+//         const endTime = performance.now();
+//         logger.info(`Batch insert of ${batchData.length} records took ${(endTime - startTime) / 1000} seconds`);
 
-        await MemoryCache.setDict(cacheKey, { amount: rewardAmount.toString(), denom: rewardDenom }, 3600);
-    }
+//         batchData = [];
+//         batchStartTime = new Date();
+//     } catch (error) {
+//         logger.error('DualStakingDelegatorRewards:: Error in batch insert operation', { error });
+//     }
+// }
 
-    return true;
-}
+// async function ProcessReward(db: PostgresJsDatabase, reward: Reward): Promise<void> {
+//     const startTime = performance.now();
+//     const { provider, chain_id } = reward;
 
-let batchData: JsinfoSchema.InsertDualStackingDelegatorRewards[] = [];
-let batchStartTime: Date = new Date();
-const BATCH_SIZE = 100;
-const BATCH_INTERVAL = 60000; // 1 minute in milliseconds
+//     const shouldProceedToDB = await checkAndCacheReward(provider, chain_id, reward);
 
-async function batchAppend(db: PostgresJsDatabase, newReward: JsinfoSchema.InsertDualStackingDelegatorRewards): Promise<void> {
-    const cacheKey = `dualStackingDelegatorRewards-batchAppend-${newReward.provider}-${newReward.chainId}`;
+//     if (shouldProceedToDB) {
+//         await insertRewardToDB(db, reward);
+//     }
 
-    const cachedValue = await MemoryCache.getDict(cacheKey);
-    if (cachedValue && cachedValue.amount === newReward.amount.toString() && cachedValue.denom === newReward.denom) {
-        // Skip appending duplicate record
-        return;
-    }
+//     const endTime = performance.now();
+//     if ((endTime - startTime) > 1000) {
+//         logger.info(`ProcessReward for provider ${provider}, chain ${chain_id} took ${(endTime - startTime) / 1000} seconds`);
+//     }
+// }
 
-    batchData.push(newReward);
+// async function insertRewardToDB(db: PostgresJsDatabase, reward: Reward): Promise<void> {
+//     const startTime = performance.now();
+//     const { provider, chain_id } = reward;
 
-    if (batchData.length >= BATCH_SIZE || Date.now() - batchStartTime.getTime() >= BATCH_INTERVAL) {
-        await batchInsert(db);
-    }
+//     for (const amount of reward.amount) {
+//         const newReward: JsinfoSchema.InsertDualStackingDelegatorRewards = {
+//             timestamp: new Date(),
+//             provider,
+//             chainId: chain_id,
+//             amount: BigInt(amount.amount),
+//             denom: amount.denom
+//         };
 
-    // Update the cache after appending
-    await MemoryCache.setDict(cacheKey, { amount: newReward.amount.toString(), denom: newReward.denom }, 3600);
-}
+//         try {
+//             const queryStartTime = performance.now();
+//             const latestEntry = await db.select()
+//                 .from(JsinfoSchema.dualStackingDelegatorRewards)
+//                 .where(and(
+//                     eq(JsinfoSchema.dualStackingDelegatorRewards.provider, provider),
+//                     eq(JsinfoSchema.dualStackingDelegatorRewards.chainId, chain_id)
+//                 ))
+//                 .orderBy(desc(JsinfoSchema.dualStackingDelegatorRewards.timestamp))
+//                 .limit(1);
+//             const queryEndTime = performance.now();
+//             if ((queryEndTime - queryStartTime) > 500) {
+//                 logger.info(`DB query in insertRewardToDB took ${(queryEndTime - queryStartTime)} ms`);
+//             }
 
-async function batchInsert(db: PostgresJsDatabase): Promise<void> {
-    if (batchData.length === 0) return;
+//             if (latestEntry.length === 0 ||
+//                 latestEntry[0].amount !== newReward.amount ||
+//                 latestEntry[0].denom !== newReward.denom) {
 
-    const startTime = performance.now();
-    try {
-        await db.insert(JsinfoSchema.dualStackingDelegatorRewards).values(batchData);
+//                 batchAppend(db, newReward);
+//             }
+//         } catch (error) {
+//             logger.error('Failed to process reward', {
+//                 provider,
+//                 chain_id,
+//                 amount: amount.amount,
+//                 denom: amount.denom,
+//                 error: error instanceof Error ? error.message : String(error),
+//                 stack: error instanceof Error ? error.stack : undefined
+//             });
+//         }
+//     }
 
-        const endTime = performance.now();
-        logger.info(`Batch insert of ${batchData.length} records took ${(endTime - startTime) / 1000} seconds`);
-
-        // After successful insert, reset the batch
-        batchData = [];
-        batchStartTime = new Date();
-    } catch (error) {
-        logger.error('DualStakingDelegatorRewards:: Error in batch insert operation', { error });
-    }
-}
-
-async function ProcessReward(db: PostgresJsDatabase, reward: Reward): Promise<void> {
-    const startTime = performance.now();
-    const { provider, chain_id } = reward;
-
-    const shouldProceedToDB = await checkAndCacheReward(provider, chain_id, reward);
-
-    if (shouldProceedToDB) {
-        await insertRewardToDB(db, reward);
-    }
-
-    const endTime = performance.now();
-    if ((endTime - startTime) > 1000) {
-        logger.info(`ProcessReward for provider ${provider}, chain ${chain_id} took ${(endTime - startTime) / 1000} seconds`);
-    }
-}
-
-async function insertRewardToDB(db: PostgresJsDatabase, reward: Reward): Promise<void> {
-    const startTime = performance.now();
-    const { provider, chain_id } = reward;
-
-    for (const amount of reward.amount) {
-        const newReward: JsinfoSchema.InsertDualStackingDelegatorRewards = {
-            timestamp: new Date(),
-            provider,
-            chainId: chain_id,
-            amount: BigInt(amount.amount),
-            denom: amount.denom
-        };
-
-        try {
-            const queryStartTime = performance.now();
-            const latestEntry = await db.select()
-                .from(JsinfoSchema.dualStackingDelegatorRewards)
-                .where(and(
-                    eq(JsinfoSchema.dualStackingDelegatorRewards.provider, provider),
-                    eq(JsinfoSchema.dualStackingDelegatorRewards.chainId, chain_id)
-                ))
-                .orderBy(desc(JsinfoSchema.dualStackingDelegatorRewards.timestamp))
-                .limit(1);
-            const queryEndTime = performance.now();
-            if ((queryEndTime - queryStartTime) > 500) { // Log if query takes more than 500ms
-                logger.info(`DB query in insertRewardToDB took ${(queryEndTime - queryStartTime)} ms`);
-            }
-
-            if (latestEntry.length === 0 ||
-                latestEntry[0].amount !== newReward.amount ||
-                latestEntry[0].denom !== newReward.denom) {
-
-                batchAppend(db, newReward);
-            }
-        } catch (error) {
-            logger.error('Failed to process reward', {
-                provider,
-                chain_id,
-                amount: amount.amount,
-                denom: amount.denom,
-                error: error instanceof Error ? error.message : String(error),
-                stack: error instanceof Error ? error.stack : undefined
-            });
-        }
-    }
-
-    const endTime = performance.now();
-    if ((endTime - startTime) > 1000) {
-        logger.info(`insertRewardToDB for provider ${provider}, chain ${chain_id} took ${(endTime - startTime) / 1000} seconds`);
-    }
-}
-
-
-
+//     const endTime = performance.now();
+//     if ((endTime - startTime) > 1000) {
+//         logger.info(`insertRewardToDB for provider ${provider}, chain ${chain_id} took ${(endTime - startTime) / 1000} seconds`);
+//     }
+// }

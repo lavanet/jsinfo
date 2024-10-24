@@ -301,7 +301,7 @@ export type InsertConsumerSubscriptionList = typeof consumerSubscriptionList.$in
 
 export const supply = pgTable('supply', {
   key: text('key').notNull().primaryKey(),
-  amount: bigint('amount', { mode: 'bigint' }).notNull(),
+  amount: text('amount').notNull(),
   timestamp: timestamp('timestamp', { mode: "date" }).notNull(),
 }, (table) => {
   return {

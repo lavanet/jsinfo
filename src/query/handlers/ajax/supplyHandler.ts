@@ -24,7 +24,7 @@ export async function TotalSupplyRawHandler(request: FastifyRequest, reply: Fast
         .where(eq(JsinfoSchema.supply.key, "total"))
 
     if (result.length > 0 && result[0].amount) {
-        const amount = Number(result[0].amount) / 1000000;
+        const amount = BigInt(result[0].amount) / BigInt(1000000);
         return amount.toString();
     } else {
         return "0";
@@ -34,7 +34,7 @@ export async function TotalSupplyRawHandler(request: FastifyRequest, reply: Fast
 
 export async function CirculatingSupplyRawHandler(request: FastifyRequest, reply: FastifyReply) {
     await QueryCheckJsinfoReadDbInstance()
-    const supplydb = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.supply);
+    // const supplydb = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.supply);
 
     const result = await QueryGetJsinfoReadDbInstance()
         .select({ amount: JsinfoSchema.supply.amount })
@@ -42,7 +42,7 @@ export async function CirculatingSupplyRawHandler(request: FastifyRequest, reply
         .where(eq(JsinfoSchema.supply.key, "circulating"))
 
     if (result.length > 0 && result[0].amount) {
-        const amount = Number(result[0].amount) / 1000000;
+        const amount = BigInt(result[0].amount) / BigInt(1000000);
         return amount.toString();
     } else {
         return "0";

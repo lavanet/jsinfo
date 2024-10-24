@@ -105,13 +105,13 @@ export async function SaveTokenSupplyToDB(db: PostgresJsDatabase, client: LavaCl
 
     const rowTotalSupply: JsinfoSchema.InsertSupply = {
         key: 'total',
-        amount: totalSupply,
+        amount: totalSupply.toString(),
         timestamp: now,
     };
 
     const rowCirculating: JsinfoSchema.InsertSupply = {
         key: 'circulating',
-        amount: circulatingSupply,
+        amount: circulatingSupply.toString(),
         timestamp: now,
     };
 
@@ -122,7 +122,7 @@ export async function SaveTokenSupplyToDB(db: PostgresJsDatabase, client: LavaCl
                 .onConflictDoUpdate({
                     target: [JsinfoSchema.supply.key],
                     set: {
-                        amount: row.amount,
+                        amount: row.amount.toString(),
                         timestamp: row.timestamp,
                     } as any
                 });

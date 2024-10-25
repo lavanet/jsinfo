@@ -96,6 +96,7 @@ import {
 // -- Internal data endpoints --
 import { LavapDualStackingDelegatorRewardsHandler, LavapDualStackingDelegatorRewardsOpts } from './handlers/pods/lavapDualStackingDelegatorRewardsHandler';
 import { ConsumerV2CahcedHandler, ConsumerV2CahcedHandlerOpts } from './handlers/consumer/consumerV2Handler';
+import { ChainWalletApiHandlerOpts, LavaChainRestakersHandler, LavaChainStakersHandler } from './handlers/ajax/chainWalletApiHandlers';
 
 // -- Server status ajax --
 GetServerInstance().get('/latest', LatestRawHandlerOpts, LatestRawHandler);
@@ -108,6 +109,10 @@ GetServerInstance().get('/healthstatus', HealthStatusRawHandlerOpts, HealthStatu
 // -- Server supply ajax --
 RegisterRedisBackedHandler('/supply/total', SupplyRawHandlerOpts, TotalSupplyRawHandler, { cache_ttl: 60, is_text: true });
 RegisterRedisBackedHandler('/supply/circulating', SupplyRawHandlerOpts, CirculatingSupplyRawHandler, { cache_ttl: 60, is_text: true });
+
+// -- Server chain wallet api ajax --
+RegisterRedisBackedHandler('/lava_chain_stakers', ChainWalletApiHandlerOpts, LavaChainStakersHandler, { cache_ttl: 10 });
+RegisterRedisBackedHandler('/lava_chain_restakers', ChainWalletApiHandlerOpts, LavaChainRestakersHandler, { cache_ttl: 10 });
 
 // -- list all providers and monikers endpoint ---
 RegisterRedisBackedHandler('/listProviders', ListProvidersRawHandlerOpts, ListProvidersRawHandler, { cache_ttl: 10 * 60 });

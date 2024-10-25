@@ -1,8 +1,8 @@
 // src/indexer/classes/RpcEndpointCahce.ts
 
-import { IsMeaningfulText, logger } from "../../utils/utils";
+import { IsMeaningfulText, logger, TruncateError } from "../../utils/utils";
 import { QueryLavaRPC } from "../rpcUtils";
-import { MemoryCache } from "../classes/MemoryCache";
+import { MemoryCache } from "./MemoryCache";
 
 interface Delegation {
     provider: string;
@@ -18,17 +18,6 @@ interface Delegation {
 interface ProviderDelegatorsResponse {
     delegations: Delegation[];
 }
-
-interface Reward {
-    provider: string;
-    chain_id: string;
-    amount: {
-        denom: string;
-        amount: string;
-    }[];
-}
-
-
 
 interface ProviderMetadata {
     provider: string;
@@ -83,8 +72,9 @@ class RpcEndpointCacheClass {
         try {
             await this.fetchAndCacheProviders();
             await this.fetchAndCacheDelegators();
+            await this.fetchAndCacheEmptyProviderDelegations();
         } catch (error) {
-            logger.error('Error refreshing unique delegators and providers cache', { error });
+            logger.error('Error refreshing cache', { error: TruncateError(error) });
         }
     }
 
@@ -96,7 +86,7 @@ class RpcEndpointCacheClass {
 
             logger.info('Providers cache refreshed successfully.');
         } catch (error) {
-            logger.error('Error fetching providers metadata', { error });
+            logger.error('Error fetching providers metadata', { error: TruncateError(error) });
         }
     }
 
@@ -115,23 +105,64 @@ class RpcEndpointCacheClass {
             const uniqueDelegators = new Set<string>();
 
             for (const provider of cachedProviders) {
-                const delegators = await this.GetProviderDelegators(provider);
-                for (const delegation of delegators.delegations) {
+                const delegations = await this.getProviderDelegations(provider);
+                for (const delegation of delegations) {
                     if (IsMeaningfulText(delegation.delegator)) {
                         uniqueDelegators.add(delegation.delegator);
                     }
                 }
-
-                // Cache the delegations for each provider for future queries.
-                await MemoryCache.set(`provider_delegations_${provider}`, delegators.delegations, this.providerAndDelegatorRefreshInterval);
             }
 
             await MemoryCache.setArray('uniqueDelegators', Array.from(uniqueDelegators), this.providerAndDelegatorRefreshInterval);
 
             logger.info('UniqueDelegatorsCache refreshed successfully.');
         } catch (error) {
-            logger.error('Error fetching and caching unique delegators', { error });
+            logger.error('Error fetching and caching unique delegators', { error: TruncateError(error) });
         }
+    }
+
+    private async fetchAndCacheEmptyProviderDelegations(): Promise<void> {
+        try {
+            const emptyProviderDelegations = await this.GetProviderDelegators('empty_provider');
+            await MemoryCache.set('empty_provider_delegations', emptyProviderDelegations.delegations, this.providerAndDelegatorRefreshInterval);
+            logger.info('Empty provider delegations cache refreshed successfully.');
+        } catch (error) {
+            logger.error('Error fetching empty provider delegations', { error: TruncateError(error) });
+        }
+    }
+
+    public async GetTotalDelegatedAmount(from?: number, includeEmptyProviders: boolean = false): Promise<bigint> {
+        const providers = await this.GetProviders();
+        let totalAmount = BigInt(0);
+
+        for (const provider of providers) {
+            const delegations = await this.getProviderDelegations(provider);
+            if (!delegations) {
+                continue;
+            }
+
+            totalAmount += this.sumDelegations(delegations, from);
+        }
+
+        if (includeEmptyProviders) {
+            const emptyProviderDelegations = await this.getProviderDelegations('empty_provider');
+            if (emptyProviderDelegations) {
+                totalAmount += this.sumDelegations(emptyProviderDelegations, from);
+            } else {
+                logger.warn('No empty provider delegations found in cache.');
+            }
+        }
+
+        return totalAmount;
+    }
+
+    private sumDelegations(delegations: Delegation[], from?: number): bigint {
+        return delegations.reduce((sum, delegation) => {
+            if (from && Number(delegation.timestamp) < from) {
+                return sum;
+            }
+            return sum + BigInt(delegation.amount.amount);
+        }, BigInt(0));
     }
 
     public async GetUniqueDelegators(): Promise<string[]> {
@@ -152,27 +183,7 @@ class RpcEndpointCacheClass {
         return providers;
     }
 
-    public async GetTotalDelegatedAmount(provider: string, from?: number): Promise<bigint> {
-        const delegations = await MemoryCache.get<Delegation[]>(`provider_delegations_${provider}`);
-        if (!delegations) {
-            logger.warn(`No delegations found for provider ${provider}.`);
-            return BigInt(0);
-        }
-
-        const totalAmount = delegations.reduce((sum, delegation) => {
-            // Filter by timestamp if 'from' is provided.
-            if (from && Number(delegation.timestamp) < from) {
-                return sum;
-            }
-
-            // Accumulate the amount.
-            return sum + BigInt(delegation.amount.amount);
-        }, BigInt(0));
-
-        return totalAmount;
-    }
-
-    private async GetProviderDelegators(provider: string): Promise<ProviderDelegatorsResponse> {
+    public async GetProviderDelegators(provider: string): Promise<ProviderDelegatorsResponse> {
         const cacheKey = `provider_delegators_${provider}`;
         let delegators = await MemoryCache.get<ProviderDelegatorsResponse>(cacheKey);
 
@@ -186,7 +197,7 @@ class RpcEndpointCacheClass {
         return delegators;
     }
 
-    private async GetProviderMetadata(): Promise<ProviderMetadataResponse> {
+    public async GetProviderMetadata(): Promise<ProviderMetadataResponse> {
         const cacheKey = `provider_metadata`;
         let metadata = await MemoryCache.get<ProviderMetadataResponse>(cacheKey);
 
@@ -197,10 +208,32 @@ class RpcEndpointCacheClass {
 
         return metadata;
     }
+
+    public async getProviderDelegations(provider: string): Promise<Delegation[]> {
+        const cacheKey = `provider_delegations_${provider}`;
+        let delegations = await MemoryCache.get<Delegation[]>(cacheKey);
+
+        if (!delegations) {
+            const delegatorsResponse = await this.GetProviderDelegators(provider);
+            delegations = delegatorsResponse.delegations;
+            await MemoryCache.set(cacheKey, delegations, this.providerAndDelegatorRefreshInterval);
+        }
+
+        return delegations;
+    }
 }
 
 export const RpcEndpointCache = new RpcEndpointCacheClass();
 
+
+// interface Reward {
+//     provider: string;
+//     chain_id: string;
+//     amount: {
+//         denom: string;
+//         amount: string;
+//     }[];
+// }
 
 // interface DelegatorRewardsResponse {
 //     rewards: Reward[];

@@ -232,6 +232,13 @@
       "when": 1729769937737,
       "tag": "0032_wet_doctor_octopus",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "5",
+      "when": 1729851323266,
+      "tag": "0033_silent_slayback",
+      "breakpoints": true
     }
   ]
 }

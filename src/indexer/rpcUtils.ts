@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { GetEnvVar, logger, BackoffRetry } from "../utils/utils";
+import { GetEnvVar, logger, BackoffRetry, TruncateError } from "../utils/utils";
 
 export async function QueryLavaRPC<T>(path: string): Promise<T> {
     const baseUrl = GetEnvVar("JSINFO_INDEXER_LAVA_REST_RPC_URL");
@@ -10,7 +10,7 @@ export async function QueryLavaRPC<T>(path: string): Promise<T> {
             const response = await axios.get<T>(url);
             return response.data;
         } catch (error) {
-            logger.error(`Failed to fetch data from ${url}`, { error });
+            logger.error(`Failed to fetch data from ${url}`, { error: TruncateError(error) });
             throw error;
         }
     });

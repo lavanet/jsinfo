@@ -1,5 +1,5 @@
 import { IsMeaningfulText, logger } from "../../utils/utils";
-import { QueryLavaRPC } from "./utils";
+import { QueryLavaRPC } from "../rpcUtils";
 import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { sql } from 'drizzle-orm';

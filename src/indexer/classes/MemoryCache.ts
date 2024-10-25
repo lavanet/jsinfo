@@ -68,10 +68,6 @@ class MemoryCacheClass {
         if (!this.debugLogs) return;
         logger.info(`MemoryCache: ${message}`);
     }
-
-    private logError(message: string, error: any) {
-        logger.error(`MemoryCache: ${message}`, error);
-    }
 }
 
 export const MemoryCache = new MemoryCacheClass();

@@ -141,13 +141,13 @@ class RpcEndpointCacheClass {
                 continue;
             }
 
-            totalAmount += this.sumDelegations(delegations, from);
+            totalAmount += this.sumUlavaDelegations(delegations, from);
         }
 
         if (includeEmptyProviders) {
             const emptyProviderDelegations = await this.getProviderDelegations('empty_provider');
             if (emptyProviderDelegations) {
-                totalAmount += this.sumDelegations(emptyProviderDelegations, from);
+                totalAmount += this.sumUlavaDelegations(emptyProviderDelegations, from);
             } else {
                 logger.warn('No empty provider delegations found in cache.');
             }
@@ -156,10 +156,13 @@ class RpcEndpointCacheClass {
         return totalAmount;
     }
 
-    private sumDelegations(delegations: Delegation[], from?: number): bigint {
+    private sumUlavaDelegations(delegations: Delegation[], from?: number): bigint {
         return delegations.reduce((sum, delegation) => {
             if (from && Number(delegation.timestamp) < from) {
                 return sum;
+            }
+            if (delegation.amount.denom.toLowerCase() != 'ulava') {
+                return 0n;
             }
             return sum + BigInt(delegation.amount.amount);
         }, BigInt(0));
@@ -221,48 +224,45 @@ class RpcEndpointCacheClass {
 
         return delegations;
     }
+
+    public async GetUniqueDelegatorCount(from?: number, includeEmptyProviders: boolean = false): Promise<number> {
+        const providers = await this.GetProviders();
+        const uniqueDelegators = new Set<string>();
+
+        for (const provider of providers) {
+            const delegations = await this.getProviderDelegations(provider);
+            if (!delegations) {
+                continue;
+            }
+
+            for (const delegation of delegations) {
+                if (from && Number(delegation.timestamp) < from) {
+                    continue;
+                }
+                if (IsMeaningfulText(delegation.delegator)) {
+                    uniqueDelegators.add(delegation.delegator);
+                }
+            }
+        }
+
+        if (includeEmptyProviders) {
+            const emptyProviderDelegations = await this.getProviderDelegations('empty_provider');
+            if (emptyProviderDelegations) {
+                for (const delegation of emptyProviderDelegations) {
+                    if (from && Number(delegation.timestamp) < from) {
+                        continue;
+                    }
+                    if (IsMeaningfulText(delegation.delegator)) {
+                        uniqueDelegators.add(delegation.delegator);
+                    }
+                }
+            } else {
+                logger.warn('No empty provider delegations found in cache.');
+            }
+        }
+
+        return uniqueDelegators.size;
+    }
 }
 
 export const RpcEndpointCache = new RpcEndpointCacheClass();
-
-
-// interface Reward {
-//     provider: string;
-//     chain_id: string;
-//     amount: {
-//         denom: string;
-//         amount: string;
-//     }[];
-// }
-
-// interface DelegatorRewardsResponse {
-//     rewards: Reward[];
-// }
-
-// // Refresh the rewards for each unique delegator
-// for (const delegator of uniqueDelegators) {
-//     await this.fetchAndCacheDelegatorRewards(delegator);
-// }
-
-// private async fetchAndCacheDelegatorRewards(delegator: string): Promise<void> {
-//     try {
-//         const rewards = await this.GetDelegatorRewards(delegator);
-//         await MemoryCache.setDict(`delegator_rewards_${delegator}`, rewards, this.rewardRefreshInterval);
-//     } catch (error) {
-//         logger.error(`Failed to fetch or cache rewards for delegator ${delegator}`, { error });
-//     }
-// }
-
-
-// public async GetRewardsForDelegator(delegator: string): Promise<DelegatorRewardsResponse | null> {
-//     const rewards = await MemoryCache.getDict<DelegatorRewardsResponse>(`delegator_rewards_${delegator}`);
-//     if (!rewards) {
-//         await this.fetchAndCacheDelegatorRewards(delegator);
-//         return await MemoryCache.getDict<DelegatorRewardsResponse>(`delegator_rewards_${delegator}`) || null;
-//     }
-//     return rewards;
-// }
-
-// private async GetDelegatorRewards(delegator: string): Promise<DelegatorRewardsResponse> {
-//     return QueryLavaRPC<DelegatorRewardsResponse>(`/lavanet/lava/dualstaking/delegator_rewards/${delegator}`);
-// }

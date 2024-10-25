@@ -40,8 +40,8 @@ async function getKeyValueFromStore(key: string): Promise<string> {
 
 export async function LavaChainStakersHandler(request: FastifyRequest, reply: FastifyReply) {
     try {
-        const total = await getKeyValueFromStore('stakers_total_current_unique_users');
-        const monthly = await getKeyValueFromStore('stakers_total_monthly_unique_users');
+        const total = await getKeyValueFromStore('stakers_current_unique_delegators');
+        const monthly = await getKeyValueFromStore('stakers_monthly_unique_delegators');
 
         return {
             total,
@@ -55,8 +55,8 @@ export async function LavaChainStakersHandler(request: FastifyRequest, reply: Fa
 
 export async function LavaChainRestakersHandler(request: FastifyRequest, reply: FastifyReply) {
     try {
-        const total = await getKeyValueFromStore('restakers_total_current_unique_users');
-        const monthly = await getKeyValueFromStore('restakers_total_monthly_unique_users');
+        const total = await getKeyValueFromStore('restakers_current_unique_delegators');
+        const monthly = await getKeyValueFromStore('restakers_monthly_unique_delegators');
 
         return {
             total,

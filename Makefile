@@ -57,12 +57,6 @@ indexer_with_debugger:
 indexer_debug_events:
 	JSINFO_INDEXER_DEBUG_DUMP_EVENTS=true NODE_TLS_REJECT_UNAUTHORIZED=0 bun run src/indexer.ts
 
-indexer_test_rpc_endpoint_cache:
-	bun test src/indexer/classes/RpcEndpointCache.test.ts
-
-indexer_test_rpc_endpoint_cache_table:
-	bun run src/indexer/classes/RpcEndpointCache.tabletest.ts
-
 query:
 	npx --yes nodemon --watch src --ext ts --exec "JSINFO_QUERY_IS_DEBUG_MODE=true bun run src/query.ts"
 

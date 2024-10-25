@@ -1,4 +1,3 @@
-
 import retry from 'async-retry';
 import util from 'util';
 
@@ -62,11 +61,11 @@ export const BackoffRetry = async <T>(title: string, fn: () => Promise<T>): Prom
                 try {
                     errorMessage += `Attempt number: ${attempt} has failed.\n`;
                     if (error instanceof Error) {
-                        errorMessage += `An error occurred during the execution of ${title}: ${error.message}\n`;
-                        errorMessage += `Stack trace for the error in ${title}: ${error.stack}\n`;
-                        errorMessage += `Full error object: ${util.inspect(error, { showHidden: true, depth: null })}\n`;
+                        errorMessage += `An error occurred during the execution of ${title}: ${TruncateError(error.message)}\n`;
+                        errorMessage += `Stack trace for the error in ${title}: ${TruncateError(error.stack)}\n`;
+                        errorMessage += `Full error object: ${TruncateError(util.inspect(error, { showHidden: true, depth: null }))}\n`;
                     } else {
-                        errorMessage += `An unknown error occurred during the execution of ${title}: ${error}\n`;
+                        errorMessage += `An unknown error occurred during the execution of ${title}: ${TruncateError(String(error))}\n`;
                     }
                 } catch (e) { }
                 logger.error(errorMessage);
@@ -195,4 +194,9 @@ export function SetIsIndexerProcess(value: boolean): void {
 
 export function GetIsIndexerProcess(): boolean {
     return _isIndexerProcess;
+}
+
+export function TruncateError(error: any): string {
+    const errorString = error instanceof Error ? error.stack || error.message : String(error);
+    return errorString.length > 1000 ? errorString.substring(0, 997) + '...' : errorString;
 }

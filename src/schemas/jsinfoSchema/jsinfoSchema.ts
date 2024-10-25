@@ -320,3 +320,18 @@ export const blocks = pgTable('blocks', {
 });
 export type Block = typeof blocks.$inferSelect
 export type InsertBlock = typeof blocks.$inferInsert
+
+
+export const keyValueStore = pgTable('key_value_store', {
+  key: text('key').notNull().primaryKey(),
+  value: text('value').notNull(),
+  createdAt: timestamp('created_at', { mode: "date" }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { mode: "date" }).defaultNow().notNull(),
+}, (table) => {
+  return {
+    keyIdx: index("key_value_store_key_idx").on(table.key),
+  };
+});
+
+export type KeyValueStore = typeof keyValueStore.$inferSelect;
+export type InsertKeyValueStore = typeof keyValueStore.$inferInsert;

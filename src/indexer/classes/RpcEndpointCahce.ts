@@ -28,9 +28,7 @@ interface Reward {
     }[];
 }
 
-interface DelegatorRewardsResponse {
-    rewards: Reward[];
-}
+
 
 interface ProviderMetadata {
     provider: string;
@@ -57,13 +55,12 @@ interface ProviderMetadataResponse {
 
 class RpcEndpointCacheClass {
     private providerAndDelegatorRefreshInterval = 20 * 60; // 20 minutes
-    private rewardRefreshInterval = 5 * 60; // 5 minutes
     private isRefreshing: boolean = false;
     private refreshPromise: Promise<void> | null = null;
 
     constructor() {
         this.refreshCache();
-        setInterval(() => this.refreshCache(), this.providerAndDelegatorRefreshInterval);
+        setInterval(() => this.refreshCache(), this.providerAndDelegatorRefreshInterval * 1000);
     }
 
     private async refreshCache(): Promise<void> {
@@ -105,7 +102,7 @@ class RpcEndpointCacheClass {
 
     private async fetchAndCacheDelegators(): Promise<void> {
         try {
-            const cachedProviders = await MemoryCache.getArray('providers');
+            const cachedProviders = await MemoryCache.getArray<string>('providers');
             if (!cachedProviders) {
                 logger.warn('No providers found in cache. Skipping delegator fetching.');
                 return;
@@ -115,7 +112,6 @@ class RpcEndpointCacheClass {
             if (cachedDelegators) {
                 return;
             }
-
             const uniqueDelegators = new Set<string>();
 
             for (const provider of cachedProviders) {
@@ -125,51 +121,90 @@ class RpcEndpointCacheClass {
                         uniqueDelegators.add(delegation.delegator);
                     }
                 }
+
+                // Cache the delegations for each provider for future queries.
+                await MemoryCache.set(`provider_delegations_${provider}`, delegators.delegations, this.providerAndDelegatorRefreshInterval);
             }
 
             await MemoryCache.setArray('uniqueDelegators', Array.from(uniqueDelegators), this.providerAndDelegatorRefreshInterval);
 
             logger.info('UniqueDelegatorsCache refreshed successfully.');
-
-
         } catch (error) {
             logger.error('Error fetching and caching unique delegators', { error });
         }
     }
 
-
     public async GetUniqueDelegators(): Promise<string[]> {
-        const delegators = await MemoryCache.getArray('uniqueDelegators');
+        const delegators = await MemoryCache.getArray<string>('uniqueDelegators');
         if (!delegators) {
             await this.refreshCache();
-            return await MemoryCache.getArray('uniqueDelegators') || [];
+            return await MemoryCache.getArray<string>('uniqueDelegators') || [];
         }
         return delegators;
     }
 
     public async GetProviders(): Promise<string[]> {
-        const providers = await MemoryCache.getArray('providers');
+        const providers = await MemoryCache.getArray<string>('providers');
         if (!providers) {
             await this.refreshCache();
-            return await MemoryCache.getArray('providers') || [];
+            return await MemoryCache.getArray<string>('providers') || [];
         }
         return providers;
     }
 
+    public async GetTotalDelegatedAmount(provider: string, from?: number): Promise<bigint> {
+        const delegations = await MemoryCache.get<Delegation[]>(`provider_delegations_${provider}`);
+        if (!delegations) {
+            logger.warn(`No delegations found for provider ${provider}.`);
+            return BigInt(0);
+        }
 
+        const totalAmount = delegations.reduce((sum, delegation) => {
+            // Filter by timestamp if 'from' is provided.
+            if (from && Number(delegation.timestamp) < from) {
+                return sum;
+            }
 
-    private async GetProviderDelegators(provider: string): Promise<ProviderDelegatorsResponse> {
-        return QueryLavaRPC<ProviderDelegatorsResponse>(`/lavanet/lava/dualstaking/provider_delegators/${provider}`);
+            // Accumulate the amount.
+            return sum + BigInt(delegation.amount.amount);
+        }, BigInt(0));
+
+        return totalAmount;
     }
 
+    private async GetProviderDelegators(provider: string): Promise<ProviderDelegatorsResponse> {
+        const cacheKey = `provider_delegators_${provider}`;
+        let delegators = await MemoryCache.get<ProviderDelegatorsResponse>(cacheKey);
+
+        if (!delegators) {
+            delegators = await QueryLavaRPC<ProviderDelegatorsResponse>(
+                `/lavanet/lava/dualstaking/provider_delegators/${provider}`
+            );
+            await MemoryCache.set(cacheKey, delegators, this.providerAndDelegatorRefreshInterval);
+        }
+
+        return delegators;
+    }
 
     private async GetProviderMetadata(): Promise<ProviderMetadataResponse> {
-        return QueryLavaRPC<ProviderMetadataResponse>(`/lavanet/lava/epochstorage/provider_metadata/`);
+        const cacheKey = `provider_metadata`;
+        let metadata = await MemoryCache.get<ProviderMetadataResponse>(cacheKey);
+
+        if (!metadata) {
+            metadata = await QueryLavaRPC<ProviderMetadataResponse>(`/lavanet/lava/epochstorage/provider_metadata/`);
+            await MemoryCache.set(cacheKey, metadata, this.providerAndDelegatorRefreshInterval);
+        }
+
+        return metadata;
     }
 }
 
 export const RpcEndpointCache = new RpcEndpointCacheClass();
 
+
+// interface DelegatorRewardsResponse {
+//     rewards: Reward[];
+// }
 
 // // Refresh the rewards for each unique delegator
 // for (const delegator of uniqueDelegators) {

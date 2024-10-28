@@ -12,6 +12,9 @@ import { HealthStatusRawHandler, HealthStatusRawHandlerOpts } from './handlers/h
 // -- Server supply ajax --
 import { SupplyRawHandlerOpts, TotalSupplyRawHandler, CirculatingSupplyRawHandler } from './handlers/ajax/supplyHandler';
 
+// -- Server supply ajax --
+import { APRRawHandlerOpts, APRRawHandler } from './handlers/ajax/aprHandler';
+
 // -- list all providers and monikers endpoint ---
 import { ListProvidersRawHandlerOpts, ListProvidersRawHandler } from './handlers/ajax/listProvidersHandler';
 
@@ -119,6 +122,8 @@ GetServerInstance().get('/healthstatus', HealthStatusRawHandlerOpts, HealthStatu
 RegisterRedisBackedHandler('/supply/total', SupplyRawHandlerOpts, TotalSupplyRawHandler, { cache_ttl: 60, is_text: true });
 RegisterRedisBackedHandler('/supply/circulating', SupplyRawHandlerOpts, CirculatingSupplyRawHandler, { cache_ttl: 60, is_text: true });
 
+// -- Server APR ajax --
+RegisterRedisBackedHandler('/apr', APRRawHandlerOpts, APRRawHandler, { cache_ttl: 60 });
 // -- list all providers and monikers endpoint ---
 RegisterRedisBackedHandler('/listProviders', ListProvidersRawHandlerOpts, ListProvidersRawHandler, { cache_ttl: 10 * 60 });
 

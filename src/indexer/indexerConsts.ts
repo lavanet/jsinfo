@@ -7,7 +7,8 @@ import { homedir } from 'os';
 import { join } from 'path';
 
 export const JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE: number = parseInt(GetEnvVar('JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE', "20"));
-export const JSINFO_INDEXER_LAVA_RPC: string = GetEnvVar("JSINFO_INDEXER_LAVA_RPC", "https://public-rpc.lavanet.xyz/"); // testnet
+export const JSINFO_INDEXER_LAVA_RPC: string = GetEnvVar("JSINFO_INDEXER_LAVA_RPC", "https://lav1.tendermintrpc.lava.build/"); // testnet
+export const JSINFO_INDEXER_LAVA_REST_RPC_URL: string = GetEnvVar("JSINFO_INDEXER_LAVA_REST_RPC_URL", "https://lav1.lava.build/"); // testnet
 export const JSINFO_INDEXER_N_WORKERS: number = parseInt(GetEnvVar('JSINFO_INDEXER_N_WORKERS', "2"));
 export const JSINFO_INDEXER_BATCH_SIZE: number = parseInt(GetEnvVar('JSINFO_INDEXER_BATCH_SIZE', "100"));
 export const JSINFO_INDEXER_POLL_MS: number = parseInt(GetEnvVar('JSINFO_INDEXER_POLL_MS', "5000"));

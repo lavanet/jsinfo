@@ -4,19 +4,39 @@ import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import { MemoryCache } from "../classes/MemoryCache";
 
-export async function QueryLavaRPC<T>(path: string): Promise<T> {
-    const baseUrl = GetEnvVar("JSINFO_INDEXER_LAVA_REST_RPC_URL");
-    const url = `${baseUrl}${path}`;
-
-    return BackoffRetry(`QueryLavaRPC: ${path}`, async () => {
+export async function fetchData<T>(
+    url: string, 
+    options: RequestInit = {}, 
+    skipBackoff: boolean = false,
+    retries: number = 8,
+    factor: number = 2,
+    minTimeout: number = 1000,
+    maxTimeout: number = 5000
+): Promise<T> {
+    const fetchDataFunc = async () => {
         try {
-            const response = await axios.get<T>(url);
-            return response.data;
+            const response = await fetch(url, options);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return await response.json() as T;
         } catch (error) {
             logger.error(`Failed to fetch data from ${url}`, { error });
             throw error;
         }
-    });
+    };
+
+    if (skipBackoff) {
+        return fetchDataFunc();
+    } else {
+        return BackoffRetry(`fetchData: ${url}`, fetchDataFunc, retries, factor, minTimeout, maxTimeout);
+    }
+}
+
+export async function QueryLavaRPC<T>(path: string, skipBackoff: boolean = false): Promise<T> {
+    const baseUrl = GetEnvVar("JSINFO_INDEXER_LAVA_REST_RPC_URL");
+    const url = `${baseUrl}${path}`;
+    return fetchData<T>(url, {}, skipBackoff);
 }
 
 export function ReplaceForCompare(data: any): string {
@@ -109,5 +129,28 @@ export async function EnsureProviderVerified(db: PostgresJsDatabase, provider: s
     } catch (error) {
         logger.error('Error ensuring provider exists', { provider, moniker, error });
         throw new Error('Error ensuring provider exists');
+    }
+}
+
+
+export function calculatePercentile(values: number[], rank: number): number {
+    const dataLen = values.length;
+    if (dataLen === 0 || rank < 0.0 || rank > 1.0) {
+        return 0;
+    }
+
+    // Sort values in ascending order
+    values.sort((a, b) => a - b);
+
+    // Calculate the position based on the rank
+    const position = Math.floor((dataLen - 1) * rank);
+
+    if (dataLen % 2 === 0) {
+        // Interpolate between two middle values
+        const lower = values[position];
+        const upper = values[position + 1];
+        return lower + (upper - lower) * rank;
+    } else {
+        return values[position];
     }
 }

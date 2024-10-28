@@ -392,3 +392,20 @@ export const supply = pgTable('supply', {
 
 export type Supply = typeof supply.$inferSelect;
 export type InsertSupply = typeof supply.$inferInsert;
+
+
+
+export const apr = pgTable('apr', {
+  key: text('key').notNull().primaryKey(),
+  value: real('value').notNull(),
+  timestamp: timestamp('timestamp', { mode: "date" }).notNull(),
+}, (table) => {
+  return {
+    aprIdx: index("aprIdx").on(
+      table.key,
+    )
+  };
+});
+
+export type Apr = typeof apr.$inferSelect;
+export type InsertApr = typeof apr.$inferInsert;

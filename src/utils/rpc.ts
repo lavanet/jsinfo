@@ -13,13 +13,7 @@ export interface RpcConnection {
 }
 
 export async function ConnectToRpc(rpc: string): Promise<RpcConnection> {
-    try {
-        await axios.get(rpc);
-        logger.info(`ConnectToRpc:: http tested successfully connected to ${rpc}`);
-    } catch (error) {
-        logger.error(`ConnectToRpc:: error connecting to ${rpc}: ${error}`);
-        throw error;
-    }
+
 
     logger.info(`ConnectToRpc:: connecting to ${rpc}`);
     const client = await StargateClient.connect(rpc);

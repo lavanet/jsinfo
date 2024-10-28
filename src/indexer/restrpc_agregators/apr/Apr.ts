@@ -4,6 +4,7 @@ import { MemoryCache } from "../../classes/MemoryCache";
 import { calculatePercentile, fetchData, QueryLavaRPC } from "../utils";
 import { logger } from '../../../utils/utils';
 import denomsData from './denoms.json';
+import { JSINFO_QUERY_NETWORK } from '../../../query/queryConsts';
 
 
 // Constants
@@ -14,6 +15,7 @@ const CACHE_DURATION = {
   COINGECKO_RATE: 300,    // 5 minutes
   DENOM_TRACE: 3600 * 24, // 1 day
 };
+const TEST_DENOMS = ["ibc/E3FCBEDDBAC500B1BAB90395C7D1E4F33D9B9ECFE82A16ED7D7D141A0152323F"]
 const DENOM_CONVERSIONS = {
     "ulava":    { baseDenom: "lava",  factor: 1_000_000 },                    // Lava (LAVA)
     "uatom":    { baseDenom: "atom",  factor: 1_000_000 },                    // Cosmos (ATOM)
@@ -161,18 +163,16 @@ async function GetProvidersPerSpec(chainId: string): Promise<ProviderPerSpecResp
     return QueryLavaRPC<ProviderPerSpecResponse>(`/lavanet/lava/pairing/providers/${chainId}`);
 }
 
-async function getAllProviders(): Promise<Array<{ address: string, chain: string }>> {
-    const chains = await GetAllChains()
-    let allProviders: Array<{ address: string, chain: string }> = [];
-    for (const chain of chains.chainInfoList) {
-        const providers = await GetProvidersPerSpec(chain.chainID);
-        const providersForChain = providers.stakeEntry.map(provider => ({
-            address: provider.address,
-            chain: chain.chainID
-        }));
-        allProviders = allProviders.concat(providersForChain);
+async function getAllProviders(): Promise<string[]> {
+    const chainsResponse = await GetAllChains();
+    const uniqueChains = [...new Set(chainsResponse.chainInfoList.map(chain => chain.chainID))];
+    let allProviders: string[] = [];
+    for (const chainID of uniqueChains) {
+        const providers = await GetProvidersPerSpec(chainID);
+        const providerAddresses = providers.stakeEntry.map(provider => provider.address);
+        allProviders = allProviders.concat(providerAddresses);
     }
-    return allProviders;
+    return [...new Set(allProviders)];
 }
 
 async function GetAllValidators(): Promise<string[]> {
@@ -194,16 +194,8 @@ async function GetEstimatedValidatorRewards(validator: string, amount: number, d
     return QueryLavaRPC<EstimatedRewardsResponse>(`/lavanet/lava/subscription/estimated_validator_rewards/${validator}/${amount}${denom}`, true);
 }
 
-async function GetEstimatedProviderRewards(provider: string, chainId: string, amount: number, denom: string): Promise<EstimatedRewardsResponse> {
-    try {
-        const response = await QueryLavaRPC<EstimatedRewardsResponse>(`/lavanet/lava/subscription/estimated_rewards/${provider}/${chainId}/${amount}${denom}`, true);
-        return response;
-    } catch (error: any) {
-        if ( error.response.data.message.includes("spec emission part not found for chain ID")) {
-            return { info: [], total: [] };
-        }
-        throw error;
-    }
+async function GetEstimatedProviderRewards(provider: string, amount: number, denom: string): Promise<EstimatedRewardsResponse> {
+  return QueryLavaRPC<EstimatedRewardsResponse>(`/lavanet/lava/subscription/estimated_provider_rewards/${provider}/${amount}${denom}`, true);
 }
 
 async function GetDenomTrace(denom: string): Promise<DenomTraceResponse> {
@@ -286,11 +278,18 @@ async function calculateAPRForEntities(
       const estimatedRewards = await getEstimatedRewards(entity);
 
       for (const total of estimatedRewards.total) {
-        const [amount, denom] = await GetBasePrice(total.amount, total.denom);
-        const usdcAmount = await GetUSDCValue(amount, denom);
 
-        const currentReward = totalRewards.get(entity) || 0;
-        totalRewards.set(entity, currentReward + usdcAmount);
+          // in testnet we might find some rewards withtest-denoms that don't really exist,
+          // so no need to fail the whole process here
+          if (TEST_DENOMS.includes(total.denom)) {
+            continue;
+          }
+
+          const [amount, denom] = await GetBasePrice(total.amount, total.denom);
+          const usdcAmount = await GetUSDCValue(amount, denom);
+
+          const currentReward = totalRewards.get(entity) || 0;
+          totalRewards.set(entity, currentReward + usdcAmount);
       }
     }
 
@@ -308,17 +307,10 @@ async function calculateAPRForEntities(
 }
 
 export async function ProcessRestakingAPR(): Promise<number> {
-  const getProviders = async () => {
-    const providers = await getAllProviders();
-    return providers.map(p => `${p.address}:${p.chain}`);
-  };
-
-  const getEstimatedProviderRewards = async (entityId: string) => {
-    const [address, chain] = entityId.split(':');
-    return GetEstimatedProviderRewards(address, chain, BENCHMARK_AMOUNT, BENCHMARK_DENOM);
-  };
-
-  return calculateAPRForEntities(getProviders, getEstimatedProviderRewards);
+  return calculateAPRForEntities(
+    getAllProviders,
+    (provider) => GetEstimatedProviderRewards(provider, BENCHMARK_AMOUNT, BENCHMARK_DENOM)
+  );
 }
 
 export async function ProcessStakingAPR(): Promise<number> {

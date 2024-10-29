@@ -2,8 +2,10 @@ import { ProcessSubscriptionList } from "./SubscriptionList";
 import { ProcessProviderMonikerSpecs } from "./ProviderSpecMoniker";
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { logger } from "../../utils/utils";
-import { RpcEndpointCache } from "../classes/RpcEndpointCache";
-import { ProcessChainWalletApi } from "./ChainWalletApi";
+
+// TODO: uncomment chain wallet api to when it is available
+// import { RpcEndpointCache } from "../classes/RpcEndpointCache";
+// import { ProcessChainWalletApi } from "./ChainWalletApi";
 // import { ProcessDualStackingDelegatorRewards } from "./DualStakingDelegatorRewards";
 
 let isRunning = false;
@@ -48,17 +50,17 @@ export async function RestRpcAgreagorsCaller(db: PostgresJsDatabase): Promise<vo
         return;
     }
 
-    logger.info(`ProcessChainWalletApi started at: ${new Date().toISOString()}`);
-    try {
-        const start = Date.now();
-        await ProcessChainWalletApi(db);
-        const executionTime = Date.now() - start;
-        logger.info(`Successfully executed ProcessChainWalletApi. Execution time: ${executionTime} ms`);
-    } catch (e) {
-        logger.error(`Failed to execute ProcessChainWalletApi. Error: ${(e as Error).message}`, { stack: (e as Error).stack });
-        isRunning = false;
-        return;
-    }
+    // logger.info(`ProcessChainWalletApi started at: ${new Date().toISOString()}`);
+    // try {
+    //     const start = Date.now();
+    //     await ProcessChainWalletApi(db);
+    //     const executionTime = Date.now() - start;
+    //     logger.info(`Successfully executed ProcessChainWalletApi. Execution time: ${executionTime} ms`);
+    // } catch (e) {
+    //     logger.error(`Failed to execute ProcessChainWalletApi. Error: ${(e as Error).message}`, { stack: (e as Error).stack });
+    //     isRunning = false;
+    //     return;
+    // }
 
     // logger.info(`ProcessDualStackingDelegatorRewards started at: ${new Date().toISOString()}`);
     // try {

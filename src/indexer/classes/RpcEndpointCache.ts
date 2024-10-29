@@ -265,4 +265,4 @@ class RpcEndpointCacheClass {
     }
 }
 
-export const RpcEndpointCache = new RpcEndpointCacheClass();
+export const RpcEndpointCache = null; // new RpcEndpointCacheClass();

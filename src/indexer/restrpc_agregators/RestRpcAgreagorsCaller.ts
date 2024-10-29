@@ -1,9 +1,11 @@
+// src/indexer/restrpc_agregators/RestRpcAgreagorsCaller.ts
+
 import { ProcessSubscriptionList } from "./SubscriptionList";
 import { ProcessProviderMonikerSpecs } from "./ProviderSpecMoniker";
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { logger } from "../../utils/utils";
-import { RpcEndpointCache } from "../classes/RpcEndpointCache";
 import { ProcessChainWalletApi } from "./ChainWalletApi";
+import { APRMonitor } from "./AprMonitor";
 // import { ProcessDualStackingDelegatorRewards } from "./DualStakingDelegatorRewards";
 
 let isRunning = false;
@@ -14,15 +16,10 @@ export async function RestRpcAgreagorsCaller(db: PostgresJsDatabase): Promise<vo
         return;
     }
 
-    // const providerMetadata = await RpcEndpointCache.GetProviderMetadata();
-    // const providerDelegators = await RpcEndpointCache.GetProviderDelegators("lava@1f8kg6htavv67x4e54j6zvlg6pwzcsg52k3wu80");
-    // const totalDelegatedAmount = await RpcEndpointCache.GetTotalDelegatedAmount();
-
-    // console.log("providerMetadata", providerMetadata);
-    // console.log("providerDelegators", providerDelegators);
-    // console.log("totalDelegatedAmount", totalDelegatedAmount);
-
     isRunning = true;
+
+    // this guy runs in the background
+    APRMonitor.start();
 
     logger.info(`ProcessSubscriptionList started at: ${new Date().toISOString()}`);
     try {

@@ -1,6 +1,6 @@
 import { IsMeaningfulText, logger } from "../../utils/utils";
-import { ReplaceForCompare } from "./utils";
-import { QueryLavaRPC } from "../rpcUtils";
+import { ReplaceForCompare } from "./indexerRestRpcUtils";
+import { QueryLavaRPC } from "../utils/restRpc";
 import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import { eq, desc } from "drizzle-orm";
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";

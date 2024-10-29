@@ -45,3 +45,24 @@ export function RemoveKey(obj: any, keyToRemove: string): any {
     return obj;
 }
 
+export function CalculatePercentile(values: number[], rank: number): number {
+    const dataLen = values.length;
+    if (dataLen === 0 || rank < 0.0 || rank > 1.0) {
+        return 0;
+    }
+
+    // Sort values in ascending order
+    values.sort((a, b) => a - b);
+
+    // Calculate the position based on the rank
+    const position = Math.floor((dataLen - 1) * rank);
+
+    if (dataLen % 2 === 0) {
+        // Interpolate between two middle values
+        const lower = values[position];
+        const upper = values[position + 1];
+        return lower + (upper - lower) * rank;
+    } else {
+        return values[position];
+    }
+}

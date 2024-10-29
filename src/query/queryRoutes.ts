@@ -12,6 +12,9 @@ import { HealthStatusRawHandler, HealthStatusRawHandlerOpts } from './handlers/h
 // -- Server supply ajax --
 import { SupplyRawHandlerOpts, TotalSupplyRawHandler, CirculatingSupplyRawHandler } from './handlers/ajax/supplyHandler';
 
+// -- Server supply ajax --
+import { APRRawHandlerOpts, APRRawHandler } from './handlers/ajax/aprHandler';
+
 // -- list all providers and monikers endpoint ---
 import { ListProvidersRawHandlerOpts, ListProvidersRawHandler } from './handlers/ajax/listProvidersHandler';
 
@@ -113,6 +116,9 @@ RegisterRedisBackedHandler('/supply/circulating', SupplyRawHandlerOpts, Circulat
 // -- Server chain wallet api ajax --
 RegisterRedisBackedHandler('/lava_chain_stakers', ChainWalletApiHandlerOpts, LavaChainStakersHandler, { cache_ttl: 10 });
 RegisterRedisBackedHandler('/lava_chain_restakers', ChainWalletApiHandlerOpts, LavaChainRestakersHandler, { cache_ttl: 10 });
+
+// -- Server APR ajax --
+RegisterRedisBackedHandler('/apr', APRRawHandlerOpts, APRRawHandler, { cache_ttl: 60 });
 
 // -- list all providers and monikers endpoint ---
 RegisterRedisBackedHandler('/listProviders', ListProvidersRawHandlerOpts, ListProvidersRawHandler, { cache_ttl: 10 * 60 });

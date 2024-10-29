@@ -1,8 +1,9 @@
+// src/utils/rpc.ts
+
 import { StargateClient } from "@cosmjs/stargate"
 import { Tendermint37Client } from "@cosmjs/tendermint-rpc";
 import * as lavajs from '@lavanet/lavajs';
-import axios from 'axios';
-import { logger } from "./utils";
+import { logger } from "../../utils/utils";
 
 export interface RpcConnection {
     client: StargateClient;
@@ -13,13 +14,6 @@ export interface RpcConnection {
 }
 
 export async function ConnectToRpc(rpc: string): Promise<RpcConnection> {
-    try {
-        await axios.get(rpc);
-        logger.info(`ConnectToRpc:: http tested successfully connected to ${rpc}`.slice(0, 1000));
-    } catch (error) {
-        logger.error(`ConnectToRpc:: error connecting to ${rpc}: ${error}`.slice(0, 1000));
-        throw error;
-    }
 
     logger.info(`ConnectToRpc:: connecting to ${rpc}`);
     const client = await StargateClient.connect(rpc);

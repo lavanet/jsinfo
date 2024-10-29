@@ -335,3 +335,18 @@ export const keyValueStore = pgTable('key_value_store', {
 
 export type KeyValueStore = typeof keyValueStore.$inferSelect;
 export type InsertKeyValueStore = typeof keyValueStore.$inferInsert;
+
+export const apr = pgTable('apr', {
+  key: text('key').notNull().primaryKey(),
+  value: real('value').notNull(),
+  timestamp: timestamp('timestamp', { mode: "date" }).defaultNow().notNull(),
+}, (table) => {
+  return {
+    aprIdx: index("aprIdx").on(
+      table.key,
+    )
+  };
+});
+
+export type Apr = typeof apr.$inferSelect;
+export type InsertApr = typeof apr.$inferInsert;

@@ -1,7 +1,7 @@
 // src/indexer/classes/RpcEndpointCahce.ts
 
 import { IsMeaningfulText, logger, TruncateError } from "../../utils/utils";
-import { QueryLavaRPC } from "../rpcUtils";
+import { QueryLavaRPC } from "../utils/restRpc";
 import { MemoryCache } from "./MemoryCache";
 
 interface Delegation {
@@ -42,14 +42,52 @@ interface ProviderMetadataResponse {
     MetaData: ProviderMetadata[];
 }
 
-class RpcEndpointCacheClass {
-    private providerAndDelegatorRefreshInterval = 20 * 60; // 20 minutes
+interface AllValidatorsResponse {
+    validators: {
+        operator_address: string;
+        consensus_pubkey: {
+            "@type": string;
+            [key: string]: string;
+        };
+        jailed: boolean;
+        status: string;
+        tokens: string;
+        delegator_shares: string;
+        description: {
+            moniker: string;
+            identity: string;
+            website: string;
+            security_contact: string;
+            details: string;
+        };
+        unbonding_height: string;
+        unbonding_time: string;
+        commission: {
+            commission_rates: {
+                rate: string;
+                max_rate: string;
+                max_change_rate: string;
+            };
+            update_time: string;
+        };
+        min_self_delegation: string;
+        unbonding_on_hold_ref_count: string;
+        unbonding_ids: string[];
+    }[];
+    pagination: {
+        next_key: string;
+        total: string;
+    };
+}
+
+class RpcPeriodicEndpointCacheClass {
+    private cacheRefreshInterval = 20 * 60; // 20 minutes
     private isRefreshing: boolean = false;
     private refreshPromise: Promise<void> | null = null;
 
     constructor() {
         this.refreshCache();
-        setInterval(() => this.refreshCache(), this.providerAndDelegatorRefreshInterval * 1000);
+        setInterval(() => this.refreshCache(), this.cacheRefreshInterval * 1000);
     }
 
     private async refreshCache(): Promise<void> {
@@ -73,6 +111,7 @@ class RpcEndpointCacheClass {
             await this.fetchAndCacheProviders();
             await this.fetchAndCacheDelegators();
             await this.fetchAndCacheEmptyProviderDelegations();
+            await this.fetchAndCacheValidators();
         } catch (error) {
             logger.error('Error refreshing cache', { error: TruncateError(error) });
         }
@@ -82,7 +121,7 @@ class RpcEndpointCacheClass {
         try {
             const response = await this.GetProviderMetadata();
             const providers = response.MetaData.map((meta) => meta.provider);
-            await MemoryCache.setArray('providers', providers, this.providerAndDelegatorRefreshInterval);
+            await MemoryCache.setArray('providers', providers, this.cacheRefreshInterval);
 
             logger.info('Providers cache refreshed successfully.');
         } catch (error) {
@@ -113,7 +152,7 @@ class RpcEndpointCacheClass {
                 }
             }
 
-            await MemoryCache.setArray('uniqueDelegators', Array.from(uniqueDelegators), this.providerAndDelegatorRefreshInterval);
+            await MemoryCache.setArray('uniqueDelegators', Array.from(uniqueDelegators), this.cacheRefreshInterval);
 
             logger.info('UniqueDelegatorsCache refreshed successfully.');
         } catch (error) {
@@ -124,7 +163,7 @@ class RpcEndpointCacheClass {
     private async fetchAndCacheEmptyProviderDelegations(): Promise<void> {
         try {
             const emptyProviderDelegations = await this.GetProviderDelegators('empty_provider');
-            await MemoryCache.set('empty_provider_delegations', emptyProviderDelegations.delegations, this.providerAndDelegatorRefreshInterval);
+            await MemoryCache.set('empty_provider_delegations', emptyProviderDelegations.delegations, this.cacheRefreshInterval);
             logger.info('Empty provider delegations cache refreshed successfully.');
         } catch (error) {
             logger.error('Error fetching empty provider delegations', { error: TruncateError(error) });
@@ -194,7 +233,7 @@ class RpcEndpointCacheClass {
             delegators = await QueryLavaRPC<ProviderDelegatorsResponse>(
                 `/lavanet/lava/dualstaking/provider_delegators/${provider}`
             );
-            await MemoryCache.set(cacheKey, delegators, this.providerAndDelegatorRefreshInterval);
+            await MemoryCache.set(cacheKey, delegators, this.cacheRefreshInterval);
         }
 
         return delegators;
@@ -206,7 +245,7 @@ class RpcEndpointCacheClass {
 
         if (!metadata) {
             metadata = await QueryLavaRPC<ProviderMetadataResponse>(`/lavanet/lava/epochstorage/provider_metadata/`);
-            await MemoryCache.set(cacheKey, metadata, this.providerAndDelegatorRefreshInterval);
+            await MemoryCache.set(cacheKey, metadata, this.cacheRefreshInterval);
         }
 
         return metadata;
@@ -219,7 +258,7 @@ class RpcEndpointCacheClass {
         if (!delegations) {
             const delegatorsResponse = await this.GetProviderDelegators(provider);
             delegations = delegatorsResponse.delegations;
-            await MemoryCache.set(cacheKey, delegations, this.providerAndDelegatorRefreshInterval);
+            await MemoryCache.set(cacheKey, delegations, this.cacheRefreshInterval);
         }
 
         return delegations;
@@ -263,6 +302,35 @@ class RpcEndpointCacheClass {
 
         return uniqueDelegators.size;
     }
+
+    public async GetAllValidators(): Promise<string[]> {
+        const validators = await MemoryCache.getArray<string>('all_validators');
+        if (!validators) {
+            await this.refreshCache();
+            return await MemoryCache.getArray<string>('all_validators') || [];
+        }
+        return validators;
+    }
+
+    private async fetchAndCacheValidators(): Promise<void> {
+        try {
+            let validatorAddresses: string[] = [];
+            let nextKey: string | null = null;
+
+            do {
+                const queryParams = nextKey ? `?pagination.key=${encodeURIComponent(nextKey)}` : '';
+                const response = await QueryLavaRPC<AllValidatorsResponse>(`/cosmos/staking/v1beta1/validators${queryParams}`);
+
+                validatorAddresses = validatorAddresses.concat(response.validators.map(validator => validator.operator_address));
+                nextKey = response.pagination.next_key;
+            } while (nextKey);
+
+            await MemoryCache.setArray('all_validators', validatorAddresses, this.cacheRefreshInterval);
+            logger.info(`Fetched and cached ${validatorAddresses.length} validators successfully.`);
+        } catch (error) {
+            logger.error('Error fetching validators', { error: TruncateError(error) });
+        }
+    }
 }
 
-export const RpcEndpointCache = new RpcEndpointCacheClass();
+export const RpcPeriodicEndpointCache = new RpcPeriodicEndpointCacheClass();

@@ -2,7 +2,7 @@
 
 import { GetRpcBlock, GetRpcTxs, GetRpcBlockResultEvents } from "./lavaBlock";
 import { logger } from "../utils/utils";
-import { RpcConnection } from "../utils/rpc";
+import { RpcConnection } from "./utils/lavajsRpc";
 import { ProcessOneEvent } from "./eventProcessor";
 import * as JsinfoSchema from '../schemas/jsinfoSchema/jsinfoSchema';
 import { LavaBlock } from "./types";

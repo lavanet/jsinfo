@@ -15,7 +15,7 @@ import { GetOneLavaBlock } from './indexer/lavaBlock'
 import { EventDebug } from './indexer/eventDebug'
 import { LavaBlock } from './indexer/types'
 import { SyncBlockchainEntities } from './indexer/blockchainEntities/blockchainEntitiesSync'
-import { ConnectToRpc, RpcConnection } from "./utils/rpc";
+import { ConnectToRpc, RpcConnection } from "./indexer/utils/lavajsRpc";
 import { MigrateDb, GetJsinfoDb } from "./utils/dbUtils";
 import { AggProviderAndConsumerRelayPayments, AggProviderAndConsumerRelayPaymentsSync } from "./indexer/agregators/aggProviderAndConsumerRelayPayments";
 import { SaveTokenSupplyToDB } from './indexer/supply/syncSupply';
@@ -180,7 +180,6 @@ const indexer = async (): Promise<void> => {
     logger.info('Done RestRpcAgreagorsCaller');
     await SaveTokenSupplyToDB(db, rpcConnection.lavajsClient);
     logger.info('Done SaveTokenSupplyToDB');
-
     await fillUpBackoffRetry(db, rpcConnection);
     logger.info('Done fillUpBackoffRetry');
 }

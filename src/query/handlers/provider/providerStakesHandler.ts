@@ -9,7 +9,7 @@ import { Pagination, ParsePaginationFromString } from '../../utils/queryPaginati
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '../../queryConsts';
 import { CSVEscape } from '../../utils/queryUtils';
 import { GetAndValidateProviderAddressFromRequest } from '../../utils/queryRequestArgParser';
-import { ReplaceArchive } from '../../../indexer/indexerUtils';
+import { ReplaceArchive } from '../../../indexer/utils/indexerUtils';
 import { RequestHandlerBase } from '../../classes/RequestHandlerBase';
 import { BigIntIsZero } from '../../../utils/utils';
 

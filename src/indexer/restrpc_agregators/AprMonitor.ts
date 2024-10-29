@@ -174,7 +174,8 @@ class APRMonitorClass {
   private async calculateAPRForEntities(
     getEntities: () => Promise<string[]>,
     getEstimatedRewards: (entity: string) => Promise<EstimatedRewardsResponse>,
-    caller: string
+    caller: string,
+    numThreads: number = 3
   ): Promise<number> {
     const startTime = Date.now();
     let processedCount = 0;
@@ -187,6 +188,7 @@ class APRMonitorClass {
 
       logger.info(`APRMonitor::${caller} - Starting calculation`, {
         totalEntities,
+        numThreads,
         timestamp: new Date().toISOString()
       });
 
@@ -201,7 +203,8 @@ class APRMonitorClass {
             processed: processedCount,
             total: totalEntities,
             percentComplete: currentPercent,
-            timeElapsedSeconds: (currentTime - lastLogTime) / 1000
+            timeElapsedSeconds: (currentTime - lastLogTime) / 1000,
+            activeThreads: numThreads
           });
           lastLogTime = currentTime;
           lastLogPercent = currentPercent;
@@ -209,7 +212,7 @@ class APRMonitorClass {
       };
 
       // Split and process in parallel
-      const chunks = this.splitIntoChunks(entities);
+      const chunks = this.splitIntoChunks(entities, numThreads);
       const chunkResults = await Promise.all(
         chunks.map((chunk, index) =>
           this.processEntityChunk(chunk, index, getEstimatedRewards, totalEntities, caller, updateProgress)
@@ -247,70 +250,106 @@ class APRMonitorClass {
     }
   }
 
-  public async ProcessRestakingAPR(): Promise<number> {
-    return this.calculateAPRForEntities(
-      () => RpcPeriodicEndpointCache.GetProviders(),
-      (provider) => RpcOnDemandEndpointCache.GetEstimatedProviderRewards(provider, BENCHMARK_AMOUNT, BENCHMARK_DENOM),
-      'Restaking APR'
-    );
-  }
-
-  public async ProcessStakingAPR(): Promise<number> {
-    return this.calculateAPRForEntities(
-      () => RpcPeriodicEndpointCache.GetAllValidators(),
-      (validator) => RpcOnDemandEndpointCache.GetEstimatedValidatorRewards(validator, BENCHMARK_AMOUNT, BENCHMARK_DENOM),
-      'Staking APR'
-    );
-  }
-
-  public async ProcessAPR(): Promise<void> {
-    logger.info('Starting APR processing', { timestamp: new Date().toISOString() });
-    const startTime = Date.now();
-
+  private async updateAprInDb(key: string, value: number): Promise<void> {
     try {
       const db = await GetJsinfoDb();
       const now = new Date();
 
-      const [restakingAPR, stakingAPR] = await Promise.all([
-        this.ProcessRestakingAPR(),
-        this.ProcessStakingAPR()
-      ]);
-
-      logger.debug(`ProcessRestakingAPR: ${restakingAPR}`);
-      logger.debug(`ProcessStakingAPR: ${stakingAPR}`);
-
-      const aprRows: JsinfoSchema.InsertApr[] = [
-        { key: 'restaking_apr_percentile', value: restakingAPR, timestamp: now },
-        { key: 'staking_apr_percentile', value: stakingAPR, timestamp: now }
-      ];
-
       await db.transaction(async (tx) => {
-        for (const row of aprRows) {
-          await tx.insert(JsinfoSchema.apr)
-            .values(row as any)
-            .onConflictDoUpdate({
-              target: [JsinfoSchema.apr.key],
-              set: {
-                value: row.value,
-                timestamp: row.timestamp,
-              } as any
-            });
-        }
+        await tx.insert(JsinfoSchema.apr)
+          .values({
+            key,
+            value,
+            timestamp: now
+          } as any)
+          .onConflictDoUpdate({
+            target: [JsinfoSchema.apr.key],
+            set: {
+              value,
+              timestamp: now,
+            } as any
+          });
       });
 
-      const processingTime = (Date.now() - startTime) / 1000;
-      logger.info('Completed APR processing', {
-        processingTimeSeconds: processingTime,
-        timestamp: new Date().toISOString()
+      logger.info(`APRMonitor::DB Update - Successfully updated ${key}`, {
+        value,
+        timestamp: now.toISOString()
       });
     } catch (error) {
-      logger.error('Error in APR processing', {
+      logger.error(`APRMonitor::DB Update - Failed to update ${key}`, {
         error,
-        processingTimeSeconds: (Date.now() - startTime) / 1000,
+        value,
         timestamp: new Date().toISOString()
       });
       throw error;
     }
+  }
+
+  public async ProcessRestakingAPR(): Promise<void> {
+    const startTime = Date.now();
+    try {
+      const apr = await this.calculateAPRForEntities(
+        () => RpcPeriodicEndpointCache.GetProviders(),
+        (provider) => RpcOnDemandEndpointCache.GetEstimatedProviderRewards(provider, BENCHMARK_AMOUNT, BENCHMARK_DENOM),
+        'Restaking APR'
+      );
+
+      await this.updateAprInDb('restaking_apr_percentile', apr);
+
+      const processingTime = (Date.now() - startTime) / 1000;
+      logger.info('APRMonitor::Restaking - Completed full process', {
+        processingTimeSeconds: processingTime,
+        apr
+      });
+    } catch (error) {
+      logger.error('APRMonitor::Restaking - Failed processing', {
+        error,
+        processingTimeSeconds: (Date.now() - startTime) / 1000
+      });
+      throw error;
+    }
+  }
+
+  public async ProcessStakingAPR(): Promise<void> {
+    const startTime = Date.now();
+    try {
+      const apr = await this.calculateAPRForEntities(
+        () => RpcPeriodicEndpointCache.GetAllValidators(),
+        (validator) => RpcOnDemandEndpointCache.GetEstimatedValidatorRewards(validator, BENCHMARK_AMOUNT, BENCHMARK_DENOM),
+        'Staking APR',
+        6
+      );
+
+      await this.updateAprInDb('staking_apr_percentile', apr);
+
+      const processingTime = (Date.now() - startTime) / 1000;
+      logger.info('APRMonitor::Staking - Completed full process', {
+        processingTimeSeconds: processingTime,
+        apr
+      });
+    } catch (error) {
+      logger.error('APRMonitor::Staking - Failed processing', {
+        error,
+        processingTimeSeconds: (Date.now() - startTime) / 1000
+      });
+      throw error;
+    }
+  }
+
+  public async ProcessAPR(): Promise<void> {
+    logger.info('APRMonitor::Processing - Starting both APR calculations');
+
+    // Run both processes independently
+    Promise.all([
+      this.ProcessRestakingAPR().catch(error => {
+        logger.error('APRMonitor::Processing - Restaking APR failed', { error });
+      }),
+      this.ProcessStakingAPR().catch(error => {
+        logger.error('APRMonitor::Processing - Staking APR failed', { error });
+      })
+    ]).catch(error => {
+      logger.error('APRMonitor::Processing - Unexpected error in Promise.all', { error });
+    });
   }
 }
 

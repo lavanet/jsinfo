@@ -6,7 +6,7 @@ import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '..
 import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
 import * as JsinfoProviderAgrSchema from '../../../schemas/jsinfoSchema/providerRelayPaymentsAgregation';
 import { sql, desc, gt, and, eq } from "drizzle-orm";
-import { ReplaceArchive } from '../../../indexer/indexerUtils';
+import { ReplaceArchive } from '../../../indexer/utils/indexerUtils';
 import { GetAndValidateSpecIdFromRequest } from '../../utils/queryRequestArgParser';
 import { MonikerCache } from '../../classes/MonikerCache';
 import { BigIntIsZero } from '../../../utils/utils';

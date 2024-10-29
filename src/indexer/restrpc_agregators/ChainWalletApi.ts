@@ -1,6 +1,6 @@
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { keyValueStore } from '../../schemas/jsinfoSchema/jsinfoSchema';
-import { RpcEndpointCache } from '../classes/RpcEndpointCache';
+import { RpcPeriodicEndpointCache } from '../classes/RpcPeriodicEndpointCache';
 import { logger } from '../../utils/utils';
 
 async function saveToKeyValueStore(db: PostgresJsDatabase, key: string, value: string): Promise<void> {
@@ -15,47 +15,47 @@ async function saveToKeyValueStore(db: PostgresJsDatabase, key: string, value: s
 }
 
 async function saveStakersTotalCurrentUlavaAmount(db: PostgresJsDatabase): Promise<void> {
-    const total = await RpcEndpointCache.GetTotalDelegatedAmount(undefined, true);
+    const total = await RpcPeriodicEndpointCache.GetTotalDelegatedAmount(undefined, true);
     await saveToKeyValueStore(db, 'stakers_total_current_ulava_amount', total.toString());
 }
 
 async function saveStakersTotalMonthlyUlavaAmount(db: PostgresJsDatabase): Promise<void> {
     const thirtyDaysAgo = Math.floor(Date.now() / 1000) - 30 * 24 * 60 * 60;
-    const total = await RpcEndpointCache.GetTotalDelegatedAmount(thirtyDaysAgo, true);
+    const total = await RpcPeriodicEndpointCache.GetTotalDelegatedAmount(thirtyDaysAgo, true);
     await saveToKeyValueStore(db, 'stakers_total_monthly_ulava_amount', total.toString());
 }
 
 async function saveRestakersTotalCurrentUlavaAmount(db: PostgresJsDatabase): Promise<void> {
-    const total = await RpcEndpointCache.GetTotalDelegatedAmount();
+    const total = await RpcPeriodicEndpointCache.GetTotalDelegatedAmount();
     await saveToKeyValueStore(db, 'restakers_total_current_ulava_amount', total.toString());
 }
 
 async function saveRestakersTotalMonthlyUlavaAmount(db: PostgresJsDatabase): Promise<void> {
     const thirtyDaysAgo = Math.floor(Date.now() / 1000) - 30 * 24 * 60 * 60;
-    const total = await RpcEndpointCache.GetTotalDelegatedAmount(thirtyDaysAgo);
+    const total = await RpcPeriodicEndpointCache.GetTotalDelegatedAmount(thirtyDaysAgo);
     await saveToKeyValueStore(db, 'restakers_total_monthly_ulava_amount', total.toString());
 }
 
 // New functions using GetUniqueDelegatorCount
 async function saveStakersCurrentUniqueDelegators(db: PostgresJsDatabase): Promise<void> {
-    const count = await RpcEndpointCache.GetUniqueDelegatorCount(undefined, true);
+    const count = await RpcPeriodicEndpointCache.GetUniqueDelegatorCount(undefined, true);
     await saveToKeyValueStore(db, 'stakers_current_unique_delegators', count.toString());
 }
 
 async function saveStakersMonthlyUniqueDelegators(db: PostgresJsDatabase): Promise<void> {
     const thirtyDaysAgo = Math.floor(Date.now() / 1000) - 30 * 24 * 60 * 60;
-    const count = await RpcEndpointCache.GetUniqueDelegatorCount(thirtyDaysAgo, true);
+    const count = await RpcPeriodicEndpointCache.GetUniqueDelegatorCount(thirtyDaysAgo, true);
     await saveToKeyValueStore(db, 'stakers_monthly_unique_delegators', count.toString());
 }
 
 async function saveRestakersCurrentUniqueDelegators(db: PostgresJsDatabase): Promise<void> {
-    const count = await RpcEndpointCache.GetUniqueDelegatorCount();
+    const count = await RpcPeriodicEndpointCache.GetUniqueDelegatorCount();
     await saveToKeyValueStore(db, 'restakers_current_unique_delegators', count.toString());
 }
 
 async function saveRestakersMonthlyUniqueDelegators(db: PostgresJsDatabase): Promise<void> {
     const thirtyDaysAgo = Math.floor(Date.now() / 1000) - 30 * 24 * 60 * 60;
-    const count = await RpcEndpointCache.GetUniqueDelegatorCount(thirtyDaysAgo);
+    const count = await RpcPeriodicEndpointCache.GetUniqueDelegatorCount(thirtyDaysAgo);
     await saveToKeyValueStore(db, 'restakers_monthly_unique_delegators', count.toString());
 }
 

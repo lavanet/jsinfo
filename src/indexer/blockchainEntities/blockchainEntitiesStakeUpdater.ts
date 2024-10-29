@@ -2,7 +2,7 @@
 
 import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import { StakeEntry } from '@lavanet/lavajs/dist/codegen/lavanet/lava/epochstorage/stake_entry';
-import { AppendUniqueItems, ToSignedBigIntOrMinusOne, ToSignedIntOrMinusOne } from '../indexerUtils';
+import { AppendUniqueItems, ToSignedBigIntOrMinusOne, ToSignedIntOrMinusOne } from '../utils/indexerUtils';
 import { LavaClient } from '../types';
 import { logger } from '../../utils/utils';
 

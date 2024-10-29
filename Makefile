@@ -27,6 +27,9 @@ bun_create_migrations:
 bun_build:
 	bun run build --verbose
 
+bun_clean_cache:
+	bun pm cache rm
+
 docker_build:
 	docker build --progress=plain -t bun-docker .
 

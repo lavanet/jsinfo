@@ -1,12 +1,12 @@
 // src/indexer/restrpc_agregators/RestRpcAgreagorsCaller.ts
 
 import { ProcessSubscriptionList } from "./SubscriptionList";
-import { ProcessProviderMonikerSpecs } from "./ProviderSpecMoniker";
+import { ProcessProviderMonikerSpecs } from "./ProviderSpecMonikerProcessor";
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { logger } from "../../utils/utils";
 import { ProcessChainWalletApi } from "./ChainWalletApi";
 import { APRMonitor } from "./AprMonitor";
-// import { ProcessDualStackingDelegatorRewards } from "./DualStakingDelegatorRewards";
+import { DelegatorRewardsMonitor } from "./DelegatorRewardsMonitor";
 
 let isRunning = false;
 
@@ -18,8 +18,9 @@ export async function RestRpcAgreagorsCaller(db: PostgresJsDatabase): Promise<vo
 
     isRunning = true;
 
-    // this guy runs in the background
+    // this guys run in the background
     APRMonitor.start();
+    DelegatorRewardsMonitor.start();
 
     logger.info(`ProcessSubscriptionList started at: ${new Date().toISOString()}`);
     try {
@@ -56,18 +57,6 @@ export async function RestRpcAgreagorsCaller(db: PostgresJsDatabase): Promise<vo
         isRunning = false;
         return;
     }
-
-    // logger.info(`ProcessDualStackingDelegatorRewards started at: ${new Date().toISOString()}`);
-    // try {
-    //     const start = Date.now();
-    //     await ProcessDualStackingDelegatorRewards(db);
-    //     const executionTime = Date.now() - start;
-    //     logger.info(`Successfully executed ProcessDualStackingDelegatorRewards. Execution time: ${executionTime} ms`);
-    // } catch (e) {
-    //     logger.error(`Failed to execute ProcessDualStackingDelegatorRewards. Error: ${(e as Error).message}`, { stack: (e as Error).stack });
-    //     isRunning = false;
-    //     return;
-    // }
 
     isRunning = false;
 }

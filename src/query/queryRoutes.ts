@@ -41,10 +41,7 @@ import { IndexChartsV3RawHandler, IndexChartsV3RawHandlerOpts } from './handlers
 // -- Provider page ajax --
 import { ProviderPaginatedHandler, ProviderPaginatedHandlerOpts } from './handlers/provider/providerHandler';
 import { ProviderV2PaginatedHandler, ProviderV2PaginatedHandlerOpts } from './handlers/provider/providerV2Handler';
-import { ProviderCardsHandler, ProviderCardsHandlerOpts } from './handlers/provider/providerCardsHandler';
-import { ProviderCardsClaimableRewardsHandler, ProviderCardsClaimableRewardsHandlerOpts } from './handlers/provider/providerCardsClaimableRewardsHandler';
-import { ProviderCardsClaimedRewards30DaysHandler, ProviderCardsClaimedRewards30DaysHandlerOpts } from './handlers/provider/providerCardsClaimedRewards30DaysHandler';
-import { ProviderCardsClaimedRewardsAllTimeHandler, ProviderCardsClaimedRewardsAllTimeHandlerOpts } from './handlers/provider/providerCardsClaimedRewardsAllTimeHandler';
+import { ProviderCardsDelegatorRewardsHandler, ProviderCardsDelegatorRewardsHandlerOpts } from './handlers/provider/providerCardsDelegatorRewardsHandler';
 import { ProviderCardsCuRelayAndRewardsHandler, ProviderCardsCuRelayAndRewardsHandlerOpts } from './handlers/provider/providerCardsCuRelayAndRewardsHandler';
 import { ProviderCardsStakesHandler, ProviderCardsStakesHandlerOpts } from './handlers/provider/providerCardsStakesHandler';
 import { ProviderChartsRawHandler, ProviderChartsRawHandlerOpts } from './handlers/provider/providerChartsHandler';
@@ -57,7 +54,6 @@ import { ProviderStakesPaginatedHandlerOpts, ProviderStakesHandler, ProviderStak
 import { ProviderEventsPaginatedHandlerOpts, ProviderEventsPaginatedHandler, ProviderEventsItemCountPaginatiedHandler, ProviderEventsCSVRawHandler } from './handlers/provider/providerEventsHandler';
 import { ProviderRewardsPaginatedHandlerOpts, ProviderRewardsPaginatedHandler, ProviderRewardsItemCountPaginatiedHandler, ProviderRewardsCSVRawHandler } from './handlers/provider/providerRewardsHandler';
 import { ProviderReportsPaginatedHandlerOpts, ProviderReportsPaginatedHandler, ProviderReportsItemCountPaginatiedHandler, ProviderReportsCSVRawHandler } from './handlers/provider/providerReportsHandler';
-import { ProviderDelegatorRewardsPaginatedHandlerOpts, ProviderDelegatorRewardsPaginatedHandler, ProviderDelegatorRewardsItemCountPaginatiedHandler, ProviderDelegatorRewardsCSVRawHandler } from './handlers/provider/providerDelegatorRewardsHandler';
 import { ProviderBlockReportsPaginatedHandlerOpts, ProviderBlockReportsPaginatedHandler, ProviderBlockReportsItemCountPaginatiedHandler, ProviderBlockReportsCSVRawHandler } from './handlers/provider/providerBlockReportsHandler';
 
 import { ProviderHealthLatestPaginatedHandler, ProviderHealthLatestPaginatedHandlerOpts } from './handlers/provider/providerHealthLatestHandler';
@@ -97,7 +93,6 @@ import {
 } from './handlers/spec/specV2Handlers';
 
 // -- Internal data endpoints --
-import { LavapDualStackingDelegatorRewardsHandler, LavapDualStackingDelegatorRewardsOpts } from './handlers/pods/lavapDualStackingDelegatorRewardsHandler';
 import { ConsumerV2CahcedHandler, ConsumerV2CahcedHandlerOpts } from './handlers/consumer/consumerV2Handler';
 import { ChainWalletApiHandlerOpts, LavaChainRestakersHandler, LavaChainStakersHandler } from './handlers/ajax/chainWalletApiHandlers';
 
@@ -147,10 +142,7 @@ GetServerInstance().get('/indexChartsV3', IndexChartsV3RawHandlerOpts, IndexChar
 // -- Provider page ajax --
 RegisterRedisBackedHandler('/provider/:addr', ProviderPaginatedHandlerOpts, ProviderPaginatedHandler);
 RegisterRedisBackedHandler('/providerV2/:addr', ProviderV2PaginatedHandlerOpts, ProviderV2PaginatedHandler);
-RegisterRedisBackedHandler('/providerCards/:addr', ProviderCardsHandlerOpts, ProviderCardsHandler);
-RegisterRedisBackedHandler('/providerCardsClaimableRewards/:addr', ProviderCardsClaimableRewardsHandlerOpts, ProviderCardsClaimableRewardsHandler);
-RegisterRedisBackedHandler('/providerCardsClaimedRewards30Days/:addr', ProviderCardsClaimedRewards30DaysHandlerOpts, ProviderCardsClaimedRewards30DaysHandler);
-RegisterRedisBackedHandler('/providerCardsClaimedRewardsAllTime/:addr', ProviderCardsClaimedRewardsAllTimeHandlerOpts, ProviderCardsClaimedRewardsAllTimeHandler);
+RegisterRedisBackedHandler('/providerCardsDelegatorRewards/:addr', ProviderCardsDelegatorRewardsHandlerOpts, ProviderCardsDelegatorRewardsHandler);
 RegisterRedisBackedHandler('/providerCardsCuRelayAndRewards/:addr', ProviderCardsCuRelayAndRewardsHandlerOpts, ProviderCardsCuRelayAndRewardsHandler);
 RegisterRedisBackedHandler('/providerCardsStakes/:addr', ProviderCardsStakesHandlerOpts, ProviderCardsStakesHandler);
 GetServerInstance().get('/providerCharts/:addr', ProviderChartsRawHandlerOpts, ProviderChartsRawHandler);
@@ -163,7 +155,6 @@ RegisterPaginationServerHandler('/providerStakes/:addr', ProviderStakesPaginated
 RegisterPaginationServerHandler('/providerEvents/:addr', ProviderEventsPaginatedHandlerOpts, ProviderEventsPaginatedHandler, ProviderEventsItemCountPaginatiedHandler);
 RegisterPaginationServerHandler('/providerRewards/:addr', ProviderRewardsPaginatedHandlerOpts, ProviderRewardsPaginatedHandler, ProviderRewardsItemCountPaginatiedHandler);
 RegisterPaginationServerHandler('/providerReports/:addr', ProviderReportsPaginatedHandlerOpts, ProviderReportsPaginatedHandler, ProviderReportsItemCountPaginatiedHandler);
-RegisterPaginationServerHandler('/providerDelegatorRewards/:addr', ProviderDelegatorRewardsPaginatedHandlerOpts, ProviderDelegatorRewardsPaginatedHandler, ProviderDelegatorRewardsItemCountPaginatiedHandler);
 RegisterPaginationServerHandler('/providerBlockReports/:addr', ProviderBlockReportsPaginatedHandlerOpts, ProviderBlockReportsPaginatedHandler, ProviderBlockReportsItemCountPaginatiedHandler);
 
 RegisterRedisBackedHandler('/providerLatestHealth/:addr', ProviderHealthLatestPaginatedHandlerOpts, ProviderHealthLatestPaginatedHandler, { cache_ttl: 2 * 60 });
@@ -174,7 +165,6 @@ GetServerInstance().get('/providerStakesCsv/:addr', ProviderStakesCSVRawHandler)
 GetServerInstance().get('/providerEventsCsv/:addr', ProviderEventsCSVRawHandler);
 GetServerInstance().get('/providerRewardsCsv/:addr', ProviderRewardsCSVRawHandler);
 GetServerInstance().get('/providerReportsCsv/:addr', ProviderReportsCSVRawHandler);
-GetServerInstance().get('/providerDelegatorRewardsCsv/:addr', ProviderDelegatorRewardsCSVRawHandler);
 GetServerInstance().get('/providerBlockReportsCsv/:addr', ProviderBlockReportsCSVRawHandler);
 
 // -- Consumer page ajax --
@@ -210,8 +200,3 @@ RegisterRedisBackedHandler('/specEndpointHealth/:specId', SpecEndpointHealthHand
 RegisterRedisBackedHandler('/specCacheHitRate/:specId', SpecCacheHitRateHandlerOpts, SpecCacheHitRateHandler);
 
 RegisterRedisBackedHandler('/specProviderHealth/:specId/:addr', SpecProviderHealthHandlerOpts, SpecProviderHealthHandler, { cache_ttl: 10 });
-
-// -- Internal data endpoints --
-if (consts.JSINFO_QUERY_LAVAP_DUAL_STACKING_DELEGATOR_REWARDS_ENDPOINT_ENABLED) {
-    GetServerInstance().post('/lavapDualStackingDelegatorRewards', LavapDualStackingDelegatorRewardsOpts, LavapDualStackingDelegatorRewardsHandler);
-}

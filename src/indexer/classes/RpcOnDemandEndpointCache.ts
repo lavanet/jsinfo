@@ -3,7 +3,6 @@
 import { logger, TruncateError } from "../../utils/utils";
 import { QueryLavaRPC } from "../utils/restRpc";
 import { MemoryCache } from "./MemoryCache";
-
 export interface DenomTraceResponse {
     denom_trace: {
         path: string;
@@ -25,18 +24,38 @@ export interface EstimatedRewardsResponse {
     }[];
 }
 
+export interface DelegatorRewardAmount {
+    denom: string;
+    amount: string;
+}
+export interface DelegatorReward {
+    provider: string;
+    amount: DelegatorRewardAmount[];
+}
+export interface DelegatorRewardsResponse {
+    rewards: DelegatorReward[];
+}
+
+const CACHE_KEYS = {
+    DENOM_TRACE: (denom: string) => `denom_trace:${denom}`,
+    VALIDATOR_REWARDS: (validator: string, amount: number, denom: string) =>
+        `validator_rewards:${validator}:${amount}:${denom}`,
+    PROVIDER_REWARDS: (provider: string, amount: number, denom: string) =>
+        `provider_rewards:${provider}:${amount}:${denom}`,
+    DELEGATOR_REWARDS: (delegator: string) => `delegator_rewards:${delegator}`,
+} as const;
+
 class RpcOnDemandEndpointCacheClass {
     private cacheRefreshInterval = 20 * 60; // 20 minutes
 
     public async GetDenomTrace(denom: string): Promise<DenomTraceResponse> {
-        const cacheKey = `denom_trace_${denom}`;
+        const cacheKey = CACHE_KEYS.DENOM_TRACE(denom);
         let denomTrace = await MemoryCache.get<DenomTraceResponse>(cacheKey);
 
         if (!denomTrace) {
-            await this.fetchAndCacheDenomTrace(denom);
-            denomTrace = await MemoryCache.get<DenomTraceResponse>(cacheKey);
+            denomTrace = await this.fetchAndCacheDenomTrace(denom);
             if (!denomTrace) {
-                logger.warn('Denom trace not found in cache after refresh');
+                logger.warn('Denom trace not found in cache after refresh', { cacheKey, denom, denomTrace });
                 return { denom_trace: { path: '', base_denom: '' } };
             }
         }
@@ -44,11 +63,12 @@ class RpcOnDemandEndpointCacheClass {
         return denomTrace;
     }
 
-    private async fetchAndCacheDenomTrace(denom: string): Promise<void> {
+    private async fetchAndCacheDenomTrace(denom: string): Promise<DenomTraceResponse> {
         try {
             const response = await QueryLavaRPC<DenomTraceResponse>(`/ibc/apps/transfer/v1/denom_traces/${denom}`);
             await MemoryCache.set(`denom_trace_${denom}`, response, this.cacheRefreshInterval);
             logger.info(`Fetched and cached denom trace for ${denom} successfully.`);
+            return response;
         } catch (error) {
             logger.error(`Error fetching denom trace for ${denom}`, { error: TruncateError(error) });
             throw error;
@@ -56,7 +76,7 @@ class RpcOnDemandEndpointCacheClass {
     }
 
     public async GetEstimatedValidatorRewards(validator: string, amount: number, denom: string): Promise<EstimatedRewardsResponse> {
-        const cacheKey = `validator_rewards_${validator}_${amount}_${denom}`;
+        const cacheKey = CACHE_KEYS.VALIDATOR_REWARDS(validator, amount, denom);
         let rewards = await MemoryCache.get<EstimatedRewardsResponse>(cacheKey);
 
         if (!rewards) {
@@ -73,12 +93,9 @@ class RpcOnDemandEndpointCacheClass {
 
     private async fetchAndCacheEstimatedValidatorRewards(validator: string, amount: number, denom: string): Promise<void> {
         try {
-            const response = await QueryLavaRPC<EstimatedRewardsResponse>(
-                `/lavanet/lava/subscription/estimated_validator_rewards/${validator}/${amount}${denom}`,
-                true
-            );
+            const response = await QueryLavaRPC<EstimatedRewardsResponse>(`/lavanet/lava/subscription/estimated_validator_rewards/${validator}/${amount}${denom}`);
             await MemoryCache.set(
-                `validator_rewards_${validator}_${amount}_${denom}`,
+                CACHE_KEYS.VALIDATOR_REWARDS(validator, amount, denom),
                 response,
                 this.cacheRefreshInterval
             );
@@ -90,7 +107,7 @@ class RpcOnDemandEndpointCacheClass {
     }
 
     public async GetEstimatedProviderRewards(provider: string, amount: number, denom: string): Promise<EstimatedRewardsResponse> {
-        const cacheKey = `provider_rewards_${provider}_${amount}_${denom}`;
+        const cacheKey = CACHE_KEYS.PROVIDER_REWARDS(provider, amount, denom);
         let rewards = await MemoryCache.get<EstimatedRewardsResponse>(cacheKey);
 
         if (!rewards) {
@@ -107,18 +124,62 @@ class RpcOnDemandEndpointCacheClass {
 
     private async fetchEstimatedProviderRewards(provider: string, amount: number, denom: string): Promise<void> {
         try {
-            const response = await QueryLavaRPC<EstimatedRewardsResponse>(
-                `/lavanet/lava/subscription/estimated_provider_rewards/${provider}/${amount}${denom}`,
-                true
-            );
+            const response = await QueryLavaRPC<EstimatedRewardsResponse>(`/lavanet/lava/subscription/estimated_provider_rewards/${provider}/${amount}${denom}`);
             await MemoryCache.set(
-                `provider_rewards_${provider}_${amount}_${denom}`,
+                CACHE_KEYS.PROVIDER_REWARDS(provider, amount, denom),
                 response,
                 this.cacheRefreshInterval
             );
             // logger.info(`Fetched and cached estimated provider rewards for ${provider}`);
         } catch (error) {
             logger.error(`Error fetching estimated provider rewards for ${provider}`, { error: TruncateError(error) });
+            throw error;
+        }
+    }
+
+    public async GetDelegatorRewards(delegator: string): Promise<DelegatorRewardsResponse> {
+        const cacheKey = CACHE_KEYS.DELEGATOR_REWARDS(delegator);
+        let rewards = await MemoryCache.get<DelegatorRewardsResponse>(cacheKey);
+
+        if (!rewards) {
+            rewards = await this.fetchAndCacheDelegatorRewards(delegator);
+        }
+
+        return rewards || { rewards: [] };
+    }
+
+    private async fetchAndCacheDelegatorRewards(delegator: string): Promise<DelegatorRewardsResponse> {
+        try {
+            const response = await QueryLavaRPC<DelegatorRewardsResponse>(
+                `/lavanet/lava/dualstaking/delegator_rewards/${delegator}`
+            );
+
+            if (response.rewards && response.rewards.length > 0) {
+                const mappedRewards = await Promise.all(response.rewards.map(async (reward) => {
+                    const results = await Promise.all(reward.amount.map(async (amt) => {
+                        if (amt.denom.startsWith('ibc/')) {
+                            const hash = amt.denom.replace('ibc/', '');
+                            const denomTrace = await this.GetDenomTrace(hash);
+                            return {
+                                denom: denomTrace.denom_trace.base_denom,
+                                amount: amt.amount
+                            };
+                        }
+                        return amt;
+                    }));
+
+                    return {
+                        provider: reward.provider,
+                        amount: results
+                    };
+                }));
+
+                return { rewards: mappedRewards };
+            }
+
+            return response;
+        } catch (error) {
+            logger.error(`Error fetching delegator rewards for ${delegator}`, { error: TruncateError(error) });
             throw error;
         }
     }

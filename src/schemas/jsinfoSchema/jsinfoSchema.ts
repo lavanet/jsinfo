@@ -3,7 +3,7 @@
 // Do not use 'drizzle-orm' date, it will cause bugs
 
 import { sql } from 'drizzle-orm'
-import { pgTable, index, text, integer, serial, bigint, real, timestamp, varchar, uniqueIndex } from 'drizzle-orm/pg-core';
+import { pgTable, index, text, integer, serial, bigint, real, timestamp, varchar, uniqueIndex, primaryKey, jsonb } from 'drizzle-orm/pg-core';
 
 export enum LavaProviderStakeStatus {
   Active = 1,
@@ -247,22 +247,6 @@ export const providerHealth = pgTable('provider_health2', {
 export type ProviderHealth = typeof providerHealth.$inferSelect;
 export type InsertProviderHealth = typeof providerHealth.$inferInsert;
 
-export const dualStackingDelegatorRewards = pgTable('dual_stacking_delegator_rewards', {
-  id: serial('id').primaryKey(),
-  provider: text('provider').notNull(),
-  timestamp: timestamp('timestamp').notNull(),
-  chainId: text('chain_id').notNull(),
-  amount: bigint('amount', { mode: 'bigint' }).notNull(),
-  denom: text('denom').notNull(),
-}, (table) => {
-  return {
-    providerIdx: index("dual_stacking_delegator_rewards_provider_idx").on(table.provider),
-  };
-});
-
-export type DualStackingDelegatorRewards = typeof dualStackingDelegatorRewards.$inferSelect;
-export type InsertDualStackingDelegatorRewards = typeof dualStackingDelegatorRewards.$inferInsert;
-
 export const providerSpecMoniker = pgTable('provider_spec_moniker', {
   id: serial('id').primaryKey(),
   provider: text('provider').notNull(),
@@ -350,3 +334,13 @@ export const apr = pgTable('apr', {
 
 export type Apr = typeof apr.$inferSelect;
 export type InsertApr = typeof apr.$inferInsert;
+
+// Add new table for delegator rewards
+export const delegatorRewards = pgTable('delegator_rewards', {
+  delegator: text('delegator').primaryKey(),
+  data: jsonb('data'),
+  timestamp: timestamp('timestamp').defaultNow().notNull(),
+});
+
+export type DelegatorRewards = typeof delegatorRewards.$inferSelect;
+export type InsertDelegatorRewards = typeof delegatorRewards.$inferInsert;

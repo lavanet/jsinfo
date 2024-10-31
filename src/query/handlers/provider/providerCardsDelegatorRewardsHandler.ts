@@ -10,39 +10,20 @@ export const ProviderCardsDelegatorRewardsHandlerOpts: RouteShorthandOptions = {
     schema: {
         response: {
             200: {
-                type: 'object',
-                properties: {
-                    success: { type: 'boolean' },
-                    data: {
-                        type: 'object',
-                        nullable: true,
-                        properties: {
-                            provider: { type: 'string' },
-                            amounts: {
-                                type: 'array',
-                                items: {
-                                    type: 'object',
-                                    properties: {
-                                        denom: { type: 'string' },
-                                        amount: { type: 'string' }
-                                    }
-                                }
-                            },
-                            timestamp: { type: 'string', format: 'date-time' }
-                        }
-                    }
-                }
+                additionalProperties: true,
+                type: 'object'
             }
         }
     }
 }
 
 async function getDelegatorRewards(addr: string) {
-    return await QueryGetJsinfoReadDbInstance()
+    let ret = await QueryGetJsinfoReadDbInstance()
         .select()
         .from(JsinfoSchema.delegatorRewards)
-        .where(eq(JsinfoSchema.delegatorRewards.provider, addr))
+        .where(eq(JsinfoSchema.delegatorRewards.delegator, addr))
         .limit(1);
+    return ret[0] || { "error": "No data found" };
 }
 
 export async function ProviderCardsDelegatorRewardsHandler(request: FastifyRequest, reply: FastifyReply) {
@@ -53,9 +34,9 @@ export async function ProviderCardsDelegatorRewardsHandler(request: FastifyReque
 
     await QueryCheckJsinfoReadDbInstance();
 
-    const stakeSum = await getDelegatorRewards(addr);
+    const res = await getDelegatorRewards(addr);
 
-    return {
-        stakeSum: stakeSum.toString()
-    };
+    console.log("res", res);
+
+    return res;
 }

@@ -1,10 +1,10 @@
 // src/indexer/restrpc_agregators/RestRpcAgreagorsCaller.ts
 
-import { ProcessSubscriptionList } from "./SubscriptionList";
+import { ProcessSubscriptionList } from "./SubscriptionListProcessor";
 import { ProcessProviderMonikerSpecs } from "./ProviderSpecMonikerProcessor";
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { logger } from "../../utils/utils";
-import { ProcessChainWalletApi } from "./ChainWalletApi";
+import { ProcessChainWalletApi } from "./ChainWalletApiProcessor";
 import { APRMonitor } from "./AprMonitor";
 import { DelegatorRewardsMonitor } from "./DelegatorRewardsMonitor";
 

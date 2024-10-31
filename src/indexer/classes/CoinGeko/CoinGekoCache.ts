@@ -1,7 +1,7 @@
 import { logger, TruncateError } from "../../../utils/utils";
 import { MemoryCache } from "../MemoryCache";
 import { FetchRestData } from "../../utils/restRpc";
-import denomsData from "./denoms.json" assert { type: "json" };
+import denomsData from "./CoinGekoDenomMap.json" assert { type: "json" };
 
 export interface CoinGeckoRateResponse {
     [coinGeckodenom: string]: {

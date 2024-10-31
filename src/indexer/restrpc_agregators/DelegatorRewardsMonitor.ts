@@ -12,11 +12,6 @@ export interface ProcessedRewardAmount {
     provider: string;
 }
 
-export interface ProcessedDelegatorRewards {
-    fmtversion: string;
-    rewards: ProcessedRewardAmount[];
-}
-
 class DelegatorRewardsMonitorClass {
     private intervalId: NodeJS.Timer | null = null;
     private readonly UPDATE_INTERVAL = 5 * 60 * 1000; // 5 minutes
@@ -39,43 +34,37 @@ class DelegatorRewardsMonitorClass {
         }
     }
 
-    private async updateRewardsInDb(delegator: string, rewards: ProcessedDelegatorRewards): Promise<void> {
-        console.log("rewards", rewards);
+    private async updateRewardsInDb(delegator: string, rewards: ProcessedRewardAmount[]): Promise<void> {
         try {
             const db = await GetJsinfoDb();
             const now = new Date();
 
-            await db.transaction(async (tx) => {
-                for (const reward of rewards.rewards) {
-                    // Convert amount array to denom-amount dictionary
-                    const amounts = reward.amount.reduce((acc, curr) => {
-                        acc[curr.denom] = curr.amount;
-                        return acc;
-                    }, {} as Record<string, string>);
+            const data = {
+                rewards: rewards,
+                fmtversion: 'v20240401'
+            };
 
-                    // Insert or update rewards
-                    await tx.insert(JsinfoSchema.delegatorRewards)
-                        .values({
-                            provider: reward.provider,
-                            amounts,
-                            timestamp: now
-                        })
-                        .onConflictDoUpdate({
-                            target: [JsinfoSchema.delegatorRewards.provider],
-                            set: {
-                                amounts,
-                                timestamp: now
-                            }
-                        });
-                }
-            });
+            await db.insert(JsinfoSchema.delegatorRewards)
+                .values({
+                    delegator,
+                    data,
+                    timestamp: now
+                })
+                .onConflictDoUpdate({
+                    target: [JsinfoSchema.delegatorRewards.delegator],
+                    set: {
+                        data,
+                        timestamp: now
+                    }
+                });
 
-            logger.info(`DelegatorRewardsMonitor::DB Update - Updated rewards`, {
+            logger.info(`DelegatorRewardsMonitor::DB Update - Updated rewards for delegator ${delegator}`, {
                 timestamp: now.toISOString()
             });
         } catch (error) {
             logger.error(`DelegatorRewardsMonitor::DB Update - Failed to update rewards`, {
                 error,
+                delegator,
                 timestamp: new Date().toISOString()
             });
             throw error;
@@ -112,14 +101,23 @@ class DelegatorRewardsMonitorClass {
                     }
                 }
 
-                await this.updateRewardsInDb(delegator, { fmtversion: "v20241031", rewards: processedRewards });
+                await this.updateRewardsInDb(delegator, processedRewards);
                 progressCallback(1);
             } catch (error) {
-                logger.error(`DelegatorRewardsMonitor - Error processing delegator`, {
+                const errorDetails = {
                     thread: chunkIndex + 1,
                     delegator,
-                    error
-                });
+                    errorType: typeof error,
+                    errorName: (error as Error)?.name,
+                    errorMessage: (error as Error)?.message,
+                    errorStack: (error as Error)?.stack,
+                    fullError: error instanceof Error
+                        ? JSON.stringify(error, Object.getOwnPropertyNames(error))
+                        : JSON.stringify(error)
+                };
+
+                console.error('Full error details:', errorDetails);  // For immediate console debugging
+                logger.error(`DelegatorRewardsMonitor - Error processing delegator`, errorDetails);
             }
         }
     }

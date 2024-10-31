@@ -19,7 +19,7 @@ import { ConnectToRpc, RpcConnection } from "./indexer/utils/lavajsRpc";
 import { MigrateDb, GetJsinfoDb } from "./utils/dbUtils";
 import { AggProviderAndConsumerRelayPayments, AggProviderAndConsumerRelayPaymentsSync } from "./indexer/agregators/aggProviderAndConsumerRelayPayments";
 import { SaveTokenSupplyToDB } from './indexer/supply/syncSupply';
-import { RestRpcAgreagorsCaller } from './indexer/restrpc_agregators/RestRpcAgreagorsCaller';
+import { RestRpcAgreagorsCaller } from './indexer/restrpc_agregators/RestRpcAgregatorsCaller';
 
 let static_blockchainEntitiesStakes: Map<string, JsinfoSchema.InsertProviderStake[]> = new Map()
 

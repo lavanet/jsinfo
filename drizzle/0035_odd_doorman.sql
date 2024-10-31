@@ -5,3 +5,5 @@ CREATE TABLE IF NOT EXISTS "delegator_rewards" (
 );
 --> statement-breakpoint
 -- DROP TABLE "dual_stacking_delegator_rewards";
+
+-- ALTER TABLE delegator_rewards OWNER TO jsinfo;

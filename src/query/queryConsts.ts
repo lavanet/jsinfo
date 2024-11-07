@@ -44,3 +44,9 @@ numberQueryConsts.forEach(key => {
         throw new Error(`${key} is NaN`);
     }
 });
+
+export const JSINFO_QUERY_MEMORY_DEBUG_MODE = GetEnvVar("JSINFO_QUERY_MEMORY_DEBUG_MODE", "false") == "true";
+export const JSINFO_QUERY_CLASS_MEMORY_DEBUG_MODE = GetEnvVar("JSINFO_QUERY_CLASS_MEMORY_DEBUG_MODE", "false") == "true";
+
+
+

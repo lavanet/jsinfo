@@ -66,7 +66,10 @@ query_no_nodemon:
 	JSINFO_QUERY_IS_DEBUG_MODE=true bun run src/query.ts
 
 query_inspect:
-	JSINFO_QUERY_IS_DEBUG_MODE=true bun --inspect run src/query.ts
+	NODE_ENV=development JSINFO_QUERY_MEMORY_DEBUG_MODE=true JSINFO_QUERY_IS_DEBUG_MODE=true bun --inspect run src/query.ts --expose-gc
+
+query_memory_debug:
+	JSINFO_QUERY_CLASS_MEMORY_DEBUG_MODE=true JSINFO_QUERY_MEMORY_DEBUG_MODE=true make query
 
 query_port8090:
 	JSINFO_QUERY_PORT=8090 make query

@@ -88,7 +88,6 @@ export function QueryGetRelaysReadDbInstance(): PostgresJsDatabase {
 }
 
 export async function GetLatestBlock() {
-    //
     const latestDbBlocks = await QueryGetJsinfoDbInstance().select().from(JsinfoSchema.blocks).orderBy(desc(JsinfoSchema.blocks.height)).limit(1)
     let latestHeight = 0
     let latestDatetime = 0

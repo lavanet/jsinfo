@@ -49,8 +49,8 @@ export const logger = winston.createLogger({
 
 // Define the BackoffRetry function
 export const BackoffRetry = async <T>(
-    title: string, 
-    fn: () => Promise<T>, 
+    title: string,
+    fn: () => Promise<T>,
     retries: number = 8,
     factor: number = 2,
     minTimeout: number = 1000,

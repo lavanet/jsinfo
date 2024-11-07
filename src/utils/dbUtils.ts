@@ -77,8 +77,8 @@ export async function GetJsinfoDb(): Promise<PostgresJsDatabase> {
 export async function GetJsinfoReadDb(): Promise<PostgresJsDatabase> {
     // use one db
     const queryClient = postgres(await GetReadPostgresUrl(), {
-        idle_timeout: 20,
-        connect_timeout: 20,
+        idle_timeout: 80,
+        connect_timeout: 80,
         max_lifetime: 75,
         max: 60,
     });
@@ -88,8 +88,8 @@ export async function GetJsinfoReadDb(): Promise<PostgresJsDatabase> {
 
 export async function GetRelaysReadDb(): Promise<PostgresJsDatabase> {
     const queryClient = postgres(await GetRelaysReadPostgresUrl(), {
-        idle_timeout: 20,
-        connect_timeout: 20,
+        idle_timeout: 80,
+        connect_timeout: 80,
         max_lifetime: 75,
         max: 60,
     });

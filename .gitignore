@@ -67,3 +67,4 @@ __pycache__/
 
 env.sh
 heap.json
+heap-snapshot-*.json

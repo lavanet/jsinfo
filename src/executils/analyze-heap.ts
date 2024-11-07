@@ -191,8 +191,8 @@ function printObjectAnalysis(type: string, stats: any) {
 
     // Edge Types
     console.log('\nConnection Types:');
-    Array.from(stats.edgeTypes.entries())
-        .sort(([, a], [, b]) => b - a)
+    (Array.from(stats.edgeTypes.entries()) as any)
+        .sort(([, a], [, b]) => b - a as number)
         .forEach(([edgeType, count]) => {
             console.log(`  ${edgeType}: ${count.toLocaleString()}`);
         });
@@ -201,8 +201,8 @@ function printObjectAnalysis(type: string, stats: any) {
     console.log('\nTop Memory Holders:');
     const retainersByType = new Map();
 
-    Array.from(stats.retainers.entries())
-        .sort(([, a], [, b]) => b.size - a.size)
+    (Array.from(stats.retainers.entries()) as any)
+        .sort(([, a], [, b]) => (b.size - a.size) as number)
         .slice(0, 10)
         .forEach(([key, info]) => {
             const [retainerType, edgeType, name] = key.split(':');

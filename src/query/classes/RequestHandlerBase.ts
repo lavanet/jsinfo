@@ -271,9 +271,9 @@ export class RequestHandlerBase<T> {
 
 }
 
-// Add cleanup on process exit
-process.on('exit', () => {
-    RequestHandlerBase.instances.forEach(instance => {
-        instance.cleanup();
-    });
-});
+// // Add cleanup on process exit
+// process.on('exit', () => {
+//     RequestHandlerBase.instances.forEach(instance => {
+//         instance.cleanup();
+//     });
+// });

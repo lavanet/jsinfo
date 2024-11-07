@@ -66,16 +66,16 @@ query_no_nodemon:
 	JSINFO_QUERY_IS_DEBUG_MODE=true bun run src/query.ts
 
 query_inspect:
-	JSINFO_QUERY_IS_DEBUG_MODE=true bun --inspect run src/query.ts
+	NODE_ENV=development JSINFO_QUERY_MEMORY_DEBUG_MODE=true JSINFO_QUERY_IS_DEBUG_MODE=true bun --inspect run src/query.ts --expose-gc
+
+query_memory_debug:
+	JSINFO_QUERY_CLASS_MEMORY_DEBUG_MODE=true JSINFO_QUERY_MEMORY_DEBUG_MODE=true make query
 
 query_port8090:
 	JSINFO_QUERY_PORT=8090 make query
 
 query_test_lavap_prodiver_error_parsing:
 	bun run ./src/query/utils/lavapProvidersErrorParser.test.ts 
-
-getblock:
-	JSINFO_QUERY_IS_DEBUG_MODE=true bun run src/executils/getblock.ts 1629704
 
 redis_run:
 	docker rm -f redis-stack || true
@@ -124,3 +124,9 @@ query_endpoints_full_tests_testnet:
 
 query_endpoints_full_tests_mainnet:
 	cd tests/query_endpoints && make query_endpoints_full_tests_mainnet
+
+executils_getblock:
+	JSINFO_QUERY_IS_DEBUG_MODE=true bun run src/executils/getblock.ts 1629704
+
+executils_analyze_heap:
+	bun run ./src/executils/analyze-heap.ts

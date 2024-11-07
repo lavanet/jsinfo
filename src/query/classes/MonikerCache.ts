@@ -4,6 +4,8 @@ import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '..
 import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import { RedisCache } from './RedisCache';
 import { GetIsIndexerProcess } from '../../utils/utils';
+import { JSINFO_QUERY_CLASS_MEMORY_DEBUG_MODE } from '../queryConsts';
+import { logClassMemory } from './MemoryLogger';
 
 if (GetIsIndexerProcess()) {
     throw new Error('MonikerCache should not be used in the indexer');
@@ -24,10 +26,34 @@ class ProviderSpecMonikerCache {
     private refreshInterval = 2 * 60 * 1000;
     private monikerForProviderCache: Map<string, string> = new Map();
     private monikerFullDescriptionCache: Map<string, string> = new Map();
+    private debugInterval: NodeJS.Timer | null = null;
 
     constructor() {
         this.refreshCache();
         setInterval(() => this.refreshCache(), this.refreshInterval);
+
+        if (JSINFO_QUERY_CLASS_MEMORY_DEBUG_MODE) {
+            this.debugInterval = setInterval(() => this.logMemoryUsage(), 5 * 1000);
+            this.logMemoryUsage(); // Initial log
+        }
+    }
+
+    private logMemoryUsage() {
+        logClassMemory({
+            className: 'MonikerCache',
+            caches: [
+                this.psmCache,
+                this.monikerForProviderCache,
+                this.monikerFullDescriptionCache
+            ],
+            cacheNames: ['psm', 'provider', 'description']
+        });
+    }
+
+    public cleanup() {
+        if (this.debugInterval) {
+            clearInterval(this.debugInterval);
+        }
     }
 
     private async refreshCache() {
@@ -234,3 +260,7 @@ class ProviderSpecMonikerCache {
 }
 
 export const MonikerCache = new ProviderSpecMonikerCache();
+
+process.on('exit', () => {
+    MonikerCache.cleanup();
+});

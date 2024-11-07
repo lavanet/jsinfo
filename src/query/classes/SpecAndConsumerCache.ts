@@ -4,7 +4,9 @@ import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '..
 import { sql } from 'drizzle-orm';
 import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import { RedisCache } from './RedisCache';
-import { logger } from '../../utils/utils'
+import { logger } from '../../utils/utils';
+import { JSINFO_QUERY_CLASS_MEMORY_DEBUG_MODE } from '../queryConsts';
+import { logClassMemory } from './MemoryLogger';
 
 class SpecAndConsumerCacheClass {
     private specCache: string[] = [];
@@ -12,10 +14,31 @@ class SpecAndConsumerCacheClass {
     private refreshInterval = 2 * 60 * 1000;
     private isRefreshing: boolean = false;
     private refreshPromise: Promise<void> | null = null;
+    private debugInterval: NodeJS.Timer | null = null;
 
     public constructor() {
         this.refreshCache();
         setInterval(() => this.refreshCache(), this.refreshInterval);
+
+        // Setup memory debugging if enabled
+        if (JSINFO_QUERY_CLASS_MEMORY_DEBUG_MODE) {
+            this.debugInterval = setInterval(() => this.logMemoryUsage(), 5 * 1000);
+            this.logMemoryUsage(); // Initial log
+        }
+    }
+
+    private logMemoryUsage() {
+        logClassMemory({
+            className: 'SpecAndConsumerCache',
+            caches: [this.specCache, this.consumerCache],
+            cacheNames: ['spec', 'consumer']
+        });
+    }
+
+    public cleanup() {
+        if (this.debugInterval) {
+            clearInterval(this.debugInterval);
+        }
     }
 
     private async refreshCache(): Promise<void> {
@@ -127,3 +150,8 @@ class SpecAndConsumerCacheClass {
 }
 
 export const SpecAndConsumerCache = new SpecAndConsumerCacheClass();
+
+// Clean up on process exit
+process.on('exit', () => {
+    SpecAndConsumerCache.cleanup();
+});

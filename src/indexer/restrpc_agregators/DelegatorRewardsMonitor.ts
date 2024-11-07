@@ -41,7 +41,7 @@ class DelegatorRewardsMonitorClass {
 
             const data = {
                 rewards: rewards,
-                fmtversion: 'v20240401'
+                fmtversion: 'v20240407'
             };
 
             await db.insert(JsinfoSchema.delegatorRewards)
@@ -89,15 +89,17 @@ class DelegatorRewardsMonitorClass {
                 const processedRewards: ProcessedRewardAmount[] = [];
 
                 for (const reward of rewards.rewards) {
-                    for (const rewardAmount of reward.amount) {
-                        const [amount, denom] = await ConvertToBaseDenom(rewardAmount.amount, rewardAmount.denom);
-                        const usdcAmount = await GetUSDCValue(amount, denom);
-                        processedRewards.push({
-                            amount: Number(amount),
-                            denom,
-                            usdcValue: parseFloat(usdcAmount),
-                            provider: reward.provider
-                        });
+                    if (reward.provider === delegator) {
+                        for (const rewardAmount of reward.amount) {
+                            const [amount, denom] = await ConvertToBaseDenom(rewardAmount.amount, rewardAmount.denom);
+                            const usdcAmount = await GetUSDCValue(amount, denom);
+                            processedRewards.push({
+                                amount: Number(amount),
+                                denom,
+                                usdcValue: parseFloat(usdcAmount),
+                                provider: reward.provider
+                            });
+                        }
                     }
                 }
 

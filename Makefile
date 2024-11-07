@@ -77,9 +77,6 @@ query_port8090:
 query_test_lavap_prodiver_error_parsing:
 	bun run ./src/query/utils/lavapProvidersErrorParser.test.ts 
 
-getblock:
-	JSINFO_QUERY_IS_DEBUG_MODE=true bun run src/executils/getblock.ts 1629704
-
 redis_run:
 	docker rm -f redis-stack || true
 	docker run --name redis-stack -p 6379:6379 -p 8001:8001 -e REDIS_ARGS="--requirepass mypassword" redis/redis-stack:latest
@@ -127,3 +124,9 @@ query_endpoints_full_tests_testnet:
 
 query_endpoints_full_tests_mainnet:
 	cd tests/query_endpoints && make query_endpoints_full_tests_mainnet
+
+executils_getblock:
+	JSINFO_QUERY_IS_DEBUG_MODE=true bun run src/executils/getblock.ts 1629704
+
+executils_analyze_heap:
+	bun run ./src/executils/analyze-heap.ts

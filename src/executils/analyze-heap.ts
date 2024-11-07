@@ -2,7 +2,7 @@
 
 import { readFileSync } from 'fs';
 
-const snapshotFile = 'heap-snapshot-2024-11-06T22-08-45-401Z.json';
+const snapshotFile = 'heap-snapshot-2024-11-07T07-43-26-491Z.json';
 console.log('Loading snapshot...');
 const snapshot = JSON.parse(readFileSync(snapshotFile, 'utf-8'));
 
@@ -101,34 +101,9 @@ for (let i = 0; i < snapshot.nodes.length; i += 6) {
 console.log('\nDetailed Memory Analysis:');
 Array.from(typeStats.entries())
     .sort(([, a], [, b]) => b.size - a.size)
-    .slice(0, 5)
+    .slice(0, 20)  // Top 20 types by size
     .forEach(([type, stats]) => {
-        console.log(`\n${type}:`);
-        console.log(`  Total Count: ${stats.count.toLocaleString()}`);
-        console.log(`  Total Size: ${(stats.size / 1024 / 1024).toFixed(2)}MB`);
-        console.log(`  Average Size: ${(stats.avgSize / 1024).toFixed(2)}KB`);
-        console.log(`  Largest Instance: ${(stats.maxSize / 1024).toFixed(2)}KB`);
-        console.log(`  Max Edge Count: ${stats.maxEdges}`);
-
-        console.log('\n  Edge Type Distribution:');
-        Array.from(stats.edgeTypes.entries())
-            .sort(([, a], [, b]) => b - a)
-            .forEach(([edgeType, count]) => {
-                console.log(`    ${edgeType}: ${count}`);
-            });
-
-        console.log('  Top Retainers:');
-        Array.from(stats.retainers.entries())
-            .sort(([, a], [, b]) => b.count - a.count)
-            .slice(0, 5)
-            .forEach(([retainer, retainerStats]) => {
-                const sizeInMB = (retainerStats.size / 1024 / 1024).toFixed(2);
-                console.log(`    ${retainer}`);
-                console.log(`      Count: ${retainerStats.count.toLocaleString()}`);
-                console.log(`      Size: ${sizeInMB}MB`);
-                console.log(`      Edge Type: ${retainerStats.edgeType}`);
-                console.log(`      Retainer Type: ${retainerStats.retainerType}`);
-            });
+        printObjectAnalysis(type, stats);
     });
 
 // Print memory usage
@@ -137,3 +112,119 @@ console.log('\nProcess Memory Usage:');
 Object.entries(memUsage).forEach(([key, value]) => {
     console.log(`${key}: ${(value / 1024 / 1024).toFixed(2)}MB`);
 });
+
+// Add these new analysis functions
+function analyzeStructures(snapshot) {
+    const structureStats = new Map();
+
+    for (let i = 0; i < snapshot.nodes.length; i += 6) {
+        const nodeType = snapshot.nodeClassNames[snapshot.nodes[i + 0]];
+        const structureId = snapshot.nodes[i + 1];  // Structure ID
+        const size = snapshot.nodes[i + 2];
+
+        const key = `${nodeType}@${structureId}`;
+        if (!structureStats.has(key)) {
+            structureStats.set(key, {
+                count: 0,
+                totalSize: 0,
+                retainedSize: 0,
+                examples: []
+            });
+        }
+
+        const stats = structureStats.get(key);
+        stats.count++;
+        stats.totalSize += size;
+        if (stats.examples.length < 3) {  // Keep a few examples
+            stats.examples.push(i);
+        }
+    }
+
+    // Print structure analysis
+    console.log('\nUnique Object Structures:');
+    Array.from(structureStats.entries())
+        .sort(([, a], [, b]) => b.totalSize - a.totalSize)
+        .slice(0, 20)  // Top 20 structures
+        .forEach(([structure, stats]) => {
+            console.log(`\n${structure}:`);
+            console.log(`  Instances: ${stats.count}`);
+            console.log(`  Total Size: ${(stats.totalSize / 1024).toFixed(2)}KB`);
+            console.log(`  Average Size: ${(stats.totalSize / stats.count).toFixed(2)} bytes`);
+
+            // Print example properties if available
+            if (stats.examples.length > 0) {
+                const nodeIndex = stats.examples[0];
+                const edgeStart = snapshot.nodes[nodeIndex + 4];
+                const edgeCount = snapshot.nodes[nodeIndex + 3];
+
+                console.log('  Properties:');
+                const uniqueProperties = new Set();
+                for (let e = 0; e < edgeCount; e++) {
+                    const edgeNameIndex = snapshot.edges[edgeStart + e * 3 + 2];
+                    const edgeName = snapshot.edgeNames[edgeNameIndex];
+                    if (edgeName) {
+                        uniqueProperties.add(edgeName);
+                    }
+                }
+
+                // Print unique properties
+                uniqueProperties.forEach(prop => {
+                    console.log(`    - ${prop}`);
+                });
+            }
+        });
+}
+
+// Add this call after your existing analysis
+analyzeStructures(snapshot);
+
+function printObjectAnalysis(type: string, stats: any) {
+    console.log(`\n=== ${type} Analysis ===`);
+
+    // Basic Stats
+    console.log('\nBasic Statistics:');
+    console.log(`  Instance Count: ${stats.count.toLocaleString()}`);
+    console.log(`  Total Memory: ${(stats.size / 1024 / 1024).toFixed(2)}MB`);
+    console.log(`  Average Size: ${(stats.avgSize / 1024).toFixed(2)}KB`);
+    console.log(`  Largest Instance: ${(stats.maxSize / 1024).toFixed(2)}KB`);
+    console.log(`  Max Connections: ${stats.maxEdges}`);
+
+    // Edge Types
+    console.log('\nConnection Types:');
+    Array.from(stats.edgeTypes.entries())
+        .sort(([, a], [, b]) => b - a)
+        .forEach(([edgeType, count]) => {
+            console.log(`  ${edgeType}: ${count.toLocaleString()}`);
+        });
+
+    // Retainers by Category
+    console.log('\nTop Memory Holders:');
+    const retainersByType = new Map();
+
+    Array.from(stats.retainers.entries())
+        .sort(([, a], [, b]) => b.size - a.size)
+        .slice(0, 10)
+        .forEach(([key, info]) => {
+            const [retainerType, edgeType, name] = key.split(':');
+            const category = `${retainerType} via ${edgeType}`;
+
+            if (!retainersByType.has(category)) {
+                retainersByType.set(category, []);
+            }
+
+            retainersByType.get(category).push({
+                name: name || 'anonymous',
+                count: info.count,
+                sizeMB: (info.size / 1024 / 1024).toFixed(2)
+            });
+        });
+
+    retainersByType.forEach((items, category) => {
+        console.log(`\n  ${category}:`);
+        items.forEach(item => {
+            console.log(`    ${item.name}`);
+            console.log(`      Count: ${item.count.toLocaleString()}`);
+            console.log(`      Size: ${item.sizeMB}MB`);
+        });
+    });
+}

@@ -89,7 +89,9 @@ import {
     SpecEndpointHealthHandler,
     SpecEndpointHealthHandlerOpts,
     SpecCacheHitRateHandler,
-    SpecCacheHitRateHandlerOpts
+    SpecCacheHitRateHandlerOpts,
+    SpecTrackedInfoHandler,
+    SpecTrackedInfoHandlerOpts
 } from './handlers/spec/specV2Handlers';
 
 // -- Internal data endpoints --
@@ -198,5 +200,5 @@ RegisterRedisBackedHandler('/specCuRelayRewards/:specId', SpecCuRelayRewardsHand
 RegisterRedisBackedHandler('/specProviderCount/:specId', SpecProviderCountHandlerOpts, SpecProviderCountHandler);
 RegisterRedisBackedHandler('/specEndpointHealth/:specId', SpecEndpointHealthHandlerOpts, SpecEndpointHealthHandler);
 RegisterRedisBackedHandler('/specCacheHitRate/:specId', SpecCacheHitRateHandlerOpts, SpecCacheHitRateHandler);
-
 RegisterRedisBackedHandler('/specProviderHealth/:specId/:addr', SpecProviderHealthHandlerOpts, SpecProviderHealthHandler, { cache_ttl: 10 });
+RegisterRedisBackedHandler('/specTrackedInfo/:specId', SpecTrackedInfoHandlerOpts, SpecTrackedInfoHandler, { cache_ttl: 10 });

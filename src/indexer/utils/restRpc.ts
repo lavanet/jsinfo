@@ -31,6 +31,9 @@ export async function FetchRestData<T>(
 
 export async function QueryLavaRPC<T>(path: string, skipBackoff: boolean = false): Promise<T> {
     const baseUrl = GetEnvVar("JSINFO_INDEXER_LAVA_REST_RPC_URL");
+    if (baseUrl.endsWith('/') && path.startsWith('/')) {
+        path = path.slice(1);
+    }
     const url = `${baseUrl}${path}`;
     return FetchRestData<T>(url, {}, skipBackoff);
 }

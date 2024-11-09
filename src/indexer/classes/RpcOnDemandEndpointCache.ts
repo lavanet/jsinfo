@@ -36,6 +36,18 @@ export interface DelegatorRewardsResponse {
     rewards: DelegatorReward[];
 }
 
+export interface SpecTrackedInfoResponse {
+    info: {
+        provider: string;
+        chain_id: string;
+        base_pay: {
+            total: string;
+            totalAdjusted: string;
+            iprpc_cu: string;
+        };
+    }[];
+}
+
 const CACHE_KEYS = {
     DENOM_TRACE: (denom: string) => `denom_trace:${denom}`,
     VALIDATOR_REWARDS: (validator: string, amount: number, denom: string) =>
@@ -43,6 +55,7 @@ const CACHE_KEYS = {
     PROVIDER_REWARDS: (provider: string, amount: number, denom: string) =>
         `provider_rewards:${provider}:${amount}:${denom}`,
     DELEGATOR_REWARDS: (delegator: string) => `delegator_rewards:${delegator}`,
+    SPEC_TRACKED_INFO: (chainId: string) => `spec_tracked_info:${chainId}`,
 } as const;
 
 class RpcOnDemandEndpointCacheClass {
@@ -180,6 +193,33 @@ class RpcOnDemandEndpointCacheClass {
             return response;
         } catch (error) {
             logger.error(`Error fetching delegator rewards for ${delegator}`, { error: TruncateError(error) });
+            throw error;
+        }
+    }
+
+    public async GetSpecTrackedInfo(chainId: string): Promise<SpecTrackedInfoResponse> {
+        const cacheKey = CACHE_KEYS.SPEC_TRACKED_INFO(chainId);
+        let specTrackedInfo = await MemoryCache.get<SpecTrackedInfoResponse>(cacheKey);
+
+        if (!specTrackedInfo) {
+            specTrackedInfo = await this.fetchAndCacheSpecTrackedInfo(chainId);
+            if (!specTrackedInfo) {
+                logger.warn(`SpecTrackedInfo not found in cache after refresh for ${chainId}`);
+                return { info: [] };
+            }
+        }
+
+        return specTrackedInfo;
+    }
+
+    private async fetchAndCacheSpecTrackedInfo(chainId: string): Promise<SpecTrackedInfoResponse> {
+        try {
+            const response = await QueryLavaRPC<SpecTrackedInfoResponse>(`/lavanet/lava/rewards/SpecTrackedInfo/${chainId}/`);
+            await MemoryCache.set(CACHE_KEYS.SPEC_TRACKED_INFO(chainId), response, this.cacheRefreshInterval);
+            logger.info(`Fetched and cached SpecTrackedInfo for ${chainId} successfully.`);
+            return response;
+        } catch (error) {
+            logger.error(`Error fetching SpecTrackedInfo for ${chainId}`, { error: TruncateError(error) });
             throw error;
         }
     }

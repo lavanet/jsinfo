@@ -253,6 +253,13 @@
       "when": 1730324516723,
       "tag": "0035_odd_doorman",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "5",
+      "when": 1731159731090,
+      "tag": "0036_simple_bug",
+      "breakpoints": true
     }
   ]
 }

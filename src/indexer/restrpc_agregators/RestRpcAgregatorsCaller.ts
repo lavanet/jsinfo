@@ -7,6 +7,7 @@ import { logger } from "../../utils/utils";
 import { ProcessChainWalletApi } from "./ChainWalletApiProcessor";
 import { APRMonitor } from "./AprMonitor";
 import { DelegatorRewardsMonitor } from "./DelegatorRewardsMonitor";
+import { SpecTrackedInfoMonitor } from "./SpecTrackedInfoMonitor";
 
 let isRunning = false;
 
@@ -21,6 +22,7 @@ export async function RestRpcAgreagorsCaller(db: PostgresJsDatabase): Promise<vo
     // this guys run in the background
     APRMonitor.start();
     DelegatorRewardsMonitor.start();
+    SpecTrackedInfoMonitor.start();
 
     logger.info(`ProcessSubscriptionList started at: ${new Date().toISOString()}`);
     try {

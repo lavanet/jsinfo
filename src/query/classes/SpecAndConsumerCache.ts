@@ -17,6 +17,8 @@ class SpecAndConsumerCacheClass {
     private debugInterval: NodeJS.Timer | null = null;
 
     public constructor() {
+        // "const error = Errors.postgres(parseError(x))"
+        // Comment this when migrations are stuck (i think this is solved in the timescale branch)
         this.refreshCache();
         setInterval(() => this.refreshCache(), this.refreshInterval);
 
@@ -72,27 +74,22 @@ class SpecAndConsumerCacheClass {
         }
 
         if (!newConsumerCache || newConsumerCache.length === 0 || this.consumerCache.length === 0) {
-            logger.info('Fetching new consumer data from database');
             this.consumerCache = await this.fetchConsumerTable();
             RedisCache.setArray("ConsumerTable", this.consumerCache, this.refreshInterval);
         } else {
             this.consumerCache = newConsumerCache;
         }
-
-        // logger.info('SpecAndConsumerCache refresh completed');
     }
 
     public IsValidSpec(specId: string): boolean {
-        if (!this.specCache.includes(specId.toUpperCase())) {
-            this.refreshCache();
+        if (!this.GetAllSpecs().includes(specId.toUpperCase())) {
             return false;
         }
         return true;
     }
 
     public IsValidConsumer(consumer: string): boolean {
-        if (!this.consumerCache.includes(consumer.toLowerCase())) {
-            this.refreshCache();
+        if (!this.GetAllConsumers().includes(consumer.toLowerCase())) {
             return false;
         }
         return true;
@@ -102,7 +99,7 @@ class SpecAndConsumerCacheClass {
         if (this.specCache.length === 0) {
             this.refreshCache();
         }
-        return this.specCache;
+        return this.specCache.length === 0 ? ["EVMOS", "STRGZ"] : this.specCache;
     }
 
     public GetAllConsumers(): string[] {

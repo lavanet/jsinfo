@@ -14,22 +14,36 @@ export interface RpcConnection {
 }
 
 export async function ConnectToRpc(rpc: string): Promise<RpcConnection> {
+    try {
+        // Test HTTP connection first
+        logger.info(`ConnectToRpc:: testing HTTP connection to ${rpc}`);
+        const healthResponse = await fetch(`${rpc}/health`);
 
-    logger.info(`ConnectToRpc:: connecting to ${rpc}`);
-    const client = await StargateClient.connect(rpc);
-    logger.info(`ConnectToRpc:: connected to StargateClient`);
+        if (!healthResponse.ok) {
+            throw new Error(`HTTP health check failed with status: ${healthResponse.status}`);
+        }
+        logger.info(`ConnectToRpc:: HTTP health check passed`);
 
-    const clientTm = await Tendermint37Client.connect(rpc);
-    logger.info(`ConnectToRpc:: connected to Tendermint37Client`);
+        // Proceed with RPC connection
+        logger.info(`ConnectToRpc:: connecting to ${rpc}`);
+        const client = await StargateClient.connect(rpc);
+        logger.info(`ConnectToRpc:: connected to StargateClient`);
 
-    const chainId = await client.getChainId();
-    logger.info(`ConnectToRpc:: fetched chainId ${chainId}`);
+        const clientTm = await Tendermint37Client.connect(rpc);
+        logger.info(`ConnectToRpc:: connected to Tendermint37Client`);
 
-    const height = await client.getHeight();
-    logger.info(`ConnectToRpc:: fetched height ${height}`);
+        const chainId = await client.getChainId();
+        logger.info(`ConnectToRpc:: fetched chainId ${chainId}`);
 
-    const lavajsClient = await lavajs.lavanet.ClientFactory.createRPCQueryClient({ rpcEndpoint: rpc });
-    logger.info(`ConnectToRpc:: created lavajsClient`);
+        const height = await client.getHeight();
+        logger.info(`ConnectToRpc:: fetched height ${height}`);
 
-    return { client, clientTm, chainId, height, lavajsClient };
+        const lavajsClient = await lavajs.lavanet.ClientFactory.createRPCQueryClient({ rpcEndpoint: rpc });
+        logger.info(`ConnectToRpc:: created lavajsClient`);
+
+        return { client, clientTm, chainId, height, lavajsClient };
+    } catch (error) {
+        logger.error(`ConnectToRpc:: failed to connect to ${rpc}: ${error}`);
+        throw error;
+    }
 }

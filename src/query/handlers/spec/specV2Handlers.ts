@@ -177,3 +177,33 @@ export async function SpecCacheHitRateHandler(request: FastifyRequest, reply: Fa
 
     return { cacheHitRate };
 }
+
+// Spec Tracked Info Sum Handler
+export const SpecTrackedInfoHandlerOpts: RouteShorthandOptions = {
+    schema: {
+        response: {
+            200: {
+                type: 'object',
+                properties: {
+                    cuSum: { type: 'string' }
+                }
+            }
+        }
+    }
+}
+
+export async function SpecTrackedInfoHandler(request: FastifyRequest, reply: FastifyReply) {
+    const spec = await GetAndValidateSpecIdFromRequest(request, reply);
+    if (spec === '') {
+        return null;
+    }
+
+    const result = await QueryGetJsinfoReadDbInstance()
+        .select({
+            cuSum: sql<string>`SUM(${JsinfoSchema.specTrackedInfo.iprpc_cu}::numeric)`
+        })
+        .from(JsinfoSchema.specTrackedInfo)
+        .where(eq(JsinfoSchema.specTrackedInfo.chain_id, spec));
+
+    return { cuSum: result[0]?.cuSum || '0' };
+}

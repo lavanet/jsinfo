@@ -344,3 +344,17 @@ export const delegatorRewards = pgTable('delegator_rewards', {
 
 export type DelegatorRewards = typeof delegatorRewards.$inferSelect;
 export type InsertDelegatorRewards = typeof delegatorRewards.$inferInsert;
+
+export const specTrackedInfo = pgTable('spec_tracked_info', {
+  provider: text('provider').notNull(),
+  chain_id: text('chain_id').notNull(),
+  iprpc_cu: text('iprpc_cu').notNull(),
+  timestamp: timestamp('timestamp').defaultNow().notNull(),
+}, (table) => {
+  return {
+    pk: primaryKey({ columns: [table.provider, table.chain_id] }),
+  };
+});
+
+export type SpecTrackedInfo = typeof specTrackedInfo.$inferSelect;
+export type InsertSpecTrackedInfo = typeof specTrackedInfo.$inferInsert;

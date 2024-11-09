@@ -130,3 +130,6 @@ executils_getblock:
 
 executils_analyze_heap:
 	bun run ./src/executils/analyze-heap.ts
+
+executils_test_rpc:
+	bun run ./src/executils/test-rpc.ts

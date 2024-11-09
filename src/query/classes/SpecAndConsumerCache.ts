@@ -99,6 +99,7 @@ class SpecAndConsumerCacheClass {
         if (this.specCache.length === 0) {
             this.refreshCache();
         }
+        // TODO: remove once merged with ts branch
         return this.specCache.length === 0 ? ["EVMOS", "STRGZ"] : this.specCache;
     }
 

@@ -12,7 +12,6 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { eq, desc } from "drizzle-orm";
 import { PromisePool } from '@supercharge/promise-pool'
 import { GetOneLavaBlock } from './indexer/lavaBlock'
-import { EventDebug } from './indexer/eventDebug'
 import { LavaBlock } from './indexer/types'
 import { SyncBlockchainEntities } from './indexer/blockchainEntities/blockchainEntitiesSync'
 import { ConnectToRpc, RpcConnection } from "./indexer/utils/lavajsRpc";
@@ -143,11 +142,6 @@ const indexer = async (): Promise<void> => {
     }
 
     const rpcConnection = await establishRpcConnection();
-
-    if (consts.JSINFO_INDEXER_DEBUG_DUMP_EVENTS) {
-        await EventDebug(rpcConnection);
-        return
-    }
 
     const db = await migrateAndFetchDb();
     logger.info('Done migrateAndFetchDb');

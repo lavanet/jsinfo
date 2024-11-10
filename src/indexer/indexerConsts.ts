@@ -20,9 +20,6 @@ export const JSINFO_INDEXER_CACHE_USE_READ: number = parseInt(GetEnvVar('JSINFO_
 export const JSINFO_INDEXER_CACHE_PATH: string = GetEnvVar('JSINFO_INDEXER_CACHE_PATH', join(homedir(), 'Documents/jsinfo_disk_cache'));
 export const JSINFO_INDEXER_CACHE_USE_PAKO_COMPRESSION: number = parseInt(GetEnvVar('JSINFO_INDEXER_CACHE_USE_PAKO_COMPRESSION', "1"));
 export const JSINFO_INDEXER_CACHE_MAX_SIZE: number = ParseSizeToBytes(GetEnvVar('JSINFO_INDEXER_CACHE_MAX_SIZE', "50gb"));
-
-export const JSINFO_INDEXER_DEBUG_DUMP_EVENTS: boolean = GetEnvVar('JSINFO_INDEXER_DEBUG_DUMP_EVENTS', "false").toLowerCase() == "true";
-
 export const JSINFO_INDEXER_EVENT_ATTRIBUTE_VALUE_MAX_LENGTH: number = parseInt(GetEnvVar('JSINFO_INDEXER_EVENT_ATTRIBUTE_VALUE_MAX_LENGTH', "5000"));
 
 // lava_provider_bonus_rewards was 600 keys

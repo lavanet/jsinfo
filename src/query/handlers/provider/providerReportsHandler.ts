@@ -23,6 +23,7 @@ export type ProviderReportsResponse = {
         datetime: Date | null;
         totalComplaintEpoch: number | null;
         tx: string | null;
+        chainId: string | null;
     };
     blocks: {
         height: number | null;
@@ -74,7 +75,10 @@ export const ProviderReportsPaginatedHandlerOpts: RouteShorthandOptions = {
                                         },
                                         tx: {
                                             type: ['string', 'null']
-                                        }
+                                        },
+                                        chainId: {
+                                            type: ['string', 'null']
+                                        },
                                     }
                                 },
                                 blocks: {
@@ -193,7 +197,8 @@ class ProviderReportsData extends RequestHandlerBase<ProviderReportsResponse> {
             "provider_reported.cu": JsinfoSchema.providerReported.cu,
             "provider_reported.disconnections": JsinfoSchema.providerReported.disconnections,
             "provider_reported.errors": JsinfoSchema.providerReported.errors,
-            "provider_reported.project": JsinfoSchema.providerReported.project
+            "provider_reported.project": JsinfoSchema.providerReported.project,
+            "provider_reported.chainId": JsinfoSchema.providerReported.chainId
         };
 
         if (!Object.keys(keyToColumnMap).includes(finalPagination.sortKey)) {
@@ -221,7 +226,8 @@ class ProviderReportsData extends RequestHandlerBase<ProviderReportsResponse> {
                     project: JsinfoSchema.providerReported.project,
                     datetime: JsinfoSchema.providerReported.datetime,
                     totalComplaintEpoch: JsinfoSchema.providerReported.totalComplaintEpoch,
-                    tx: JsinfoSchema.providerReported.tx
+                    tx: JsinfoSchema.providerReported.tx,
+                    chainId: JsinfoSchema.providerReported.chainId
                 },
                 blocks: {
                     height: JsinfoSchema.providerReported.blockId,
@@ -250,7 +256,8 @@ class ProviderReportsData extends RequestHandlerBase<ProviderReportsResponse> {
                 project: row.providerReported.project,
                 datetime: row.providerReported.datetime,
                 totalComplaintEpoch: row.providerReported.totalComplaintEpoch,
-                tx: row.providerReported.tx
+                tx: row.providerReported.tx,
+                chainId: row.providerReported.chainId
             },
             blocks: {
                 height: row.blocks.height,
@@ -267,6 +274,7 @@ class ProviderReportsData extends RequestHandlerBase<ProviderReportsResponse> {
             { key: "provider_reported.disconnections", name: "Disconnections" },
             { key: "provider_reported.errors", name: "Errors" },
             { key: "provider_reported.project", name: "Project" },
+            { key: "provider_reported.chainId", name: "Chain ID" }
         ];
 
         let csv = columns.map(column => CSVEscape(column.name)).join(',') + '\n';

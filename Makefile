@@ -56,9 +56,6 @@ indexer_with_migrations:
 indexer_with_debugger:
 	NODE_TLS_REJECT_UNAUTHORIZED=0 bun --inspect-brk run src/indexer.ts
 
-indexer_debug_events:
-	JSINFO_INDEXER_DEBUG_DUMP_EVENTS=true NODE_TLS_REJECT_UNAUTHORIZED=0 bun run src/indexer.ts
-
 query:
 	npx --yes nodemon --watch src --ext ts --exec "JSINFO_QUERY_IS_DEBUG_MODE=true bun run src/query.ts"
 
@@ -133,3 +130,6 @@ executils_analyze_heap:
 
 executils_test_rpc:
 	bun run ./src/executils/test-rpc.ts
+
+executils_event_debug:
+	bun run ./src/executils/event-debug.ts

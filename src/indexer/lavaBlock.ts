@@ -31,7 +31,7 @@ export const GetRpcTxs = async (
     return cache.getOrGenerate<IndexedTx[]>(height, "txs", async () => {
         const txs = await client.searchTx(`tx.height=${height}`);
         if (txs.length === 0 && block.txs.length !== 0) {
-            throw new Error('txs.length == 0 && block.txs.length != 0');
+            console.warn('txs.length == 0 && block.txs.length != 0');
         }
         return txs;
     });

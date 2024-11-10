@@ -192,6 +192,7 @@ export const providerReported = pgTable('provider_reported', {
   epoch: integer('epoch'),
   errors: integer('errors'),
   project: text('project'),
+  chainId: text('chain_id'),
   datetime: timestamp('datetime', { mode: "date" }),
   totalComplaintEpoch: integer('total_complaint_this_epoch'),
   tx: text('tx'),

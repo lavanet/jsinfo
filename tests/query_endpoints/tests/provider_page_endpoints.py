@@ -33,8 +33,7 @@ class TestProviderEndpoints(unittest.TestCase):
 
         for provider in self.selected_providers:
             try:
-                addr = provider['address']
-                url = f"{server_address}/provider/{addr}"
+                url = f"{server_address}/provider/{provider}"
                 response = requests.get(url)
                 self.assertEqual(response.status_code, 200, "Expected status code 200")
 
@@ -58,8 +57,7 @@ class TestProviderEndpoints(unittest.TestCase):
 
         for provider in self.selected_providers:
             try:
-                addr = provider['address']
-                url = f"{server_address}/providerCards/{addr}"
+                url = f"{server_address}/providerCards/{provider}"
                 response = requests.get(url)
                 self.assertEqual(response.status_code, 200, "Expected status code 200")
 
@@ -77,8 +75,7 @@ class TestProviderEndpoints(unittest.TestCase):
     def test_provider_charts_endpoint_structure(self):
         """Test the structure of the response from the providerCharts endpoint for random providers."""
         for provider in self.selected_providers:
-            addr = provider['address']
-            url = f"{server_address}/providerCharts/{addr}"
+            url = f"{server_address}/providerCharts/{provider}"
             response = requests.get(url)
             self.assertEqual(response.status_code, 200, "Expected status code 200")
 

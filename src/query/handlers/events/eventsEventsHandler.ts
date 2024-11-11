@@ -8,7 +8,7 @@ import { Pagination, ParsePaginationFromString } from '../../utils/queryPaginati
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '../../queryConsts';
 import { CSVEscape } from '../../utils/queryUtils';
 import { RequestHandlerBase } from '../../classes/RequestHandlerBase';
-import { MonikerCache } from '../../classes/MonikerCache';
+import { MonikerCache } from '../../classes/QueryProviderMonikerCache';
 
 export interface EventsEventsResponse {
     id: number | null;
@@ -96,7 +96,7 @@ class EventsEventsData extends RequestHandlerBase<EventsEventsResponse> {
         const eventsRes = await QueryGetJsinfoReadDbInstance()
             .select()
             .from(JsinfoSchema.events)
-            .where(sql`timestamp >= NOW() - INTERVAL '30 days'`) // Add this line to filter by the last 30 days
+            .where(sql`timestamp >= NOW() - INTERVAL '30 days'`)
             .orderBy(desc(JsinfoSchema.events.id))
             .offset(0)
             .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
@@ -190,7 +190,7 @@ class EventsEventsData extends RequestHandlerBase<EventsEventsResponse> {
                 .select()
                 .from(JsinfoSchema.events)
                 .leftJoin(JsinfoSchema.providerSpecMoniker, eq(JsinfoSchema.events.provider, JsinfoSchema.providerSpecMoniker.provider))
-                .where(sql`timestamp >= NOW() - INTERVAL '30 days'`) // Add this line to filter by the last 30 days
+                .where(sql`timestamp >= NOW() - INTERVAL '30 days'`)
                 .orderBy(orderFunction(sortColumn))
                 .offset(offset)
                 .limit(finalPagination.count);
@@ -198,7 +198,7 @@ class EventsEventsData extends RequestHandlerBase<EventsEventsResponse> {
             eventsRes = await QueryGetJsinfoReadDbInstance()
                 .select()
                 .from(JsinfoSchema.events)
-                .where(sql`timestamp >= NOW() - INTERVAL '30 days'`) // Add this line to filter by the last 30 days
+                .where(sql`timestamp >= NOW() - INTERVAL '30 days'`)
                 .orderBy(orderFunction(sortColumn))
                 .offset(offset)
                 .limit(finalPagination.count);

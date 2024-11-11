@@ -4,6 +4,7 @@ import { drizzle, PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import postgres from 'postgres';
 import { GetEnvVar, Sleep, logger } from './utils';
+import { sql } from 'drizzle-orm';
 
 let cachedPostgresUrl: string | null = null;
 
@@ -74,6 +75,15 @@ export async function GetJsinfoDb(): Promise<PostgresJsDatabase> {
     return db;
 }
 
+export async function GetJsinfoDbForIndexer(): Promise<PostgresJsDatabase> {
+    const queryClient = postgres(await GetPostgresUrl(), {
+        idle_timeout: 60 * 2,
+        connect_timeout: 60 * 10,
+    });
+    const db: PostgresJsDatabase = drizzle(queryClient/*, { logger: true }*/);
+    return db;
+}
+
 export async function GetJsinfoReadDb(): Promise<PostgresJsDatabase> {
     // use one db
     const queryClient = postgres(await GetReadPostgresUrl(), {
@@ -99,7 +109,9 @@ export async function GetRelaysReadDb(): Promise<PostgresJsDatabase> {
 
 export const MigrateDb = async () => {
     logger.info(`MigrateDb:: Starting database migration... ${new Date().toISOString()}`);
-    const migrationClient = postgres(await GetPostgresUrl(), { max: 1 });
+    let postgresUrl = await GetPostgresUrl();
+    // console.log("MigrateDb:: postgresUrl", postgresUrl);
+    const migrationClient = postgres(postgresUrl, { max: 1 });
     logger.info(`MigrateDb:: Migration client created. ${new Date().toISOString()}`);
     await migrate(drizzle(migrationClient), { migrationsFolder: "drizzle" });
     logger.info(`MigrateDb:: Database migration completed. ${new Date().toISOString()}`);

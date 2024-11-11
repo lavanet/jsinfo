@@ -39,7 +39,7 @@ export const SpecProviderHealthHandlerOpts: RouteShorthandOptions = {
 };
 
 // SELECT DISTINCT ON(provider, spec, interface) *
-//     FROM provider_health2
+//     FROM provider_health
 // WHERE provider = 'lava@1lamrmq78w6dnw5ahpyflus5ps7pvlwrtn9rf83'
 // AND spec = 'NEAR'
 // AND timestamp >= '2024-08-24'
@@ -50,12 +50,12 @@ export async function SpecProviderHealthHandler(request: FastifyRequest, reply: 
 
     let provider = await GetAndValidateProviderAddressFromRequest("specProviderHealth", request, reply);
     if (provider === '') {
-        return null;
+        return reply;
     }
 
     let spec = await GetAndValidateSpecIdFromRequest(request, reply);
     if (spec === '') {
-        return null;
+        return reply;
     }
 
     const twoDaysAgo = new Date();

@@ -5,6 +5,7 @@ import { GetLatestBlock, QueryCheckIsJsinfoDbInstanceOk, QueryCheckJsinfoReadDbI
 import { RedisCache } from '../../classes/RedisCache';
 import * as JsinfoSchema from "../../../schemas/jsinfoSchema/jsinfoSchema";
 import { gt, desc } from "drizzle-orm";
+import { GetUtcNow } from '../../../utils/utils';
 
 export const HealthStatusRawHandlerOpts: RouteShorthandOptions = {
     schema: {
@@ -130,7 +131,7 @@ async function IsRedisOK(): Promise<HealthCheckResponse> {
 
 async function IsHealthProbeOK(): Promise<HealthCheckResponse> {
     try {
-        const twentyMinutesAgo = new Date(Date.now() - 20 * 60 * 1000);
+        const twentyMinutesAgo = new Date(GetUtcNow().getTime() - 20 * 60 * 1000);
 
         const recentHealthRecords = await QueryGetJsinfoReadDbInstance()
             .select()

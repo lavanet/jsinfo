@@ -2,7 +2,7 @@
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryCheckJsinfoReadDbInstance } from '../../queryDb';
-import { SpecAndConsumerCache } from '../../classes/SpecAndConsumerCache';
+import { SpecAndConsumerCache } from '../../classes/QuerySpecAndConsumerCache';
 
 export const ConsumersPaginatedHandlerOpts: RouteShorthandOptions = {
     schema: {

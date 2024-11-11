@@ -5,7 +5,7 @@
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { GetLatestBlock, QueryCheckJsinfoReadDbInstance } from '../../queryDb';
 import { GetAndValidateProviderAddressFromRequest } from '../../utils/queryRequestArgParser';
-import { MonikerCache } from '../../classes/MonikerCache';
+import { MonikerCache } from '../../classes/QueryProviderMonikerCache';
 
 export const ProviderPaginatedHandlerOpts: RouteShorthandOptions = {
     schema: {

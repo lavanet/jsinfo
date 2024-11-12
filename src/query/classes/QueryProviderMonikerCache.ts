@@ -277,7 +277,12 @@ class ProviderSpecMonikerCache {
                             break; // No more results
                         }
 
-                        allResults = allResults.concat(chunkResults);
+                        const mappedResults = chunkResults.map(result => ({
+                            ...result,
+                            spec: result.specId,  // Map specId to spec
+                        }));
+
+                        allResults = allResults.concat(mappedResults);
                         offset += chunkSize;
                     }
 

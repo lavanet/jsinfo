@@ -1,7 +1,7 @@
 // src/query/handlers/provider/providerCardsDelegatorRewardsHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../../queryDb';
+import { QueryCheckJsinfoDbInstance, QueryGetJsinfoDbForQueryInstance } from '../../queryDb';
 import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
 import { eq } from "drizzle-orm";
 import { GetAndValidateProviderAddressFromRequest } from '../../utils/queryRequestArgParser';
@@ -18,7 +18,7 @@ export const ProviderCardsDelegatorRewardsHandlerOpts: RouteShorthandOptions = {
 }
 
 async function getDelegatorRewards(addr: string) {
-    let ret = await QueryGetJsinfoReadDbInstance()
+    let ret = await QueryGetJsinfoDbForQueryInstance()
         .select()
         .from(JsinfoSchema.delegatorRewards)
         .where(eq(JsinfoSchema.delegatorRewards.delegator, addr))
@@ -29,14 +29,10 @@ async function getDelegatorRewards(addr: string) {
 export async function ProviderCardsDelegatorRewardsHandler(request: FastifyRequest, reply: FastifyReply) {
     const addr = await GetAndValidateProviderAddressFromRequest("ProviderCardsDelegatorRewards", request, reply);
     if (addr === '') {
-        return;
+        return null;
     }
 
-    await QueryCheckJsinfoReadDbInstance();
+    await QueryCheckJsinfoDbInstance();
 
-    const res = await getDelegatorRewards(addr);
-
-    console.log("res", res);
-
-    return res;
+    return await getDelegatorRewards(addr);
 }

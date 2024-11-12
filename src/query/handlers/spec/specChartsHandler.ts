@@ -1,7 +1,7 @@
 // src/query/handlers/specChartsHandler.ts
 
 import { FastifyReply, FastifyRequest, RouteShorthandOptions } from 'fastify';
-import { QueryGetJsinfoReadDbInstance } from '../../queryDb';
+import { QueryGetJsinfoDbForQueryInstance } from '../../queryDb';
 import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
 import * as JsinfoProviderAgrSchema from '../../../schemas/jsinfoSchema/providerRelayPaymentsAgregation';
 import { sql, desc, gt, and, lt, eq, inArray } from "drizzle-orm";
@@ -9,7 +9,7 @@ import { DateToISOString, FormatDateItems } from '../../utils/queryDateUtils';
 import { RequestHandlerBase } from '../../classes/RequestHandlerBase';
 import { GetDataLength } from '../../utils/queryUtils';
 import { GetAndValidateSpecIdFromRequest } from '../../utils/queryRequestArgParser';
-import { MonikerCache } from '../../classes/MonikerCache';
+import { MonikerCache } from '../../classes/QueryProviderMonikerCache';
 import { PgColumn } from 'drizzle-orm/pg-core';
 import { JSONStringifySpaced } from '../../../utils/utils';
 
@@ -107,7 +107,7 @@ class SpecChartsData extends RequestHandlerBase<SpecChartResponse> {
         }
 
         // First query to get top 10 providers
-        let top10Providers = await QueryGetJsinfoReadDbInstance().select({
+        let top10Providers = await QueryGetJsinfoDbForQueryInstance().select({
             provider: JsinfoSchema.providerStakes.provider,
         }).from(JsinfoSchema.providerStakes)
             .where(eq(JsinfoSchema.providerStakes.specId, this.spec))
@@ -141,7 +141,7 @@ class SpecChartsData extends RequestHandlerBase<SpecChartResponse> {
 
         const qosMetricWeightedAvg = (metric: PgColumn) => sql<number>`SUM(${metric} * ${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum}) / SUM(CASE WHEN ${metric} IS NOT NULL THEN ${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum} ELSE 0 END)`;
 
-        let monthlyData: QosQueryData[] = await QueryGetJsinfoReadDbInstance().select({
+        let monthlyData: QosQueryData[] = await QueryGetJsinfoDbForQueryInstance().select({
             date: JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday,
             qosSyncAvg: qosMetricWeightedAvg(JsinfoProviderAgrSchema.aggDailyRelayPayments.qosSyncAvg),
             qosAvailabilityAvg: qosMetricWeightedAvg(JsinfoProviderAgrSchema.aggDailyRelayPayments.qosAvailabilityAvg),
@@ -190,7 +190,7 @@ class SpecChartsData extends RequestHandlerBase<SpecChartResponse> {
     private async getSpecRelayCuChartWithTopProviders(from: Date, to: Date, top10Providers: any): Promise<SpecCuRelayData[]> {
         const formatedData: SpecCuRelayData[] = [];
 
-        let allProvidersMonthlyData: SpecCuRelayQueryData[] = await QueryGetJsinfoReadDbInstance().select({
+        let allProvidersMonthlyData: SpecCuRelayQueryData[] = await QueryGetJsinfoDbForQueryInstance().select({
             date: JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday,
             cuSum: sql<number>`SUM(COALESCE(NULLIF(${JsinfoProviderAgrSchema.aggDailyRelayPayments.cuSum}, 0), 0))`,
             relaySum: sql<number>`SUM(COALESCE(NULLIF(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum}, 0), 0))`,
@@ -214,7 +214,7 @@ class SpecChartsData extends RequestHandlerBase<SpecChartResponse> {
         });
 
         let providers = Object.keys(top10Providers);
-        let monthlyData: SpecCuRelayQueryDataWithProvider[] = await QueryGetJsinfoReadDbInstance().select({
+        let monthlyData: SpecCuRelayQueryDataWithProvider[] = await QueryGetJsinfoDbForQueryInstance().select({
             date: JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday,
             cuSum: sql<number>`SUM(COALESCE(NULLIF(${JsinfoProviderAgrSchema.aggDailyRelayPayments.cuSum}, 0), 0))`,
             relaySum: sql<number>`SUM(COALESCE(NULLIF(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum}, 0), 0))`,

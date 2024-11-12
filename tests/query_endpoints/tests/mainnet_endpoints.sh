@@ -1,5 +1,6 @@
 #!/bin/bash
 
+
 # Check if TESTS_SERVER_ADDRESS environment variable is set, default to localhost:8081 if not
 TESTS_SERVER_ADDRESS="${TESTS_SERVER_ADDRESS:-http://localhost:8081}"
 

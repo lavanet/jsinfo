@@ -2,7 +2,7 @@
 // src/query/handlers/provider/providerCardsCuRelayAndRewardsHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../../queryDb';
+import { QueryCheckJsinfoDbInstance, QueryGetJsinfoDbForQueryInstance } from '../../queryDb';
 import * as JsinfoProviderAgrSchema from '../../../schemas/jsinfoSchema/providerRelayPaymentsAgregation';
 import { sql, eq } from "drizzle-orm";
 import { GetAndValidateProviderAddressFromRequest } from '../../utils/queryRequestArgParser';
@@ -23,7 +23,7 @@ export const ProviderCardsCuRelayAndRewardsHandlerOpts: RouteShorthandOptions = 
 }
 
 async function getCuRelayAndRewardsTotal(addr: string) {
-    const result = await QueryGetJsinfoReadDbInstance()
+    const result = await QueryGetJsinfoDbForQueryInstance()
         .select({
             cuSum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggAllTimeRelayPayments.cuSum})`,
             relaySum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggAllTimeRelayPayments.relaySum})`,
@@ -47,10 +47,10 @@ async function getCuRelayAndRewardsTotal(addr: string) {
 export async function ProviderCardsCuRelayAndRewardsHandler(request: FastifyRequest, reply: FastifyReply) {
     const addr = await GetAndValidateProviderAddressFromRequest("providerCardsCuRelayAndRewards", request, reply);
     if (addr === '') {
-        return;
+        return null;
     }
 
-    await QueryCheckJsinfoReadDbInstance();
+    await QueryCheckJsinfoDbInstance();
 
     const { cuSum, relaySum, rewardSum } = await getCuRelayAndRewardsTotal(addr);
 

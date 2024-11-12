@@ -3,7 +3,7 @@
 
 import * as RelaysSchema from '../../../schemas/relaysSchema';
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryCheckRelaysReadDbInstance, QueryGetRelaysReadDbInstance } from '../../queryDb';
+import { QueryCheckRelaysReadDbInstance, QueryGetRelaysReadDbForQueryInstance } from '../../queryDb';
 import { eq, desc, sql, asc } from "drizzle-orm";
 import { Pagination } from '../../utils/queryPagination';
 import { CSVEscape } from '../../utils/queryUtils';
@@ -69,7 +69,7 @@ class ProviderErrorsData extends RequestHandlerBase<ErrorsReportResponse> {
     protected async fetchAllRecords(): Promise<ErrorsReportResponse[]> {
         await QueryCheckRelaysReadDbInstance();
 
-        const result = await QueryGetRelaysReadDbInstance().select().from(RelaysSchema.lavaReportError)
+        const result = await QueryGetRelaysReadDbForQueryInstance().select().from(RelaysSchema.lavaReportError)
             .where(eq(RelaysSchema.lavaReportError.provider, this.addr))
             .orderBy(desc(RelaysSchema.lavaReportError.id)).
             offset(0).
@@ -86,7 +86,7 @@ class ProviderErrorsData extends RequestHandlerBase<ErrorsReportResponse> {
     protected async fetchRecordCountFromDb(): Promise<number> {
         await QueryCheckRelaysReadDbInstance();
 
-        const countResult = await QueryGetRelaysReadDbInstance()
+        const countResult = await QueryGetRelaysReadDbForQueryInstance()
             .select({
                 count: sql<number>`COUNT(*)`
             })
@@ -120,7 +120,7 @@ class ProviderErrorsData extends RequestHandlerBase<ErrorsReportResponse> {
         const sortColumn = keyToColumnMap[pagination.sortKey || defaultSortKey] || keyToColumnMap[defaultSortKey];
         const orderFunction = pagination.direction === 'ascending' ? asc : desc;
 
-        const result = await QueryGetRelaysReadDbInstance()
+        const result = await QueryGetRelaysReadDbForQueryInstance()
             .select({
                 id: RelaysSchema.lavaReportError.id,
                 created_at: RelaysSchema.lavaReportError.created_at,

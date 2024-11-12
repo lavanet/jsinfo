@@ -1,7 +1,7 @@
 // src/query/handlers/providerChartsHandler.ts
 
 import { FastifyReply, FastifyRequest, RouteShorthandOptions } from 'fastify';
-import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../../queryDb';
+import { QueryCheckJsinfoDbInstance, QueryGetJsinfoDbForQueryInstance } from '../../queryDb';
 import * as JsinfoProviderAgrSchema from '../../../schemas/jsinfoSchema/providerRelayPaymentsAgregation';
 import { sql, gt, and, lt, desc, eq } from "drizzle-orm";
 import { DateToISOString, FormatDateItems } from '../../utils/queryDateUtils';
@@ -102,7 +102,7 @@ class ProviderChartsData extends RequestHandlerBase<ProviderChartResponse> {
 
         const qosMetricWeightedAvg = (metric: PgColumn) => sql<number>`SUM(${metric} * ${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum}) / SUM(CASE WHEN ${metric} IS NOT NULL THEN ${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum} ELSE 0 END)`;
 
-        let monthlyData: ProviderQosQueryData[] = await QueryGetJsinfoReadDbInstance().select({
+        let monthlyData: ProviderQosQueryData[] = await QueryGetJsinfoDbForQueryInstance().select({
             date: JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday,
             qosSyncAvg: qosMetricWeightedAvg(JsinfoProviderAgrSchema.aggDailyRelayPayments.qosSyncAvg),
             qosAvailabilityAvg: qosMetricWeightedAvg(JsinfoProviderAgrSchema.aggDailyRelayPayments.qosAvailabilityAvg),
@@ -149,7 +149,7 @@ class ProviderChartsData extends RequestHandlerBase<ProviderChartResponse> {
     private async getSpecRelayCuChartWithTopProviders(from: Date, to: Date): Promise<ProviderCuRelayData[]> {
         const formatedData: ProviderCuRelayData[] = [];
 
-        let monthlyData: ProviderCuRelayQueryDataWithSpecId[] = await QueryGetJsinfoReadDbInstance().select({
+        let monthlyData: ProviderCuRelayQueryDataWithSpecId[] = await QueryGetJsinfoDbForQueryInstance().select({
             date: JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday,
             specId: JsinfoProviderAgrSchema.aggDailyRelayPayments.specId,
             cuSum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggDailyRelayPayments.cuSum})`,
@@ -223,7 +223,7 @@ class ProviderChartsData extends RequestHandlerBase<ProviderChartResponse> {
     }
 
     protected async fetchDateRangeRecords(from: Date, to: Date): Promise<ProviderChartResponse[]> {
-        await QueryCheckJsinfoReadDbInstance();
+        await QueryCheckJsinfoDbInstance();
 
         const providerMainChartData = await this.getSpecRelayCuChartWithTopProviders(from, to);
         if (GetDataLength(providerMainChartData) === 0) {

@@ -88,7 +88,7 @@ function handleRequestWithRedisCache(
         // If no cache is found, call the handler
         const handlerData = await handler(request, reply);
         // returns null on error and handler handled the response
-        if (handlerData == null) return reply;
+        if (handlerData == null || handlerData == undefined || handlerData == reply) return reply;
 
         // Cache the new response, don't await
         RedisCache.set(cacheKey, JSONStringify(handlerData), cache_ttl || 30);

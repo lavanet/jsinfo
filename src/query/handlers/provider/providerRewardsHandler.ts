@@ -2,7 +2,7 @@
 // src/query/handlers/provider/providerRewardsHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../../queryDb';
+import { QueryCheckJsinfoDbInstance, QueryGetJsinfoDbForQueryInstance } from '../../queryDb';
 import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
 import { asc, desc, eq, gte, sql, and } from "drizzle-orm";
 import { Pagination, ParsePaginationFromString } from '../../utils/queryPagination';
@@ -143,11 +143,11 @@ class ProviderRewardsData extends RequestHandlerBase<ProviderRewardsResponse> {
     }
 
     protected async fetchAllRecords(): Promise<ProviderRewardsResponse[]> {
-        await QueryCheckJsinfoReadDbInstance();
+        await QueryCheckJsinfoDbInstance();
 
         const thirtyDaysAgo = this.getThirtyDaysAgo();
 
-        const paymentsRes: ProviderRewardsResponse[] = await QueryGetJsinfoReadDbInstance()
+        const paymentsRes: ProviderRewardsResponse[] = await QueryGetJsinfoDbForQueryInstance()
             .select({
                 relay_payments: JsinfoSchema.relayPayments,
                 blocks: {
@@ -174,11 +174,11 @@ class ProviderRewardsData extends RequestHandlerBase<ProviderRewardsResponse> {
     }
 
     protected async fetchRecordCountFromDb(): Promise<number> {
-        await QueryCheckJsinfoReadDbInstance();
+        await QueryCheckJsinfoDbInstance();
 
         const thirtyDaysAgo = this.getThirtyDaysAgo();
 
-        const countResult = await QueryGetJsinfoReadDbInstance()
+        const countResult = await QueryGetJsinfoDbForQueryInstance()
             .select({
                 count: sql<number>`COUNT(*)`
             })
@@ -226,14 +226,14 @@ class ProviderRewardsData extends RequestHandlerBase<ProviderRewardsResponse> {
             throw new Error(`Invalid sort key: ${trimmedSortKey}`);
         }
 
-        await QueryCheckJsinfoReadDbInstance();
+        await QueryCheckJsinfoDbInstance();
 
         const sortColumn = keyToColumnMap[finalPagination.sortKey];
         const orderFunction = finalPagination.direction === 'ascending' ? asc : desc;
 
         const thirtyDaysAgo = this.getThirtyDaysAgo();
 
-        const paymentsRes: ProviderRewardsResponse[] = await QueryGetJsinfoReadDbInstance()
+        const paymentsRes: ProviderRewardsResponse[] = await QueryGetJsinfoDbForQueryInstance()
             .select({
                 relay_payments: JsinfoSchema.relayPayments,
                 blocks: {

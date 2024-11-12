@@ -4,7 +4,7 @@ import * as consts from './query/queryConsts'
 import { logger } from './utils/utils'
 
 import { GetServerInstance } from './query/queryServer'
-import { QueryInitJsinfoDbInstance, QueryInitJsinfoReadDbInstance, QueryInitRelaysReadDbInstance, GetLatestBlock } from './query/queryDb'
+import { QueryInitJsinfoDbInstance, QueryInitRelaysReadDbInstance, GetLatestBlock } from './query/queryDb'
 
 import './query/queryRoutes'
 
@@ -12,7 +12,6 @@ export const queryServerMain = async (): Promise<void> => {
     logger.info('Starting query server on port ' + consts.JSINFO_QUERY_PORT + ' host ' + consts.JSINFO_QUERY_HOST)
 
     await QueryInitJsinfoDbInstance()
-    await QueryInitJsinfoReadDbInstance()
     await QueryInitRelaysReadDbInstance()
 
     try {
@@ -40,7 +39,6 @@ export const queryServerMain = async (): Promise<void> => {
 
 
 try {
-    console.info(`QueryCache:: JSINFO_QUERY_PROVIDER_HEALTH_HOURLY_CUTOFF_DAYS: ${consts.JSINFO_QUERY_PROVIDER_HEALTH_HOURLY_CUTOFF_DAYS}`);
     console.info(`QueryCache:: JSINFO_QUERY_HIGH_POST_BODY_LIMIT: ${consts.JSINFO_QUERY_HIGH_POST_BODY_LIMIT}`);
 
     queryServerMain();

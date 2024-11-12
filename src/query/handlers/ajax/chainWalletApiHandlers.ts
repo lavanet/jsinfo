@@ -3,7 +3,7 @@
 // curl http://localhost:8081/lava_chain_restakers
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../../queryDb';
+import { QueryCheckJsinfoDbInstance, QueryGetJsinfoDbForQueryInstance } from '../../queryDb';
 import { keyValueStore } from '../../../schemas/jsinfoSchema/jsinfoSchema';
 import { eq } from 'drizzle-orm';
 import { logger } from '../../../utils/utils';
@@ -23,9 +23,9 @@ export const ChainWalletApiHandlerOpts: RouteShorthandOptions = {
 }
 
 async function getKeyValueFromStore(key: string): Promise<string> {
-    await QueryCheckJsinfoReadDbInstance();
+    await QueryCheckJsinfoDbInstance();
 
-    const result = await QueryGetJsinfoReadDbInstance()
+    const result = await QueryGetJsinfoDbForQueryInstance()
         .select({ value: keyValueStore.value })
         .from(keyValueStore)
         .where(eq(keyValueStore.key, key));

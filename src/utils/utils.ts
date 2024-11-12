@@ -30,17 +30,18 @@ export const logger = winston.createLogger({
             format: winston.format.combine(
                 winston.format.colorize({ all: true }),
                 winston.format.printf(({ level, message, timestamp, service, ...metadata }) => {
-                    let msg = `${timestamp} ${level}: ${message}`;
+                    let msg = `${timestamp} ${level}: ${TruncateText(message, 1000)}`;
 
                     if (metadata.service === 'user-service') {
                         delete metadata.service;
                     }
 
                     if (Object.keys(metadata).length > 0) {
-                        msg += ' ' + JSON.stringify(metadata);
+                        const metadataString = TruncateText(JSON.stringify(metadata), 3900);
+                        msg += ' ' + metadataString;
                     }
 
-                    return msg;
+                    return TruncateText(msg, 5000);
                 })
             )
         })
@@ -193,17 +194,30 @@ export const IsMeaningfulText = (text: string | null | undefined): boolean => {
     return true;
 };
 
-let _isIndexerProcess: boolean = false;
-
-export function SetIsIndexerProcess(value: boolean): void {
-    _isIndexerProcess = value;
+export function IsIndexerProcess(): boolean {
+    return GetEnvVar("IS_INDEXER_PROCESS", "false") === "true";
 }
 
-export function GetIsIndexerProcess(): boolean {
-    return _isIndexerProcess;
-}
+export function TruncateText(str: string, maxLength: number): string {
+    if (str.length <= maxLength) return str;
+    return str.slice(0, maxLength - 3) + '...';
+};
 
 export function TruncateError(error: any): string {
     const errorString = error instanceof Error ? error.stack || error.message : String(error);
     return errorString.length > 1000 ? errorString.substring(0, 997) + '...' : errorString;
+}
+
+export function GetUtcNow(): Date {
+    const now = new Date();
+    const utcNow = new Date(Date.UTC(
+        now.getUTCFullYear(),
+        now.getUTCMonth(),
+        now.getUTCDate(),
+        now.getUTCHours(),
+        now.getUTCMinutes(),
+        now.getUTCSeconds(),
+        now.getUTCMilliseconds()
+    ));
+    return utcNow;
 }

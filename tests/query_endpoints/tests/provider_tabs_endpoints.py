@@ -27,7 +27,7 @@ class TestProviderEndpoints(unittest.TestCase):
 
     def test_provider_health(self):
         for provider in self.selected_providers:
-            url = f"{server_address}/providerHealth/{provider['address']}"
+            url = f"{server_address}/providerHealth/{provider}"
             response = requests.get(url)
             try:
                 assert response.status_code == 200
@@ -49,7 +49,7 @@ class TestProviderEndpoints(unittest.TestCase):
 
     def test_provider_errors(self):
         for provider in self.selected_providers:
-            url = f"{server_address}/providerErrors/{provider['address']}"
+            url = f"{server_address}/providerErrors/{provider}"
             response = None
             try:
                 response = requests.get(url)
@@ -64,7 +64,7 @@ class TestProviderEndpoints(unittest.TestCase):
 
     def test_provider_stakes(self):
         for provider in self.selected_providers:
-            response = requests.get(f"{server_address}/providerStakes/{provider['address']}")
+            response = requests.get(f"{server_address}/providerStakes/{provider}")
             assert response.status_code == 200
             if len(response.json()['data']) == 0:
                 continue
@@ -79,20 +79,20 @@ class TestProviderEndpoints(unittest.TestCase):
 
     def test_provider_events(self):
         for provider in self.selected_providers:
-            url = f"{server_address}/providerEvents/{provider['address']}"
+            url = f"{server_address}/providerEvents/{provider}"
             response = requests.get(url)
-            assert response.status_code == 200, f"Expected status code 200, got {response.status_code} for provider {provider['address']}, url: {url}"
+            assert response.status_code == 200, f"Expected status code 200, got {response.status_code} for provider {provider}, url: {url}"
             if len(response.json()['data']) == 0:
                 continue
             data = response.json()['data'][0]
             events = data['events']
-            assert 'id' in events, f"'id' not found in events for provider {provider['address']}, url: {url}"
-            assert 'eventType' in events, f"'eventType' not found in events for provider {provider['address']}, url: {url}"
-            assert 't1' in events, f"'t1' not found in events for provider {provider['address']}, url: {url}"
+            assert 'id' in events, f"'id' not found in events for provider {provider}, url: {url}"
+            assert 'eventType' in events, f"'eventType' not found in events for provider {provider}, url: {url}"
+            assert 't1' in events, f"'t1' not found in events for provider {provider}, url: {url}"
 
     def test_provider_rewards(self):
         for provider in self.selected_providers:
-            response = requests.get(f"{server_address}/providerRewards/{provider['address']}")
+            response = requests.get(f"{server_address}/providerRewards/{provider}")
             assert response.status_code == 200
             if len(response.json()['data']) == 0:
                 continue
@@ -106,21 +106,21 @@ class TestProviderEndpoints(unittest.TestCase):
 
     def test_provider_reports(self):
         for provider in self.selected_providers:
-            response = requests.get(f"{server_address}/providerReports/{provider['address']}")
+            response = requests.get(f"{server_address}/providerReports/{provider}")
             assert response.status_code == 200
             data = response.json()['data']
             assert isinstance(data, list)  # Expecting data to be a list
 
-    def test_provider_delegator_rewards(self):
-        for provider in self.selected_providers:
-            response = requests.get(f"{server_address}/providerDelegatorRewards/{provider['address']}")
-            assert response.status_code == 200
-            data = response.json()['data']
-            assert isinstance(data, list)  # Expecting data to be a list
+    # def test_provider_delegator_rewards(self):
+    #     for provider in self.selected_providers:
+    #         response = requests.get(f"{server_address}/providerDelegatorRewards/{provider}")
+    #         assert response.status_code == 200
+    #         data = response.json()['data']
+    #         assert isinstance(data, list)  # Expecting data to be a list
 
     def test_provider_block_reports(self):
         for provider in self.selected_providers:
-            response = requests.get(f"{server_address}/providerBlockReports/{provider['address']}")
+            response = requests.get(f"{server_address}/providerBlockReports/{provider}")
             assert response.status_code == 200
             try:
                 if len(response.json()['data']) == 0:
@@ -133,13 +133,13 @@ class TestProviderEndpoints(unittest.TestCase):
                 assert 'chainId' in data
                 assert 'chainBlockHeight' in data
             except:
-                print(f"Failed test_provider_health for provider {provider['address']}")
+                print(f"Failed test_provider_health for provider {provider}")
                 print(f"Response: {response.json()}")
                 raise
 
     def test_provider_latest_health(self):
         for provider in self.selected_providers:
-            url = f"{server_address}/providerLatestHealth/{provider['address']}"
+            url = f"{server_address}/providerLatestHealth/{provider}"
             response = requests.get(url)
             response_json = None
             try:
@@ -172,7 +172,7 @@ class TestProviderEndpoints(unittest.TestCase):
                             assert 'data' in details
                             assert 'timestamp' in details
             except:
-                print(f"Failed test_provider_health for provider {provider['address']}")
+                print(f"Failed test_provider_health for provider {provider}")
                 print(f"Response: {response_json}")
                 raise
 

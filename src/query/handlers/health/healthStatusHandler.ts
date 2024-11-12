@@ -1,10 +1,11 @@
 // src/query/handlers/healthStatusHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { GetLatestBlock, QueryCheckIsJsinfoDbInstanceOk, QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../../queryDb';
+import { GetLatestBlock, QueryCheckIsJsinfoDbInstanceOk, QueryCheckJsinfoDbInstance, QueryGetJsinfoDbForQueryInstance } from '../../queryDb';
 import { RedisCache } from '../../classes/RedisCache';
 import * as JsinfoSchema from "../../../schemas/jsinfoSchema/jsinfoSchema";
 import { gt, desc } from "drizzle-orm";
+import { GetUtcNow } from '../../../utils/utils';
 
 export const HealthStatusRawHandlerOpts: RouteShorthandOptions = {
     schema: {
@@ -57,7 +58,7 @@ type HealthCheckResults = {
 
 async function IsLatest(): Promise<HealthCheckResponse> {
     try {
-        await QueryCheckJsinfoReadDbInstance();
+        await QueryCheckJsinfoDbInstance();
 
         const { latestHeight, latestDatetime } = await GetLatestBlock();
         const currentUtcTime = new Date().getTime();
@@ -130,9 +131,9 @@ async function IsRedisOK(): Promise<HealthCheckResponse> {
 
 async function IsHealthProbeOK(): Promise<HealthCheckResponse> {
     try {
-        const twentyMinutesAgo = new Date(Date.now() - 20 * 60 * 1000);
+        const twentyMinutesAgo = new Date(GetUtcNow().getTime() - 20 * 60 * 1000);
 
-        const recentHealthRecords = await QueryGetJsinfoReadDbInstance()
+        const recentHealthRecords = await QueryGetJsinfoDbForQueryInstance()
             .select()
             .from(JsinfoSchema.providerHealth)
             .where(gt(JsinfoSchema.providerHealth.timestamp, twentyMinutesAgo))

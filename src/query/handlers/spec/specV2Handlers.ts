@@ -1,7 +1,7 @@
 // src/query/handlers/spec/specV2Handlers.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { GetLatestBlock, QueryGetJsinfoReadDbInstance, QueryCheckJsinfoReadDbInstance } from '../../queryDb';
+import { GetLatestBlock, QueryGetJsinfoDbForQueryInstance, QueryCheckJsinfoDbInstance } from '../../queryDb';
 import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
 import * as JsinfoProviderAgrSchema from '../../../schemas/jsinfoSchema/providerRelayPaymentsAgregation';
 import { sql, eq, count, and, gte, inArray } from "drizzle-orm";
@@ -27,10 +27,10 @@ export const SpecCuRelayRewardsHandlerOpts: RouteShorthandOptions = {
 export async function SpecCuRelayRewardsHandler(request: FastifyRequest, reply: FastifyReply) {
     const spec = await GetAndValidateSpecIdFromRequest(request, reply);
     if (spec === '') {
-        return null;
+        return reply;
     }
 
-    const cuRelayAndRewardsTotalRes = await QueryGetJsinfoReadDbInstance()
+    const cuRelayAndRewardsTotalRes = await QueryGetJsinfoDbForQueryInstance()
         .select({
             cuSum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggAllTimeRelayPayments.cuSum})`,
             relaySum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggAllTimeRelayPayments.relaySum})`,
@@ -59,10 +59,10 @@ export const SpecProviderCountHandlerOpts: RouteShorthandOptions = {
 export async function SpecProviderCountHandler(request: FastifyRequest, reply: FastifyReply) {
     const spec = await GetAndValidateSpecIdFromRequest(request, reply);
     if (spec === '') {
-        return null;
+        return reply;
     }
 
-    const providerCount = await QueryGetJsinfoReadDbInstance()
+    const providerCount = await QueryGetJsinfoDbForQueryInstance()
         .select({ count: count() })
         .from(JsinfoSchema.providerStakes)
         .where(eq(JsinfoSchema.providerStakes.specId, spec));
@@ -93,15 +93,15 @@ export const SpecEndpointHealthHandlerOpts: RouteShorthandOptions = {
 export async function SpecEndpointHealthHandler(request: FastifyRequest, reply: FastifyReply) {
     const spec = await GetAndValidateSpecIdFromRequest(request, reply);
     if (spec === '') {
-        return null;
+        return reply;
     }
 
-    await QueryCheckJsinfoReadDbInstance();
+    await QueryCheckJsinfoDbInstance();
 
     const twoDaysAgo = new Date();
     twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
 
-    const latestIds = await QueryGetJsinfoReadDbInstance()
+    const latestIds = await QueryGetJsinfoDbForQueryInstance()
         .select({
             provider: JsinfoSchema.providerHealth.provider,
             spec: JsinfoSchema.providerHealth.spec,
@@ -132,7 +132,7 @@ export async function SpecEndpointHealthHandler(request: FastifyRequest, reply: 
 
     const maxIds = latestIds.map(li => li.maxId);
 
-    const healthStatus = await QueryGetJsinfoReadDbInstance()
+    const healthStatus = await QueryGetJsinfoDbForQueryInstance()
         .select({
             id: JsinfoSchema.providerHealth.id,
             status: JsinfoSchema.providerHealth.status,
@@ -168,7 +168,7 @@ export const SpecCacheHitRateHandlerOpts: RouteShorthandOptions = {
 export async function SpecCacheHitRateHandler(request: FastifyRequest, reply: FastifyReply) {
     const spec = await GetAndValidateSpecIdFromRequest(request, reply);
     if (spec === '') {
-        return null;
+        return reply;
     }
 
     const cacheHitRateData = await RedisCache.getDictNoKeyPrefix("jsinfo-healthp-cachedmetrics") || {};
@@ -195,10 +195,10 @@ export const SpecTrackedInfoHandlerOpts: RouteShorthandOptions = {
 export async function SpecTrackedInfoHandler(request: FastifyRequest, reply: FastifyReply) {
     const spec = await GetAndValidateSpecIdFromRequest(request, reply);
     if (spec === '') {
-        return null;
+        return reply;
     }
 
-    const result = await QueryGetJsinfoReadDbInstance()
+    const result = await QueryGetJsinfoDbForQueryInstance()
         .select({
             cuSum: sql<string>`SUM(${JsinfoSchema.specTrackedInfo.iprpc_cu}::numeric)`
         })

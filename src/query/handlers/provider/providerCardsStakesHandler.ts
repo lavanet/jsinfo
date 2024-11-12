@@ -1,7 +1,7 @@
 // src/query/handlers/provider/providerCardsStakesHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../../queryDb';
+import { QueryCheckJsinfoDbInstance, QueryGetJsinfoDbForQueryInstance } from '../../queryDb';
 import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
 import { desc, eq } from "drizzle-orm";
 import { GetAndValidateProviderAddressFromRequest } from '../../utils/queryRequestArgParser';
@@ -21,7 +21,7 @@ export const ProviderCardsStakesHandlerOpts: RouteShorthandOptions = {
 }
 
 async function getStakes(addr: string): Promise<bigint> {
-    const stakesRes = await QueryGetJsinfoReadDbInstance()
+    const stakesRes = await QueryGetJsinfoDbForQueryInstance()
         .select()
         .from(JsinfoSchema.providerStakes)
         .where(eq(JsinfoSchema.providerStakes.provider, addr))
@@ -38,10 +38,10 @@ async function getStakes(addr: string): Promise<bigint> {
 export async function ProviderCardsStakesHandler(request: FastifyRequest, reply: FastifyReply) {
     const addr = await GetAndValidateProviderAddressFromRequest("providerCardsStakes", request, reply);
     if (addr === '') {
-        return;
+        return null;
     }
 
-    await QueryCheckJsinfoReadDbInstance();
+    await QueryCheckJsinfoDbInstance();
 
     const stakeSum = await getStakes(addr);
 

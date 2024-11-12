@@ -1,7 +1,7 @@
 // src/query/handlers/aprHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../../queryDb';
+import { QueryCheckJsinfoDbInstance, QueryGetJsinfoDbForQueryInstance } from '../../queryDb';
 import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
 
 export const APRRawHandlerOpts: RouteShorthandOptions = {
@@ -15,9 +15,9 @@ export const APRRawHandlerOpts: RouteShorthandOptions = {
 }
 
 export async function APRRawHandler(request: FastifyRequest, reply: FastifyReply) {
-    await QueryCheckJsinfoReadDbInstance()
+    await QueryCheckJsinfoDbInstance()
 
-    const result = await QueryGetJsinfoReadDbInstance()
+    const result = await QueryGetJsinfoDbForQueryInstance()
         .select({ key: JsinfoSchema.apr.key, value: JsinfoSchema.apr.value })
         .from(JsinfoSchema.apr)
 

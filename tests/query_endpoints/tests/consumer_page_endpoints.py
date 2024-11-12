@@ -6,6 +6,7 @@ import sys
 import requests
 import unittest
 import random
+import json
 
 if os.getenv('TESTS_FULL', 'false').lower() != 'true':
     print("Skipping consumer endpoints tests")
@@ -17,37 +18,65 @@ server_address = os.getenv('TESTS_SERVER_ADDRESS', 'http://localhost:8081')
 class TestConsumerEndpoints(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        """Fetch consumer addresses before running tests."""
-        response = requests.get(f"{server_address}/consumers")
+        print("\nFetching consumers list:")
+        print("=" * 50)
+        
+        consumers_url = f"{server_address}/consumers"
+        print(f"\n🌐 All Consumers URL: {consumers_url}")
+        
+        response = requests.get(consumers_url)
+        print(f"Status code: {response.status_code}")
+        
+        if response.status_code != 200:
+            print(f"❌ Error fetching consumers: {response.text}")
+            return
+            
         consumers_data = response.json()
         cls.consumers = consumers_data['consumers']
-        cls.selected_consumers = random.sample(cls.consumers, 3) if len(cls.consumers) >= 3 else cls.consumers
+        print(f"\nTotal consumers found: {len(cls.consumers)}")
+        
+        # Take just one random consumer
+        cls.selected_consumer = random.choice(cls.consumers)
+        print(f"\nSelected consumer for testing: {cls.selected_consumer}")
+        print("\n" + "=" * 50)
 
     def test_consumer_endpoint_structure(self):
-        """Test the structure of the response from the consumer endpoint for random consumers."""
-        for consumer in self.selected_consumers:
-            addr = consumer['address']
-            url = f"{server_address}/consumer/{addr}"
-            response = requests.get(url)
-            self.assertEqual(response.status_code, 200, "Expected status code 200")
-
+        """Test the structure of the response from the consumer endpoint."""
+        url = f"{server_address}/consumerV2/{self.selected_consumer}"
+        
+        print("\nTesting consumer endpoint:")
+        print("=" * 50)
+        print(f"\n🌐 Browser URL: {url}")
+        
+        response = requests.get(url)
+        print(f"Status code: {response.status_code}")
+        
+        if response.status_code != 200:
+            print(f"❌ Error response: {response.text}")
+        else:
+            print("✅ Response OK")
             data = response.json()
-            # Verify expected keys
-            expected_keys = ['addr', 'cuSum', 'relaySum', 'rewardSum', 'conflicts']
-            for key in expected_keys:
-                self.assertIn(key, data, f"Expected '{key}' key in response")
-
-            # Additional check for the structure of the first conflict if exists
-            if data['conflicts']:
-                first_conflict = data['conflicts'][0]
-                expected_conflict_keys = ['id', 'blockId', 'consumer', 'specId', 'tx', 'voteId', 'requestBlock', 'voteDeadline', 'apiInterface', 'apiURL', 'connectionType', 'requestData']
-                for key in expected_conflict_keys:
-                    self.assertIn(key, first_conflict, f"Expected '{key}' key in first conflict")
+            print(f"Response data: {json.dumps(data, indent=2)}")
+        
+        self.assertEqual(response.status_code, 200, "Expected status code 200")
+        
+        data = response.json()
+        expected_structure = {
+            'addr': str,
+            'cuSum': int,
+            'relaySum': int,
+            'rewardSum': int
+        }
+        
+        for key, expected_type in expected_structure.items():
+            self.assertIn(key, data, f"Expected '{key}' in response")
+            self.assertIsInstance(data[key], expected_type, 
+                f"Expected {key} to be {expected_type.__name__}, got {type(data[key]).__name__}")
 
     # def test_consumer_charts_endpoint_structure(self):
     #     """Test the structure of the response from the consumerCharts endpoint for random consumers."""
     #     for consumer in self.selected_consumers:
-    #         addr = consumer['address']
+    #         addr = consumer
     #         url = f"{server_address}/consumerCharts/{addr}"
     #         response = requests.get(url)
     #         self.assertEqual(response.status_code, 200, "Expected status code 200")

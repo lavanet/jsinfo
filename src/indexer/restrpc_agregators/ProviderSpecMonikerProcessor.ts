@@ -1,10 +1,12 @@
+// src/indexer/restrpc_agregators/ProviderSpecMoniker.ts
+
 import { IsMeaningfulText, logger } from "../../utils/utils";
 import { QueryLavaRPC } from "../utils/restRpc";
 import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { sql } from 'drizzle-orm';
-import { MemoryCache } from "../../indexer/classes/MemoryCache";
-import { SpecAndConsumerCache } from "../../query/classes/SpecAndConsumerCache";
+import { MemoryCache } from "../classes/MemoryCache";
+import { SpecAndConsumerCache } from "../classes/IndexerSpecAndConsumerCache";
 
 interface ProviderMonikerSpec {
     provider: string;
@@ -27,12 +29,13 @@ interface ProviderResponse {
 }
 
 export async function GetProviderMonikerSpecs(spec: string): Promise<ProviderResponse> {
-    return QueryLavaRPC<ProviderResponse>(`/lavanet/lava/pairing/providers/${spec}`);
+    return await QueryLavaRPC<ProviderResponse>(`/lavanet/lava/pairing/providers/${spec}`);
 }
 
 export async function ProcessProviderMonikerSpecs(db: PostgresJsDatabase): Promise<void> {
+    console.log('ProcessProviderMonikerSpecs: Starting');
     try {
-        const specs = SpecAndConsumerCache.GetAllSpecs();
+        const specs = await SpecAndConsumerCache.GetAllSpecs(db);
 
         for (const spec of specs) {
             const providerResponse = await GetProviderMonikerSpecs(spec);
@@ -46,10 +49,10 @@ export async function ProcessProviderMonikerSpecs(db: PostgresJsDatabase): Promi
             }
         }
 
-        // Process any remaining batch data
         await batchInsert(db);
     } catch (error) {
-        logger.error('ProviderSpecMoniker:: Error processing provider moniker specs', { error });
+        console.error('ProviderSpecMonikerProcessor: Error occurred', error);
+        logger.error('ProviderSpecMonikerProcessor:: Error processing provider moniker specs', { error });
         throw error;
     }
 }
@@ -61,7 +64,7 @@ async function ProcessProviderMonikerSpec(db: PostgresJsDatabase, psmEntry: Prov
         return;
     }
 
-    batchAppend(db, psmEntry);
+    await batchAppend(db, psmEntry);
 }
 
 let batchData: ProviderMonikerSpec[] = [];
@@ -74,7 +77,6 @@ async function batchAppend(db: PostgresJsDatabase, psmEntry: ProviderMonikerSpec
 
     const cachedValue = await MemoryCache.getDict(cacheKey);
     if (cachedValue && cachedValue.moniker === psmEntry.moniker) {
-        // Skip appending duplicate record
         return;
     }
 
@@ -84,7 +86,6 @@ async function batchAppend(db: PostgresJsDatabase, psmEntry: ProviderMonikerSpec
         await batchInsert(db);
     }
 
-    // Update the cache after appending
     await MemoryCache.setDict(cacheKey, { moniker: psmEntry.moniker }, 3600);
 }
 
@@ -96,23 +97,30 @@ async function batchInsert(db: PostgresJsDatabase): Promise<void> {
     const uniqueEntriesByProviderSpec = new Map<string, ProviderMonikerSpec>();
 
     for (const entry of batchData) {
-        uniqueEntriesByProviderSpec.set(entry.provider + entry.spec, entry);
+        if (!IsMeaningfulText(entry.moniker) || !IsMeaningfulText(entry.spec)) {
+            // console.log(`batchInsert: Skipping entry due to invalid text`, entry);
+            continue;
+        }
+        const key = `${entry.provider.toLowerCase()}-${entry.spec.toLowerCase()}`;
+        uniqueEntriesByProviderSpec.set(key, entry);
     }
 
+
     try {
-        // Upsert into provider_spec_moniker table
         await db.insert(JsinfoSchema.providerSpecMoniker)
             .values(Array.from(uniqueEntriesByProviderSpec.values()))
             .onConflictDoUpdate({
+                // TODO:: this is spec on the hypertables branch
                 target: [JsinfoSchema.providerSpecMoniker.provider, JsinfoSchema.providerSpecMoniker.specId],
-                set: { moniker: sql`${JsinfoSchema.providerSpecMoniker.moniker}` }
+                set: {
+                    moniker: sql.raw('EXCLUDED.moniker')
+                }
             });
 
-        // After successful insert, reset the batch
         batchData = [];
         batchStartTime = new Date();
     } catch (error) {
-        logger.error('ProviderSpecMoniker:: Error in batch insert operation', { error });
+        logger.error('ProviderSpecMonikerProcessor:: Error in batch insert operation', { error });
     }
 }
 

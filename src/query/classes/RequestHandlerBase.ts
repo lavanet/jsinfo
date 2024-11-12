@@ -8,7 +8,7 @@ import { WriteErrorToFastifyReply } from '../utils/queryServerUtils';
 import { JSINFO_REQUEST_HANDLER_BASE_DEBUG } from '../queryConsts';
 import { RedisCache } from './RedisCache';
 import { ParseDateToUtc } from "../utils/queryDateUtils";
-import { JSONStringify, logger } from "../../utils/utils";
+import { GetUtcNow, JSONStringify, logger } from "../../utils/utils";
 
 import { JSINFO_QUERY_CLASS_MEMORY_DEBUG_MODE } from '../queryConsts';
 import { logClassMemory } from './MemoryLogger';
@@ -172,7 +172,7 @@ export class RequestHandlerBase<T> {
                 to = ParseDateToUtc(query.t);
             } else {
                 // Default to 3 months until now if either 'f' or 't' is not specified
-                to = new Date();
+                to = GetUtcNow();
                 from = subMonths(to, 3);
             }
 
@@ -183,15 +183,15 @@ export class RequestHandlerBase<T> {
             from = startOfDay(from);
             to = startOfDay(to);
 
-            if (isBefore(from, startOfDay(subMonths(new Date(), 6)))) {
+            if (isBefore(from, startOfDay(subMonths(GetUtcNow(), 6)))) {
                 throw new Error("From date cannot be more than 6 months in the past.");
             }
 
-            if (isAfter(to, startOfDay(new Date()))) {
-                if (differenceInCalendarDays(to, new Date()) > 1) {
+            if (isAfter(to, startOfDay(GetUtcNow()))) {
+                if (differenceInCalendarDays(to, GetUtcNow()) > 1) {
                     throw new Error("To date cannot be in the future.");
                 } else {
-                    to = new Date();
+                    to = GetUtcNow();
                 }
             }
 

@@ -1,7 +1,7 @@
 // src/query/handlers/spec/specChartsV2Handler.ts
 
 import { FastifyReply, FastifyRequest, RouteShorthandOptions } from 'fastify';
-import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../../queryDb';
+import { QueryCheckJsinfoDbInstance, QueryGetJsinfoDbForQueryInstance } from '../../queryDb';
 import * as JsinfoProviderAgrSchema from '../../../schemas/jsinfoSchema/providerRelayPaymentsAgregation';
 import { sql, gt, and, lt, desc, eq } from "drizzle-orm";
 import { DateToISOString } from '../../utils/queryDateUtils';
@@ -10,7 +10,7 @@ import { GetAndValidateSpecIdFromRequest, GetAndValidateProviderAddressFromReque
 import { PgColumn } from 'drizzle-orm/pg-core';
 import { logger } from '../../../utils/utils';
 import { RedisCache } from '../../classes/RedisCache';
-import { MonikerCache } from '../../classes/MonikerCache';
+import { MonikerCache } from '../../classes/QueryProviderMonikerCache';
 
 type SpecChartDataPoint = {
     date: string;
@@ -91,7 +91,7 @@ class SpecChartsV2Data extends RequestHandlerBase<SpecChartsV2Response> {
             const sixMonthsAgo = new Date();
             sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
-            const query = QueryGetJsinfoReadDbInstance()
+            const query = QueryGetJsinfoDbForQueryInstance()
                 .select({
                     provider: JsinfoProviderAgrSchema.aggDailyRelayPayments.provider,
                     latestDate: sql<Date>`MAX(${JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday})`
@@ -138,7 +138,7 @@ class SpecChartsV2Data extends RequestHandlerBase<SpecChartsV2Response> {
                 conditions = and(conditions, eq(JsinfoProviderAgrSchema.aggDailyRelayPayments.provider, this.provider));
             }
 
-            let query = QueryGetJsinfoReadDbInstance().select({
+            let query = QueryGetJsinfoDbForQueryInstance().select({
                 date: JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday,
                 qosSyncAvg: qosMetricWeightedAvg(JsinfoProviderAgrSchema.aggDailyRelayPayments.qosSyncAvg),
                 qosAvailabilityAvg: qosMetricWeightedAvg(JsinfoProviderAgrSchema.aggDailyRelayPayments.qosAvailabilityAvg),
@@ -182,7 +182,7 @@ Context:
 
     protected async fetchDateRangeRecords(from: Date, to: Date): Promise<SpecChartsV2Response[]> {
         try {
-            await QueryCheckJsinfoReadDbInstance();
+            await QueryCheckJsinfoDbInstance();
 
             const chartData = await this.getSpecData(from, to);
 

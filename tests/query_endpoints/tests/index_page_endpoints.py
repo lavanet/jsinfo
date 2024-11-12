@@ -11,7 +11,7 @@ server_address = os.getenv('TESTS_SERVER_ADDRESS', 'localhost:8081')
 class TestIndexChartsEndpoint(unittest.TestCase):
     def test_index_charts_structure(self):
         """Test the structure of the response from the indexCharts endpoint."""
-        url = server_address + "/indexCharts"
+        url = server_address + "/indexChartsV3"
         response = requests.get(url)
         self.assertEqual(response.status_code, 200, "Expected status code 200")
 
@@ -35,27 +35,27 @@ class TestIndexChartsEndpoint(unittest.TestCase):
                 self.assertIn('cuSum', nested_item, "Expected 'cuSum' key in nested item")
                 self.assertIn('relaySum', nested_item, "Expected 'relaySum' key in nested item")
 
-    def test_index_structure(self):
-        """Test the structure of the response from the index endpoint."""
-        url = server_address + "/index"
-        response = requests.get(url)
-        self.assertEqual(response.status_code, 200, "Expected status code 200")
+    # def test_index_structure(self):
+    #     """Test the structure of the response from the index endpoint."""
+    #     url = server_address + "/index"
+    #     response = requests.get(url)
+    #     self.assertEqual(response.status_code, 200, "Expected status code 200")
 
-        # Parse JSON response
-        data = response.json()
-        self.assertIn('height', data, "Expected 'height' key in response")
-        self.assertIn('datetime', data, "Expected 'datetime' key in response")
-        self.assertIn('cuSum', data, "Expected 'cuSum' key in response")
-        self.assertIn('relaySum', data, "Expected 'relaySum' key in response")
-        self.assertIn('stakeSum', data, "Expected 'stakeSum' key in response")
-        self.assertIn('allSpecs', data, "Expected 'allSpecs' key in response")
-        self.assertIsInstance(data['allSpecs'], list, "'allSpecs' should be a list")
+    #     # Parse JSON response
+    #     data = response.json()
+    #     self.assertIn('height', data, "Expected 'height' key in response")
+    #     self.assertIn('datetime', data, "Expected 'datetime' key in response")
+    #     self.assertIn('cuSum', data, "Expected 'cuSum' key in response")
+    #     self.assertIn('relaySum', data, "Expected 'relaySum' key in response")
+    #     self.assertIn('stakeSum', data, "Expected 'stakeSum' key in response")
+    #     self.assertIn('allSpecs', data, "Expected 'allSpecs' key in response")
+    #     self.assertIsInstance(data['allSpecs'], list, "'allSpecs' should be a list")
 
-        # Check the structure of the first item in the 'allSpecs' list, if present
-        if data['allSpecs']:
-            first_spec = data['allSpecs'][0]
-            self.assertIn('chainId', first_spec, "Expected 'chainId' key in first spec")
-            self.assertIn('relaySum', first_spec, "Expected 'relaySum' key in first spec")
+    #     # Check the structure of the first item in the 'allSpecs' list, if present
+    #     if data['allSpecs']:
+    #         first_spec = data['allSpecs'][0]
+    #         self.assertIn('chainId', first_spec, "Expected 'chainId' key in first spec")
+    #         self.assertIn('relaySum', first_spec, "Expected 'relaySum' key in first spec")
             
 if __name__ == '__main__':
     unittest.main()

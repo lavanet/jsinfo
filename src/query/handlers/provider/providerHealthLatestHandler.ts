@@ -4,7 +4,7 @@
 // curl http://localhost:8081/providerLatestHealth/lava@1uhwudw7vzqtnffu2hf5yhv4n8trj79ezl66z99
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryGetJsinfoReadDbInstance } from '../../queryDb';
+import { QueryGetJsinfoDbForQueryInstance } from '../../queryDb';
 import { eq, and, gte, desc } from "drizzle-orm";
 import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
 import { GetAndValidateProviderAddressFromRequest } from '../../utils/queryRequestArgParser';
@@ -137,7 +137,6 @@ export async function ProviderHealthLatestPaginatedHandler(request: FastifyReque
         return null;
     }
 
-
     const twoDaysAgo = new Date();
     twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
 
@@ -145,7 +144,7 @@ export async function ProviderHealthLatestPaginatedHandler(request: FastifyReque
     let allHealthRecords: HealthRecord[] = [];
 
     for (const geolocation of geolocations) {
-        const healthRecords: HealthRecord[] = await QueryGetJsinfoReadDbInstance()
+        const healthRecords: HealthRecord[] = await QueryGetJsinfoDbForQueryInstance()
             .select()
             .from(JsinfoSchema.providerHealth)
             .where(

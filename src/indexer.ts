@@ -18,7 +18,7 @@ import { GetOneLavaBlock } from './indexer/lavaBlock'
 import { LavaBlock } from './indexer/types'
 import { SyncBlockchainEntities } from './indexer/blockchainEntities/blockchainEntitiesSync'
 import { ConnectToRpc, RpcConnection } from "./indexer/utils/lavajsRpc";
-import { MigrateDb, GetJsinfoDb } from "./utils/dbUtils";
+import { MigrateDb, GetJsinfoDbForIndexer } from "./utils/dbUtils";
 import { AggProviderAndConsumerRelayPayments, AggProviderAndConsumerRelayPaymentsSync } from "./indexer/agregators/aggProviderAndConsumerRelayPayments";
 import { SaveTokenSupplyToDB } from './indexer/supply/syncSupply';
 import { RestRpcAgreagorsCaller } from './indexer/restrpc_agregators/RestRpcAgregatorsCaller';
@@ -255,7 +255,7 @@ const fillUp = async (db: PostgresJsDatabase, rpcConnection: RpcConnection) => {
     } catch (e) {
         logger.error(`fillUp: Error in getting latestDbBlock: ${e}`);
         logger.error('fillUp: Restarting DB connection');
-        db = await GetJsinfoDb();
+        db = await GetJsinfoDbForIndexer();
         fillUpBackoffRetryWTimeout(db, rpcConnection);
         return;
     }
@@ -282,7 +282,7 @@ const fillUp = async (db: PostgresJsDatabase, rpcConnection: RpcConnection) => {
     } catch (e) {
         logger.error(`fillUp: Error in getting latestDbBlock: ${e}`);
         logger.error('fillUp: Restarting DB connection');
-        db = await GetJsinfoDb();
+        db = await GetJsinfoDbForIndexer();
         fillUpBackoffRetryWTimeout(db, rpcConnection);
         return;
     }
@@ -290,14 +290,14 @@ const fillUp = async (db: PostgresJsDatabase, rpcConnection: RpcConnection) => {
     if (latestDbBlock2 == 0) {
         logger.error(`fillUp: Error calling doBatch to fill db with new blocks. latestDbBlock2 == 0`);
         logger.error('fillUp: Restarting DB connection');
-        db = await GetJsinfoDb();
+        db = await GetJsinfoDbForIndexer();
         fillUpBackoffRetryWTimeout(db, rpcConnection);
         return;
     }
 
     if (latestHeight != latestDbBlock2) {
         logger.error(`fillUp: latestHeight ${latestHeight} != latestDbBlock2[0].height ${latestDbBlock2[0].height}`);
-        db = await GetJsinfoDb();
+        db = await GetJsinfoDbForIndexer();
         fillUpBackoffRetryWTimeout(db, rpcConnection);
         return;
     }

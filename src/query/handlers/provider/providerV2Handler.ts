@@ -30,7 +30,7 @@ export const ProviderV2PaginatedHandlerOpts: RouteShorthandOptions = {
 export async function ProviderV2PaginatedHandler(request: FastifyRequest, reply: FastifyReply) {
     const addr = await GetAndValidateProviderAddressFromRequest("provider", request, reply);
     if (addr === '') {
-        return;
+        return null;
     }
 
     return {

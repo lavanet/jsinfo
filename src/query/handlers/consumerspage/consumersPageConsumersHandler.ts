@@ -3,7 +3,7 @@
 // curl http://localhost:8081/consumerspageConsumers | jq
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../../queryDb';
+import { QueryCheckJsinfoDbInstance, QueryGetJsinfoDbForQueryInstance } from '../../queryDb';
 import { and, asc, desc, gte, max } from "drizzle-orm";
 import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
 import * as JsinfoConsumerAgrSchema from '../../../schemas/jsinfoSchema/consumerRelayPaymentsAgregation';
@@ -41,12 +41,12 @@ type ConsumerEntry = {
     plan: string | null;
 };
 async function fetchConsumerEntries(): Promise<ConsumerEntry[]> {
-    await QueryCheckJsinfoReadDbInstance();
+    await QueryCheckJsinfoDbInstance();
 
     let ninetyDaysAgo = new Date();
     ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
 
-    let reportsRes = await QueryGetJsinfoReadDbInstance()
+    let reportsRes = await QueryGetJsinfoDbForQueryInstance()
         .select({
             consumer: JsinfoSchema.consumerSubscriptionList.consumer,
             plan: JsinfoSchema.consumerSubscriptionList.plan,
@@ -73,7 +73,7 @@ type ConsumerAgrEntry = {
 }
 
 async function fetchConsumerAgrResultsEntries(): Promise<ConsumerAgrEntry[]> {
-    return await QueryGetJsinfoReadDbInstance().select({
+    return await QueryGetJsinfoDbForQueryInstance().select({
         consumer: JsinfoConsumerAgrSchema.aggConsumerAllTimeRelayPayments.consumer,
         cuSum: JsinfoConsumerAgrSchema.aggConsumerAllTimeRelayPayments.cuSum,
         relaySum: JsinfoConsumerAgrSchema.aggConsumerAllTimeRelayPayments.relaySum,

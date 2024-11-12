@@ -3,7 +3,7 @@
 // curl http://localhost:8081/indexProviders | jq
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../../queryDb';
+import { QueryCheckJsinfoDbInstance, QueryGetJsinfoDbForQueryInstance } from '../../queryDb';
 import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
 import * as JsinfoProviderAgrSchema from '../../../schemas/jsinfoSchema/providerRelayPaymentsAgregation';
 import { sql, desc, not, eq, asc, and, isNull } from "drizzle-orm";
@@ -11,7 +11,7 @@ import { Pagination, ParsePaginationFromString } from '../../utils/queryPaginati
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE } from '../../queryConsts';
 import { CSVEscape } from '../../utils/queryUtils';
 import { RequestHandlerBase } from '../../classes/RequestHandlerBase';
-import { MonikerCache } from '../../classes/MonikerCache';
+import { MonikerCache } from '../../classes/QueryProviderMonikerCache';
 
 const rewardSumSubQuery = sql`SELECT SUM(arp_sub.rewardSum) FROM(SELECT arp."provider", SUM(arp."rewardsum") AS rewardSum FROM ${JsinfoProviderAgrSchema.aggAllTimeRelayPayments} arp GROUP BY arp."provider") arp_sub WHERE arp_sub."provider" = ${JsinfoSchema.providerStakes.provider}`
 
@@ -77,9 +77,9 @@ class IndexProvidersData extends RequestHandlerBase<IndexProvidersResponse> {
     }
 
     protected async fetchAllRecords(): Promise<IndexProvidersResponse[]> {
-        await QueryCheckJsinfoReadDbInstance();
+        await QueryCheckJsinfoDbInstance();
 
-        const res = await QueryGetJsinfoReadDbInstance().select({
+        const res = await QueryGetJsinfoDbForQueryInstance().select({
             provider: JsinfoSchema.providerStakes.provider,
             totalServices: sql<string>`CONCAT(SUM(CASE WHEN ${JsinfoSchema.providerStakes.status} = ${JsinfoSchema.LavaProviderStakeStatus.Active} THEN 1 ELSE 0 END), ' / ', COUNT(${JsinfoSchema.providerStakes.specId})) as totalServices`,
             totalStake: sql<bigint>`COALESCE(SUM(CAST(${JsinfoSchema.providerStakes.stake} AS BIGINT) + LEAST(CAST(${JsinfoSchema.providerStakes.delegateTotal} AS BIGINT), CAST(${JsinfoSchema.providerStakes.delegateLimit} AS BIGINT))), 0) AS totalStake`,
@@ -110,9 +110,9 @@ class IndexProvidersData extends RequestHandlerBase<IndexProvidersResponse> {
     }
 
     protected async fetchRecordCountFromDb(): Promise<number> {
-        await QueryCheckJsinfoReadDbInstance();
+        await QueryCheckJsinfoDbInstance();
 
-        const res = await QueryGetJsinfoReadDbInstance()
+        const res = await QueryGetJsinfoDbForQueryInstance()
             .select({
                 count: sql<number>`COUNT(DISTINCT ${JsinfoSchema.providerStakes.provider})`
             })
@@ -163,14 +163,14 @@ class IndexProvidersData extends RequestHandlerBase<IndexProvidersResponse> {
             throw new Error(`Invalid sort key: ${trimmedSortKey}`);
         }
 
-        await QueryCheckJsinfoReadDbInstance();
+        await QueryCheckJsinfoDbInstance();
 
         const sortColumn = keyToColumnMap[finalPagination.sortKey];
         const orderFunction = finalPagination.direction === 'ascending' ? asc : desc;
 
         if (sortColumn === keyToColumnMap["moniker"]) {
             // Execute the query with proper sorting, pagination using offset and limit
-            const data = await QueryGetJsinfoReadDbInstance()
+            const data = await QueryGetJsinfoDbForQueryInstance()
                 .select({
                     provider: JsinfoSchema.providerStakes.provider,
                     moniker: sql`MAX(${JsinfoSchema.providerSpecMoniker.moniker}) as moniker`,
@@ -204,7 +204,7 @@ class IndexProvidersData extends RequestHandlerBase<IndexProvidersResponse> {
             }));
         }
 
-        const data = await QueryGetJsinfoReadDbInstance()
+        const data = await QueryGetJsinfoDbForQueryInstance()
             .select({
                 provider: JsinfoSchema.providerStakes.provider,
                 totalServices: sql<string>`CONCAT(SUM(CASE WHEN ${JsinfoSchema.providerStakes.status} = ${JsinfoSchema.LavaProviderStakeStatus.Active} THEN 1 ELSE 0 END), ' / ', COUNT(${JsinfoSchema.providerStakes.specId})) as totalServices`,

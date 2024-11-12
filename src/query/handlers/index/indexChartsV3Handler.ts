@@ -1,7 +1,7 @@
 // src/query/handlers/indexChartsV3Handler.ts
 
 import { FastifyReply, FastifyRequest, RouteShorthandOptions } from 'fastify';
-import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../../queryDb';
+import { QueryCheckJsinfoDbInstance, QueryGetJsinfoDbForQueryInstance } from '../../queryDb';
 import * as JsinfoProviderAgrSchema from '../../../schemas/jsinfoSchema/providerRelayPaymentsAgregation';
 
 import { sql, desc, gt, and, inArray, lt } from "drizzle-orm";
@@ -95,7 +95,7 @@ class IndexChartsV3Data extends RequestHandlerBase<IndexChartResponse> {
         let sixMonthsAgo = new Date();
         sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
-        let topChainsQueryRes: { chainId: string | null; }[] = await QueryGetJsinfoReadDbInstance().select({
+        let topChainsQueryRes: { chainId: string | null; }[] = await QueryGetJsinfoDbForQueryInstance().select({
             chainId: JsinfoProviderAgrSchema.aggDailyRelayPayments.specId,
         }).from(JsinfoProviderAgrSchema.aggDailyRelayPayments)
             .groupBy(sql`${JsinfoProviderAgrSchema.aggDailyRelayPayments.specId}`)
@@ -140,7 +140,7 @@ class IndexChartsV3Data extends RequestHandlerBase<IndexChartResponse> {
     private async getMainChartData(topChains: any[], from: Date, to: Date): Promise<CuRelayQueryData[]> {
         let mainChartData: CuRelayQueryData[] = [];
 
-        let monthlyData: CuRelayQueryData[] = await QueryGetJsinfoReadDbInstance().select({
+        let monthlyData: CuRelayQueryData[] = await QueryGetJsinfoDbForQueryInstance().select({
             date: JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday,
             chainId: JsinfoProviderAgrSchema.aggDailyRelayPayments.specId,
             cuSum: sql<number>`SUM(COALESCE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.cuSum}, 0))`,
@@ -184,7 +184,7 @@ class IndexChartsV3Data extends RequestHandlerBase<IndexChartResponse> {
 
         const qosMetricWeightedAvg = (metric: PgColumn) => sql<number>`SUM(${metric} * ${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum}) / SUM(CASE WHEN ${metric} IS NOT NULL THEN ${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum} ELSE 0 END)`;
 
-        let monthlyData: QosQueryData[] = await QueryGetJsinfoReadDbInstance().select({
+        let monthlyData: QosQueryData[] = await QueryGetJsinfoDbForQueryInstance().select({
             date: JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday,
             qosSyncAvg: qosMetricWeightedAvg(JsinfoProviderAgrSchema.aggDailyRelayPayments.qosSyncAvg),
             qosAvailabilityAvg: qosMetricWeightedAvg(JsinfoProviderAgrSchema.aggDailyRelayPayments.qosAvailabilityAvg),
@@ -251,7 +251,7 @@ class IndexChartsV3Data extends RequestHandlerBase<IndexChartResponse> {
     }
 
     protected async fetchDateRangeRecords(from: Date, to: Date): Promise<IndexChartResponse[]> {
-        await QueryCheckJsinfoReadDbInstance()
+        await QueryCheckJsinfoDbInstance()
 
         const topChains = await this.getTopChains();
         if (GetDataLength(topChains) === 0) {

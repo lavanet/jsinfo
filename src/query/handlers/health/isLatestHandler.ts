@@ -3,7 +3,7 @@
 // curl http://localhost:8081/islatest
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryCheckJsinfoReadDbInstance, GetLatestBlock } from '../../queryDb';
+import { QueryCheckJsinfoDbInstance, GetLatestBlock } from '../../queryDb';
 import { WriteErrorToFastifyReply } from '../../utils/queryServerUtils';
 
 export const IsLatestRawHandlerOpts: RouteShorthandOptions = {
@@ -31,7 +31,7 @@ export const IsLatestRawHandlerOpts: RouteShorthandOptions = {
 
 export async function IsLatestRawHandler(request: FastifyRequest, reply: FastifyReply) {
     try {
-        await QueryCheckJsinfoReadDbInstance();
+        await QueryCheckJsinfoDbInstance();
 
         const { latestHeight, latestDatetime } = await GetLatestBlock();
         const currentUtcTime = new Date().getTime();

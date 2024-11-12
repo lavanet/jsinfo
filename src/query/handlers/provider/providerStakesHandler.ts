@@ -2,7 +2,7 @@
 // src/query/handlers/providerStakesHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../../queryDb';
+import { QueryCheckJsinfoDbInstance, QueryGetJsinfoDbForQueryInstance } from '../../queryDb';
 import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
 import { asc, desc, eq, sql } from "drizzle-orm";
 import { Pagination, ParsePaginationFromString } from '../../utils/queryPagination';
@@ -105,9 +105,9 @@ class ProviderStakesData extends RequestHandlerBase<ProviderStakesResponse> {
     }
 
     protected async fetchAllRecords(): Promise<ProviderStakesResponse[]> {
-        await QueryCheckJsinfoReadDbInstance();
+        await QueryCheckJsinfoDbInstance();
 
-        let stakesRes = await QueryGetJsinfoReadDbInstance().select({
+        let stakesRes = await QueryGetJsinfoDbForQueryInstance().select({
             stake: JsinfoSchema.providerStakes.stake,
             delegateLimit: JsinfoSchema.providerStakes.delegateLimit,
             delegateTotal: JsinfoSchema.providerStakes.delegateTotal,
@@ -140,9 +140,9 @@ class ProviderStakesData extends RequestHandlerBase<ProviderStakesResponse> {
     }
 
     protected async fetchRecordCountFromDb(): Promise<number> {
-        await QueryCheckJsinfoReadDbInstance();
+        await QueryCheckJsinfoDbInstance();
 
-        const countResult = await QueryGetJsinfoReadDbInstance()
+        const countResult = await QueryGetJsinfoDbForQueryInstance()
             .select({
                 count: sql<number>`COUNT(*)`
             })
@@ -182,14 +182,14 @@ class ProviderStakesData extends RequestHandlerBase<ProviderStakesResponse> {
             throw new Error(`Invalid sort key: ${trimmedSortKey}`);
         }
 
-        await QueryCheckJsinfoReadDbInstance();
+        await QueryCheckJsinfoDbInstance();
 
         const sortColumn = keyToColumnMap[finalPagination.sortKey];
         const orderFunction = finalPagination.direction === 'ascending' ? asc : desc;
 
         const offset = (finalPagination.page - 1) * finalPagination.count;
 
-        const stakesRes = await QueryGetJsinfoReadDbInstance()
+        const stakesRes = await QueryGetJsinfoDbForQueryInstance()
             .select({
                 stake: JsinfoSchema.providerStakes.stake,
                 delegateLimit: JsinfoSchema.providerStakes.delegateLimit,

@@ -4,7 +4,7 @@
 // curl http://localhost:8081/providerBlockReports/lava@1tlkpa7t48fjl7qan4ete6xh0lsy679flnqdw57
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../../queryDb';
+import { QueryCheckJsinfoDbInstance, QueryGetJsinfoDbForQueryInstance } from '../../queryDb';
 import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
 import { asc, desc, eq, sql } from "drizzle-orm";
 import { Pagination, ParsePaginationFromString } from '../../utils/queryPagination';
@@ -77,9 +77,9 @@ class ProviderBlockReportsData extends RequestHandlerBase<BlockReportsResponse> 
     }
 
     protected async fetchAllRecords(): Promise<BlockReportsResponse[]> {
-        await QueryCheckJsinfoReadDbInstance();
+        await QueryCheckJsinfoDbInstance();
 
-        let result = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.providerLatestBlockReports).
+        let result = await QueryGetJsinfoDbForQueryInstance().select().from(JsinfoSchema.providerLatestBlockReports).
             where(eq(JsinfoSchema.providerLatestBlockReports.provider, this.addr)).
             orderBy(desc(JsinfoSchema.providerLatestBlockReports.id)).
             offset(0).
@@ -96,9 +96,9 @@ class ProviderBlockReportsData extends RequestHandlerBase<BlockReportsResponse> 
     }
 
     protected async fetchRecordCountFromDb(): Promise<number> {
-        await QueryCheckJsinfoReadDbInstance();
+        await QueryCheckJsinfoDbInstance();
 
-        const countResult = await QueryGetJsinfoReadDbInstance()
+        const countResult = await QueryGetJsinfoDbForQueryInstance()
             .select({
                 count: sql<number>`COUNT(*)`
             })
@@ -138,13 +138,13 @@ class ProviderBlockReportsData extends RequestHandlerBase<BlockReportsResponse> 
             throw new Error(`Invalid sort key: ${trimmedSortKey}`);
         }
 
-        await QueryCheckJsinfoReadDbInstance();
+        await QueryCheckJsinfoDbInstance();
 
         const sortColumn = keyToColumnMap[finalPagination.sortKey];
         const orderFunction = finalPagination.direction === 'ascending' ? asc : desc;
 
         // Execute the database query
-        const reportsRes = await QueryGetJsinfoReadDbInstance()
+        const reportsRes = await QueryGetJsinfoDbForQueryInstance()
             .select()
             .from(JsinfoSchema.providerLatestBlockReports)
             .where(eq(JsinfoSchema.providerLatestBlockReports.provider, this.addr))

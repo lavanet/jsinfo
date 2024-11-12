@@ -4,7 +4,6 @@ import { drizzle, PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import postgres from 'postgres';
 import { GetEnvVar, Sleep, logger } from './utils';
-import { sql } from 'drizzle-orm';
 
 let cachedPostgresUrl: string | null = null;
 
@@ -26,26 +25,6 @@ export async function GetPostgresUrl(): Promise<string> {
     return cachedPostgresUrl!;
 }
 
-let cachedReadPostgresUrl: string | null = null;
-
-export async function GetReadPostgresUrl(): Promise<string> {
-    if (cachedReadPostgresUrl !== null) {
-        return cachedReadPostgresUrl;
-    }
-    try {
-        cachedReadPostgresUrl = GetEnvVar("JSINFO_READ_POSTGRESQL_URL");
-    } catch (error) {
-        try {
-            cachedReadPostgresUrl = GetEnvVar("READ_POSTGRESQL_URL");
-        } catch (error) {
-            logger.error("Missing env var for JSINFO_READ_POSTGRESQL_URL or READ_POSTGRESQL_URL");
-            await Sleep(60000); // Sleep for one minute
-            process.exit(1);
-        }
-    }
-    return cachedReadPostgresUrl!;
-}
-
 let cachedRelaysReadPostgresUrl: string | null = null;
 
 export async function GetRelaysReadPostgresUrl(): Promise<string> {
@@ -64,16 +43,6 @@ export async function GetRelaysReadPostgresUrl(): Promise<string> {
 
 // https://github.com/porsager/postgres?tab=readme-ov-file#connection-timeout
 
-export async function GetJsinfoDb(): Promise<PostgresJsDatabase> {
-    const queryClient = postgres(await GetPostgresUrl(), {
-        idle_timeout: 20,
-        connect_timeout: 20,
-        max_lifetime: 75,
-        max: 60,
-    });
-    const db: PostgresJsDatabase = drizzle(queryClient/*, { logger: true }*/);
-    return db;
-}
 
 export async function GetJsinfoDbForIndexer(): Promise<PostgresJsDatabase> {
     const queryClient = postgres(await GetPostgresUrl(), {
@@ -84,9 +53,9 @@ export async function GetJsinfoDbForIndexer(): Promise<PostgresJsDatabase> {
     return db;
 }
 
-export async function GetJsinfoReadDb(): Promise<PostgresJsDatabase> {
+export async function GetJsinfoDbForQuery(): Promise<PostgresJsDatabase> {
     // use one db
-    const queryClient = postgres(await GetReadPostgresUrl(), {
+    const queryClient = postgres(await GetPostgresUrl(), {
         idle_timeout: 20,
         connect_timeout: 20,
         max_lifetime: 75,
@@ -96,7 +65,7 @@ export async function GetJsinfoReadDb(): Promise<PostgresJsDatabase> {
     return db;
 }
 
-export async function GetRelaysReadDb(): Promise<PostgresJsDatabase> {
+export async function GetRelaysReadDbForQuery(): Promise<PostgresJsDatabase> {
     const queryClient = postgres(await GetRelaysReadPostgresUrl(), {
         idle_timeout: 20,
         connect_timeout: 20,

@@ -4,7 +4,7 @@ import { sql } from 'drizzle-orm';
 import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import { RedisCache } from './RedisCache';
 import { GetUtcNow, IsIndexerProcess, logger, Sleep } from '../../utils/utils'; // Assuming you have a Sleep function
-import { GetJsinfoDb } from '../../utils/dbUtils';
+import { GetJsinfoDbForQuery } from '../../utils/dbUtils';
 import { JSINFO_QUERY_CLASS_MEMORY_DEBUG_MODE } from '../queryConsts';
 import { logClassMemory } from './MemoryLogger';
 
@@ -104,7 +104,7 @@ class SpecAndConsumerCacheClass {
         let offset = 0;
 
         while (retryCount < maxRetries) {
-            let db = await GetJsinfoDb();
+            let db = await GetJsinfoDbForQuery();
             try {
                 while (true) {
                     const chunkResults = await db
@@ -175,7 +175,7 @@ class SpecAndConsumerCacheClass {
         let offset = 0;
 
         while (retryCount < maxRetries) {
-            let db = await GetJsinfoDb();
+            let db = await GetJsinfoDbForQuery();
             try {
                 while (true) {
                     const chunkResults = await db

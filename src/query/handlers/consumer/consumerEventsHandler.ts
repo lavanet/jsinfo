@@ -2,7 +2,7 @@
 // src/query/handlers/consumerEventsHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../../queryDb';
+import { QueryCheckJsinfoDbInstance, QueryGetJsinfoDbForQueryInstance } from '../../queryDb';
 import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
 import { asc, desc, eq, sql, gte, and } from "drizzle-orm";
 import { Pagination, ParsePaginationFromString } from '../../utils/queryPagination';
@@ -112,11 +112,11 @@ class ConsumerEventsData extends RequestHandlerBase<ConsumerEventsResponse> {
     }
 
     protected async fetchAllRecords(): Promise<ConsumerEventsResponse[]> {
-        await QueryCheckJsinfoReadDbInstance();
+        await QueryCheckJsinfoDbInstance();
 
         const thirtyDaysAgo = this.getThirtyDaysAgo();
 
-        const eventsRes: ConsumerEventsResponse[] = await QueryGetJsinfoReadDbInstance()
+        const eventsRes: ConsumerEventsResponse[] = await QueryGetJsinfoDbForQueryInstance()
             .select({
                 events: {
                     id: JsinfoSchema.events.id,
@@ -164,11 +164,11 @@ class ConsumerEventsData extends RequestHandlerBase<ConsumerEventsResponse> {
     }
 
     protected async fetchRecordCountFromDb(): Promise<number> {
-        await QueryCheckJsinfoReadDbInstance();
+        await QueryCheckJsinfoDbInstance();
 
         const thirtyDaysAgo = this.getThirtyDaysAgo();
 
-        const countResult = await QueryGetJsinfoReadDbInstance()
+        const countResult = await QueryGetJsinfoDbForQueryInstance()
             .select({
                 count: sql<number>`COUNT(*)`
             })
@@ -220,14 +220,14 @@ class ConsumerEventsData extends RequestHandlerBase<ConsumerEventsResponse> {
             throw new Error(`Invalid sort key: ${trimmedSortKey}`);
         }
 
-        await QueryCheckJsinfoReadDbInstance();
+        await QueryCheckJsinfoDbInstance();
 
         const sortColumn = keyToColumnMap[finalPagination.sortKey];
         const orderFunction = finalPagination.direction === 'ascending' ? asc : desc;
 
         const thirtyDaysAgo = this.getThirtyDaysAgo();
 
-        const eventsRes: ConsumerEventsResponse[] = await QueryGetJsinfoReadDbInstance()
+        const eventsRes: ConsumerEventsResponse[] = await QueryGetJsinfoDbForQueryInstance()
             .select({
                 events: {
                     id: JsinfoSchema.events.id,

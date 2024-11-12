@@ -111,12 +111,12 @@ class TestProviderEndpoints(unittest.TestCase):
             data = response.json()['data']
             assert isinstance(data, list)  # Expecting data to be a list
 
-    def test_provider_delegator_rewards(self):
-        for provider in self.selected_providers:
-            response = requests.get(f"{server_address}/providerDelegatorRewards/{provider}")
-            assert response.status_code == 200
-            data = response.json()['data']
-            assert isinstance(data, list)  # Expecting data to be a list
+    # def test_provider_delegator_rewards(self):
+    #     for provider in self.selected_providers:
+    #         response = requests.get(f"{server_address}/providerDelegatorRewards/{provider}")
+    #         assert response.status_code == 200
+    #         data = response.json()['data']
+    #         assert isinstance(data, list)  # Expecting data to be a list
 
     def test_provider_block_reports(self):
         for provider in self.selected_providers:

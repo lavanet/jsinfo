@@ -1,7 +1,7 @@
 // src/query/handlers/eventsRewardsHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryGetJsinfoReadDbInstance, QueryCheckJsinfoReadDbInstance } from '../../queryDb';
+import { QueryGetJsinfoDbForQueryInstance, QueryCheckJsinfoDbInstance } from '../../queryDb';
 import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
 import { asc, desc, eq, sql } from "drizzle-orm";
 import { Pagination, ParsePaginationFromString } from '../../utils/queryPagination';
@@ -85,9 +85,9 @@ class EventsRewardsData extends RequestHandlerBase<EventsRewardsResponse> {
     }
 
     protected async fetchAllRecords(): Promise<EventsRewardsResponse[]> {
-        await QueryCheckJsinfoReadDbInstance();
+        await QueryCheckJsinfoDbInstance();
 
-        const paymentsRes = await QueryGetJsinfoReadDbInstance()
+        const paymentsRes = await QueryGetJsinfoDbForQueryInstance()
             .select()
             .from(JsinfoSchema.relayPayments)
             .orderBy(desc(JsinfoSchema.relayPayments.id))
@@ -105,9 +105,9 @@ class EventsRewardsData extends RequestHandlerBase<EventsRewardsResponse> {
     }
 
     protected async fetchRecordCountFromDb(): Promise<number> {
-        await QueryCheckJsinfoReadDbInstance();
+        await QueryCheckJsinfoDbInstance();
 
-        const countResult = await QueryGetJsinfoReadDbInstance()
+        const countResult = await QueryGetJsinfoDbForQueryInstance()
             .select({
                 count: sql<number>`COUNT(*)`
             })
@@ -158,7 +158,7 @@ class EventsRewardsData extends RequestHandlerBase<EventsRewardsResponse> {
             throw new Error(`Invalid sort key: ${trimmedSortKey}`);
         }
 
-        await QueryCheckJsinfoReadDbInstance()
+        await QueryCheckJsinfoDbInstance()
 
         const sortColumn = keyToColumnMap[finalPagination.sortKey];
         const orderFunction = finalPagination.direction === 'ascending' ? asc : desc;
@@ -166,7 +166,7 @@ class EventsRewardsData extends RequestHandlerBase<EventsRewardsResponse> {
         const offset = (finalPagination.page - 1) * finalPagination.count;
 
         if (sortColumn == keyToColumnMap.moniker) {
-            const paymentsRes = await QueryGetJsinfoReadDbInstance()
+            const paymentsRes = await QueryGetJsinfoDbForQueryInstance()
                 .select({
                     id: JsinfoSchema.relayPayments.id,
                     provider: JsinfoSchema.relayPayments.provider,
@@ -206,7 +206,7 @@ class EventsRewardsData extends RequestHandlerBase<EventsRewardsResponse> {
             return flattenedRewards;
         }
 
-        const paymentsRes = await QueryGetJsinfoReadDbInstance()
+        const paymentsRes = await QueryGetJsinfoDbForQueryInstance()
             .select()
             .from(JsinfoSchema.relayPayments)
             .orderBy(orderFunction(sortColumn))

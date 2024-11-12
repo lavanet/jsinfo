@@ -29,7 +29,7 @@ for provider in selected_providers:
         (f"{server_address}/providerStakesCsv/{addr}", "\"Spec\",\"Status\",\"Geolocation\",\"Addons\",\"Extensions\",\"Self Stake\",\"Total Stake\",\"Delegate Limit\",\"Delegate Total\",\"Delegate Commission\""),
         (f"{server_address}/providerEventsCsv/{addr}", "\"Event Type\",\"Block Height\",\"Time\",\"Text1\",\"Text2\",\"Text3\",\"BigInt1\",\"BigInt2\",\"BigInt2\",\"Int1\",\"Int2\",\"Int3\""),
         (f"{server_address}/providerRewardsCsv/{addr}", "\"Spec\",\"Block\",\"Time\",\"Consumer\",\"Relays\",\"CU\",\"QoS\",\"Excellence\""),
-        (f"{server_address}/providerReportsCsv/{addr}", "\"Block\",\"Time\",\"CU\",\"Disconnections\",\"Errors\",\"Project\""),
+        (f"{server_address}/providerReportsCsv/{addr}", "\"Block\",\"Time\",\"CU\",\"Disconnections\",\"Errors\",\"Project\",\"Chain ID\""),
         (f"{server_address}/providerDelegatorRewardsCsv/{addr}", "time,chain,amount"),
         (f"{server_address}/providerBlockReportsCsv/{addr}", "time,blockId,tx,chainId,chainBlockHeight"),
     ]

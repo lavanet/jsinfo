@@ -11,7 +11,7 @@ if (IsIndexerProcess()) {
 import { JSINFO_QUERY_CLASS_MEMORY_DEBUG_MODE } from '../queryConsts';
 import { logClassMemory } from './MemoryLogger';
 import { Sleep } from '../../utils/utils'; // Assuming you have a sleep utility function
-import { GetJsinfoDb } from '../../utils/dbUtils';
+import { GetJsinfoDbForQuery } from '../../utils/dbUtils';
 
 interface ProviderSpecMoniker {
     provider: string;
@@ -265,7 +265,7 @@ class ProviderSpecMonikerCache {
             let offset = 0;
 
             while (retryCount < maxRetries) {
-                let db = await GetJsinfoDb();
+                let db = await GetJsinfoDbForQuery();
                 try {
                     while (true) {
                         const chunkResults = await db.select()

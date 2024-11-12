@@ -1,7 +1,7 @@
 // src/query/handlers/events/eventsEventsHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryGetJsinfoReadDbInstance, QueryCheckJsinfoReadDbInstance } from '../../queryDb';
+import { QueryGetJsinfoDbForQueryInstance, QueryCheckJsinfoDbInstance } from '../../queryDb';
 import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
 import { asc, desc, eq, sql } from "drizzle-orm";
 import { Pagination, ParsePaginationFromString } from '../../utils/queryPagination';
@@ -91,9 +91,9 @@ class EventsEventsData extends RequestHandlerBase<EventsEventsResponse> {
     }
 
     protected async fetchAllRecords(): Promise<EventsEventsResponse[]> {
-        await QueryCheckJsinfoReadDbInstance()
+        await QueryCheckJsinfoDbInstance()
 
-        const eventsRes = await QueryGetJsinfoReadDbInstance()
+        const eventsRes = await QueryGetJsinfoDbForQueryInstance()
             .select()
             .from(JsinfoSchema.events)
             .where(sql`timestamp >= NOW() - INTERVAL '30 days'`)
@@ -116,9 +116,9 @@ class EventsEventsData extends RequestHandlerBase<EventsEventsResponse> {
     }
 
     protected async fetchRecordCountFromDb(): Promise<number> {
-        await QueryCheckJsinfoReadDbInstance();
+        await QueryCheckJsinfoDbInstance();
 
-        const countResult = await QueryGetJsinfoReadDbInstance()
+        const countResult = await QueryGetJsinfoDbForQueryInstance()
             .select({
                 count: sql<number>`COUNT(*)`
             })
@@ -176,7 +176,7 @@ class EventsEventsData extends RequestHandlerBase<EventsEventsResponse> {
             throw new Error(`Invalid sort key: ${trimmedSortKey}`);
         }
 
-        await QueryCheckJsinfoReadDbInstance()
+        await QueryCheckJsinfoDbInstance()
 
         const sortColumn = keyToColumnMap[finalPagination.sortKey] || JsinfoSchema.events.id; // Default to id if not found
 
@@ -186,7 +186,7 @@ class EventsEventsData extends RequestHandlerBase<EventsEventsResponse> {
 
         let eventsRes: any | null = null;
         if (sortColumn === keyToColumnMap["moniker"]) {
-            eventsRes = await QueryGetJsinfoReadDbInstance()
+            eventsRes = await QueryGetJsinfoDbForQueryInstance()
                 .select()
                 .from(JsinfoSchema.events)
                 .leftJoin(JsinfoSchema.providerSpecMoniker, eq(JsinfoSchema.events.provider, JsinfoSchema.providerSpecMoniker.provider))
@@ -195,7 +195,7 @@ class EventsEventsData extends RequestHandlerBase<EventsEventsResponse> {
                 .offset(offset)
                 .limit(finalPagination.count);
         } else {
-            eventsRes = await QueryGetJsinfoReadDbInstance()
+            eventsRes = await QueryGetJsinfoDbForQueryInstance()
                 .select()
                 .from(JsinfoSchema.events)
                 .where(sql`timestamp >= NOW() - INTERVAL '30 days'`)

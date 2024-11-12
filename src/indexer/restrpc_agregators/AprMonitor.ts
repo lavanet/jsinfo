@@ -7,7 +7,7 @@ import { logger } from '../../utils/utils';
 import { RpcPeriodicEndpointCache } from '../classes/RpcPeriodicEndpointCache';
 import { EstimatedRewardsResponse, RpcOnDemandEndpointCache } from '../classes/RpcOnDemandEndpointCache';
 
-import { GetJsinfoDb } from "../../utils/dbUtils";
+import { GetJsinfoDbForIndexer } from "../../utils/dbUtils";
 import { ConvertToBaseDenom, GetUSDCValue } from './CurrencyConverstionUtils';
 
 // Constants
@@ -189,7 +189,7 @@ class APRMonitorClass {
 
   private async updateAprInDb(key: string, value: number): Promise<void> {
     try {
-      const db = await GetJsinfoDb();
+      const db = await GetJsinfoDbForIndexer();
       const now = new Date();
 
       await db.transaction(async (tx) => {

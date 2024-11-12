@@ -1,7 +1,7 @@
 // src/query/handlers/LatestRawHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryCheckJsinfoReadDbInstance, GetLatestBlock } from '../../queryDb';
+import { QueryCheckJsinfoDbInstance, GetLatestBlock } from '../../queryDb';
 
 export const LatestRawHandlerOpts: RouteShorthandOptions = {
     schema: {
@@ -22,7 +22,7 @@ export const LatestRawHandlerOpts: RouteShorthandOptions = {
 }
 
 export async function LatestRawHandler(request: FastifyRequest, reply: FastifyReply) {
-    await QueryCheckJsinfoReadDbInstance()
+    await QueryCheckJsinfoDbInstance()
 
     const { latestHeight, latestDatetime } = await GetLatestBlock()
     return {

@@ -51,6 +51,22 @@ export const GetRpcBlockResultEvents = async (
     });
 }
 
+function checkTimezoneConsistency(blockTime: Date) {
+    const localTime = blockTime.toString();
+    const utcTime = blockTime.toUTCString();
+    const isoTime = blockTime.toISOString();
+    const localHour = blockTime.getHours();
+    const utcHour = blockTime.getUTCHours();
+
+    if (localHour !== utcHour) {
+        console.warn(`Timezone mismatch detected
+        Local time: ${localTime}
+        UTC time:   ${utcTime}
+        ISO time:   ${isoTime}
+        This might indicate a timezone configuration issue.`);
+    }
+}
+
 export const GetOneLavaBlock = async (
     height: number,
     client: StargateClient,
@@ -67,7 +83,7 @@ export const GetOneLavaBlock = async (
         logger.info('GetRpcBlock took', {
             duration: endTimeBlock - startTimeBlock,
             unit: 'milliseconds',
-            returnedItems: block,
+            // returnedItems: block,
             blockHeight: height
         });
     }
@@ -98,11 +114,8 @@ export const GetOneLavaBlock = async (
 
     const blockTime = new Date(block!.header.time);
 
-    console.log('Block time in local timezone:', blockTime.toString());
-    console.log('Block time in UTC:', blockTime.toUTCString());
-    console.log('ISO 8601 UTC time:', blockTime.toISOString());
+    checkTimezoneConsistency(blockTime);
 
-    // Block object to return
     const lavaBlock: LavaBlock = {
         height: height,
         datetime: blockTime.getTime(),

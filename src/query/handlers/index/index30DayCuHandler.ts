@@ -1,7 +1,7 @@
 // src/query/handlers/index30DayCuHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryCheckJsinfoReadDbInstance, GetLatestBlock, QueryGetJsinfoReadDbInstance } from '../../queryDb';
+import { QueryCheckJsinfoDbInstance, GetLatestBlock, QueryGetJsinfoDbForQueryInstance } from '../../queryDb';
 import * as JsinfoProviderAgrSchema from '../../../schemas/jsinfoSchema/providerRelayPaymentsAgregation';
 import { sql, gt } from "drizzle-orm";
 
@@ -24,11 +24,11 @@ export const Index30DayCuHandlerOpts: RouteShorthandOptions = {
 }
 
 export async function Index30DayCuHandler(request: FastifyRequest, reply: FastifyReply) {
-    await QueryCheckJsinfoReadDbInstance()
+    await QueryCheckJsinfoDbInstance()
 
     let cuSum30Days = 0
     let relaySum30Days = 0
-    let res30Days = await QueryGetJsinfoReadDbInstance().select({
+    let res30Days = await QueryGetJsinfoDbForQueryInstance().select({
         cuSum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggDailyRelayPayments.cuSum})`,
         relaySum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum})`,
     }).from(JsinfoProviderAgrSchema.aggDailyRelayPayments).

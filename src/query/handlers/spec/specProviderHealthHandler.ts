@@ -1,7 +1,7 @@
 // src/query/handlers/specProviderHealthHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryGetJsinfoReadDbInstance } from '../../queryDb';
+import { QueryGetJsinfoDbForQueryInstance } from '../../queryDb';
 import { eq, and, gte, desc } from "drizzle-orm";
 import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
 import { GetAndValidateProviderAddressFromRequest, GetAndValidateSpecIdFromRequest } from '../../utils/queryRequestArgParser';
@@ -61,7 +61,7 @@ export async function SpecProviderHealthHandler(request: FastifyRequest, reply: 
     const twoDaysAgo = new Date();
     twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
 
-    const healthRecords: HealthRecord[] = await QueryGetJsinfoReadDbInstance()
+    const healthRecords: HealthRecord[] = await QueryGetJsinfoDbForQueryInstance()
         .selectDistinctOn([JsinfoSchema.providerHealth.provider, JsinfoSchema.providerHealth.spec, JsinfoSchema.providerHealth.interface])
         .from(JsinfoSchema.providerHealth)
         .orderBy(JsinfoSchema.providerHealth.provider, JsinfoSchema.providerHealth.spec, JsinfoSchema.providerHealth.interface, JsinfoSchema.providerHealth.provider, JsinfoSchema.providerHealth.spec, desc(JsinfoSchema.providerHealth.timestamp))

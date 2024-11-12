@@ -1,4 +1,4 @@
-import { GetJsinfoDb } from "../../utils/dbUtils";
+import { GetJsinfoDbForQuery } from "../../utils/dbUtils";
 import { logger } from '../../utils/utils';
 import { RpcPeriodicEndpointCache } from '../classes/RpcPeriodicEndpointCache';
 import { RpcOnDemandEndpointCache } from '../classes/RpcOnDemandEndpointCache';
@@ -36,7 +36,7 @@ class DelegatorRewardsMonitorClass {
 
     private async updateRewardsInDb(delegator: string, rewards: ProcessedRewardAmount[]): Promise<void> {
         try {
-            const db = await GetJsinfoDb();
+            const db = await GetJsinfoDbForQuery();
             const now = new Date();
 
             const data = {

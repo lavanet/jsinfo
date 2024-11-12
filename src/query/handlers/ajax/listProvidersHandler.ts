@@ -4,7 +4,7 @@
 // curl http://localhost:8081/listProviders | jq | grep ">"
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryCheckJsinfoReadDbInstance, GetLatestBlock, QueryGetJsinfoReadDbInstance } from '../../queryDb';
+import { QueryCheckJsinfoDbInstance, GetLatestBlock, QueryGetJsinfoDbForQueryInstance } from '../../queryDb';
 import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
 import { MonikerCache } from '../../classes/QueryProviderMonikerCache';
 
@@ -179,9 +179,9 @@ const LavaProviderStakeStatusDict: { [key: number]: string } = {
 };
 
 export async function ListProvidersRawHandler(request: FastifyRequest, reply: FastifyReply) {
-    await QueryCheckJsinfoReadDbInstance()
+    await QueryCheckJsinfoDbInstance()
 
-    const stakesRes = await QueryGetJsinfoReadDbInstance().select({
+    const stakesRes = await QueryGetJsinfoDbForQueryInstance().select({
         provider: JsinfoSchema.providerStakes.provider,
         specId: JsinfoSchema.providerStakes.specId,
         status: JsinfoSchema.providerStakes.status,

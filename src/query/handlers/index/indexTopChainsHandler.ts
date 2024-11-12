@@ -1,7 +1,7 @@
 // src/query/handlers/indexTopChainsHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../../queryDb';
+import { QueryCheckJsinfoDbInstance, QueryGetJsinfoDbForQueryInstance } from '../../queryDb';
 import * as JsinfoProviderAgrSchema from '../../../schemas/jsinfoSchema/providerRelayPaymentsAgregation';
 import { sql, gt } from "drizzle-orm";
 
@@ -21,10 +21,10 @@ export const IndexTopChainsHandlerOpts: RouteShorthandOptions = {
 }
 
 export async function IndexTopChainsHandler(request: FastifyRequest, reply: FastifyReply) {
-    await QueryCheckJsinfoReadDbInstance()
+    await QueryCheckJsinfoDbInstance()
 
     // Get top chains
-    let topSpecs = await QueryGetJsinfoReadDbInstance().select({
+    let topSpecs = await QueryGetJsinfoDbForQueryInstance().select({
         chainId: JsinfoProviderAgrSchema.aggDailyRelayPayments.specId,
         relaySum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum}) as relaySum`,
         cuSum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggDailyRelayPayments.cuSum}) as cuSum`,

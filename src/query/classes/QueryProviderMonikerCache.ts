@@ -10,7 +10,7 @@ if (IsIndexerProcess()) {
 
 import { JSINFO_QUERY_CLASS_MEMORY_DEBUG_MODE } from '../queryConsts';
 import { logClassMemory } from './MemoryLogger';
-import { Sleep } from '../../utils/utils'; // Assuming you have a sleep utility function
+import { Sleep } from '../../utils/utils';
 import { GetJsinfoDbForQuery } from '../../utils/dbUtils';
 
 interface ProviderSpecMoniker {
@@ -251,7 +251,6 @@ class ProviderSpecMonikerCache {
 
     private async fetchProviderSpecMonikerTable(): Promise<ProviderSpecMoniker[]> {
         if (this.isFetching) {
-            // console.log("Fetch already in progress, waiting...");
             return [];
         }
 
@@ -274,7 +273,7 @@ class ProviderSpecMonikerCache {
                             .offset(offset);
 
                         if (chunkResults.length === 0) {
-                            break; // No more results
+                            break;
                         }
 
                         const mappedResults = chunkResults.map(result => ({
@@ -286,8 +285,7 @@ class ProviderSpecMonikerCache {
                         offset += chunkSize;
                     }
 
-                    // console.log(`Successfully fetched all ${allResults.length} ProviderSpecMoniker records`);
-                    break; // Exit retry loop if successful
+                    break;
                 } catch (error) {
                     lastError = error as Error;
                     console.error(`Error fetching ProviderSpecMoniker data (attempt ${retryCount + 1}/${maxRetries}):`, lastError);

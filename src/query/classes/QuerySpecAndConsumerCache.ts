@@ -115,7 +115,7 @@ class SpecAndConsumerCacheClass {
                         .offset(offset);
 
                     if (chunkResults.length === 0) {
-                        break; // No more results
+                        break;
                     }
 
                     allSpecs.push(...chunkResults.map(spec => spec.specId!.toUpperCase()));
@@ -137,14 +137,14 @@ class SpecAndConsumerCacheClass {
                         .offset(offset);
 
                     if (healthResults.length === 0) {
-                        break; // No more results
+                        break;
                     }
 
                     allSpecs.push(...healthResults.map(spec => spec.specId!.toUpperCase()));
                     offset += chunkSize;
                 }
 
-                break; // Exit retry loop if successful
+                break;
             } catch (error) {
                 lastError = error as Error;
                 logger.error(`Error fetching spec table data (attempt ${retryCount + 1}/${maxRetries}):`, lastError);
@@ -186,14 +186,14 @@ class SpecAndConsumerCacheClass {
                         .offset(offset);
 
                     if (chunkResults.length === 0) {
-                        break; // No more results
+                        break;
                     }
 
                     allConsumers.push(...chunkResults.map(c => c.consumer.toLowerCase()));
                     offset += chunkSize;
                 }
 
-                break; // Exit retry loop if successful
+                break;
             } catch (error) {
                 lastError = error as Error;
                 logger.error(`Error fetching consumer data (attempt ${retryCount + 1}/${maxRetries}):`, lastError);

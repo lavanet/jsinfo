@@ -4,6 +4,8 @@
 
 echo "Starting indexer container at $(date)"
 
+export IS_INDEXER_PROCESS=true;
+
 trap 'echo \"Warning: Script received SIGSEGV, ignoring\"' 11;
 trap 'echo \"Error: Script terminated by signal, ignoring\"' 2 15;
 ulimit -c unlimited;

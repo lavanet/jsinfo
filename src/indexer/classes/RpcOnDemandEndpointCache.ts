@@ -112,7 +112,6 @@ class RpcOnDemandEndpointCacheClass {
                 response,
                 this.cacheRefreshInterval
             );
-            // logger.info(`Fetched and cached estimated validator rewards for ${validator}`);
         } catch (error) {
             logger.error(`Error fetching estimated validator rewards for ${validator}`, { error: TruncateError(error) });
             throw error;
@@ -143,7 +142,6 @@ class RpcOnDemandEndpointCacheClass {
                 response,
                 this.cacheRefreshInterval
             );
-            // logger.info(`Fetched and cached estimated provider rewards for ${provider}`);
         } catch (error) {
             logger.error(`Error fetching estimated provider rewards for ${provider}`, { error: TruncateError(error) });
             throw error;
@@ -216,7 +214,6 @@ class RpcOnDemandEndpointCacheClass {
         try {
             const response = await QueryLavaRPC<SpecTrackedInfoResponse>(`/lavanet/lava/rewards/SpecTrackedInfo/${chainId}/`);
             await MemoryCache.set(CACHE_KEYS.SPEC_TRACKED_INFO(chainId), response, this.cacheRefreshInterval);
-            // logger.info(`Fetched and cached SpecTrackedInfo for ${chainId} successfully.`);
             return response;
         } catch (error) {
             logger.error(`Error fetching SpecTrackedInfo for ${chainId}`, { error: TruncateError(error) });

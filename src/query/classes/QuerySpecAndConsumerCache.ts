@@ -7,6 +7,7 @@ import { GetUtcNow, IsIndexerProcess, logger, Sleep } from '../../utils/utils'; 
 import { GetJsinfoDbForQuery } from '../../utils/dbUtils';
 import { JSINFO_QUERY_CLASS_MEMORY_DEBUG_MODE } from '../queryConsts';
 import { logClassMemory } from './MemoryLogger';
+import { eq } from 'drizzle-orm';
 
 class SpecAndConsumerCacheClass {
     private specCache: Set<string> = new Set();
@@ -92,6 +93,21 @@ class SpecAndConsumerCacheClass {
 
     private async fetchSpecTable(): Promise<string[]> {
         const db = await GetJsinfoDbForQuery();
+
+        // First try to get from key-value store
+        const result = await db
+            .select()
+            .from(JsinfoSchema.keyValueStore)
+            .where(eq(JsinfoSchema.keyValueStore.key, 'specs'))
+            .limit(1);
+
+        if (result.length > 0 && result[0].value) {
+            logger.info('Fetched specs from key-value store');
+            return result[0].value.split(',');
+        }
+
+        // Fallback to old method if key-value store is empty
+        logger.warn('No specs found in key-value store, falling back to provider stakes query');
         const threeMonthsAgo = GetUtcNow();
         threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
 

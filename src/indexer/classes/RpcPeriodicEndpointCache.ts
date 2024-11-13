@@ -80,9 +80,19 @@ interface AllValidatorsResponse {
     };
 }
 
+interface ChainInfo {
+    chainName: string;
+    chainID: string;
+    enabledApiInterfaces: string[];
+    api_count: string;
+}
+
+interface ChainListResponse {
+    chainInfoList: ChainInfo[];
+}
+
 class RpcPeriodicEndpointCacheClass {
     private cacheRefreshInterval = 20 * 60; // 20 minutes
-    private isRefreshing: boolean = false;
     private refreshPromise: Promise<void> | null = null;
 
     constructor() {
@@ -91,19 +101,16 @@ class RpcPeriodicEndpointCacheClass {
     }
 
     private async refreshCache(): Promise<void> {
-        if (this.isRefreshing) {
-            return this.refreshPromise || Promise.resolve();
+        if (this.refreshPromise) {
+            return this.refreshPromise;
         }
 
-        this.isRefreshing = true;
-        this.refreshPromise = this._refreshCache();
+        this.refreshPromise = this._refreshCache()
+            .finally(() => {
+                this.refreshPromise = null;
+            });
 
-        try {
-            await this.refreshPromise;
-        } finally {
-            this.isRefreshing = false;
-            this.refreshPromise = null;
-        }
+        return this.refreshPromise;
     }
 
     private async _refreshCache(): Promise<void> {
@@ -112,6 +119,7 @@ class RpcPeriodicEndpointCacheClass {
             await this.fetchAndCacheDelegators();
             await this.fetchAndCacheEmptyProviderDelegations();
             await this.fetchAndCacheValidators();
+            await this.fetchAndCacheChainList();
         } catch (error) {
             logger.error('Error refreshing cache', { error: TruncateError(error) });
         }
@@ -330,6 +338,25 @@ class RpcPeriodicEndpointCacheClass {
         } catch (error) {
             logger.error('Error fetching validators', { error: TruncateError(error) });
         }
+    }
+
+    private async fetchAndCacheChainList(): Promise<void> {
+        try {
+            const response = await QueryLavaRPC<ChainListResponse>('/lavanet/lava/spec/show_all_chains');
+            await MemoryCache.set('chain_list', response.chainInfoList, this.cacheRefreshInterval);
+            logger.info('Chain list cache refreshed successfully.');
+        } catch (error) {
+            logger.error('Error fetching chain list', { error: TruncateError(error) });
+        }
+    }
+
+    public async GetChainList(): Promise<ChainInfo[]> {
+        const chainList = await MemoryCache.get<ChainInfo[]>('chain_list');
+        if (!chainList) {
+            await this.refreshCache();
+            return await MemoryCache.get<ChainInfo[]>('chain_list') || [];
+        }
+        return chainList;
     }
 }
 

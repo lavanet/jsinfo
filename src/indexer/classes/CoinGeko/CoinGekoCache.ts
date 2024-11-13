@@ -11,11 +11,12 @@ export interface CoinGeckoRateResponse {
 
 class CoinGekoCacheClass {
     private cacheRefreshInterval = 5 * 60; // 5 minutes
+    private activeFetches: { [denom: string]: Promise<number> } = {};
 
     public async GetDenomToUSDRate(denom: string): Promise<number> {
         const coinGeckodenom = denomsData[denom as keyof typeof denomsData];
         if (!coinGeckodenom) {
-            throw new Error(`No matching id found in denoms.json for ${denom}`);
+            throw new Error(`CoinGekoCache:: No matching id found in denoms.json for ${denom}`);
         }
 
         const cacheKey = `coingecko-rate-${coinGeckodenom}`;
@@ -24,16 +25,22 @@ class CoinGekoCacheClass {
             return cachedRate.rate;
         }
 
-        await this.fetchAndCacheDenomRate(coinGeckodenom);
-        const newCachedRate = await MemoryCache.getDict(cacheKey);
-        if (!newCachedRate) {
-            throw new Error(`Failed to cache rate for ${coinGeckodenom}`);
+        // Return existing promise if we're already fetching this denom
+        if (coinGeckodenom in this.activeFetches) {
+            logger.info(`CoinGekoCache:: Reusing existing fetch promise for ${coinGeckodenom}`);
+            return this.activeFetches[coinGeckodenom];
         }
 
-        return newCachedRate.rate;
+        // Create new promise for this denom
+        this.activeFetches[coinGeckodenom] = this.fetchAndCacheDenomRate(coinGeckodenom)
+            .finally(() => {
+                delete this.activeFetches[coinGeckodenom];
+            });
+
+        return this.activeFetches[coinGeckodenom];
     }
 
-    private async fetchAndCacheDenomRate(coinGeckodenom: string): Promise<void> {
+    private async fetchAndCacheDenomRate(coinGeckodenom: string): Promise<number> {
         try {
             const url = `https://api.coingecko.com/api/v3/simple/price?ids=${coinGeckodenom}&vs_currencies=usd`;
             const data = await FetchRestData<CoinGeckoRateResponse>(
@@ -56,9 +63,11 @@ class CoinGekoCacheClass {
                 { rate: usdRate },
                 this.cacheRefreshInterval
             );
-            logger.info(`Fetched and cached USD rate for ${coinGeckodenom}: ${usdRate}`);
+            logger.info(`CoinGekoCache:: Fetched and cached USD rate for ${coinGeckodenom}: ${usdRate}`);
+
+            return usdRate;
         } catch (error) {
-            logger.error(`Error fetching USD rate for ${coinGeckodenom}`, { error: TruncateError(error) });
+            logger.error(`CoinGekoCache:: Error fetching USD rate for ${coinGeckodenom}`, { error: TruncateError(error) });
             throw error;
         }
     }

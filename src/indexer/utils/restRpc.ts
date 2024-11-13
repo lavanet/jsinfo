@@ -1,5 +1,7 @@
 import { GetEnvVar, logger, BackoffRetry } from "../../utils/utils";
 
+const activeFetches: Record<string, Promise<any>> = {};
+
 export async function FetchRestData<T>(
     url: string,
     options: RequestInit = {},
@@ -9,6 +11,11 @@ export async function FetchRestData<T>(
     minTimeout: number = 1000,
     maxTimeout: number = 5000
 ): Promise<T> {
+    if (url in activeFetches) {
+        // logger.debug(`FetchRestData:: Reusing existing fetch promise for ${url}`);
+        return activeFetches[url] as Promise<T>;
+    }
+
     const fetchFunc = async () => {
         try {
             const response = await fetch(url, options);
@@ -19,14 +26,16 @@ export async function FetchRestData<T>(
         } catch (error) {
             logger.error(`Failed to fetch data from ${url}`, { error });
             throw error;
+        } finally {
+            delete activeFetches[url];
         }
     };
 
-    if (skipBackoff) {
-        return fetchFunc();
-    } else {
-        return BackoffRetry(`FetchRestData: ${url}`, fetchFunc, retries, factor, minTimeout, maxTimeout);
-    }
+    const promise = skipBackoff ?
+        fetchFunc() :
+        BackoffRetry(`FetchRestData: ${url}`, fetchFunc, retries, factor, minTimeout, maxTimeout);
+    activeFetches[url] = promise;
+    return promise;
 }
 
 export async function QueryLavaRPC<T>(path: string, skipBackoff: boolean = false): Promise<T> {

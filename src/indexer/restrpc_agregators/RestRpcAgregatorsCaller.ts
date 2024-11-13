@@ -8,6 +8,7 @@ import { ProcessChainWalletApi } from "./ChainWalletApiProcessor";
 import { APRMonitor } from "./AprMonitor";
 import { DelegatorRewardsMonitor } from "./DelegatorRewardsMonitor";
 import { SpecTrackedInfoMonitor } from "./SpecTrackedInfoMonitor";
+import { ProcessChainSpecs } from "./ChainSpecProcessor";
 
 let isRunning = false;
 
@@ -19,7 +20,7 @@ export async function RestRpcAgreagorsCaller(db: PostgresJsDatabase): Promise<vo
 
     isRunning = true;
 
-    // this guys run in the background
+    // these guys run in the background
     APRMonitor.start();
     DelegatorRewardsMonitor.start();
     SpecTrackedInfoMonitor.start();
@@ -56,6 +57,18 @@ export async function RestRpcAgreagorsCaller(db: PostgresJsDatabase): Promise<vo
         logger.info(`Successfully executed ProcessChainWalletApi. Execution time: ${executionTime} ms`);
     } catch (e) {
         logger.error(`Failed to execute ProcessChainWalletApi. Error: ${(e as Error).message}`, { stack: (e as Error).stack });
+        isRunning = false;
+        return;
+    }
+
+    logger.info(`ProcessChainSpecs started at: ${new Date().toISOString()}`);
+    try {
+        const start = Date.now();
+        await ProcessChainSpecs(db);
+        const executionTime = Date.now() - start;
+        logger.info(`Successfully executed ProcessChainSpecs. Execution time: ${executionTime} ms`);
+    } catch (e) {
+        logger.error(`Failed to execute ProcessChainSpecs. Error: ${(e as Error).message}`, { stack: (e as Error).stack });
         isRunning = false;
         return;
     }

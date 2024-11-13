@@ -216,7 +216,7 @@ class RpcOnDemandEndpointCacheClass {
         try {
             const response = await QueryLavaRPC<SpecTrackedInfoResponse>(`/lavanet/lava/rewards/SpecTrackedInfo/${chainId}/`);
             await MemoryCache.set(CACHE_KEYS.SPEC_TRACKED_INFO(chainId), response, this.cacheRefreshInterval);
-            logger.info(`Fetched and cached SpecTrackedInfo for ${chainId} successfully.`);
+            // logger.info(`Fetched and cached SpecTrackedInfo for ${chainId} successfully.`);
             return response;
         } catch (error) {
             logger.error(`Error fetching SpecTrackedInfo for ${chainId}`, { error: TruncateError(error) });

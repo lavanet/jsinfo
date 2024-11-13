@@ -10,16 +10,14 @@ if (IsIndexerProcess()) {
 
 import { JSINFO_QUERY_CLASS_MEMORY_DEBUG_MODE } from '../queryConsts';
 import { logClassMemory } from './MemoryLogger';
-import { Sleep } from '../../utils/utils';
 import { GetJsinfoDbForQuery } from '../../utils/dbUtils';
+import { logger } from '../../utils/utils';
+import { desc, sql } from 'drizzle-orm';
 
 interface ProviderSpecMoniker {
     provider: string;
     moniker: string | null;
     spec: string | null;
-    id: number;
-    createdAt: Date;
-    updatedAt: Date | null;
 }
 
 class ProviderSpecMonikerCache {
@@ -29,7 +27,7 @@ class ProviderSpecMonikerCache {
     private monikerForProviderCache: Map<string, string> = new Map();
     private monikerFullDescriptionCache: Map<string, string> = new Map();
     private debugInterval: NodeJS.Timer | null = null;
-    private isFetching: boolean = false;
+    private fetchPromise: Promise<ProviderSpecMoniker[]> | null = null;
 
     constructor() {
         this.refreshCache();
@@ -250,69 +248,46 @@ class ProviderSpecMonikerCache {
     }
 
     private async fetchProviderSpecMonikerTable(): Promise<ProviderSpecMoniker[]> {
-        if (this.isFetching) {
-            return [];
+        if (this.fetchPromise) {
+            return this.fetchPromise;
         }
 
-        this.isFetching = true;
+        this.fetchPromise = this._fetchProviderSpecMonikerTable().finally(() => {
+            this.fetchPromise = null;
+        });
+
+        return this.fetchPromise;
+    }
+
+    private async _fetchProviderSpecMonikerTable(): Promise<ProviderSpecMoniker[]> {
+        logger.info('Fetch started for ProviderSpecMonikerTable');
+
+        let db = await GetJsinfoDbForQuery();
         try {
-            const maxRetries = 3;
-            let retryCount = 0;
-            let lastError: Error | null = null;
-            let allResults: ProviderSpecMoniker[] = [];
-            const chunkSize = 500;
-            let offset = 0;
+            const results = await db
+                .select({
+                    provider: JsinfoSchema.providerSpecMoniker.provider,
+                    specId: JsinfoSchema.providerSpecMoniker.spec,
+                    moniker: JsinfoSchema.providerSpecMoniker.moniker
+                })
+                .from(JsinfoSchema.providerSpecMoniker)
+                .groupBy(
+                    JsinfoSchema.providerSpecMoniker.provider,
+                    JsinfoSchema.providerSpecMoniker.spec,
+                    JsinfoSchema.providerSpecMoniker.moniker
+                )
+                .orderBy(desc(sql`MAX(${JsinfoSchema.providerSpecMoniker.updatedAt})`));
 
-            while (retryCount < maxRetries) {
-                let db = await GetJsinfoDbForQuery();
-                try {
-                    while (true) {
-                        const chunkResults = await db.select()
-                            .from(JsinfoSchema.providerSpecMoniker)
-                            .limit(chunkSize)
-                            .offset(offset);
+            logger.info('Fetch ended for ProviderSpecMonikerTable');
 
-                        if (chunkResults.length === 0) {
-                            break;
-                        }
-
-                        const mappedResults = chunkResults.map(result => ({
-                            ...result,
-                            spec: result.specId,  // Map specId to spec
-                        }));
-
-                        allResults = allResults.concat(mappedResults);
-                        offset += chunkSize;
-                    }
-
-                    break;
-                } catch (error) {
-                    lastError = error as Error;
-                    console.error(`Error fetching ProviderSpecMoniker data (attempt ${retryCount + 1}/${maxRetries}):`, lastError);
-                    retryCount++;
-
-                    if (retryCount < maxRetries) {
-                        const delay = 1000 * retryCount; // Exponential backoff
-                        console.log(`Retrying in ${delay}ms...`);
-                        await Sleep(delay);
-                    }
-                }
-            }
-
-            if (allResults.length === 0 && lastError) {
-                console.error(`Failed to fetch ProviderSpecMoniker data after ${maxRetries} attempts`);
-                throw lastError;
-            }
-
-            let ret = allResults.map(item => ({
+            return results.map(item => ({
                 ...item,
                 provider: item.provider.toLowerCase(),
-                spec: item.spec ? item.spec.toUpperCase() : null
+                spec: item.specId ? item.specId.toUpperCase() : null,
             }));
-
-            return ret;
-        } finally {
-            this.isFetching = false;
+        } catch (error) {
+            logger.error('Failed to fetch ProviderSpecMoniker data:', error);
+            throw error;
         }
     }
 

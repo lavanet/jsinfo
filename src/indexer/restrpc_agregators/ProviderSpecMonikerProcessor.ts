@@ -33,38 +33,30 @@ export async function GetProviderMonikerSpecs(spec: string): Promise<ProviderRes
 }
 
 export async function ProcessProviderMonikerSpecs(db: PostgresJsDatabase): Promise<void> {
-    console.log('ProcessProviderMonikerSpecs: Starting');
     try {
         const specs = await SpecAndConsumerCache.GetAllSpecs(db);
-
         for (const spec of specs) {
             const providerResponse = await GetProviderMonikerSpecs(spec);
-
             for (const provider of providerResponse.stakeEntry) {
-                await ProcessProviderMonikerSpec(db, {
+                const psmEntry = {
                     provider: provider.address,
                     moniker: provider.moniker,
                     spec: spec
-                });
+                };
+
+                if (!IsMeaningfulText(psmEntry.provider) || !IsMeaningfulText(psmEntry.moniker) || !IsMeaningfulText(psmEntry.spec)) {
+                    continue;
+                }
+
+                await batchAppend(db, psmEntry);
             }
         }
 
         await batchInsert(db);
     } catch (error) {
-        console.error('ProviderSpecMonikerProcessor: Error occurred', error);
-        logger.error('ProviderSpecMonikerProcessor:: Error processing provider moniker specs', { error });
+        logger.error('ProcessProviderMonikerSpecs: Error processing provider moniker specs', { error });
         throw error;
     }
-}
-
-async function ProcessProviderMonikerSpec(db: PostgresJsDatabase, psmEntry: ProviderMonikerSpec): Promise<void> {
-    const { provider, moniker, spec: specValue } = psmEntry;
-
-    if (!IsMeaningfulText(provider) || !IsMeaningfulText(moniker) || !IsMeaningfulText(specValue)) {
-        return;
-    }
-
-    await batchAppend(db, psmEntry);
 }
 
 let batchData: ProviderMonikerSpec[] = [];
@@ -91,36 +83,40 @@ async function batchAppend(db: PostgresJsDatabase, psmEntry: ProviderMonikerSpec
 
 async function batchInsert(db: PostgresJsDatabase): Promise<void> {
     if (batchData.length === 0) {
+        logger.warn('providerSpecMoniker:: batchInsert: No data to insert');
         return;
     }
 
+    // console.log(`providerSpecMoniker:: batchInsert: Processing ${batchData.length} entries`);
     const uniqueEntriesByProviderSpec = new Map<string, ProviderMonikerSpec>();
 
     for (const entry of batchData) {
         if (!IsMeaningfulText(entry.moniker) || !IsMeaningfulText(entry.spec)) {
-            // console.log(`batchInsert: Skipping entry due to invalid text`, entry);
+            // console.log(`batchInsert: Skipping invalid entry for provider ${entry.provider}`);
             continue;
         }
         const key = `${entry.provider.toLowerCase()}-${entry.spec.toLowerCase()}`;
-        uniqueEntriesByProviderSpec.set(key, entry);
+        uniqueEntriesByProviderSpec.set(key, {
+            provider: entry.provider.toLowerCase(),
+            spec: entry.spec.toLowerCase(),
+            moniker: entry.moniker
+        });
     }
-
-
     try {
         await db.insert(JsinfoSchema.providerSpecMoniker)
             .values(Array.from(uniqueEntriesByProviderSpec.values()))
             .onConflictDoUpdate({
-                // TODO:: this is spec on the hypertables branch
-                target: [JsinfoSchema.providerSpecMoniker.provider, JsinfoSchema.providerSpecMoniker.specId],
+                target: [JsinfoSchema.providerSpecMoniker.provider, JsinfoSchema.providerSpecMoniker.spec],
                 set: {
-                    moniker: sql.raw('EXCLUDED.moniker')
+                    moniker: sql.raw('EXCLUDED.moniker'),
+                    updatedAt: sql.raw('NOW()')
                 }
             });
 
         batchData = [];
         batchStartTime = new Date();
     } catch (error) {
-        logger.error('ProviderSpecMonikerProcessor:: Error in batch insert operation', { error });
+        logger.error('ProviderSpecMonikerProcessor:: batchInsert: Error in batch insert operation', { error });
     }
 }
 

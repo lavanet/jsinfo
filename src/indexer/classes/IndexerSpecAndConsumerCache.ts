@@ -9,61 +9,62 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 class SpecAndConsumerCacheClass {
     private specCache: string[] = [];
     private consumerCache: string[] = [];
-    private refreshInterval = 2 * 60 * 1000; // 2 minutes in milliseconds
-    private lastRefreshTime: number = 0;
-    private isRefreshing: boolean = false;
+    private lastSpecRefreshTime: number = 0;
+    private lastConsumerRefreshTime: number = 0;
+    private refreshInterval = 2 * 60 * 1000; // 2 minutes
+    private currentSpecRefresh: Promise<void> | null = null;
+    private currentConsumerRefresh: Promise<void> | null = null;
 
     public async GetAllSpecs(db: PostgresJsDatabase): Promise<string[]> {
-        await this.refreshCache(db);
+        logger.info(`GetAllSpecs called. Current cache size: ${this.specCache.length}`);
+
+        if (this.shouldRefreshSpecs()) {
+            if (!this.currentSpecRefresh) {
+                this.currentSpecRefresh = this.fetchSpecTable(db)
+                    .then(results => {
+                        this.specCache = results;
+                        this.lastSpecRefreshTime = Date.now();
+                        logger.info(`Specs cache refreshed. New size: ${results.length}`);
+                    })
+                    .finally(() => {
+                        this.currentSpecRefresh = null;
+                    });
+            }
+            await this.currentSpecRefresh;
+        }
+
         return this.specCache;
     }
 
     public async GetAllConsumers(db: PostgresJsDatabase): Promise<string[]> {
-        await this.refreshCache(db);
+        logger.info(`GetAllConsumers called. Current cache size: ${this.consumerCache.length}`);
+
+        if (this.shouldRefreshConsumers()) {
+            if (!this.currentConsumerRefresh) {
+                this.currentConsumerRefresh = this.fetchConsumerTable(db)
+                    .then(results => {
+                        this.consumerCache = results;
+                        this.lastConsumerRefreshTime = Date.now();
+                        logger.info(`Consumers cache refreshed. New size: ${results.length}`);
+                    })
+                    .finally(() => {
+                        this.currentConsumerRefresh = null;
+                    });
+            }
+            await this.currentConsumerRefresh;
+        }
+
         return this.consumerCache;
     }
 
-    private async refreshCache(db: PostgresJsDatabase): Promise<void> {
-        const currentTime = Date.now();
-
-        if (currentTime - this.lastRefreshTime < this.refreshInterval) {
-            return;
-        }
-
-        if (this.isRefreshing) {
-            return;
-        }
-
-        this.isRefreshing = true;
-
-        try {
-            await this._refreshCache(db);
-            this.lastRefreshTime = currentTime;
-        } finally {
-            this.isRefreshing = false;
-        }
+    private shouldRefreshSpecs(): boolean {
+        return Date.now() - this.lastSpecRefreshTime >= this.refreshInterval ||
+            this.specCache.length === 0;
     }
 
-    private async _refreshCache(db: PostgresJsDatabase): Promise<void> {
-        let newSpecCache = await MemoryCache.getArray("SpecTable") as string[] | null;
-        let newConsumerCache = await MemoryCache.getArray("ConsumerTable") as string[] | null;
-
-        if (!newSpecCache || newSpecCache.length === 0 || this.specCache.length === 0) {
-            this.specCache = await this.fetchSpecTable(db);
-            MemoryCache.setArray("SpecTable", this.specCache, this.refreshInterval);
-        } else {
-            this.specCache = newSpecCache;
-        }
-
-        if (!newConsumerCache || newConsumerCache.length === 0 || this.consumerCache.length === 0) {
-            logger.info('Fetching new consumer data from database');
-            this.consumerCache = await this.fetchConsumerTable(db);
-            MemoryCache.setArray("ConsumerTable", this.consumerCache, this.refreshInterval);
-        } else {
-            this.consumerCache = newConsumerCache;
-        }
-
-        logger.info('SpecAndConsumerCache refresh completed');
+    private shouldRefreshConsumers(): boolean {
+        return Date.now() - this.lastConsumerRefreshTime >= this.refreshInterval ||
+            this.consumerCache.length === 0;
     }
 
     private async fetchSpecTable(db: PostgresJsDatabase): Promise<string[]> {
@@ -95,9 +96,7 @@ class SpecAndConsumerCacheClass {
             .from(JsinfoSchema.consumerSubscriptionList)
             .groupBy(JsinfoSchema.consumerSubscriptionList.consumer);
 
-        const uniqueConsumers = new Set(consumers.map(c => c.consumer.toLowerCase()));
-
-        return Array.from(uniqueConsumers);
+        return consumers.map(c => c.consumer.toLowerCase());
     }
 }
 

@@ -12,7 +12,6 @@ class SpecAndConsumerCacheClass {
     private specCache: Set<string> = new Set();
     private consumerCache: Set<string> = new Set();
     private refreshInterval: number = 2 * 60 * 1000;
-    private isRefreshing: boolean = false;
     private refreshPromise: Promise<void> | null = null;
     private debugInterval: NodeJS.Timer | null = null;
 
@@ -26,19 +25,15 @@ class SpecAndConsumerCacheClass {
     }
 
     private async refreshCache(): Promise<void> {
-        if (this.isRefreshing) {
-            return this.refreshPromise || Promise.resolve();
+        if (this.refreshPromise) {
+            return this.refreshPromise;
         }
 
-        this.isRefreshing = true;
-        this.refreshPromise = this._refreshCache();
-
-        try {
-            await this.refreshPromise;
-        } finally {
-            this.isRefreshing = false;
+        this.refreshPromise = this._refreshCache().finally(() => {
             this.refreshPromise = null;
-        }
+        });
+
+        return this.refreshPromise;
     }
 
     private async _refreshCache(): Promise<void> {
@@ -96,123 +91,38 @@ class SpecAndConsumerCacheClass {
     }
 
     private async fetchSpecTable(): Promise<string[]> {
-        const maxRetries = 3;
-        let retryCount = 0;
-        let lastError: Error | null = null;
-        const allSpecs: string[] = [];
-        const chunkSize = 500;
-        let offset = 0;
+        const db = await GetJsinfoDbForQuery();
+        const threeMonthsAgo = GetUtcNow();
+        threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
 
-        while (retryCount < maxRetries) {
-            let db = await GetJsinfoDbForQuery();
-            try {
-                while (true) {
-                    const chunkResults = await db
-                        .select({ specId: JsinfoSchema.providerStakes.specId })
-                        .from(JsinfoSchema.providerStakes)
-                        .groupBy(JsinfoSchema.providerStakes.specId)
-                        .limit(chunkSize)
-                        .offset(offset);
+        // Get specs from provider stakes
+        const stakeSpecs = await db
+            .select({ specId: JsinfoSchema.providerStakes.specId })
+            .from(JsinfoSchema.providerStakes)
+            .groupBy(JsinfoSchema.providerStakes.specId);
 
-                    if (chunkResults.length === 0) {
-                        break;
-                    }
+        // Get specs from provider health
+        const healthSpecs = await db
+            .select({ specId: JsinfoSchema.providerHealth.spec })
+            .from(JsinfoSchema.providerHealth)
+            .where(sql`${JsinfoSchema.providerHealth.timestamp} >= ${threeMonthsAgo}`)
+            .groupBy(JsinfoSchema.providerHealth.spec);
 
-                    allSpecs.push(...chunkResults.map(spec => spec.specId!.toUpperCase()));
-                    offset += chunkSize;
-                }
-
-                // Include specs from providerHealth table
-                offset = 0;
-                const threeMonthsAgo = GetUtcNow();
-                threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
-
-                while (true) {
-                    const healthResults = await db
-                        .select({ specId: JsinfoSchema.providerHealth.spec })
-                        .from(JsinfoSchema.providerHealth)
-                        .where(sql`${JsinfoSchema.providerHealth.timestamp} >= ${threeMonthsAgo}`)
-                        .groupBy(JsinfoSchema.providerHealth.spec)
-                        .limit(chunkSize)
-                        .offset(offset);
-
-                    if (healthResults.length === 0) {
-                        break;
-                    }
-
-                    allSpecs.push(...healthResults.map(spec => spec.specId!.toUpperCase()));
-                    offset += chunkSize;
-                }
-
-                break;
-            } catch (error) {
-                lastError = error as Error;
-                logger.error(`Error fetching spec table data (attempt ${retryCount + 1}/${maxRetries}):`, lastError);
-                retryCount++;
-
-                if (retryCount < maxRetries) {
-                    const delay = 1000 * retryCount; // Exponential backoff
-                    logger.info(`Retrying in ${delay}ms...`);
-                    await Sleep(delay);
-                }
-            }
-        }
-
-        if (allSpecs.length === 0 && lastError) {
-            logger.error(`Failed to fetch spec data after ${maxRetries} attempts`);
-            throw lastError;
-        }
+        // Combine and deduplicate
+        const allSpecs = [...stakeSpecs, ...healthSpecs]
+            .map(spec => spec.specId!.toUpperCase());
 
         return Array.from(new Set(allSpecs));
     }
 
     private async fetchConsumerTable(): Promise<string[]> {
-        const maxRetries = 3;
-        let retryCount = 0;
-        let lastError: Error | null = null;
-        const allConsumers: string[] = [];
-        const chunkSize = 500;
-        let offset = 0;
+        const db = await GetJsinfoDbForQuery();
+        const results = await db
+            .select({ consumer: JsinfoSchema.consumerSubscriptionList.consumer })
+            .from(JsinfoSchema.consumerSubscriptionList)
+            .groupBy(JsinfoSchema.consumerSubscriptionList.consumer);
 
-        while (retryCount < maxRetries) {
-            let db = await GetJsinfoDbForQuery();
-            try {
-                while (true) {
-                    const chunkResults = await db
-                        .select({ consumer: JsinfoSchema.consumerSubscriptionList.consumer })
-                        .from(JsinfoSchema.consumerSubscriptionList)
-                        .groupBy(JsinfoSchema.consumerSubscriptionList.consumer)
-                        .limit(chunkSize)
-                        .offset(offset);
-
-                    if (chunkResults.length === 0) {
-                        break;
-                    }
-
-                    allConsumers.push(...chunkResults.map(c => c.consumer.toLowerCase()));
-                    offset += chunkSize;
-                }
-
-                break;
-            } catch (error) {
-                lastError = error as Error;
-                logger.error(`Error fetching consumer data (attempt ${retryCount + 1}/${maxRetries}):`, lastError);
-                retryCount++;
-
-                if (retryCount < maxRetries) {
-                    const delay = 1000 * retryCount; // Exponential backoff
-                    logger.info(`Retrying in ${delay}ms...`);
-                    await Sleep(delay);
-                }
-            }
-        }
-
-        if (allConsumers.length === 0 && lastError) {
-            logger.error(`Failed to fetch consumer data after ${maxRetries} attempts`);
-            throw lastError;
-        }
-
-        return Array.from(new Set(allConsumers));
+        return results.map(c => c.consumer.toLowerCase());
     }
 
     private logMemoryUsage() {

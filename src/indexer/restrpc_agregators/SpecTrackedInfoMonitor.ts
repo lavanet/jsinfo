@@ -86,10 +86,10 @@ class SpecTrackedInfoMonitorClass {
 
             for (const spec of specs) {
                 const specTrackedInfo = await RpcOnDemandEndpointCache.GetSpecTrackedInfo(spec);
-                logger.info(`SpecTrackedInfoMonitor - Got spec info`, {
-                    spec,
-                    infoCount: specTrackedInfo.info.length
-                });
+                // logger.info(`SpecTrackedInfoMonitor - Got spec info`, {
+                //     spec,
+                //     infoCount: specTrackedInfo.info.length
+                // });
 
                 allProcessedInfo.push(...specTrackedInfo.info.map(info => ({
                     provider: info.provider,

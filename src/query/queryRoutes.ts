@@ -109,9 +109,8 @@ RegisterRedisBackedHandler('/supply/total', SupplyRawHandlerOpts, TotalSupplyRaw
 RegisterRedisBackedHandler('/supply/circulating', SupplyRawHandlerOpts, CirculatingSupplyRawHandler, { cache_ttl: 60, is_text: true });
 
 // -- Server chain wallet api ajax --
-// TODO: uncomment chain wallet api to when it is available
-// RegisterRedisBackedHandler('/lava_chain_stakers', ChainWalletApiHandlerOpts, LavaChainStakersHandler, { cache_ttl: 10 });
-// RegisterRedisBackedHandler('/lava_chain_restakers', ChainWalletApiHandlerOpts, LavaChainRestakersHandler, { cache_ttl: 10 });
+RegisterRedisBackedHandler('/lava_chain_stakers', ChainWalletApiHandlerOpts, LavaChainStakersHandler, { cache_ttl: 10 });
+RegisterRedisBackedHandler('/lava_chain_restakers', ChainWalletApiHandlerOpts, LavaChainRestakersHandler, { cache_ttl: 10 });
 
 // -- Server APR ajax --
 RegisterRedisBackedHandler('/apr', APRRawHandlerOpts, APRRawHandler, { cache_ttl: 60 });

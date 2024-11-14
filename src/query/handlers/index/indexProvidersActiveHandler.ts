@@ -11,7 +11,7 @@ import { Pagination, ParsePaginationFromString } from '../../utils/queryPaginati
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE } from '../../queryConsts';
 import { CSVEscape } from '../../utils/queryUtils';
 import { RequestHandlerBase } from '../../classes/RequestHandlerBase';
-import { MonikerCache } from '../../classes/QueryProviderMonikerCache';
+import { ProviderMonikerService } from '../../classes/QueryProviderMonikerService';
 
 /*
 v1
@@ -183,8 +183,8 @@ class IndexProvidersActiveData extends RequestHandlerBase<IndexProvidersActiveRe
 
         const providersDetails: IndexProvidersActiveResponse[] = res.map(provider => ({
             provider: provider.provider || "",
-            moniker: MonikerCache.GetMonikerForProvider(provider.provider),
-            monikerfull: MonikerCache.GetMonikerFullDescription(provider.provider),
+            moniker: ProviderMonikerService.GetMonikerForProvider(provider.provider),
+            monikerfull: ProviderMonikerService.GetMonikerFullDescription(provider.provider),
             rewardSum: provider.rewardSum,
             totalServices: provider.totalServices || "",
             totalStake: provider.totalStake.toString(),
@@ -258,8 +258,8 @@ class IndexProvidersActiveData extends RequestHandlerBase<IndexProvidersActiveRe
 
             return data.map(item => ({
                 provider: item.provider || "",
-                moniker: MonikerCache.GetMonikerForProvider(item.provider),
-                monikerfull: MonikerCache.GetMonikerFullDescription(item.provider),
+                moniker: ProviderMonikerService.GetMonikerForProvider(item.provider),
+                monikerfull: ProviderMonikerService.GetMonikerFullDescription(item.provider),
                 rewardSum: item.rewardSum || 0,
                 totalServices: item.totalServices,
                 totalStake: item.totalStake.toString()
@@ -282,8 +282,8 @@ class IndexProvidersActiveData extends RequestHandlerBase<IndexProvidersActiveRe
 
         return data.map(item => ({
             provider: item.provider || "",
-            moniker: MonikerCache.GetMonikerForProvider(item.provider),
-            monikerfull: MonikerCache.GetMonikerFullDescription(item.provider),
+            moniker: ProviderMonikerService.GetMonikerForProvider(item.provider),
+            monikerfull: ProviderMonikerService.GetMonikerFullDescription(item.provider),
             rewardSum: item.rewardSum || 0,
             totalServices: item.totalServices,
             totalStake: item.totalStake.toString()

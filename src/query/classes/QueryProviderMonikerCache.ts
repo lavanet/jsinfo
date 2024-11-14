@@ -1,11 +1,11 @@
-// src/query/classes/QueryProviderMonikerCache.ts
+// src/query/classes/QueryProviderProviderMonikerService.ts
 
 import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
-import { RedisCache } from './RedisCache';
+import { RedisCache } from '../../redis/classes/RedisCache';
 import { IsIndexerProcess } from '../../utils/utils';
 
 if (IsIndexerProcess()) {
-    throw new Error('MonikerCache should not be used in the indexer');
+    throw new Error('ProviderMonikerService should not be used in the indexer');
 }
 
 import { JSINFO_QUERY_CLASS_MEMORY_DEBUG_MODE } from '../queryConsts';
@@ -20,7 +20,7 @@ interface ProviderSpecMoniker {
     spec: string | null;
 }
 
-class ProviderSpecMonikerCache {
+class ProviderMonikerService {
     private psmCache: Map<string, ProviderSpecMoniker> = new Map();
     private psmCacheIsEmpty: boolean = false;
     private refreshInterval = 2 * 60 * 1000;
@@ -41,7 +41,7 @@ class ProviderSpecMonikerCache {
 
     private logMemoryUsage() {
         logClassMemory({
-            className: 'MonikerCache',
+            className: 'ProviderMonikerService',
             caches: [
                 this.psmCache,
                 this.monikerForProviderCache,
@@ -203,16 +203,6 @@ class ProviderSpecMonikerCache {
         return result;
     }
 
-    public GetMonikerCountForProvider(lavaid: string): number {
-        if (this.psmCache.size === 0) {
-            this.refreshCacheSync()
-            if (this.psmCacheIsEmpty) return 0;
-        }
-        if (!lavaid) return 0;
-        lavaid = this.verifyLavaId(lavaid);
-        return Array.from(this.psmCache.values()).filter(item => item.provider === lavaid).length;
-    }
-
     public GetAllProviders(): string[] {
         if (this.psmCache.size === 0) {
             this.refreshCacheSync();
@@ -298,7 +288,7 @@ class ProviderSpecMonikerCache {
 }
 
 process.on('exit', () => {
-    MonikerCache.cleanup();
+    ProviderMonikerService.cleanup();
 });
 
-export const MonikerCache = IsIndexerProcess() ? (null as unknown as ProviderSpecMonikerCache) : new ProviderSpecMonikerCache();
+export const ProviderMonikerService = IsIndexerProcess() ? (null as unknown as ProviderMonikerService) : new ProviderMonikerService();

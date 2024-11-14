@@ -9,7 +9,7 @@ import { RequestHandlerBase } from '../../classes/RequestHandlerBase';
 import { GetAndValidateProviderAddressFromRequest, GetAndValidateSpecIdFromRequestWithAll } from '../../utils/queryRequestArgParser';
 import { PgColumn } from 'drizzle-orm/pg-core';
 import { logger } from '../../../utils/utils';
-import { RedisCache } from '../../classes/RedisCache';
+import { RedisCache } from '../../../redis/classes/RedisCache';
 
 type ProviderChartDataPoint = {
     date: string;

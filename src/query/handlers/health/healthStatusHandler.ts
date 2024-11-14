@@ -2,7 +2,7 @@
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { GetLatestBlock, QueryCheckIsJsinfoDbInstanceOk, QueryCheckJsinfoDbInstance, QueryGetJsinfoDbForQueryInstance } from '../../queryDb';
-import { RedisCache } from '../../classes/RedisCache';
+import { RedisCache } from '../../../redis/classes/RedisCache';
 import * as JsinfoSchema from "../../../schemas/jsinfoSchema/jsinfoSchema";
 import { gt, desc } from "drizzle-orm";
 import { GetUtcNow } from '../../../utils/utils';

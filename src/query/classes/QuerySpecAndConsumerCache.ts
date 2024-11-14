@@ -1,15 +1,15 @@
-// src/query/classes/SpecAndConsumerCache.ts
+// src/query/classes/SpecAndConsumerService.ts
 
 import { sql } from 'drizzle-orm';
 import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
-import { RedisCache } from './RedisCache';
+import { RedisCache } from '../../redis/classes/RedisCache';
 import { GetUtcNow, IsIndexerProcess, logger, Sleep } from '../../utils/utils'; // Assuming you have a Sleep function
 import { GetJsinfoDbForQuery } from '../../utils/dbUtils';
 import { JSINFO_QUERY_CLASS_MEMORY_DEBUG_MODE } from '../queryConsts';
 import { logClassMemory } from './MemoryLogger';
 import { eq } from 'drizzle-orm';
 
-class SpecAndConsumerCacheClass {
+class SpecAndConsumerServiceClass {
     private specCache: Set<string> = new Set();
     private consumerCache: Set<string> = new Set();
     private refreshInterval: number = 2 * 60 * 1000;
@@ -56,7 +56,7 @@ class SpecAndConsumerCacheClass {
             this.consumerCache = new Set(newConsumerCache);
         }
 
-        logger.info('SpecAndConsumerCache refresh completed');
+        logger.info('SpecAndConsumerService refresh completed');
     }
 
     public IsValidSpec(specId: string): boolean {
@@ -143,7 +143,7 @@ class SpecAndConsumerCacheClass {
 
     private logMemoryUsage() {
         logClassMemory({
-            className: 'SpecAndConsumerCache',
+            className: 'SpecAndConsumerService',
             caches: [this.specCache, this.consumerCache],
             cacheNames: ['spec', 'consumer']
         });
@@ -158,9 +158,9 @@ class SpecAndConsumerCacheClass {
 
 // Clean up on process exit
 process.on('exit', () => {
-    SpecAndConsumerCache.cleanup();
+    SpecAndConsumerService.cleanup();
 });
 
-export const SpecAndConsumerCache = IsIndexerProcess()
-    ? (null as unknown as SpecAndConsumerCacheClass)
-    : new SpecAndConsumerCacheClass();
+export const SpecAndConsumerService = IsIndexerProcess()
+    ? (null as unknown as SpecAndConsumerServiceClass)
+    : new SpecAndConsumerServiceClass();

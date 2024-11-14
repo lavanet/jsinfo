@@ -8,7 +8,7 @@ import { Pagination, ParsePaginationFromString } from '../../utils/queryPaginati
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '../../queryConsts';
 import { CSVEscape } from '../../utils/queryUtils';
 import { RequestHandlerBase } from '../../classes/RequestHandlerBase';
-import { MonikerCache } from '../../classes/QueryProviderMonikerCache';
+import { ProviderMonikerService } from '../../classes/QueryProviderMonikerService';
 
 export interface EventsRewardsResponse {
     id: number | null;
@@ -97,8 +97,8 @@ class EventsRewardsData extends RequestHandlerBase<EventsRewardsResponse> {
         const flattenedRes = paymentsRes.map(data => ({
             ...data,
             pay: data.pay?.toString() || null,
-            moniker: MonikerCache.GetMonikerForProvider(data.provider),
-            monikerfull: MonikerCache.GetMonikerFullDescription(data.provider),
+            moniker: ProviderMonikerService.GetMonikerForProvider(data.provider),
+            monikerfull: ProviderMonikerService.GetMonikerFullDescription(data.provider),
         }));
 
         return flattenedRes;
@@ -199,8 +199,8 @@ class EventsRewardsData extends RequestHandlerBase<EventsRewardsResponse> {
             const flattenedRewards = paymentsRes.map(data => ({
                 ...data,
                 pay: data.pay?.toString() || null,
-                moniker: MonikerCache.GetMonikerForProvider(data.provider),
-                monikerfull: MonikerCache.GetMonikerFullDescription(data.provider),
+                moniker: ProviderMonikerService.GetMonikerForProvider(data.provider),
+                monikerfull: ProviderMonikerService.GetMonikerFullDescription(data.provider),
             }));
 
             return flattenedRewards;
@@ -216,8 +216,8 @@ class EventsRewardsData extends RequestHandlerBase<EventsRewardsResponse> {
         const flattenedRewards = paymentsRes.map(data => ({
             ...data,
             pay: data.pay?.toString() || null,
-            moniker: MonikerCache.GetMonikerForProvider(data.provider),
-            monikerfull: MonikerCache.GetMonikerFullDescription(data.provider),
+            moniker: ProviderMonikerService.GetMonikerForProvider(data.provider),
+            monikerfull: ProviderMonikerService.GetMonikerFullDescription(data.provider),
         }));
 
         return flattenedRewards;

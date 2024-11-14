@@ -25,7 +25,7 @@ import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryCheckJsinfoDbInstance, QueryGetJsinfoDbForQueryInstance } from '../../queryDb';
 import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
 import { desc, eq, gte, and } from "drizzle-orm";
-import { RedisCache } from '../../classes/RedisCache';
+import { RedisCache } from '../../../redis/classes/RedisCache';
 import { JSONStringify, logger } from '../../../utils/utils';
 import { GetAndValidateConsumerAddressFromRequest } from '../../utils/queryRequestArgParser';
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '../../queryConsts';

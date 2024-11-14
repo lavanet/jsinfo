@@ -12,7 +12,7 @@ import { validatePaginationString } from './utils/queryPagination';
 import { JSONStringify, logger } from '../utils/utils';
 
 // Local classes
-import { RedisCache } from './classes/RedisCache';
+import { RedisCache } from '../redis/classes/RedisCache';
 
 const FastifyLogger: FastifyBaseLogger = pino({
     level: 'warn',

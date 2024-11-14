@@ -221,3 +221,12 @@ export function GetUtcNow(): Date {
     ));
     return utcNow;
 }
+
+export function GetRedisUrls(): string[] {
+    const envKey = IsIndexerProcess()
+        ? "JSINFO_INDEXER_REDDIS_CACHE"
+        : "JSINFO_QUERY_REDDIS_CACHE";
+
+    const redisUrls = GetEnvVar(envKey);
+    return redisUrls.split(',').map(url => url.trim());
+}

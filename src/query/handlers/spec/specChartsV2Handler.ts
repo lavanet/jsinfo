@@ -9,8 +9,8 @@ import { RequestHandlerBase } from '../../classes/RequestHandlerBase';
 import { GetAndValidateSpecIdFromRequest, GetAndValidateProviderAddressFromRequestWithAll } from '../../utils/queryRequestArgParser';
 import { PgColumn } from 'drizzle-orm/pg-core';
 import { logger } from '../../../utils/utils';
-import { RedisCache } from '../../classes/RedisCache';
-import { MonikerCache } from '../../classes/QueryProviderMonikerCache';
+import { RedisCache } from '../../../redis/classes/RedisCache';
+import { ProviderMonikerService } from '../../classes/QueryProviderMonikerService';
 
 type SpecChartDataPoint = {
     date: string;
@@ -106,7 +106,7 @@ class SpecChartsV2Data extends RequestHandlerBase<SpecChartsV2Response> {
 
             for (const p of providers) {
                 if (p.provider) {
-                    const moniker = await MonikerCache.GetMonikerForProvider(p.provider);
+                    const moniker = await ProviderMonikerService.GetMonikerForProvider(p.provider);
                     result[p.provider] = moniker || p.provider;
                 }
             }

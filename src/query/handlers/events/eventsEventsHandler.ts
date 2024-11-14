@@ -8,7 +8,7 @@ import { Pagination, ParsePaginationFromString } from '../../utils/queryPaginati
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '../../queryConsts';
 import { CSVEscape } from '../../utils/queryUtils';
 import { RequestHandlerBase } from '../../classes/RequestHandlerBase';
-import { MonikerCache } from '../../classes/QueryProviderMonikerCache';
+import { ProviderMonikerService } from '../../classes/QueryProviderMonikerService';
 
 export interface EventsEventsResponse {
     id: number | null;
@@ -106,8 +106,8 @@ class EventsEventsData extends RequestHandlerBase<EventsEventsResponse> {
             b1: event.b1?.toString() ?? null,
             b2: event.b2?.toString() ?? null,
             b3: event.b3?.toString() ?? null,
-            moniker: MonikerCache.GetMonikerForProvider(event.provider),
-            monikerfull: MonikerCache.GetMonikerFullDescription(event.provider),
+            moniker: ProviderMonikerService.GetMonikerForProvider(event.provider),
+            monikerfull: ProviderMonikerService.GetMonikerFullDescription(event.provider),
             datetime: event.timestamp?.toISOString() ?? null,
             fulltext: event.fulltext ?? null // Ensure fulltext is included
         }));
@@ -209,8 +209,8 @@ class EventsEventsData extends RequestHandlerBase<EventsEventsResponse> {
             b1: event.b1?.toString() ?? null,
             b2: event.b2?.toString() ?? null,
             b3: event.b3?.toString() ?? null,
-            moniker: MonikerCache.GetMonikerForProvider(event.provider),
-            monikerfull: MonikerCache.GetMonikerFullDescription(event.provider),
+            moniker: ProviderMonikerService.GetMonikerForProvider(event.provider),
+            monikerfull: ProviderMonikerService.GetMonikerFullDescription(event.provider),
             datetime: event.timestamp?.toISOString() ?? null,
             fulltext: event.fulltext ?? null // Ensure fulltext is included
         }));

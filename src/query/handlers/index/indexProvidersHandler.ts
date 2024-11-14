@@ -11,7 +11,7 @@ import { Pagination, ParsePaginationFromString } from '../../utils/queryPaginati
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE } from '../../queryConsts';
 import { CSVEscape } from '../../utils/queryUtils';
 import { RequestHandlerBase } from '../../classes/RequestHandlerBase';
-import { MonikerCache } from '../../classes/QueryProviderMonikerCache';
+import { ProviderMonikerService } from '../../classes/QueryProviderMonikerService';
 
 const rewardSumSubQuery = sql`SELECT SUM(arp_sub.rewardSum) FROM(SELECT arp."provider", SUM(arp."rewardsum") AS rewardSum FROM ${JsinfoProviderAgrSchema.aggAllTimeRelayPayments} arp GROUP BY arp."provider") arp_sub WHERE arp_sub."provider" = ${JsinfoSchema.providerStakes.provider}`
 
@@ -99,8 +99,8 @@ class IndexProvidersData extends RequestHandlerBase<IndexProvidersResponse> {
 
         const providersDetails: IndexProvidersResponse[] = res.map(provider => ({
             provider: provider.provider || "",
-            moniker: MonikerCache.GetMonikerForProvider(provider.provider),
-            monikerfull: MonikerCache.GetMonikerFullDescription(provider.provider),
+            moniker: ProviderMonikerService.GetMonikerForProvider(provider.provider),
+            monikerfull: ProviderMonikerService.GetMonikerFullDescription(provider.provider),
             rewardSum: provider.rewardSum,
             totalServices: provider.totalServices || "",
             totalStake: provider.totalStake.toString(),
@@ -196,8 +196,8 @@ class IndexProvidersData extends RequestHandlerBase<IndexProvidersResponse> {
 
             return data.map(item => ({
                 provider: item.provider || "",
-                moniker: MonikerCache.GetMonikerForProvider(item.provider),
-                monikerfull: MonikerCache.GetMonikerFullDescription(item.provider),
+                moniker: ProviderMonikerService.GetMonikerForProvider(item.provider),
+                monikerfull: ProviderMonikerService.GetMonikerFullDescription(item.provider),
                 rewardSum: item.rewardSum || 0,
                 totalServices: item.totalServices,
                 totalStake: item.totalStake.toString()
@@ -228,8 +228,8 @@ class IndexProvidersData extends RequestHandlerBase<IndexProvidersResponse> {
 
         return data.map(item => ({
             provider: item.provider || "",
-            moniker: MonikerCache.GetMonikerForProvider(item.provider),
-            monikerfull: MonikerCache.GetMonikerFullDescription(item.provider),
+            moniker: ProviderMonikerService.GetMonikerForProvider(item.provider),
+            monikerfull: ProviderMonikerService.GetMonikerFullDescription(item.provider),
             rewardSum: item.rewardSum || 0,
             totalServices: item.totalServices,
             totalStake: item.totalStake.toString()

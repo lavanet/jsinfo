@@ -6,7 +6,7 @@ import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { sql } from 'drizzle-orm';
 import { MemoryCache } from "../classes/MemoryCache";
-import { SpecAndConsumerCache } from "../classes/IndexerSpecAndConsumerCache";
+import { SpecAndConsumerService } from "../classes/IndexerSpecAndConsumerService";
 
 interface ProviderMonikerSpec {
     provider: string;
@@ -34,7 +34,7 @@ export async function GetProviderMonikerSpecs(spec: string): Promise<ProviderRes
 
 export async function ProcessProviderMonikerSpecs(db: PostgresJsDatabase): Promise<void> {
     try {
-        const specs = await SpecAndConsumerCache.GetAllSpecs(db);
+        const specs = await SpecAndConsumerService.GetAllSpecs(db);
         for (const spec of specs) {
             const providerResponse = await GetProviderMonikerSpecs(spec);
             for (const provider of providerResponse.stakeEntry) {

@@ -8,7 +8,7 @@ import * as JsinfoProviderAgrSchema from '../../../schemas/jsinfoSchema/provider
 import { sql, desc, gt, and, eq } from "drizzle-orm";
 import { ReplaceArchive } from '../../../indexer/utils/indexerUtils';
 import { GetAndValidateSpecIdFromRequest } from '../../utils/queryRequestArgParser';
-import { MonikerCache } from '../../classes/QueryProviderMonikerCache';
+import { ProviderMonikerService } from '@jsinfo/redis/resources/global/ProviderMonikerSpecResource';
 import { BigIntIsZero } from '../../../utils/utils';
 
 export type SpecSpecsResponse = {
@@ -182,8 +182,8 @@ export async function SpecStakesPaginatedHandler(request: FastifyRequest, reply:
             totalStake: BigIntIsZero(itemStakesRes.totalStake) ? "0" : itemStakesRes.totalStake?.toString() ?? "0",
             addons: itemStakesRes.addons,
             extensions: ReplaceArchive(itemStakesRes.extensions),
-            moniker: MonikerCache.GetMonikerForProvider(itemStakesRes.provider),
-            monikerfull: MonikerCache.GetMonikerFullDescription(itemStakesRes.provider),
+            moniker: ProviderMonikerService.GetMonikerForProvider(itemStakesRes.provider),
+            monikerfull: ProviderMonikerService.GetMonikerFullDescription(itemStakesRes.provider),
             cuSum30Days: item30Days ? item30Days.cuSum30Days || 0 : 0,
             relaySum30Days: item30Days ? item30Days.relaySum30Days || 0 : 0,
             cuSum90Days: item90Days ? item90Days.cuSum90Days || 0 : 0,

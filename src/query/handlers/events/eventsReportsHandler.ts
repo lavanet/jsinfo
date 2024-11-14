@@ -8,7 +8,7 @@ import { Pagination, ParsePaginationFromString } from '../../utils/queryPaginati
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '../../queryConsts';
 import { CSVEscape } from '../../utils/queryUtils';
 import { RequestHandlerBase } from '../../classes/RequestHandlerBase';
-import { MonikerCache } from '../../classes/QueryProviderMonikerCache';
+import { ProviderMonikerService } from '../../classes/QueryProviderMonikerService';
 
 export interface EventsReportsResponse {
     provider: string | null;
@@ -84,8 +84,8 @@ class EventsReportsData extends RequestHandlerBase<EventsReportsResponse> {
 
         const flattenedEvents = reportsRes.map(data => ({
             ...data,
-            moniker: MonikerCache.GetMonikerForProvider(data.provider),
-            monikerfull: MonikerCache.GetMonikerFullDescription(data.provider),
+            moniker: ProviderMonikerService.GetMonikerForProvider(data.provider),
+            monikerfull: ProviderMonikerService.GetMonikerFullDescription(data.provider),
             datetime: data.datetime?.toISOString() ?? null
         }));
 
@@ -162,8 +162,8 @@ class EventsReportsData extends RequestHandlerBase<EventsReportsResponse> {
 
             const flattenedReports = reportsRes.map(data => ({
                 ...data.provider_reported,
-                moniker: MonikerCache.GetMonikerForProvider(data.provider_reported.provider),
-                monikerfull: MonikerCache.GetMonikerFullDescription(data.provider_reported.provider),
+                moniker: ProviderMonikerService.GetMonikerForProvider(data.provider_reported.provider),
+                monikerfull: ProviderMonikerService.GetMonikerFullDescription(data.provider_reported.provider),
                 datetime: data.provider_reported.datetime?.toISOString() ?? null
             }));
 
@@ -179,8 +179,8 @@ class EventsReportsData extends RequestHandlerBase<EventsReportsResponse> {
 
         const flattenedReports = reportsRes.map(data => ({
             ...data,
-            moniker: MonikerCache.GetMonikerForProvider(data.provider),
-            monikerfull: MonikerCache.GetMonikerFullDescription(data.provider),
+            moniker: ProviderMonikerService.GetMonikerForProvider(data.provider),
+            monikerfull: ProviderMonikerService.GetMonikerFullDescription(data.provider),
             datetime: data.datetime?.toISOString() ?? null
         }));
 

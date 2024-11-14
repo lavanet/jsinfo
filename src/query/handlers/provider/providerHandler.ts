@@ -5,7 +5,7 @@
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { GetLatestBlock, QueryCheckJsinfoDbInstance } from '../../queryDb';
 import { GetAndValidateProviderAddressFromRequest } from '../../utils/queryRequestArgParser';
-import { MonikerCache } from '../../classes/QueryProviderMonikerCache';
+import { ProviderMonikerService } from '../../classes/QueryProviderMonikerService';
 
 export const ProviderPaginatedHandlerOpts: RouteShorthandOptions = {
     schema: {
@@ -48,7 +48,7 @@ export async function ProviderPaginatedHandler(request: FastifyRequest, reply: F
         height: latestHeight,
         datetime: latestDatetime,
         provider: addr,
-        moniker: MonikerCache.GetMonikerForProvider(addr),
-        monikerfull: MonikerCache.GetMonikerFullDescription(addr),
+        moniker: ProviderMonikerService.GetMonikerForProvider(addr),
+        monikerfull: ProviderMonikerService.GetMonikerFullDescription(addr),
     }
 }

@@ -1,109 +1,77 @@
 // src/query/classes/RedisCache.ts
 
-import { createClient, RedisClientType } from 'redis';
-import { IsIndexerProcess, JSONStringify, logger } from '../../utils/utils';
+import { createClient } from 'redis';
+import type { RedisClientType } from 'redis';
+import { JSONStringify, logger, GetRedisUrls } from '../../utils/utils';
 
 class RedisCacheClass {
-    private client: RedisClientType | null = null;
+    private clients: RedisClientType[] = [];
     private keyPrefix: string;
     private debugLogs: boolean;
-    private redisUrl: string | null | undefined = null;
+    private redisUrls: string[] = [];
 
     constructor(keyPrefix: string, debugLogs: boolean = false) {
         this.keyPrefix = keyPrefix;
         this.debugLogs = debugLogs;
-        this.initializeClient();
+        this.initializeClients();
     }
 
-    private initializeClient() {
-        this.redisUrl = process.env.JSINFO_QUERY_REDDIS_CACHE;
-        if (!this.redisUrl) {
-            this.log('JSINFO_QUERY_REDDIS_CACHE environment variable is not set.');
+    private initializeClients() {
+        this.redisUrls = GetRedisUrls();
+        if (!this.redisUrls.length) {
+            this.log('No Redis URLs configured');
             return;
         }
-        this.connect();
+        this.connectAll();
     }
 
-    private async connect() {
-        if (!this.redisUrl) return;
-        this.log('Attempting to reconnect to Redis...');
-        this.client = createClient({
-            url: this.redisUrl,
-            socket: {
-                connectTimeout: 5000, // Timeout for connecting to Redis in milliseconds
-            },
-        });
-        this.client.on('error', (err) => this.logError('Redis Client Error', err));
-        this.client.connect().catch((err) => {
-            this.logError('Failed to connect to Redis', { error: err, url: this.redisUrl });
-            this.client = null;
-        });
+    private async connectAll() {
+        this.log(`Attempting to connect to ${this.redisUrls.length} Redis instances...`);
+        this.clients = await Promise.all(this.redisUrls.map(async url => {
+            const client = createClient({
+                url,
+                socket: {
+                    connectTimeout: 5000,
+                },
+            }) as RedisClientType;
+            client.on('error', (err) => this.logError(`Redis Client Error for ${url}`, err));
+            await client.connect().catch((err) => {
+                this.logError(`Failed to connect to Redis at ${url}`, err);
+            });
+            return client;
+        }));
     }
 
     private async reconnect() {
         try {
-            this.connect();
+            await this.connectAll();
         } catch (error) {
-            this.logError(`Reddis reconnect failed`, error);
+            this.logError(`Redis reconnect failed`, error);
         }
     }
 
     async get(key: string): Promise<string | null> {
-        if (!this.client) {
-            this.log('Redis client is not available.');
+        if (!this.clients.length) {
+            this.log('No Redis clients available.');
             return null;
         }
 
         const fullKey = this.keyPrefix + key;
         const startTime = Date.now();
         try {
-            const promise = this.client.get(fullKey);
+            const promise = this.clients[0].get(fullKey);
             const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 2000));
             const result = await Promise.race([promise, timeout]);
-            const endTime = Date.now();
-            const timeTaken = endTime - startTime;
+            const timeTaken = Date.now() - startTime;
 
             if (!result) {
                 this.log(`Cache miss for key ${fullKey}. Time taken: ${timeTaken}ms`);
                 return null;
-            } else {
-                this.log(`Cache hit for key ${fullKey}. Time taken: ${timeTaken}ms`);
-                return String(result);
             }
+            this.log(`Cache hit for key ${fullKey}. Time taken: ${timeTaken}ms`);
+            return String(result);
         } catch (error) {
-            const endTime = Date.now();
-            const timeTaken = endTime - startTime;
-            this.logError(`Error getting key ${fullKey} from Redis. Time taken: ${timeTaken}ms`, error);
-            await this.reconnect();
-            return null;
-        }
-    }
-
-    async getNoKeyPrefix(key: string): Promise<string | null> {
-        if (!this.client) {
-            this.log('Redis client is not available.');
-            return null;
-        }
-
-        const fullKey = key;
-        const startTime = Date.now();
-        try {
-            const promise = this.client.get(fullKey);
-            const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 2000));
-            const result = await Promise.race([promise, timeout]);
-            const endTime = Date.now();
-            const timeTaken = endTime - startTime;
-
-            if (!result) {
-                this.log(`Cache miss for key ${fullKey}. Time taken: ${timeTaken}ms`);
-                return null;
-            } else {
-                this.log(`Cache hit for key ${fullKey}. Time taken: ${timeTaken}ms`);
-                return String(result);
-            }
-        } catch (error) {
-            const endTime = Date.now();
-            const timeTaken = endTime - startTime;
+            const timeTaken = Date.now() - startTime;
             this.logError(`Error getting key ${fullKey} from Redis. Time taken: ${timeTaken}ms`, error);
             await this.reconnect();
             return null;
@@ -111,35 +79,40 @@ class RedisCacheClass {
     }
 
     async set(key: string, value: string, ttl: number = 30): Promise<void> {
-        if (!this.client) {
-            this.log('Redis client is not available.');
+        if (!this.clients.length) {
+            this.log('No Redis clients available.');
             return;
         }
 
+        const fullKey = this.keyPrefix + key;
         try {
-            await this.client.set(this.keyPrefix + key, value, {
-                EX: ttl,
-            });
+            await Promise.all(this.clients.map(client =>
+                client.set(fullKey, value, {
+                    EX: ttl,
+                })
+            ));
         } catch (error) {
-            this.logError(`Error setting key ${this.keyPrefix + key} in Redis`, error);
+            this.logError(`Error setting key ${fullKey} in Redis`, error);
             await this.reconnect();
         }
     }
 
     async IsAlive(): Promise<boolean> {
-        if (!this.client) {
+        if (!this.clients.length) {
             return false;
         }
 
         try {
-            await this.client.set(this.keyPrefix + "test", "test", {
-                EX: 1,
-            });
-            return true
+            const testKey = this.keyPrefix + "test";
+            await Promise.all(this.clients.map(client =>
+                client.set(testKey, "test", { EX: 1 })
+            ));
+            return true;
         } catch (error) {
             return false;
         }
     }
+
     async getArray(key: string): Promise<any[] | null> {
         const result = await this.get(key);
         if (!result) return null;
@@ -172,7 +145,7 @@ class RedisCacheClass {
     }
 
     async getDictNoKeyPrefix(key: string): Promise<{ [key: string]: any } | null> {
-        const result = await this.getNoKeyPrefix(key);
+        const result = await this.get(key);
         if (!result) return null;
         try {
             return JSON.parse(result);
@@ -190,6 +163,7 @@ class RedisCacheClass {
             this.logError(`Error serializing dictionary for key ${this.keyPrefix + key}`, error);
         }
     }
+
     private log(message: string) {
         if (!this.debugLogs) return;
         logger.info(`RedisCache: ${message}`);
@@ -200,6 +174,6 @@ class RedisCacheClass {
     }
 }
 
-export const RedisCache = IsIndexerProcess() ? (null as unknown as RedisCacheClass) : new RedisCacheClass("jsinfo-");
+export const RedisCache = new RedisCacheClass("jsinfo-");
 
 

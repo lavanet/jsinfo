@@ -1,10 +1,13 @@
 // jsinfo/src/indexer.ts
 
+import { DoInChunks, logger, BackoffRetry, IsIndexerProcess, IsMeaningfulText } from "./utils/utils";
+if (!IsIndexerProcess()) {
+    console.log('indexer.ts', "not indexer process");
+    process.exit();
+}
+
 import * as consts from './indexer/indexerConsts';
 import * as JsinfoSchema from "./schemas/jsinfoSchema/jsinfoSchema";
-
-import { DoInChunks, logger, BackoffRetry, SetIsIndexerProcess } from "./utils/utils";
-SetIsIndexerProcess(true);
 
 import { StargateClient } from "@cosmjs/stargate"
 import { Tendermint37Client } from "@cosmjs/tendermint-rpc";
@@ -12,14 +15,13 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { eq, desc } from "drizzle-orm";
 import { PromisePool } from '@supercharge/promise-pool'
 import { GetOneLavaBlock } from './indexer/lavaBlock'
-import { EventDebug } from './indexer/eventDebug'
 import { LavaBlock } from './indexer/types'
 import { SyncBlockchainEntities } from './indexer/blockchainEntities/blockchainEntitiesSync'
-import { ConnectToRpc, RpcConnection } from "./utils/rpc";
-import { MigrateDb, GetJsinfoDb } from "./utils/dbUtils";
+import { ConnectToRpc, RpcConnection } from "./indexer/utils/lavajsRpc";
+import { MigrateDb, GetJsinfoDbForIndexer } from "./utils/dbUtils";
 import { AggProviderAndConsumerRelayPayments, AggProviderAndConsumerRelayPaymentsSync } from "./indexer/agregators/aggProviderAndConsumerRelayPayments";
 import { SaveTokenSupplyToDB } from './indexer/supply/syncSupply';
-import { RestRpcAgreagorsCaller } from './indexer/restrpc_agregators/RestRpcAgreagorsCaller';
+import { RestRpcAgreagorsCaller } from './indexer/restrpc_agregators/RestRpcAgregatorsCaller';
 
 let static_blockchainEntitiesStakes: Map<string, JsinfoSchema.InsertProviderStake[]> = new Map()
 
@@ -144,12 +146,8 @@ const indexer = async (): Promise<void> => {
 
     const rpcConnection = await establishRpcConnection();
 
-    if (consts.JSINFO_INDEXER_DEBUG_DUMP_EVENTS) {
-        await EventDebug(rpcConnection);
-        return
-    }
-
     const db = await migrateAndFetchDb();
+    logger.info('Done migrateAndFetchDb');
 
     // Verify the output returned at least one entry
     try {
@@ -173,14 +171,12 @@ const indexer = async (): Promise<void> => {
         return;
     }
 
-    logger.info('Done migrateAndFetchDb');
     await AggProviderAndConsumerRelayPaymentsSync(db);
     logger.info('Done AggProviderAndConsumerRelayPaymentsSync');
     await RestRpcAgreagorsCaller(db);
     logger.info('Done RestRpcAgreagorsCaller');
     await SaveTokenSupplyToDB(db, rpcConnection.lavajsClient);
     logger.info('Done SaveTokenSupplyToDB');
-
     await fillUpBackoffRetry(db, rpcConnection);
     logger.info('Done fillUpBackoffRetry');
 }
@@ -198,7 +194,7 @@ const migrateAndFetchDb = async (): Promise<PostgresJsDatabase> => {
         await MigrateDb();
         logger.info('DB migrated.');
     }
-    const db = GetJsinfoDb();
+    const db = GetJsinfoDbForIndexer();
     logger.info('DB fetched.');
     return db;
 }
@@ -251,63 +247,57 @@ const fillUp = async (db: PostgresJsDatabase, rpcConnection: RpcConnection) => {
         return;
     }
 
-    let dbHeight = consts.JSINFO_INDEXER_START_BLOCK;
-    let latestDbBlock;
+    let latestDbBlock = 0;
     try {
-        latestDbBlock = await db.select().from(JsinfoSchema.blocks).orderBy(desc(JsinfoSchema.blocks.height)).limit(1);
+        const latestDbBlockRes = await db.select().from(JsinfoSchema.blocks).orderBy(desc(JsinfoSchema.blocks.height)).limit(1);
+        latestDbBlock = latestDbBlockRes[0]?.height || 0;
         logger.info('fillUp: Successfully retrieved latest DB block');
     } catch (e) {
         logger.error(`fillUp: Error in getting latestDbBlock: ${e}`);
         logger.error('fillUp: Restarting DB connection');
-        db = await GetJsinfoDb();
+        db = await GetJsinfoDbForIndexer();
         fillUpBackoffRetryWTimeout(db, rpcConnection);
         return;
     }
 
+    let cBlockHeight = 0;
     try {
-        const tHeight = latestDbBlock[0]?.height;
-        if (tHeight != null) {
-            dbHeight = tHeight;
-            logger.info(`fillUp: DB height set to latest DB block height: ${dbHeight}`);
-        }
+        cBlockHeight = latestDbBlock != 0 ? Math.max(consts.JSINFO_INDEXER_START_BLOCK, latestDbBlock) : consts.JSINFO_INDEXER_START_BLOCK;
+        logger.info(`fillUp: Heights (pre fillup):: latestDbBlock: ${latestDbBlock}, cBlockHeight: ${cBlockHeight}`);
     } catch (error) {
         logger.error(`Error accessing height: ${error}`);
         logger.error(`Type of latestDbBlock[0]: ${typeof latestDbBlock}`);
         logger.error(`Value of latestDbBlock[0]: ${JSON.stringify(latestDbBlock)}`);
     }
 
-    logger.info(`fillUp: Starting batch process for DB height ${dbHeight} and blockchain height ${latestHeight}`);
-    await doBatch(db, rpcConnection.client, rpcConnection.clientTm, dbHeight, latestHeight);
+    logger.info(`fillUp: Starting batch process for DB height ${cBlockHeight} and blockchain height ${latestHeight}`);
+    await doBatch(db, rpcConnection.client, rpcConnection.clientTm, cBlockHeight, latestHeight);
     logger.info('fillUp: Batch process completed');
 
-    let latestDbBlock2;
+    let latestDbBlock2 = 0;
     try {
-        latestDbBlock2 = await db.select().from(JsinfoSchema.blocks).orderBy(desc(JsinfoSchema.blocks.height)).limit(1);
+        const latestDbBlock2Res = await db.select().from(JsinfoSchema.blocks).orderBy(desc(JsinfoSchema.blocks.height)).limit(1);
+        latestDbBlock2 = latestDbBlock2Res[0]?.height || 0;
         logger.info('fillUp: Successfully retrieved latest DB block');
     } catch (e) {
         logger.error(`fillUp: Error in getting latestDbBlock: ${e}`);
         logger.error('fillUp: Restarting DB connection');
-        db = await GetJsinfoDb();
+        db = await GetJsinfoDbForIndexer();
         fillUpBackoffRetryWTimeout(db, rpcConnection);
         return;
     }
 
-    let dbHeight2 = consts.JSINFO_INDEXER_START_BLOCK;
-    try {
-        const tHeight2 = latestDbBlock2[0]?.height;
-        if (tHeight2 != null) {
-            dbHeight2 = tHeight2;
-            logger.info(`fillUp: DB height set to latest DB block height: ${dbHeight2}`);
-        }
-    } catch (error) {
-        logger.error(`Error accessing height: ${error}`);
-        logger.error(`Type of latestDbBlock2[0]: ${typeof latestDbBlock2}`);
-        logger.error(`Value of latestDbBlock2[0]: ${JSON.stringify(latestDbBlock2)}`);
+    if (latestDbBlock2 == 0) {
+        logger.error(`fillUp: Error calling doBatch to fill db with new blocks. latestDbBlock2 == 0`);
+        logger.error('fillUp: Restarting DB connection');
+        db = await GetJsinfoDbForIndexer();
+        fillUpBackoffRetryWTimeout(db, rpcConnection);
+        return;
     }
 
-    if (latestHeight != dbHeight2) {
+    if (latestHeight != latestDbBlock2) {
         logger.error(`fillUp: latestHeight ${latestHeight} != latestDbBlock2[0].height ${latestDbBlock2[0].height}`);
-        db = await GetJsinfoDb();
+        db = await GetJsinfoDbForIndexer();
         fillUpBackoffRetryWTimeout(db, rpcConnection);
         return;
     }

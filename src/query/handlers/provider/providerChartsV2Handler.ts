@@ -1,7 +1,7 @@
 // src/query/handlers/ProviderChartsV2Handler.ts
 
 import { FastifyReply, FastifyRequest, RouteShorthandOptions } from 'fastify';
-import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../../queryDb';
+import { QueryCheckJsinfoDbInstance, QueryGetJsinfoDbForQueryInstance } from '../../queryDb';
 import * as JsinfoProviderAgrSchema from '../../../schemas/jsinfoSchema/providerRelayPaymentsAgregation';
 import { sql, gt, and, lt, desc, eq } from "drizzle-orm";
 import { DateToISOString, FormatDateItems } from '../../utils/queryDateUtils';
@@ -85,7 +85,7 @@ class ProviderChartsV2Data extends RequestHandlerBase<ProviderChartsV2Response> 
                 return cachedSpecs;
             }
 
-            const query = QueryGetJsinfoReadDbInstance()
+            const query = QueryGetJsinfoDbForQueryInstance()
                 .select({ specId: JsinfoProviderAgrSchema.aggDailyRelayPayments.specId })
                 .from(JsinfoProviderAgrSchema.aggDailyRelayPayments)
                 .where(eq(JsinfoProviderAgrSchema.aggDailyRelayPayments.provider, this.provider))
@@ -121,7 +121,7 @@ class ProviderChartsV2Data extends RequestHandlerBase<ProviderChartsV2Response> 
                 conditions = and(conditions, eq(JsinfoProviderAgrSchema.aggDailyRelayPayments.specId, this.chain));
             }
 
-            let query = QueryGetJsinfoReadDbInstance().select({
+            let query = QueryGetJsinfoDbForQueryInstance().select({
                 date: JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday,
                 qosSyncAvg: qosMetricWeightedAvg(JsinfoProviderAgrSchema.aggDailyRelayPayments.qosSyncAvg),
                 qosAvailabilityAvg: qosMetricWeightedAvg(JsinfoProviderAgrSchema.aggDailyRelayPayments.qosAvailabilityAvg),
@@ -165,7 +165,7 @@ Context:
 
     protected async fetchDateRangeRecords(from: Date, to: Date): Promise<ProviderChartsV2Response[]> {
         try {
-            await QueryCheckJsinfoReadDbInstance();
+            await QueryCheckJsinfoDbInstance();
 
             const chartData = await this.getProviderData(from, to);
 

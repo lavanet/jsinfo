@@ -3,7 +3,7 @@
 // Do not use 'drizzle-orm' date, it will cause bugs
 
 import { sql } from 'drizzle-orm'
-import { pgTable, index, text, integer, serial, bigint, real, timestamp, varchar, uniqueIndex } from 'drizzle-orm/pg-core';
+import { pgTable, index, text, integer, serial, bigint, real, timestamp, varchar, uniqueIndex, primaryKey, jsonb } from 'drizzle-orm/pg-core';
 
 export enum LavaProviderStakeStatus {
   Active = 1,
@@ -192,6 +192,7 @@ export const providerReported = pgTable('provider_reported', {
   epoch: integer('epoch'),
   errors: integer('errors'),
   project: text('project'),
+  chainId: text('chain_id'),
   datetime: timestamp('datetime', { mode: "date" }),
   totalComplaintEpoch: integer('total_complaint_this_epoch'),
   tx: text('tx'),
@@ -247,34 +248,18 @@ export const providerHealth = pgTable('provider_health2', {
 export type ProviderHealth = typeof providerHealth.$inferSelect;
 export type InsertProviderHealth = typeof providerHealth.$inferInsert;
 
-export const dualStackingDelegatorRewards = pgTable('dual_stacking_delegator_rewards', {
-  id: serial('id').primaryKey(),
-  provider: text('provider').notNull(),
-  timestamp: timestamp('timestamp').notNull(),
-  chainId: text('chain_id').notNull(),
-  amount: bigint('amount', { mode: 'bigint' }).notNull(),
-  denom: text('denom').notNull(),
-}, (table) => {
-  return {
-    providerIdx: index("dual_stacking_delegator_rewards_provider_idx").on(table.provider),
-  };
-});
-
-export type DualStackingDelegatorRewards = typeof dualStackingDelegatorRewards.$inferSelect;
-export type InsertDualStackingDelegatorRewards = typeof dualStackingDelegatorRewards.$inferInsert;
-
 export const providerSpecMoniker = pgTable('provider_spec_moniker', {
   id: serial('id').primaryKey(),
   provider: text('provider').notNull(),
   moniker: text('moniker'),
-  specId: text('spec'),
+  spec: text('spec'),
   createdAt: timestamp("createdat").defaultNow().notNull(),
   updatedAt: timestamp('updatedat').default(sql`CURRENT_TIMESTAMP(3)`),
 }, (table) => {
   return {
     psmIdx: uniqueIndex("psmidx").on(
       table.provider,
-      table.specId
+      table.spec
     )
   };
 });
@@ -335,3 +320,42 @@ export const keyValueStore = pgTable('key_value_store', {
 
 export type KeyValueStore = typeof keyValueStore.$inferSelect;
 export type InsertKeyValueStore = typeof keyValueStore.$inferInsert;
+
+export const apr = pgTable('apr', {
+  key: text('key').notNull().primaryKey(),
+  value: real('value').notNull(),
+  timestamp: timestamp('timestamp', { mode: "date" }).defaultNow().notNull(),
+}, (table) => {
+  return {
+    aprIdx: index("aprIdx").on(
+      table.key,
+    )
+  };
+});
+
+export type Apr = typeof apr.$inferSelect;
+export type InsertApr = typeof apr.$inferInsert;
+
+// Add new table for delegator rewards
+export const delegatorRewards = pgTable('delegator_rewards', {
+  delegator: text('delegator').primaryKey(),
+  data: jsonb('data'),
+  timestamp: timestamp('timestamp').defaultNow().notNull(),
+});
+
+export type DelegatorRewards = typeof delegatorRewards.$inferSelect;
+export type InsertDelegatorRewards = typeof delegatorRewards.$inferInsert;
+
+export const specTrackedInfo = pgTable('spec_tracked_info', {
+  provider: text('provider').notNull(),
+  chain_id: text('chain_id').notNull(),
+  iprpc_cu: text('iprpc_cu').notNull(),
+  timestamp: timestamp('timestamp').defaultNow().notNull(),
+}, (table) => {
+  return {
+    pk: primaryKey({ columns: [table.provider, table.chain_id] }),
+  };
+});
+
+export type SpecTrackedInfo = typeof specTrackedInfo.$inferSelect;
+export type InsertSpecTrackedInfo = typeof specTrackedInfo.$inferInsert;

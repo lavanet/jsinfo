@@ -31,7 +31,7 @@ export const GetRpcTxs = async (
     return cache.getOrGenerate<IndexedTx[]>(height, "txs", async () => {
         const txs = await client.searchTx(`tx.height=${height}`);
         if (txs.length === 0 && block.txs.length !== 0) {
-            throw new Error('txs.length == 0 && block.txs.length != 0');
+            console.warn('txs.length == 0 && block.txs.length != 0');
         }
         return txs;
     });
@@ -51,6 +51,22 @@ export const GetRpcBlockResultEvents = async (
     });
 }
 
+function checkTimezoneConsistency(blockTime: Date) {
+    const localTime = blockTime.toString();
+    const utcTime = blockTime.toUTCString();
+    const isoTime = blockTime.toISOString();
+    const localHour = blockTime.getHours();
+    const utcHour = blockTime.getUTCHours();
+
+    if (localHour !== utcHour) {
+        console.warn(`Timezone mismatch detected
+        Local time: ${localTime}
+        UTC time:   ${utcTime}
+        ISO time:   ${isoTime}
+        This might indicate a timezone configuration issue.`);
+    }
+}
+
 export const GetOneLavaBlock = async (
     height: number,
     client: StargateClient,
@@ -67,7 +83,7 @@ export const GetOneLavaBlock = async (
         logger.info('GetRpcBlock took', {
             duration: endTimeBlock - startTimeBlock,
             unit: 'milliseconds',
-            returnedItems: block,
+            // returnedItems: block,
             blockHeight: height
         });
     }
@@ -96,10 +112,13 @@ export const GetOneLavaBlock = async (
         });
     }
 
-    // Block object to return
+    const blockTime = new Date(block!.header.time);
+
+    checkTimezoneConsistency(blockTime);
+
     const lavaBlock: LavaBlock = {
         height: height,
-        datetime: Date.parse(block!.header.time),
+        datetime: blockTime.getTime(),
         dbEvents: [],
         dbPayments: [],
         dbConflictResponses: [],

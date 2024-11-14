@@ -1,8 +1,8 @@
 // src/query/handlers/autoCompleteLinksV2Handler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { MonikerCache } from '../../classes/MonikerCache';
-import { SpecAndConsumerCache } from '../../classes/SpecAndConsumerCache';
+import { MonikerCache } from '../../classes/QueryProviderMonikerCache';
+import { SpecAndConsumerCache } from '../../classes/QuerySpecAndConsumerCache';
 
 export const AutoCompleteLinksV2PaginatedHandlerOpts: RouteShorthandOptions = {
     schema: {

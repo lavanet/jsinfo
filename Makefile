@@ -13,7 +13,6 @@
 		query_no_cache \
 		query_test_health_handler \
 		query_test_lavap_provider_error_parsing \
-		scripts_local_startQueryProviderDualStackingDelegatorRewardsContainer \
 		redis_run \
 		redis_restart \
 		redis_connect \
@@ -26,6 +25,9 @@ bun_create_migrations:
 
 bun_build:
 	bun run build --verbose
+
+bun_clean_cache:
+	bun pm cache rm
 
 docker_build:
 	docker build --progress=plain -t bun-docker .
@@ -46,16 +48,13 @@ docker_compose_indexer:
 	docker-compose up indexer
 
 indexer:
-	NODE_TLS_REJECT_UNAUTHORIZED=0 bun run src/indexer.ts
+	IS_INDEXER_PROCESS=true NODE_TLS_REJECT_UNAUTHORIZED=0 bun run src/indexer.ts
 
 indexer_with_migrations:
 	JSINFO_INDEXER_RUN_MIGRATIONS=true NODE_TLS_REJECT_UNAUTHORIZED=0 bun run src/indexer.ts
 
 indexer_with_debugger:
 	NODE_TLS_REJECT_UNAUTHORIZED=0 bun --inspect-brk run src/indexer.ts
-
-indexer_debug_events:
-	JSINFO_INDEXER_DEBUG_DUMP_EVENTS=true NODE_TLS_REJECT_UNAUTHORIZED=0 bun run src/indexer.ts
 
 query:
 	npx --yes nodemon --watch src --ext ts --exec "JSINFO_QUERY_IS_DEBUG_MODE=true bun run src/query.ts"
@@ -64,19 +63,16 @@ query_no_nodemon:
 	JSINFO_QUERY_IS_DEBUG_MODE=true bun run src/query.ts
 
 query_inspect:
-	JSINFO_QUERY_IS_DEBUG_MODE=true bun --inspect run src/query.ts
+	NODE_ENV=development JSINFO_QUERY_MEMORY_DEBUG_MODE=true JSINFO_QUERY_IS_DEBUG_MODE=true bun --inspect run src/query.ts --expose-gc
+
+query_memory_debug:
+	JSINFO_QUERY_CLASS_MEMORY_DEBUG_MODE=true JSINFO_QUERY_MEMORY_DEBUG_MODE=true make query
 
 query_port8090:
 	JSINFO_QUERY_PORT=8090 make query
 
 query_test_lavap_prodiver_error_parsing:
 	bun run ./src/query/utils/lavapProvidersErrorParser.test.ts 
-
-getblock:
-	JSINFO_QUERY_IS_DEBUG_MODE=true bun run src/executils/getblock.ts 1629704
-
-scripts_local_startQueryProviderDualStackingDelegatorRewardsContainer:
-	QUERY_PROVIDER_DUAL_STACKING_DELEGATOR_REWARDS_CONTAINER_DEBUG=true bash scripts/startQueryProviderDualStackingDelegatorRewardsContainer.sh
 
 redis_run:
 	docker rm -f redis-stack || true
@@ -125,3 +121,15 @@ query_endpoints_full_tests_testnet:
 
 query_endpoints_full_tests_mainnet:
 	cd tests/query_endpoints && make query_endpoints_full_tests_mainnet
+
+executils_getblock:
+	JSINFO_QUERY_IS_DEBUG_MODE=true bun run src/executils/getblock.ts 1629704
+
+executils_analyze_heap:
+	bun run ./src/executils/analyze-heap.ts
+
+executils_test_rpc:
+	bun run ./src/executils/test-rpc.ts
+
+executils_event_debug:
+	bun run ./src/executils/event-debug.ts

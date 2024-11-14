@@ -1,14 +1,14 @@
 // src/query/handlers/eventsReportsHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryGetJsinfoReadDbInstance, QueryCheckJsinfoReadDbInstance } from '../../queryDb';
+import { QueryGetJsinfoDbForQueryInstance, QueryCheckJsinfoDbInstance } from '../../queryDb';
 import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
 import { asc, desc, eq, sql } from "drizzle-orm";
 import { Pagination, ParsePaginationFromString } from '../../utils/queryPagination';
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '../../queryConsts';
 import { CSVEscape } from '../../utils/queryUtils';
 import { RequestHandlerBase } from '../../classes/RequestHandlerBase';
-import { MonikerCache } from '../../classes/MonikerCache';
+import { MonikerCache } from '../../classes/QueryProviderMonikerCache';
 
 export interface EventsReportsResponse {
     provider: string | null;
@@ -73,9 +73,9 @@ class EventsReportsData extends RequestHandlerBase<EventsReportsResponse> {
     }
 
     protected async fetchAllRecords(): Promise<EventsReportsResponse[]> {
-        await QueryCheckJsinfoReadDbInstance()
+        await QueryCheckJsinfoDbInstance()
 
-        const reportsRes = await QueryGetJsinfoReadDbInstance()
+        const reportsRes = await QueryGetJsinfoDbForQueryInstance()
             .select()
             .from(JsinfoSchema.providerReported)
             .orderBy(desc(JsinfoSchema.providerReported.id))
@@ -93,9 +93,9 @@ class EventsReportsData extends RequestHandlerBase<EventsReportsResponse> {
     }
 
     protected async fetchRecordCountFromDb(): Promise<number> {
-        await QueryCheckJsinfoReadDbInstance();
+        await QueryCheckJsinfoDbInstance();
 
-        const countResult = await QueryGetJsinfoReadDbInstance()
+        const countResult = await QueryGetJsinfoDbForQueryInstance()
             .select({
                 count: sql<number>`COUNT(*)`
             })
@@ -144,7 +144,7 @@ class EventsReportsData extends RequestHandlerBase<EventsReportsResponse> {
             throw new Error(`Invalid sort key: ${trimmedSortKey}`);
         }
 
-        await QueryCheckJsinfoReadDbInstance()
+        await QueryCheckJsinfoDbInstance()
 
         const sortColumn = keyToColumnMap[finalPagination.sortKey]; // Use mapped column name for sorting
         const orderFunction = finalPagination.direction === 'ascending' ? asc : desc;
@@ -152,7 +152,7 @@ class EventsReportsData extends RequestHandlerBase<EventsReportsResponse> {
         const offset = (finalPagination.page - 1) * finalPagination.count;
 
         if (sortColumn === keyToColumnMap["moniker"]) {
-            const reportsRes = await QueryGetJsinfoReadDbInstance()
+            const reportsRes = await QueryGetJsinfoDbForQueryInstance()
                 .select()
                 .from(JsinfoSchema.providerReported)
                 .leftJoin(JsinfoSchema.providerSpecMoniker, eq(JsinfoSchema.providerReported.provider, JsinfoSchema.providerSpecMoniker.provider))
@@ -170,7 +170,7 @@ class EventsReportsData extends RequestHandlerBase<EventsReportsResponse> {
             return flattenedReports;
         }
 
-        const reportsRes = await QueryGetJsinfoReadDbInstance()
+        const reportsRes = await QueryGetJsinfoDbForQueryInstance()
             .select()
             .from(JsinfoSchema.providerReported)
             .orderBy(orderFunction(sortColumn))

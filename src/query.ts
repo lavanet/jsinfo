@@ -1,24 +1,22 @@
 // jsinfo/src/query.ts
 
-require('dotenv').config();
-
 import * as consts from './query/queryConsts'
 import { logger } from './utils/utils'
 
 import { GetServerInstance } from './query/queryServer'
-import { QueryInitJsinfoDbInstance, QueryInitJsinfoReadDbInstance, QueryInitRelaysReadDbInstance, GetLatestBlock } from './query/queryDb'
+import { QueryInitJsinfoDbInstance, QueryInitRelaysReadDbInstance, GetLatestBlock } from './query/queryDb'
 
 import './query/queryRoutes'
 
 export const queryServerMain = async (): Promise<void> => {
-    logger.info('Starting query server')
+    logger.info('Starting query server on port ' + consts.JSINFO_QUERY_PORT + ' host ' + consts.JSINFO_QUERY_HOST)
 
     await QueryInitJsinfoDbInstance()
-    await QueryInitJsinfoReadDbInstance()
     await QueryInitRelaysReadDbInstance()
 
     try {
         try {
+            logger.info('Getting latest block')
             const { latestHeight, latestDatetime } = await GetLatestBlock()
             logger.info(`block ${latestHeight} block time ${latestDatetime}`)
         } catch (err) {
@@ -41,7 +39,6 @@ export const queryServerMain = async (): Promise<void> => {
 
 
 try {
-    console.info(`QueryCache:: JSINFO_QUERY_PROVIDER_HEALTH_HOURLY_CUTOFF_DAYS: ${consts.JSINFO_QUERY_PROVIDER_HEALTH_HOURLY_CUTOFF_DAYS}`);
     console.info(`QueryCache:: JSINFO_QUERY_HIGH_POST_BODY_LIMIT: ${consts.JSINFO_QUERY_HIGH_POST_BODY_LIMIT}`);
 
     queryServerMain();
@@ -54,17 +51,55 @@ try {
     }
 }
 
-// import { heapStats } from "bun:jsc";
+async function setupMemoryDebug() {
 
-// import { generateHeapSnapshot } from "bun";
+    if (!consts.JSINFO_QUERY_MEMORY_DEBUG_MODE) return;
+    const { heapStats } = await import("bun:jsc");
+    const { generateHeapSnapshot } = await import("bun");
+    const { writeFileSync } = await import("fs");
 
-// function logHeapStats() {
-//     console.log("Heap Stats:", JSON.stringify(heapStats(), null, 2));
-//     const snapshot = generateHeapSnapshot();
-//     Bun.write("heap.json", JSON.stringify(snapshot, null, 2));
-// }
+    function logHeapStats() {
+        const stats = heapStats();
+        const processStats = process.memoryUsage();
 
-// const HEAP_STATS_INTERVAL = 30000; // 30 seconds in milliseconds
-// setInterval(logHeapStats, HEAP_STATS_INTERVAL);
+        console.log("\n=== Memory Usage ===");
+        console.log(`Heap Size: ${(stats.heapSize / 1024 / 1024).toFixed(2)}MB`);
+        console.log(`Heap Capacity: ${(stats.heapCapacity / 1024 / 1024).toFixed(2)}MB`);
+        console.log(`Extra Memory: ${(stats.extraMemorySize / 1024 / 1024).toFixed(2)}MB`);
+        console.log(`RSS: ${(processStats.rss / 1024 / 1024).toFixed(2)}MB`);
 
-// logHeapStats();
+        console.log(`\n=== Object Counts ===`);
+        console.log(`Total Objects: ${stats.objectCount.toLocaleString()}`);
+        console.log(`Protected Objects: ${stats.protectedObjectCount.toLocaleString()}`);
+        console.log(`Global Objects: ${stats.globalObjectCount.toLocaleString()}`);
+        console.log(`Protected Global Objects: ${stats.protectedGlobalObjectCount.toLocaleString()}`);
+
+        console.log(`\n=== Object Types ===`);
+        Object.entries(stats.objectTypeCounts)
+            .sort(([, a], [, b]) => b - a)
+            .forEach(([type, count]) => {
+                if (count > 1000) {
+                    console.log(`${type}: ${count.toLocaleString()}`);
+                }
+            });
+
+        console.log(`\n=== Protected Object Types ===`);
+        Object.entries(stats.protectedObjectTypeCounts)
+            .sort(([, a], [, b]) => b - a)
+            .forEach(([type, count]) => {
+                console.log(`${type}: ${count.toLocaleString()}`);
+            });
+
+        const snapshot = generateHeapSnapshot();
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        writeFileSync(`heap-snapshot-${timestamp}.json`, JSON.stringify(snapshot));
+        console.log(`\nHeap snapshot saved to heap-snapshot-${timestamp}.json`);
+    }
+
+    // Log every 30 seconds
+    setInterval(logHeapStats, 30000);
+    logHeapStats(); // Initial log
+}
+
+// Call the setup function
+setupMemoryDebug();

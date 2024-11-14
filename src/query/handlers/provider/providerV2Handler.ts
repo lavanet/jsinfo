@@ -4,7 +4,7 @@
 // curl http://localhost:8081/provider/lava@14shwrej05nrraem8mwsnlw50vrtefkajar75ge
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { GetAndValidateProviderAddressFromRequest } from '../../utils/queryRequestArgParser';
-import { MonikerCache } from '../../classes/MonikerCache';
+import { MonikerCache } from '../../classes/QueryProviderMonikerCache';
 
 export const ProviderV2PaginatedHandlerOpts: RouteShorthandOptions = {
     schema: {
@@ -30,7 +30,7 @@ export const ProviderV2PaginatedHandlerOpts: RouteShorthandOptions = {
 export async function ProviderV2PaginatedHandler(request: FastifyRequest, reply: FastifyReply) {
     const addr = await GetAndValidateProviderAddressFromRequest("provider", request, reply);
     if (addr === '') {
-        return;
+        return null;
     }
 
     return {

@@ -2,7 +2,7 @@
 // src/query/handlers/providerHealth.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../../queryDb';
+import { QueryCheckJsinfoDbInstance, QueryGetJsinfoDbForQueryInstance } from '../../queryDb';
 import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
 import { eq, desc, asc, sql } from "drizzle-orm";
 import { Pagination, ParsePaginationFromString } from '../../utils/queryPagination';
@@ -82,9 +82,9 @@ class ProviderHealthData extends RequestHandlerBase<HealthReportEntry> {
     }
 
     protected async fetchAllRecords(): Promise<HealthReportEntry[]> {
-        await QueryCheckJsinfoReadDbInstance();
+        await QueryCheckJsinfoDbInstance();
 
-        const data = await QueryGetJsinfoReadDbInstance().select()
+        const data = await QueryGetJsinfoDbForQueryInstance().select()
             .from(JsinfoSchema.providerHealth)
             .where(eq(JsinfoSchema.providerHealth.provider, this.addr))
             .orderBy(desc(JsinfoSchema.providerHealth.id))
@@ -108,9 +108,9 @@ class ProviderHealthData extends RequestHandlerBase<HealthReportEntry> {
     }
 
     protected async fetchRecordCountFromDb(): Promise<number> {
-        await QueryCheckJsinfoReadDbInstance();
+        await QueryCheckJsinfoDbInstance();
 
-        const countResult = await QueryGetJsinfoReadDbInstance()
+        const countResult = await QueryGetJsinfoDbForQueryInstance()
             .select({
                 count: sql<number>`COUNT(*)`
             })
@@ -151,14 +151,14 @@ class ProviderHealthData extends RequestHandlerBase<HealthReportEntry> {
             throw new Error(`Invalid sort key: ${trimmedSortKey}`);
         }
 
-        await QueryCheckJsinfoReadDbInstance();
+        await QueryCheckJsinfoDbInstance();
 
         const sortColumn = keyToColumnMap[finalPagination.sortKey];
         const orderFunction = finalPagination.direction === 'ascending' ? asc : desc;
 
         const offset = (finalPagination.page - 1) * finalPagination.count;
 
-        const additionalData = await QueryGetJsinfoReadDbInstance()
+        const additionalData = await QueryGetJsinfoDbForQueryInstance()
             .select()
             .from(JsinfoSchema.providerHealth)
             .where(eq(JsinfoSchema.providerHealth.provider, this.addr))

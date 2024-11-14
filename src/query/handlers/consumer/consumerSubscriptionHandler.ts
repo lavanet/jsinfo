@@ -22,7 +22,7 @@
 */
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../../queryDb';
+import { QueryCheckJsinfoDbInstance, QueryGetJsinfoDbForQueryInstance } from '../../queryDb';
 import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
 import { desc, eq, gte, and } from "drizzle-orm";
 import { RedisCache } from '../../classes/RedisCache';
@@ -93,12 +93,12 @@ export const ConsumerSubscriptionRawHandlerOpts: RouteShorthandOptions = {
 };
 
 async function fetchAllData(addr: string): Promise<ConsumerSubscriptionRawEntry[]> {
-    await QueryCheckJsinfoReadDbInstance();
+    await QueryCheckJsinfoDbInstance();
 
     let nintyDaysAgo = new Date();
     nintyDaysAgo.setDate(nintyDaysAgo.getDate() - 90);
 
-    let reportsRes = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.consumerSubscriptionList)
+    let reportsRes = await QueryGetJsinfoDbForQueryInstance().select().from(JsinfoSchema.consumerSubscriptionList)
         .where(
             and(
                 eq(JsinfoSchema.consumerSubscriptionList.consumer, addr),

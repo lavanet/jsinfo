@@ -2,8 +2,8 @@
 
 import { FastifyReply, FastifyRequest } from "fastify";
 import { WriteErrorToFastifyReply } from "./queryServerUtils";
-import { MonikerCache } from '../classes/MonikerCache';
-import { SpecAndConsumerCache } from "../classes/SpecAndConsumerCache";
+import { MonikerCache } from '../classes/QueryProviderMonikerCache';
+import { SpecAndConsumerCache } from "../classes/QuerySpecAndConsumerCache";
 
 let GetAndValidateConsumerAddressFromRequest_cache = {};
 

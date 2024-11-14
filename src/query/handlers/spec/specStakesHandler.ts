@@ -2,13 +2,13 @@
 // src/query/handlers/specStakesHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../../queryDb';
+import { QueryCheckJsinfoDbInstance, QueryGetJsinfoDbForQueryInstance } from '../../queryDb';
 import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
 import * as JsinfoProviderAgrSchema from '../../../schemas/jsinfoSchema/providerRelayPaymentsAgregation';
 import { sql, desc, gt, and, eq } from "drizzle-orm";
-import { ReplaceArchive } from '../../../indexer/indexerUtils';
+import { ReplaceArchive } from '../../../indexer/utils/indexerUtils';
 import { GetAndValidateSpecIdFromRequest } from '../../utils/queryRequestArgParser';
-import { MonikerCache } from '../../classes/MonikerCache';
+import { MonikerCache } from '../../classes/QueryProviderMonikerCache';
 import { BigIntIsZero } from '../../../utils/utils';
 
 export type SpecSpecsResponse = {
@@ -112,9 +112,9 @@ export async function SpecStakesPaginatedHandler(request: FastifyRequest, reply:
         return reply;
     }
 
-    await QueryCheckJsinfoReadDbInstance();
+    await QueryCheckJsinfoDbInstance();
 
-    let stakesRes = await QueryGetJsinfoReadDbInstance().select({
+    let stakesRes = await QueryGetJsinfoDbForQueryInstance().select({
         stake: JsinfoSchema.providerStakes.stake,
         delegateLimit: JsinfoSchema.providerStakes.delegateLimit,
         delegateTotal: JsinfoSchema.providerStakes.delegateTotal,
@@ -132,7 +132,7 @@ export async function SpecStakesPaginatedHandler(request: FastifyRequest, reply:
         .orderBy(desc(JsinfoSchema.providerStakes.stake))
         .offset(0).limit(200);
 
-    let aggRes90Days = await QueryGetJsinfoReadDbInstance().select({
+    let aggRes90Days = await QueryGetJsinfoDbForQueryInstance().select({
         provider: JsinfoSchema.providerStakes.provider,
         cuSum90Days: sql<number>`SUM(${JsinfoProviderAgrSchema.aggDailyRelayPayments.cuSum})`,
         relaySum90Days: sql<number>`SUM(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum})`,
@@ -151,7 +151,7 @@ export async function SpecStakesPaginatedHandler(request: FastifyRequest, reply:
     let aggRes90DaysMap = new Map(aggRes90Days.map(item => [item.provider, item]));
 
     // Query for 30 days
-    let aggRes30Days = await QueryGetJsinfoReadDbInstance().select({
+    let aggRes30Days = await QueryGetJsinfoDbForQueryInstance().select({
         provider: JsinfoSchema.providerStakes.provider,
         cuSum30Days: sql<number>`SUM(${JsinfoProviderAgrSchema.aggDailyRelayPayments.cuSum})`,
         relaySum30Days: sql<number>`SUM(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum})`,

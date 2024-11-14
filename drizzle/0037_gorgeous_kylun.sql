@@ -1,0 +1,1 @@
+ALTER TABLE "provider_reported" ADD COLUMN "chain_id" text;

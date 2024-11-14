@@ -2,7 +2,7 @@
 // src/query/handlers/consumer/consumerConflictsHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../../queryDb';
+import { QueryCheckJsinfoDbInstance, QueryGetJsinfoDbForQueryInstance } from '../../queryDb';
 import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
 import { desc, eq } from "drizzle-orm";
 import { GetAndValidateConsumerAddressFromRequest } from '../../utils/queryRequestArgParser';
@@ -32,9 +32,9 @@ export async function ConsumerConflictsHandler(request: FastifyRequest, reply: F
         return reply;
     }
 
-    await QueryCheckJsinfoReadDbInstance()
+    await QueryCheckJsinfoDbInstance()
 
-    const conflictsRet = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.conflictResponses).where(eq(JsinfoSchema.conflictResponses.consumer, addr)).
+    const conflictsRet = await QueryGetJsinfoDbForQueryInstance().select().from(JsinfoSchema.conflictResponses).where(eq(JsinfoSchema.conflictResponses.consumer, addr)).
         orderBy(desc(JsinfoSchema.conflictResponses.id)).offset(0).limit(50)
 
     return {

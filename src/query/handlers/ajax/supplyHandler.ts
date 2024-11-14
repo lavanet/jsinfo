@@ -1,7 +1,7 @@
 // src/query/handlers/supplyHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../../queryDb';
+import { QueryCheckJsinfoDbInstance, QueryGetJsinfoDbForQueryInstance } from '../../queryDb';
 import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
 import { eq } from 'drizzle-orm';
 
@@ -16,9 +16,9 @@ export const SupplyRawHandlerOpts: RouteShorthandOptions = {
 }
 
 export async function TotalSupplyRawHandler(request: FastifyRequest, reply: FastifyReply) {
-    await QueryCheckJsinfoReadDbInstance()
+    await QueryCheckJsinfoDbInstance()
 
-    const result = await QueryGetJsinfoReadDbInstance()
+    const result = await QueryGetJsinfoDbForQueryInstance()
         .select({ amount: JsinfoSchema.supply.amount })
         .from(JsinfoSchema.supply)
         .where(eq(JsinfoSchema.supply.key, "total"))
@@ -33,10 +33,10 @@ export async function TotalSupplyRawHandler(request: FastifyRequest, reply: Fast
 
 
 export async function CirculatingSupplyRawHandler(request: FastifyRequest, reply: FastifyReply) {
-    await QueryCheckJsinfoReadDbInstance()
-    // const supplydb = await QueryGetJsinfoReadDbInstance().select().from(JsinfoSchema.supply);
+    await QueryCheckJsinfoDbInstance()
+    // const supplydb = await QueryGetJsinfoDbForQueryInstance().select().from(JsinfoSchema.supply);
 
-    const result = await QueryGetJsinfoReadDbInstance()
+    const result = await QueryGetJsinfoDbForQueryInstance()
         .select({ amount: JsinfoSchema.supply.amount })
         .from(JsinfoSchema.supply)
         .where(eq(JsinfoSchema.supply.key, "circulating"))

@@ -2,7 +2,7 @@
 // src/query/handlers/providerReportsHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../../queryDb';
+import { QueryCheckJsinfoDbInstance, QueryGetJsinfoDbForQueryInstance } from '../../queryDb';
 import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
 import { asc, desc, eq, gte, sql, and } from "drizzle-orm";
 import { Pagination, ParsePaginationFromString } from '../../utils/queryPagination';
@@ -23,6 +23,7 @@ export type ProviderReportsResponse = {
         datetime: Date | null;
         totalComplaintEpoch: number | null;
         tx: string | null;
+        chainId: string | null;
     };
     blocks: {
         height: number | null;
@@ -74,7 +75,10 @@ export const ProviderReportsPaginatedHandlerOpts: RouteShorthandOptions = {
                                         },
                                         tx: {
                                             type: ['string', 'null']
-                                        }
+                                        },
+                                        chainId: {
+                                            type: ['string', 'null']
+                                        },
                                     }
                                 },
                                 blocks: {
@@ -121,11 +125,11 @@ class ProviderReportsData extends RequestHandlerBase<ProviderReportsResponse> {
     }
 
     protected async fetchAllRecords(): Promise<ProviderReportsResponse[]> {
-        await QueryCheckJsinfoReadDbInstance();
+        await QueryCheckJsinfoDbInstance();
 
         const thirtyDaysAgo = this.getThirtyDaysAgo();
 
-        let reportsRes = await QueryGetJsinfoReadDbInstance()
+        let reportsRes = await QueryGetJsinfoDbForQueryInstance()
             .select({
                 providerReported: JsinfoSchema.providerReported,
                 blocks: {
@@ -151,11 +155,11 @@ class ProviderReportsData extends RequestHandlerBase<ProviderReportsResponse> {
     }
 
     protected async fetchRecordCountFromDb(): Promise<number> {
-        await QueryCheckJsinfoReadDbInstance();
+        await QueryCheckJsinfoDbInstance();
 
         const thirtyDaysAgo = this.getThirtyDaysAgo();
 
-        const countResult = await QueryGetJsinfoReadDbInstance()
+        const countResult = await QueryGetJsinfoDbForQueryInstance()
             .select({
                 count: sql<number>`COUNT(*)`
             })
@@ -193,7 +197,8 @@ class ProviderReportsData extends RequestHandlerBase<ProviderReportsResponse> {
             "provider_reported.cu": JsinfoSchema.providerReported.cu,
             "provider_reported.disconnections": JsinfoSchema.providerReported.disconnections,
             "provider_reported.errors": JsinfoSchema.providerReported.errors,
-            "provider_reported.project": JsinfoSchema.providerReported.project
+            "provider_reported.project": JsinfoSchema.providerReported.project,
+            "provider_reported.chainId": JsinfoSchema.providerReported.chainId
         };
 
         if (!Object.keys(keyToColumnMap).includes(finalPagination.sortKey)) {
@@ -201,14 +206,14 @@ class ProviderReportsData extends RequestHandlerBase<ProviderReportsResponse> {
             throw new Error(`Invalid sort key: ${trimmedSortKey}`);
         }
 
-        await QueryCheckJsinfoReadDbInstance();
+        await QueryCheckJsinfoDbInstance();
 
         const sortColumn = keyToColumnMap[finalPagination.sortKey];
         const orderFunction = finalPagination.direction === 'ascending' ? asc : desc;
 
         const thirtyDaysAgo = this.getThirtyDaysAgo();
 
-        const reportsRes = await QueryGetJsinfoReadDbInstance()
+        const reportsRes = await QueryGetJsinfoDbForQueryInstance()
             .select({
                 providerReported: {
                     id: JsinfoSchema.providerReported.id,
@@ -221,7 +226,8 @@ class ProviderReportsData extends RequestHandlerBase<ProviderReportsResponse> {
                     project: JsinfoSchema.providerReported.project,
                     datetime: JsinfoSchema.providerReported.datetime,
                     totalComplaintEpoch: JsinfoSchema.providerReported.totalComplaintEpoch,
-                    tx: JsinfoSchema.providerReported.tx
+                    tx: JsinfoSchema.providerReported.tx,
+                    chainId: JsinfoSchema.providerReported.chainId
                 },
                 blocks: {
                     height: JsinfoSchema.providerReported.blockId,
@@ -250,7 +256,8 @@ class ProviderReportsData extends RequestHandlerBase<ProviderReportsResponse> {
                 project: row.providerReported.project,
                 datetime: row.providerReported.datetime,
                 totalComplaintEpoch: row.providerReported.totalComplaintEpoch,
-                tx: row.providerReported.tx
+                tx: row.providerReported.tx,
+                chainId: row.providerReported.chainId
             },
             blocks: {
                 height: row.blocks.height,
@@ -267,6 +274,7 @@ class ProviderReportsData extends RequestHandlerBase<ProviderReportsResponse> {
             { key: "provider_reported.disconnections", name: "Disconnections" },
             { key: "provider_reported.errors", name: "Errors" },
             { key: "provider_reported.project", name: "Project" },
+            { key: "provider_reported.chainId", name: "Chain ID" }
         ];
 
         let csv = columns.map(column => CSVEscape(column.name)).join(',') + '\n';

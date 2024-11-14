@@ -3,7 +3,7 @@
 // curl http://localhost:8081/consumerspage | jq
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryCheckJsinfoReadDbInstance, GetLatestBlock, QueryGetJsinfoReadDbInstance } from '../../queryDb';
+import { QueryCheckJsinfoDbInstance, GetLatestBlock, QueryGetJsinfoDbForQueryInstance } from '../../queryDb';
 import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
 import { sql } from "drizzle-orm";
 
@@ -29,11 +29,11 @@ export const ConsumersPageHandlerOpts: RouteShorthandOptions = {
 }
 
 export async function ConsumersPageHandler(request: FastifyRequest, reply: FastifyReply) {
-    await QueryCheckJsinfoReadDbInstance()
+    await QueryCheckJsinfoDbInstance()
 
     const { latestHeight, latestDatetime } = await GetLatestBlock()
 
-    const uniqueConsumerCount = await QueryGetJsinfoReadDbInstance()
+    const uniqueConsumerCount = await QueryGetJsinfoDbForQueryInstance()
         .select({
             count: sql<number>`COUNT(DISTINCT consumer)`
         })

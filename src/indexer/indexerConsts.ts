@@ -1,13 +1,14 @@
 // src/indexer/indexerConsts.ts
 
 import { GetEnvVar } from '../utils/utils';
-import { ParseSizeToBytes } from './indexerUtils';
+import { ParseSizeToBytes } from './utils/indexerUtils';
 import { existsSync, mkdirSync } from 'fs';
 import { homedir } from 'os';
 import { join } from 'path';
 
 export const JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE: number = parseInt(GetEnvVar('JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE', "20"));
-export const JSINFO_INDEXER_LAVA_RPC: string = GetEnvVar("JSINFO_INDEXER_LAVA_RPC", "https://public-rpc.lavanet.xyz/"); // testnet
+export const JSINFO_INDEXER_LAVA_RPC: string = GetEnvVar("JSINFO_INDEXER_LAVA_RPC", "https://lav1.tendermintrpc.lava.build/"); // testnet
+export const JSINFO_INDEXER_LAVA_REST_RPC_URL: string = GetEnvVar("JSINFO_INDEXER_LAVA_REST_RPC_URL", "https://lav1.lava.build/"); // testnet
 export const JSINFO_INDEXER_N_WORKERS: number = parseInt(GetEnvVar('JSINFO_INDEXER_N_WORKERS', "2"));
 export const JSINFO_INDEXER_BATCH_SIZE: number = parseInt(GetEnvVar('JSINFO_INDEXER_BATCH_SIZE', "100"));
 export const JSINFO_INDEXER_POLL_MS: number = parseInt(GetEnvVar('JSINFO_INDEXER_POLL_MS', "5000"));
@@ -19,9 +20,6 @@ export const JSINFO_INDEXER_CACHE_USE_READ: number = parseInt(GetEnvVar('JSINFO_
 export const JSINFO_INDEXER_CACHE_PATH: string = GetEnvVar('JSINFO_INDEXER_CACHE_PATH', join(homedir(), 'Documents/jsinfo_disk_cache'));
 export const JSINFO_INDEXER_CACHE_USE_PAKO_COMPRESSION: number = parseInt(GetEnvVar('JSINFO_INDEXER_CACHE_USE_PAKO_COMPRESSION', "1"));
 export const JSINFO_INDEXER_CACHE_MAX_SIZE: number = ParseSizeToBytes(GetEnvVar('JSINFO_INDEXER_CACHE_MAX_SIZE', "50gb"));
-
-export const JSINFO_INDEXER_DEBUG_DUMP_EVENTS: boolean = GetEnvVar('JSINFO_INDEXER_DEBUG_DUMP_EVENTS', "false").toLowerCase() == "true";
-
 export const JSINFO_INDEXER_EVENT_ATTRIBUTE_VALUE_MAX_LENGTH: number = parseInt(GetEnvVar('JSINFO_INDEXER_EVENT_ATTRIBUTE_VALUE_MAX_LENGTH', "5000"));
 
 // lava_provider_bonus_rewards was 600 keys

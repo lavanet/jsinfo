@@ -3,12 +3,15 @@
 import { Pagination, ParsePaginationFromRequest, SerializePagination } from "../utils/queryPagination";
 import { FastifyReply, FastifyRequest } from "fastify";
 import { GetDataLength, GetDataLengthForPrints } from "../utils/queryUtils";
-import { subMonths, isAfter, isBefore, parseISO, startOfDay, differenceInCalendarDays } from 'date-fns';
+import { subMonths, isAfter, isBefore, startOfDay, differenceInCalendarDays } from 'date-fns';
 import { WriteErrorToFastifyReply } from '../utils/queryServerUtils';
 import { JSINFO_REQUEST_HANDLER_BASE_DEBUG } from '../queryConsts';
 import { RedisCache } from './RedisCache';
 import { ParseDateToUtc } from "../utils/queryDateUtils";
-import { JSONStringify, logger } from "../../utils/utils";
+import { GetUtcNow, JSONStringify, logger } from "../../utils/utils";
+
+import { JSINFO_QUERY_CLASS_MEMORY_DEBUG_MODE } from '../queryConsts';
+import { logClassMemory } from './MemoryLogger';
 
 export class RequestHandlerBase<T> {
     protected className: string;
@@ -16,6 +19,7 @@ export class RequestHandlerBase<T> {
     protected data: T[] | null = null;
     protected debug: boolean = JSINFO_REQUEST_HANDLER_BASE_DEBUG;
     protected dataKey: string = "";
+    private debugInterval: NodeJS.Timer | null = null;
 
     private static instances: Map<string, RequestHandlerBase<any>> = new Map();
 
@@ -55,6 +59,26 @@ export class RequestHandlerBase<T> {
             throw new Error("Parameter 'className' must be provided and be longer than 2 characters.");
         }
         this.className = className;
+
+        // Setup memory debugging if enabled
+        if (JSINFO_QUERY_CLASS_MEMORY_DEBUG_MODE) {
+            this.debugInterval = setInterval(() => this.logMemoryUsage(), 5 * 1000);
+            this.logMemoryUsage(); // Initial log
+        }
+    }
+
+    private logMemoryUsage() {
+        logClassMemory({
+            className: this.dataKey,
+            caches: [{ data: this.data }, RequestHandlerBase.instances],
+            cacheNames: ['data', 'instances']
+        });
+    }
+
+    public cleanup() {
+        if (this.debugInterval) {
+            clearInterval(this.debugInterval);
+        }
     }
 
     protected log(message: string) {
@@ -148,7 +172,7 @@ export class RequestHandlerBase<T> {
                 to = ParseDateToUtc(query.t);
             } else {
                 // Default to 3 months until now if either 'f' or 't' is not specified
-                to = new Date();
+                to = GetUtcNow();
                 from = subMonths(to, 3);
             }
 
@@ -159,15 +183,15 @@ export class RequestHandlerBase<T> {
             from = startOfDay(from);
             to = startOfDay(to);
 
-            if (isBefore(from, startOfDay(subMonths(new Date(), 6)))) {
+            if (isBefore(from, startOfDay(subMonths(GetUtcNow(), 6)))) {
                 throw new Error("From date cannot be more than 6 months in the past.");
             }
 
-            if (isAfter(to, startOfDay(new Date()))) {
-                if (differenceInCalendarDays(to, new Date()) > 1) {
+            if (isAfter(to, startOfDay(GetUtcNow()))) {
+                if (differenceInCalendarDays(to, GetUtcNow()) > 1) {
                     throw new Error("To date cannot be in the future.");
                 } else {
-                    to = new Date();
+                    to = GetUtcNow();
                 }
             }
 
@@ -246,3 +270,10 @@ export class RequestHandlerBase<T> {
     }
 
 }
+
+// // Add cleanup on process exit
+// process.on('exit', () => {
+//     RequestHandlerBase.instances.forEach(instance => {
+//         instance.cleanup();
+//     });
+// });

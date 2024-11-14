@@ -3,7 +3,7 @@
 // curl http://localhost:8081/indexProviders | jq
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryCheckJsinfoReadDbInstance, QueryGetJsinfoReadDbInstance } from '../../queryDb';
+import { QueryCheckJsinfoDbInstance, QueryGetJsinfoDbForQueryInstance } from '../../queryDb';
 import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
 import * as JsinfoProviderAgrSchema from '../../../schemas/jsinfoSchema/providerRelayPaymentsAgregation';
 import { sql, desc, not, eq, asc, and, isNull, gt, inArray } from "drizzle-orm";
@@ -11,7 +11,7 @@ import { Pagination, ParsePaginationFromString } from '../../utils/queryPaginati
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE } from '../../queryConsts';
 import { CSVEscape } from '../../utils/queryUtils';
 import { RequestHandlerBase } from '../../classes/RequestHandlerBase';
-import { MonikerCache } from '../../classes/MonikerCache';
+import { MonikerCache } from '../../classes/QueryProviderMonikerCache';
 
 /*
 v1
@@ -131,7 +131,7 @@ class IndexProvidersActiveData extends RequestHandlerBase<IndexProvidersActiveRe
     }
 
     protected async getActiveProviderAddresses(): Promise<string[]> {
-        const data = await QueryGetJsinfoReadDbInstance()
+        const data = await QueryGetJsinfoDbForQueryInstance()
             .select({
                 provider: JsinfoSchema.providerStakes.provider,
             })
@@ -162,11 +162,16 @@ class IndexProvidersActiveData extends RequestHandlerBase<IndexProvidersActiveRe
     }
 
     protected async fetchAllRecords(): Promise<IndexProvidersActiveResponse[]> {
-        await QueryCheckJsinfoReadDbInstance();
+        await QueryCheckJsinfoDbInstance();
 
         let activeProviders = await this.getActiveProviderAddresses();
 
-        const res = await QueryGetJsinfoReadDbInstance().select({
+        if (activeProviders.length === 0) {
+            console.log("No active providers found");
+            return [];
+        }
+
+        const res = await QueryGetJsinfoDbForQueryInstance().select({
             provider: JsinfoSchema.providerStakes.provider,
             totalServices: sql<string>`CONCAT(SUM(CASE WHEN ${JsinfoSchema.providerStakes.status} = ${JsinfoSchema.LavaProviderStakeStatus.Active} THEN 1 ELSE 0 END), ' / ', COUNT(${JsinfoSchema.providerStakes.specId})) as totalServices`,
             totalStake: sql<bigint>`COALESCE(SUM(CAST(${JsinfoSchema.providerStakes.stake} AS BIGINT) + LEAST(CAST(${JsinfoSchema.providerStakes.delegateTotal} AS BIGINT), CAST(${JsinfoSchema.providerStakes.delegateLimit} AS BIGINT))), 0) AS totalStake`,
@@ -190,6 +195,11 @@ class IndexProvidersActiveData extends RequestHandlerBase<IndexProvidersActiveRe
 
     public async fetchPaginatedRecords(pagination: Pagination | null): Promise<IndexProvidersActiveResponse[]> {
         let activeProviders = await this.getActiveProviderAddresses();
+
+        if (activeProviders.length === 0) {
+            console.log("No active providers found");
+            return [];
+        }
 
         const defaultSortKey = "totalStake";
 
@@ -223,14 +233,14 @@ class IndexProvidersActiveData extends RequestHandlerBase<IndexProvidersActiveRe
             throw new Error(`Invalid sort key: ${trimmedSortKey}`);
         }
 
-        await QueryCheckJsinfoReadDbInstance();
+        await QueryCheckJsinfoDbInstance();
 
         const sortColumn = keyToColumnMap[finalPagination.sortKey];
         const orderFunction = finalPagination.direction === 'ascending' ? asc : desc;
 
         if (sortColumn === keyToColumnMap["moniker"]) {
 
-            const data = await QueryGetJsinfoReadDbInstance()
+            const data = await QueryGetJsinfoDbForQueryInstance()
                 .select({
                     provider: JsinfoSchema.providerStakes.provider,
                     moniker: sql`MAX(${JsinfoSchema.providerSpecMoniker.moniker}) as moniker`,
@@ -256,7 +266,7 @@ class IndexProvidersActiveData extends RequestHandlerBase<IndexProvidersActiveRe
             }));
         }
 
-        const data = await QueryGetJsinfoReadDbInstance()
+        const data = await QueryGetJsinfoDbForQueryInstance()
             .select({
                 provider: JsinfoSchema.providerStakes.provider,
                 totalServices: sql<string>`CONCAT(SUM(CASE WHEN ${JsinfoSchema.providerStakes.status} = ${JsinfoSchema.LavaProviderStakeStatus.Active} THEN 1 ELSE 0 END), ' / ', COUNT(${JsinfoSchema.providerStakes.specId})) as totalServices`,
@@ -281,11 +291,16 @@ class IndexProvidersActiveData extends RequestHandlerBase<IndexProvidersActiveRe
     }
 
     protected async fetchRecordCountFromDb(): Promise<number> {
-        await QueryCheckJsinfoReadDbInstance();
+        await QueryCheckJsinfoDbInstance();
 
         let activeProviders = await this.getActiveProviderAddresses();
 
-        const res = await QueryGetJsinfoReadDbInstance()
+        if (activeProviders.length === 0) {
+            console.log("No active providers found");
+            return 0;
+        }
+
+        const res = await QueryGetJsinfoDbForQueryInstance()
             .select({
                 count: sql<number>`COUNT(DISTINCT ${JsinfoSchema.providerStakes.provider})`,
             })

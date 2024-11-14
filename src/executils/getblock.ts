@@ -2,7 +2,7 @@
 
 import { GetRpcBlock, GetRpcTxs } from "../indexer/lavaBlock";
 import { logger } from "../utils/utils";
-import { ConnectToRpc, RpcConnection } from "../utils/rpc";
+import { ConnectToRpc, RpcConnection } from "../indexer/utils/lavajsRpc";
 import * as indexerconsts from '../indexer/indexerConsts';
 
 const printBlockAndTxs = async (height: number, rpcConnection: RpcConnection): Promise<void> => {

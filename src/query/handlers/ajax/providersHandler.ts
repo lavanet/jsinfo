@@ -20,8 +20,7 @@ export const ProvidersPaginatedHandlerOpts: RouteShorthandOptions = {
 }
 
 export async function ProvidersPaginatedHandler(request: FastifyRequest, reply: FastifyReply) {
-    const providers = ProviderMonikerService.GetAllProviders();
-
+    const providers = await ProviderMonikerService.GetAllProviders();
     return {
         providers: providers,
     }

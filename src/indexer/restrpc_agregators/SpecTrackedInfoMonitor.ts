@@ -1,8 +1,8 @@
-import { GetJsinfoDbForIndexer } from "../../utils/dbUtils";
-import { logger } from '../../utils/utils';
-import { RpcOnDemandEndpointCache } from '../classes/RpcOnDemandEndpointCache';
-import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
-import { SpecAndConsumerService } from "../classes/IndexerSpecAndConsumerService";
+import { GetJsinfoDbForIndexer } from '@jsinfo/utils/db';
+import { logger } from '@jsinfo/utils/logger';
+import { RpcOnDemandEndpointCache } from '@jsinfo/indexer/classes/RpcOnDemandEndpointCache';
+import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
+import { SpecAndConsumerService } from "@jsinfo/redis/resources/global/SpecAndConsumerResource";
 import { sql } from 'drizzle-orm';
 
 export interface ProcessedSpecInfo {
@@ -79,7 +79,7 @@ class SpecTrackedInfoMonitorClass {
 
         try {
             const db = await GetJsinfoDbForIndexer();
-            const specs = await SpecAndConsumerService.GetAllSpecs(db);
+            const specs = await SpecAndConsumerService.GetAllSpecs();
             logger.info(`SpecTrackedInfoMonitor - Processing specs`, { specCount: specs.length });
 
             const allProcessedInfo: ProcessedSpecInfo[] = [];

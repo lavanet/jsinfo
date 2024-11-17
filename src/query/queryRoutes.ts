@@ -33,9 +33,9 @@ import { IndexTopChainsHandlerOpts, IndexTopChainsHandler } from './handlers/ind
 import { IndexTotalCuHandlerOpts, IndexTotalCuHandler } from './handlers/index/indexTotalCuHandler';
 import { IndexStakesHandlerOpts, IndexStakesHandler } from './handlers/index/indexStakesHandler';
 
-import { IndexProvidersPaginatedHandler, IndexProvidersPaginatedHandlerOpts, IndexProvidersItemCountPaginatiedHandler, IndexProvidersCSVRawHandler } from './handlers/index/indexProvidersHandler';
-import { IndexProvidersActivePaginatedHandler, IndexProvidersActivePaginatedHandlerOpts, IndexProvidersActiveItemCountPaginatiedHandler, IndexProvidersActiveCSVRawHandler } from './handlers/index/indexProvidersActiveHandler';
-import { IndexChartsV3RawHandler, IndexChartsV3RawHandlerOpts } from './handlers/index/indexChartsV3Handler';
+import { IndexProvidersPaginatedHandler, IndexProvidersPaginatedHandlerOpts, IndexProvidersItemCountPaginatiedHandler, IndexProvidersCSVRawHandler, IndexProvidersCSVRawHandlerOpts } from './handlers/index/indexProvidersHandler';
+import { IndexProvidersActivePaginatedHandler, IndexProvidersActivePaginatedHandlerOpts, IndexProvidersActiveItemCountPaginatiedHandler, IndexProvidersActiveCSVRawHandler, IndexProvidersActiveCSVRawHandlerOpts } from './handlers/index/indexProvidersActiveHandler';
+import { IndexChartsQuerystring, IndexChartsV3RawHandler, IndexChartsV3RawHandlerOpts } from './handlers/index/indexChartsV3Handler';
 
 // -- Provider page ajax --
 import { ProviderPaginatedHandler, ProviderPaginatedHandlerOpts } from './handlers/provider/providerHandler';
@@ -126,16 +126,16 @@ GetServerInstance().get('/consumers', ConsumersPaginatedHandlerOpts, ConsumersPa
 GetServerInstance().get('/autoCompleteLinksV2Handler', AutoCompleteLinksV2PaginatedHandlerOpts, AutoCompleteLinksV2PaginatedHandler);
 
 // -- Index page ajax -- 
-RegisterRedisBackedHandler('/index30DayCu', Index30DayCuHandlerOpts, Index30DayCuHandler, { cache_ttl: 10 });
-RegisterRedisBackedHandler('/indexLatestBlock', IndexLatestBlockHandlerOpts, IndexLatestBlockHandler, { cache_ttl: 10 });
-RegisterRedisBackedHandler('/indexTopChains', IndexTopChainsHandlerOpts, IndexTopChainsHandler, { cache_ttl: 10 });
-RegisterRedisBackedHandler('/indexTotalCu', IndexTotalCuHandlerOpts, IndexTotalCuHandler, { cache_ttl: 10 });
-RegisterRedisBackedHandler('/indexStakesHandler', IndexStakesHandlerOpts, IndexStakesHandler, { cache_ttl: 10 });
-RegisterPaginationServerHandler('/indexProviders', IndexProvidersPaginatedHandlerOpts, IndexProvidersPaginatedHandler, IndexProvidersItemCountPaginatiedHandler);
-RegisterPaginationServerHandler('/indexProvidersActive', IndexProvidersActivePaginatedHandlerOpts, IndexProvidersActivePaginatedHandler, IndexProvidersActiveItemCountPaginatiedHandler);
-GetServerInstance().get('/indexProvidersCsv', IndexProvidersCSVRawHandler);
-GetServerInstance().get('/indexProvidersActiveCsv', IndexProvidersActiveCSVRawHandler);
-GetServerInstance().get('/indexChartsV3', IndexChartsV3RawHandlerOpts, IndexChartsV3RawHandler);
+GetServerInstance().get('/index30DayCu', Index30DayCuHandlerOpts, Index30DayCuHandler);
+GetServerInstance().get('/indexLatestBlock', IndexLatestBlockHandlerOpts, IndexLatestBlockHandler);
+GetServerInstance().get('/indexTopChains', IndexTopChainsHandlerOpts, IndexTopChainsHandler);
+GetServerInstance().get('/indexTotalCu', IndexTotalCuHandlerOpts, IndexTotalCuHandler);
+GetServerInstance().get('/indexStakesHandler', IndexStakesHandlerOpts, IndexStakesHandler);
+GetServerInstance().get('/indexProviders', IndexProvidersPaginatedHandlerOpts, IndexProvidersPaginatedHandler);
+GetServerInstance().get('/indexProvidersActive', IndexProvidersActivePaginatedHandlerOpts, IndexProvidersActivePaginatedHandler);
+GetServerInstance().get('/indexProvidersCsv', IndexProvidersCSVRawHandlerOpts, IndexProvidersCSVRawHandler);
+GetServerInstance().get('/indexProvidersActiveCsv', IndexProvidersActiveCSVRawHandlerOpts, IndexProvidersActiveCSVRawHandler);
+GetServerInstance().get<{ Querystring: IndexChartsQuerystring }>('/indexChartsV3', IndexChartsV3RawHandlerOpts, IndexChartsV3RawHandler);
 
 // -- Provider page ajax --
 RegisterRedisBackedHandler('/provider/:addr', ProviderPaginatedHandlerOpts, ProviderPaginatedHandler);

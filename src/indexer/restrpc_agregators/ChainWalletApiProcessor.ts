@@ -1,7 +1,7 @@
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { keyValueStore } from '../../schemas/jsinfoSchema/jsinfoSchema';
-import { RpcPeriodicEndpointCache } from '../classes/RpcPeriodicEndpointCache';
-import { logger } from '../../utils/utils';
+import { keyValueStore } from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
+import { RpcPeriodicEndpointCache } from '@jsinfo/indexer/classes/RpcPeriodicEndpointCache';
+import { logger } from '@jsinfo/utils/logger';
 
 async function saveToKeyValueStore(db: PostgresJsDatabase, key: string, value: string): Promise<void> {
     try {

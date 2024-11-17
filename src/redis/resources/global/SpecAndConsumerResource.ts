@@ -1,13 +1,14 @@
 import { sql } from 'drizzle-orm';
-import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
+import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { RedisResourceBase } from '../../classes/RedisResourceBase';
-import { GetUtcNow, logger } from '../../../utils/utils';
+import { logger } from '@jsinfo/utils/logger';
+import { GetUtcNow } from '@jsinfo/utils/date';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { eq } from 'drizzle-orm';
 
 class SpecAndConsumerResource extends RedisResourceBase<{ specs: string[], consumers: string[] }, {}> {
     protected readonly redisKey = 'spec-and-consumer-cache';
-    protected readonly ttlMs = 2 * 60 * 1000; // 2 minutes
+    protected ttlSeconds = 120; // 2 minutes
 
     protected async fetchFromDb(db: PostgresJsDatabase): Promise<{ specs: string[], consumers: string[] }> {
         const [specs, consumers] = await Promise.all([

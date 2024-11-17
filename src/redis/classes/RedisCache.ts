@@ -2,7 +2,9 @@
 
 import { createClient } from 'redis';
 import type { RedisClientType } from 'redis';
-import { JSONStringify, logger, GetRedisUrls } from '../../utils/utils';
+import { logger } from '@jsinfo/utils/logger';
+import { GetRedisUrls } from '@jsinfo/utils/env';
+import { JSONStringify } from '@jsinfo/utils/fmt';
 
 class RedisCacheClass {
     private clients: RedisClientType[] = [];

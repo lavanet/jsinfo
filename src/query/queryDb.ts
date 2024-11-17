@@ -1,12 +1,12 @@
 // src/query/queryDb.ts
 
-import { IsIndexerProcess, logger } from '../utils/utils';
-
-import { GetJsinfoDbForQuery, GetRelaysReadDbForQuery } from '../utils/dbUtils';
+import { IsIndexerProcess } from '@jsinfo/utils/env';
+import { logger } from '@jsinfo/utils/logger';
+import { GetJsinfoDbForQuery, GetRelaysReadDbForQuery } from '@jsinfo/utils/db';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { desc } from "drizzle-orm";
-import * as JsinfoSchema from '../schemas/jsinfoSchema/jsinfoSchema';
-import * as RelaysSchema from '../schemas/relaysSchema';
+import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
+import * as RelaysSchema from '@jsinfo/schemas/relaysSchema';
 
 let db: PostgresJsDatabase | null = null;
 let relaysReadDb: PostgresJsDatabase | null = null;

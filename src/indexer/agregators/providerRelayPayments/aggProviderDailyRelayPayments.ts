@@ -2,8 +2,9 @@
 
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { isNotNull, sql, and, ne } from "drizzle-orm";
-import * as JsinfoProviderAgrSchema from '../../../schemas/jsinfoSchema/providerRelayPaymentsAgregation';
-import { DoInChunks, logger } from "../../../utils/utils";
+import * as JsinfoProviderAgrSchema from '@jsinfo/schemas/jsinfoSchema/providerRelayPaymentsAgregation';
+import { DoInChunks } from '@jsinfo/utils/processing';
+import { logger } from '@jsinfo/utils/logger';
 import { PgColumn } from 'drizzle-orm/pg-core';
 
 export async function getProviderAggDailyTimeSpan(db: PostgresJsDatabase): Promise<{ startTime: Date | null, endTime: Date | null }> {

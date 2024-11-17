@@ -1,6 +1,6 @@
 import { desc } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
+import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { RedisResourceBase } from '@jsinfo/redis/classes/RedisResourceBase';
 
 export interface IndexLatestBlockData {

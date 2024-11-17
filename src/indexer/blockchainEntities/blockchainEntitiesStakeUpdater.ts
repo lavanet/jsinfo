@@ -1,10 +1,10 @@
 // src/indexer/blockchainEntities/blockchainEntitiesStakeUpdater.ts
 
-import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
+import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { StakeEntry } from '@lavanet/lavajs/dist/codegen/lavanet/lava/epochstorage/stake_entry';
 import { AppendUniqueItems, ToSignedBigIntOrMinusOne, ToSignedIntOrMinusOne } from '../utils/indexerUtils';
 import { LavaClient } from '../types';
-import { logger } from '../../utils/utils';
+import { logger } from '../../utils/logger';
 
 /*
 providers with stake {

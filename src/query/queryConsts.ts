@@ -1,6 +1,6 @@
 // src/query/consts.ts
 
-import { GetEnvVar } from '../utils/utils';
+import { GetEnvVar } from '@jsinfo/utils/env';
 
 export const JSINFO_QUERY_IS_DEBUG_MODE: boolean = GetEnvVar("JSINFO_QUERY_IS_DEBUG_MODE", "false").toLowerCase() === "true";
 export const JSINFO_QUERY_CACHE_POPULTAE_MODE: boolean = GetEnvVar("JSINFO_QUERY_CACHE_POPULTAE_MODE", "false").toLowerCase() === "true";

@@ -2,8 +2,8 @@
 
 import { FastifyReply, FastifyRequest } from "fastify";
 import { WriteErrorToFastifyReply } from "./queryServerUtils";
-import { ProviderMonikerService } from '../classes/QueryProviderMonikerService';
-import { SpecAndConsumerService } from "../classes/QuerySpecAndConsumerService";
+import { ProviderMonikerService } from '@jsinfo/redis/resources/global/ProviderMonikerSpecResource';
+import { SpecAndConsumerService } from '@jsinfo/redis/resources/global/SpecAndConsumerResource';
 
 let GetAndValidateConsumerAddressFromRequest_cache = {};
 
@@ -19,7 +19,7 @@ export async function GetAndValidateConsumerAddressFromRequest(request: FastifyR
         return addr;
     }
 
-    if (!SpecAndConsumerService.IsValidConsumer(addr)) {
+    if (!(await SpecAndConsumerService.IsValidConsumer(addr))) {
         WriteErrorToFastifyReply(reply, 'Consumer does not exist');
         return '';
     }
@@ -43,7 +43,7 @@ export async function GetAndValidateProviderAddressFromRequest(endpoint: string,
         return addr;
     }
 
-    if (!ProviderMonikerService.IsValidProvider(addr)) {
+    if (!(await ProviderMonikerService.IsValidProvider(addr))) {
         WriteErrorToFastifyReply(reply, 'Provider does not exist on ' + endpoint);
         return '';
     }
@@ -70,7 +70,7 @@ export async function GetAndValidateProviderAddressFromRequestWithAll(endpoint: 
         return addr;
     }
 
-    if (!ProviderMonikerService.IsValidProvider(addr)) {
+    if (!(await ProviderMonikerService.IsValidProvider(addr))) {
         WriteErrorToFastifyReply(reply, 'Provider does not exist on ' + endpoint);
         return '';
     }
@@ -96,7 +96,7 @@ export async function GetAndValidateSpecIdFromRequest(request: FastifyRequest, r
         return upSpecId;
     }
 
-    if (!SpecAndConsumerService.IsValidSpec(upSpecId)) {
+    if (!(await SpecAndConsumerService.IsValidSpec(upSpecId))) {
         WriteErrorToFastifyReply(reply, 'Spec does not exist');
         return '';
     }
@@ -125,7 +125,7 @@ export async function GetAndValidateSpecIdFromRequestWithAll(request: FastifyReq
         return upSpecId;
     }
 
-    if (!SpecAndConsumerService.IsValidSpec(upSpecId)) {
+    if (!(await SpecAndConsumerService.IsValidSpec(upSpecId))) {
         WriteErrorToFastifyReply(reply, 'Spec does not exist');
         return '';
     }

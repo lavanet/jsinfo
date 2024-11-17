@@ -1,7 +1,8 @@
 // src/indexer/classes/MemoryCache.ts
 
 import NodeCache from 'node-cache';
-import { JSONStringify, logger } from '../../utils/utils';
+import { JSONStringify } from '@jsinfo/utils/fmt';
+import { logger } from '@jsinfo/utils/logger';
 
 class MemoryCacheClass {
     private cache: NodeCache;

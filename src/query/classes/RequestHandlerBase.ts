@@ -2,15 +2,15 @@
 
 import { Pagination, ParsePaginationFromRequest, SerializePagination } from "../utils/queryPagination";
 import { FastifyReply, FastifyRequest } from "fastify";
-import { GetDataLength, GetDataLengthForPrints } from "../utils/queryUtils";
-import { subMonths, isAfter, isBefore, startOfDay, differenceInCalendarDays } from 'date-fns';
-import { WriteErrorToFastifyReply } from '../utils/queryServerUtils';
-import { JSINFO_REQUEST_HANDLER_BASE_DEBUG } from '../queryConsts';
-import { RedisCache } from '../../redis/classes/RedisCache';
-import { ParseDateToUtc } from "../utils/queryDateUtils";
-import { GetUtcNow, JSONStringify, logger } from "../../utils/utils";
-
-import { JSINFO_QUERY_CLASS_MEMORY_DEBUG_MODE } from '../queryConsts';
+import { GetDataLength, GetDataLengthForPrints } from "@jsinfo/utils/fmt";
+import { subMonths } from 'date-fns';
+import { WriteErrorToFastifyReply } from '@jsinfo/query/utils/queryServerUtils';
+import { JSINFO_REQUEST_HANDLER_BASE_DEBUG } from '@jsinfo/query/queryConsts';
+import { RedisCache } from '@jsinfo/redis/classes/RedisCache';
+import { ParseDateToUtc, GetUtcNow, NormalizeChartFetchDates } from "@jsinfo/utils/date";
+import { logger } from "@jsinfo/utils/logger";
+import { JSONStringify } from '@jsinfo/utils/fmt';
+import { JSINFO_QUERY_CLASS_MEMORY_DEBUG_MODE } from '@jsinfo/query/queryConsts';
 import { logClassMemory } from './MemoryLogger';
 
 export class RequestHandlerBase<T> {
@@ -176,33 +176,16 @@ export class RequestHandlerBase<T> {
                 from = subMonths(to, 3);
             }
 
-            if (isAfter(from, to)) {
-                [from, to] = [to, from];
-            }
+            const { from: normalizedFrom, to: normalizedTo } = NormalizeChartFetchDates(from, to);
 
-            from = startOfDay(from);
-            to = startOfDay(to);
-
-            if (isBefore(from, startOfDay(subMonths(GetUtcNow(), 6)))) {
-                throw new Error("From date cannot be more than 6 months in the past.");
-            }
-
-            if (isAfter(to, startOfDay(GetUtcNow()))) {
-                if (differenceInCalendarDays(to, GetUtcNow()) > 1) {
-                    throw new Error("To date cannot be in the future.");
-                } else {
-                    to = GetUtcNow();
-                }
-            }
-
-            const key = `${this.dataKey}|${from.toISOString()}|${to.toISOString()}`;
+            const key = `${this.dataKey}|${normalizedFrom.toISOString()}|${normalizedTo.toISOString()}`;
             const redisVal = await RedisCache.getArray(key);
             if (redisVal) {
                 this.logExecutionTime("DateRangeRequestHandler", startTime, `(cache hit): ${key}`);
                 return { data: redisVal as T[] };
             }
 
-            const filteredData = await this.fetchDateRangeRecords(from, to);
+            const filteredData = await this.fetchDateRangeRecords(normalizedFrom, normalizedTo);
             this.logExecutionTime("DateRangeRequestHandler", startTime, `DateRangeRequestHandler (cache miss): ${key}`);
             RedisCache.setArray(key, filteredData, this.getTTL(key));
             return { data: filteredData };

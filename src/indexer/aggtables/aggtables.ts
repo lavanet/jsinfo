@@ -2,7 +2,7 @@
 
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { sql } from 'drizzle-orm';
-import { logger } from '../../utils/utils';
+import { logger } from '@jsinfo/utils/logger';
 
 export const AggProviderAndConsumerRelayPayments = async (db: PostgresJsDatabase) => {
     refreshMaterializedViews(db);

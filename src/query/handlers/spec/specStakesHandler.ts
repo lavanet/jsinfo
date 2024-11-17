@@ -2,14 +2,14 @@
 // src/query/handlers/specStakesHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryCheckJsinfoDbInstance, QueryGetJsinfoDbForQueryInstance } from '../../queryDb';
-import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
-import * as JsinfoProviderAgrSchema from '../../../schemas/jsinfoSchema/providerRelayPaymentsAgregation';
+import { QueryCheckJsinfoDbInstance, QueryGetJsinfoDbForQueryInstance } from '@jsinfo/query/queryDb';
+import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
+import * as JsinfoProviderAgrSchema from '@jsinfo/schemas/jsinfoSchema/providerRelayPaymentsAgregation';
 import { sql, desc, gt, and, eq } from "drizzle-orm";
-import { ReplaceArchive } from '../../../indexer/utils/indexerUtils';
-import { GetAndValidateSpecIdFromRequest } from '../../utils/queryRequestArgParser';
+import { ReplaceArchive } from '@jsinfo/indexer/utils/indexerUtils';
+import { GetAndValidateSpecIdFromRequest } from '@jsinfo/query/utils/queryRequestArgParser';
 import { ProviderMonikerService } from '@jsinfo/redis/resources/global/ProviderMonikerSpecResource';
-import { BigIntIsZero } from '../../../utils/utils';
+import { BigIntIsZero } from '@jsinfo/utils/bigint';
 
 export type SpecSpecsResponse = {
     stake: string;
@@ -170,7 +170,7 @@ export async function SpecStakesPaginatedHandler(request: FastifyRequest, reply:
     let aggRes30DaysMap = new Map(aggRes30Days.map(item => [item.provider, item]));
 
     // Combine results
-    let combinedStakesRes: SpecSpecsResponse[] = stakesRes.map((itemStakesRes) => {
+    let combinedStakesRes: SpecSpecsResponse[] = await Promise.all(stakesRes.map(async (itemStakesRes) => {
         let item90Days = aggRes90DaysMap.get(itemStakesRes.provider);
         let item30Days = aggRes30DaysMap.get(itemStakesRes.provider);
         return {
@@ -182,14 +182,14 @@ export async function SpecStakesPaginatedHandler(request: FastifyRequest, reply:
             totalStake: BigIntIsZero(itemStakesRes.totalStake) ? "0" : itemStakesRes.totalStake?.toString() ?? "0",
             addons: itemStakesRes.addons,
             extensions: ReplaceArchive(itemStakesRes.extensions),
-            moniker: ProviderMonikerService.GetMonikerForProvider(itemStakesRes.provider),
-            monikerfull: ProviderMonikerService.GetMonikerFullDescription(itemStakesRes.provider),
+            moniker: await ProviderMonikerService.GetMonikerForProvider(itemStakesRes.provider),
+            monikerfull: await ProviderMonikerService.GetMonikerFullDescription(itemStakesRes.provider),
             cuSum30Days: item30Days ? item30Days.cuSum30Days || 0 : 0,
             relaySum30Days: item30Days ? item30Days.relaySum30Days || 0 : 0,
             cuSum90Days: item90Days ? item90Days.cuSum90Days || 0 : 0,
             relaySum90Days: item90Days ? item90Days.relaySum90Days || 0 : 0,
         };
-    }).sort((a, b) => b.cuSum90Days - a.cuSum90Days);
+    })).then(results => results.sort((a, b) => b.cuSum90Days - a.cuSum90Days));
 
     return { data: combinedStakesRes };
 }

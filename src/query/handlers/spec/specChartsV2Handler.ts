@@ -1,16 +1,16 @@
 // src/query/handlers/spec/specChartsV2Handler.ts
 
 import { FastifyReply, FastifyRequest, RouteShorthandOptions } from 'fastify';
-import { QueryCheckJsinfoDbInstance, QueryGetJsinfoDbForQueryInstance } from '../../queryDb';
-import * as JsinfoProviderAgrSchema from '../../../schemas/jsinfoSchema/providerRelayPaymentsAgregation';
+import { QueryCheckJsinfoDbInstance, QueryGetJsinfoDbForQueryInstance } from '@jsinfo/query/queryDb';
+import * as JsinfoProviderAgrSchema from '@jsinfo/schemas/jsinfoSchema/providerRelayPaymentsAgregation';
 import { sql, gt, and, lt, desc, eq } from "drizzle-orm";
-import { DateToISOString } from '../../utils/queryDateUtils';
-import { RequestHandlerBase } from '../../classes/RequestHandlerBase';
-import { GetAndValidateSpecIdFromRequest, GetAndValidateProviderAddressFromRequestWithAll } from '../../utils/queryRequestArgParser';
+import { DateToISOString } from '@jsinfo/utils/date';
+import { RequestHandlerBase } from '@jsinfo/query/classes/RequestHandlerBase';
+import { GetAndValidateSpecIdFromRequest, GetAndValidateProviderAddressFromRequestWithAll } from '@jsinfo/query/utils/queryRequestArgParser';
 import { PgColumn } from 'drizzle-orm/pg-core';
-import { logger } from '../../../utils/utils';
-import { RedisCache } from '../../../redis/classes/RedisCache';
-import { ProviderMonikerService } from '../../classes/QueryProviderMonikerService';
+import { logger } from '@jsinfo/utils/logger';
+import { RedisCache } from '@jsinfo/redis/classes/RedisCache';
+import { ProviderMonikerService } from '@jsinfo/redis/resources/global/ProviderMonikerSpecResource';
 
 type SpecChartDataPoint = {
     date: string;

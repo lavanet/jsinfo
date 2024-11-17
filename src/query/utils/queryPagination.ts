@@ -2,8 +2,8 @@
 
 import { FastifyRequest } from "fastify";
 import * as url from 'url';
-import { JSINFO_QUERY_ALLOWED_ITEMS_PER_PAGE } from "../queryConsts";
-import { logger } from "../../utils/utils";
+import { JSINFO_QUERY_ALLOWED_ITEMS_PER_PAGE } from '@jsinfo/query/queryConsts';
+import { logger } from '@jsinfo/utils/logger';
 
 export interface Pagination {
     sortKey: string | null;

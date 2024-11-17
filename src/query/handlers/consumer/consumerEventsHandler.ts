@@ -3,11 +3,11 @@
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryCheckJsinfoDbInstance, QueryGetJsinfoDbForQueryInstance } from '../../queryDb';
-import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
+import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { asc, desc, eq, sql, gte, and } from "drizzle-orm";
 import { Pagination, ParsePaginationFromString } from '../../utils/queryPagination';
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '../../queryConsts';
-import { CSVEscape } from '../../utils/queryUtils';
+import { CSVEscape } from '@jsinfo/utils/fmt';
 import { GetAndValidateConsumerAddressFromRequest } from '../../utils/queryRequestArgParser';
 import { RequestHandlerBase } from '../../classes/RequestHandlerBase';
 

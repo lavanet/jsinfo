@@ -1,7 +1,7 @@
 import { SupplyResource } from '@jsinfo/redis/resources/ajax/SupplyResource';
 import { ChainWalletResource } from '@jsinfo/redis/resources/ajax/ChainWalletResource';
-import { logger } from '../../utils/utils';
-import { GetJsinfoDbForIndexer } from '@jsinfo/utils/dbUtils';
+import { logger } from '@jsinfo/utils/logger';
+import { GetJsinfoDbForIndexer } from '@jsinfo/utils/db';
 import { AprResource } from '../resources/ajax/AprResource';
 import { AutoCompleteResource } from '../resources/ajax/AutoCompleteResource';
 import { SpecAndConsumerService } from '../resources/global/SpecAndConsumerResource';

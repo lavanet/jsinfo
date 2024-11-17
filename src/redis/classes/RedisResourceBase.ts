@@ -1,7 +1,7 @@
-import { GetJsinfoDbForIndexer } from '@jsinfo/utils/dbUtils';
+import { GetJsinfoDbForIndexer } from '@jsinfo/utils/db';
 import { RedisCache } from './RedisCache';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { IsIndexerProcess } from '@jsinfo/utils/utils';
+import { IsIndexerProcess } from '@jsinfo/utils/env';
 import { QueryGetJsinfoDbForQueryInstance } from '@jsinfo/query/queryDb';
 import { QueryCheckJsinfoDbInstance } from '@jsinfo/query/queryDb';
 
@@ -70,16 +70,26 @@ export abstract class RedisResourceBase<T, A extends BaseArgs = BaseArgs> {
     }
 
     async fetchAndPickDb(args?: A): Promise<T | null> {
-        const db = await (IsIndexerProcess() ? GetJsinfoDbForIndexer() : QueryGetJsinfoDbForQueryInstance());
-        const result = await this.fetch(db, args);
+        try {
+            const db = await (IsIndexerProcess() ? GetJsinfoDbForIndexer() : QueryGetJsinfoDbForQueryInstance());
+            const result = await this.fetch(db, args);
 
-        if (!result && !IsIndexerProcess()) {
-            await QueryCheckJsinfoDbInstance();
-            const newDb = await QueryGetJsinfoDbForQueryInstance();
-            return await this.fetch(newDb, args);
+            if (!result && !IsIndexerProcess()) {
+                await QueryCheckJsinfoDbInstance();
+                const newDb = await QueryGetJsinfoDbForQueryInstance();
+                return await this.fetch(newDb, args);
+            }
+
+            return result;
+        } catch (error) {
+            console.error('RedisResourceBase fetchAndPickDb error:', {
+                error: (error as Error).message,
+                resourceKey: this.redisKey,
+                args,
+                stack: (error as Error).stack
+            });
+            return null;
         }
-
-        return result;
     }
 
     // Optional utility methods

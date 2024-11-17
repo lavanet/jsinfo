@@ -1,4 +1,4 @@
-import { logger } from '../utils/utils';
+import { logger } from '../utils/logger';
 import { ConnectToRpc, RpcConnection } from '../indexer/utils/lavajsRpc';
 import { GetRpcBlock, GetRpcTxs, GetRpcBlockResultEvents } from "../indexer/lavaBlock";
 // import { ProcessOneEvent } from "../indexer/eventProcessor";

@@ -1,7 +1,7 @@
 // src/executils/getblock.ts
 
 import { GetRpcBlock, GetRpcTxs } from "../indexer/lavaBlock";
-import { logger } from "../utils/utils";
+import { logger } from "../utils/logger";
 import { ConnectToRpc, RpcConnection } from "../indexer/utils/lavajsRpc";
 import * as indexerconsts from '../indexer/indexerConsts';
 

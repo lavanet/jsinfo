@@ -1,10 +1,10 @@
 // src/query/handlers/provider/providerRelaysPerSpecPieHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryCheckJsinfoDbInstance, QueryGetJsinfoDbForQueryInstance } from '../../queryDb';
-import * as JsinfoProviderAgrSchema from '../../../schemas/jsinfoSchema/providerRelayPaymentsAgregation';
+import { QueryCheckJsinfoDbInstance, QueryGetJsinfoDbForQueryInstance } from '@jsinfo/query/queryDb';
+import * as JsinfoProviderAgrSchema from '@jsinfo/schemas/jsinfoSchema/providerRelayPaymentsAgregation';
 import { sql, eq, desc } from "drizzle-orm";
-import { GetAndValidateProviderAddressFromRequest } from '../../utils/queryRequestArgParser';
+import { GetAndValidateProviderAddressFromRequest } from '@jsinfo/query/utils/queryRequestArgParser';
 
 export const ProviderRelaysPerSpecPieHandlerOpts: RouteShorthandOptions = {
     schema: {

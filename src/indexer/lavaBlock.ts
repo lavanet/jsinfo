@@ -1,12 +1,12 @@
 // src/indexer/lavaBlock.ts
 
-import * as JsinfoSchema from '../schemas/jsinfoSchema/jsinfoSchema';
+import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { StargateClient, IndexedTx, Block, Event } from "@cosmjs/stargate"
 import { Tendermint37Client } from "@cosmjs/tendermint-rpc";
 import { ProcessOneEvent } from './eventProcessor';
 import { LavaBlock } from './types';
 import LavaBlockCache from './lavaBlockCache';
-import { logger } from '../utils/utils';
+import { logger } from '@jsinfo/utils/logger';
 
 const cache = new LavaBlockCache();
 

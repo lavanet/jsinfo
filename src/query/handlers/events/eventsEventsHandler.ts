@@ -1,14 +1,14 @@
 // src/query/handlers/events/eventsEventsHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryGetJsinfoDbForQueryInstance, QueryCheckJsinfoDbInstance } from '../../queryDb';
-import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
+import { QueryGetJsinfoDbForQueryInstance, QueryCheckJsinfoDbInstance } from '@jsinfo/query/queryDb';
+import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { asc, desc, eq, sql } from "drizzle-orm";
-import { Pagination, ParsePaginationFromString } from '../../utils/queryPagination';
-import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '../../queryConsts';
-import { CSVEscape } from '../../utils/queryUtils';
-import { RequestHandlerBase } from '../../classes/RequestHandlerBase';
-import { ProviderMonikerService } from '../../classes/QueryProviderMonikerService';
+import { Pagination, ParsePaginationFromString } from '@jsinfo/query/utils/queryPagination';
+import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '@jsinfo/query/queryConsts';
+import { CSVEscape } from '@jsinfo/utils/fmt';
+import { RequestHandlerBase } from '@jsinfo/query/classes/RequestHandlerBase';
+import { ProviderMonikerService } from '@jsinfo/redis/resources/global/ProviderMonikerSpecResource';
 
 export interface EventsEventsResponse {
     id: number | null;
@@ -101,16 +101,16 @@ class EventsEventsData extends RequestHandlerBase<EventsEventsResponse> {
             .offset(0)
             .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
 
-        const flattenedEvents = eventsRes.map(event => ({
+        const flattenedEvents = await Promise.all(eventsRes.map(async event => ({
             ...event,
             b1: event.b1?.toString() ?? null,
             b2: event.b2?.toString() ?? null,
             b3: event.b3?.toString() ?? null,
-            moniker: ProviderMonikerService.GetMonikerForProvider(event.provider),
-            monikerfull: ProviderMonikerService.GetMonikerFullDescription(event.provider),
+            moniker: event.provider ? await ProviderMonikerService.GetMonikerForProvider(event.provider) : null,
+            monikerfull: event.provider ? await ProviderMonikerService.GetMonikerFullDescription(event.provider) : null,
             datetime: event.timestamp?.toISOString() ?? null,
-            fulltext: event.fulltext ?? null // Ensure fulltext is included
-        }));
+            fulltext: event.fulltext ?? null
+        })));
 
         return flattenedEvents;
     }
@@ -204,16 +204,16 @@ class EventsEventsData extends RequestHandlerBase<EventsEventsResponse> {
                 .limit(finalPagination.count);
         }
 
-        const flattenedEvents = eventsRes.map(event => ({
+        const flattenedEvents = await Promise.all(eventsRes.map(async event => ({
             ...event,
             b1: event.b1?.toString() ?? null,
             b2: event.b2?.toString() ?? null,
             b3: event.b3?.toString() ?? null,
-            moniker: ProviderMonikerService.GetMonikerForProvider(event.provider),
-            monikerfull: ProviderMonikerService.GetMonikerFullDescription(event.provider),
+            moniker: event.provider ? await ProviderMonikerService.GetMonikerForProvider(event.provider) : null,
+            monikerfull: event.provider ? await ProviderMonikerService.GetMonikerFullDescription(event.provider) : null,
             datetime: event.timestamp?.toISOString() ?? null,
-            fulltext: event.fulltext ?? null // Ensure fulltext is included
-        }));
+            fulltext: event.fulltext ?? null
+        })));
 
         return flattenedEvents;
     }

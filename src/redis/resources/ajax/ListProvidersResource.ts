@@ -1,9 +1,8 @@
-import { RedisResourceBase } from '../../classes/RedisResourceBase';
+import { RedisResourceBase } from '@jsinfo/redis/classes/RedisResourceBase';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
-import { ProviderMonikerService } from '../global/ProviderMonikerSpecResource';
-import { IsIndexerProcess } from '@jsinfo/utils/utils';
-import { GetLatestBlock } from '../../../query/queryDb';
+import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
+import { ProviderMonikerService } from '@jsinfo/redis/resources/global/ProviderMonikerSpecResource';
+import { GetLatestBlock } from '@jsinfo/query/queryDb';
 
 interface ProviderEntry {
     provider: string;

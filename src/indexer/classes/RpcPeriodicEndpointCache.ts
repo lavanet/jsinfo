@@ -1,8 +1,10 @@
 // src/indexer/classes/RpcEndpointCahce.ts
 
-import { IsMeaningfulText, logger, TruncateError } from "../../utils/utils";
-import { QueryLavaRPC } from "../utils/restRpc";
-import { MemoryCache } from "./MemoryCache";
+import { logger } from '@jsinfo/utils/logger';
+import { QueryLavaRPC } from '@jsinfo/indexer/utils/restRpc';
+import { MemoryCache } from '@jsinfo/indexer/classes/MemoryCache';
+import { TruncateError } from '@jsinfo/utils/fmt';
+import { IsMeaningfulText } from '@jsinfo/utils/fmt';
 
 interface Delegation {
     provider: string;

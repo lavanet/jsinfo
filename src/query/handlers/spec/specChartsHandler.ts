@@ -1,17 +1,17 @@
 // src/query/handlers/specChartsHandler.ts
 
 import { FastifyReply, FastifyRequest, RouteShorthandOptions } from 'fastify';
-import { QueryGetJsinfoDbForQueryInstance } from '../../queryDb';
-import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
-import * as JsinfoProviderAgrSchema from '../../../schemas/jsinfoSchema/providerRelayPaymentsAgregation';
+import { QueryGetJsinfoDbForQueryInstance } from '@jsinfo/query/queryDb';
+import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
+import * as JsinfoProviderAgrSchema from '@jsinfo/schemas/jsinfoSchema/providerRelayPaymentsAgregation';
 import { sql, desc, gt, and, lt, eq, inArray } from "drizzle-orm";
-import { DateToISOString, FormatDateItems } from '../../utils/queryDateUtils';
-import { RequestHandlerBase } from '../../classes/RequestHandlerBase';
-import { GetDataLength } from '../../utils/queryUtils';
-import { GetAndValidateSpecIdFromRequest } from '../../utils/queryRequestArgParser';
-import { ProviderMonikerService } from '../../classes/QueryProviderMonikerService';
+import { DateToISOString, FormatDateItems } from '@jsinfo/utils/date';
+import { RequestHandlerBase } from '@jsinfo/query/classes/RequestHandlerBase';
+import { GetDataLength } from '@jsinfo/utils/fmt';
+import { GetAndValidateSpecIdFromRequest } from '@jsinfo/query/utils/queryRequestArgParser';
+import { ProviderMonikerService } from '@jsinfo/redis/resources/global/ProviderMonikerSpecResource';
 import { PgColumn } from 'drizzle-orm/pg-core';
-import { JSONStringifySpaced } from '../../../utils/utils';
+import { JSONStringifySpaced } from '@jsinfo/utils/fmt';
 
 type SpecChartCuRelay = {
     provider: string;
@@ -122,8 +122,8 @@ class SpecChartsData extends RequestHandlerBase<SpecChartResponse> {
         });
 
         // Populate monikers
-        let result = top10Providers.reduce((acc, item) => {
-            let moniker = ProviderMonikerService.GetMonikerForProvider(item.provider);
+        let result = top10Providers.reduce(async (acc, item) => {
+            let moniker = await ProviderMonikerService.GetMonikerForProvider(item.provider);
             return {
                 ...acc,
                 [item.provider!]: moniker || item.provider, // Fallback to provider if moniker is not found

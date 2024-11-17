@@ -1,12 +1,13 @@
 // src/indexer/restrpc_agregators/ProviderSpecMoniker.ts
 
-import { IsMeaningfulText, logger } from "../../utils/utils";
-import { QueryLavaRPC } from "../utils/restRpc";
-import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
+import { IsMeaningfulText } from '@jsinfo/utils/fmt';
+import { logger } from '@jsinfo/utils/logger';
+import { QueryLavaRPC } from '@jsinfo/indexer/utils/restRpc';
+import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { sql } from 'drizzle-orm';
-import { MemoryCache } from "../classes/MemoryCache";
-import { SpecAndConsumerService } from "../classes/IndexerSpecAndConsumerService";
+import { MemoryCache } from "@jsinfo/indexer/classes/MemoryCache";
+import { SpecAndConsumerService } from "@jsinfo/redis/resources/global/SpecAndConsumerResource";
 
 interface ProviderMonikerSpec {
     provider: string;
@@ -34,7 +35,7 @@ export async function GetProviderMonikerSpecs(spec: string): Promise<ProviderRes
 
 export async function ProcessProviderMonikerSpecs(db: PostgresJsDatabase): Promise<void> {
     try {
-        const specs = await SpecAndConsumerService.GetAllSpecs(db);
+        const specs = await SpecAndConsumerService.GetAllSpecs();
         for (const spec of specs) {
             const providerResponse = await GetProviderMonikerSpecs(spec);
             for (const provider of providerResponse.stakeEntry) {

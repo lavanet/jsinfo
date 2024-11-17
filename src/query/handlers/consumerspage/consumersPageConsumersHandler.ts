@@ -4,9 +4,9 @@
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryCheckJsinfoDbInstance, QueryGetJsinfoDbForQueryInstance } from '../../queryDb';
-import { and, asc, desc, gte, max } from "drizzle-orm";
-import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
-import * as JsinfoConsumerAgrSchema from '../../../schemas/jsinfoSchema/consumerRelayPaymentsAgregation';
+import { asc, gte, max } from "drizzle-orm";
+import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
+import * as JsinfoConsumerAgrSchema from '@jsinfo/schemas/jsinfoSchema/consumerRelayPaymentsAgregation';
 
 export const ConsumersPageConsumersRawHandlerOpts = {
     schema: {

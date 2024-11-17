@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import * as JsinfoProviderAgrSchema from '../../../schemas/jsinfoSchema/providerRelayPaymentsAgregation';
+import * as JsinfoProviderAgrSchema from '@jsinfo/schemas/jsinfoSchema/providerRelayPaymentsAgregation';
 import { RedisResourceBase } from '../../RedisResourceBase';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 

@@ -1,7 +1,6 @@
 import { RedisResourceBase } from '../../classes/RedisResourceBase';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { QueryGetJsinfoDbForQueryInstance } from '../../../query/queryDb';
-import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
+import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { eq } from 'drizzle-orm';
 
 interface SupplyData {
@@ -16,8 +15,8 @@ export class SupplyResource extends RedisResourceBase<SupplyData, SupplyArgs> {
     protected readonly redisKey = 'supply';
     protected readonly ttlSeconds = 300; // 5 minutes cache
 
-    protected async fetchFromDb(_db: PostgresJsDatabase, args: SupplyArgs): Promise<SupplyData> {
-        const result = await QueryGetJsinfoDbForQueryInstance()
+    protected async fetchFromDb(db: PostgresJsDatabase, args: SupplyArgs): Promise<SupplyData> {
+        const result = await db
             .select({ amount: JsinfoSchema.supply.amount })
             .from(JsinfoSchema.supply)
             .where(eq(JsinfoSchema.supply.key, args.type));

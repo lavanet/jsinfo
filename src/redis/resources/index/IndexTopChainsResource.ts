@@ -1,6 +1,6 @@
 import { sql, gt } from "drizzle-orm";
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import * as JsinfoProviderAgrSchema from '../../../schemas/jsinfoSchema/providerRelayPaymentsAgregation';
+import * as JsinfoProviderAgrSchema from '@jsinfo/schemas/jsinfoSchema/providerRelayPaymentsAgregation';
 import { RedisResourceBase } from '@jsinfo/redis/classes/RedisResourceBase';
 
 export interface IndexTopChainsData {

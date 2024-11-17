@@ -1,11 +1,11 @@
 // src/query/handlers/healthStatusHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { GetLatestBlock, QueryCheckIsJsinfoDbInstanceOk, QueryCheckJsinfoDbInstance, QueryGetJsinfoDbForQueryInstance } from '../../queryDb';
-import { RedisCache } from '../../../redis/classes/RedisCache';
-import * as JsinfoSchema from "../../../schemas/jsinfoSchema/jsinfoSchema";
+import { GetLatestBlock, QueryCheckIsJsinfoDbInstanceOk, QueryCheckJsinfoDbInstance, QueryGetJsinfoDbForQueryInstance } from '@jsinfo/query/queryDb';
+import { RedisCache } from '@jsinfo/redis/classes/RedisCache';
+import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { gt, desc } from "drizzle-orm";
-import { GetUtcNow } from '../../../utils/utils';
+import { GetUtcNow } from '@jsinfo/utils/date';
 
 export const HealthStatusRawHandlerOpts: RouteShorthandOptions = {
     schema: {

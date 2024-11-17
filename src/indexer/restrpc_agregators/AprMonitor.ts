@@ -1,13 +1,10 @@
 // src/indexer/restrpc_agregators/AprApi.ts
 
-import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
-import { CalculatePercentile } from "./DataProcessingUtils";
-import { logger } from '../../utils/utils';
-
-import { RpcPeriodicEndpointCache } from '../classes/RpcPeriodicEndpointCache';
-import { EstimatedRewardsResponse, RpcOnDemandEndpointCache } from '../classes/RpcOnDemandEndpointCache';
-
-import { GetJsinfoDbForIndexer } from "../../utils/dbUtils";
+import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
+import { logger } from '@jsinfo/utils/logger';
+import { RpcPeriodicEndpointCache } from '@jsinfo/indexer/classes/RpcPeriodicEndpointCache';
+import { EstimatedRewardsResponse, RpcOnDemandEndpointCache } from '@jsinfo/indexer/classes/RpcOnDemandEndpointCache';
+import { GetJsinfoDbForIndexer } from '@jsinfo/utils/db';
 import { ConvertToBaseDenom, GetUSDCValue } from './CurrencyConverstionUtils';
 
 // Constants
@@ -16,6 +13,28 @@ const BENCHMARK_DENOM = "ulava";
 const PERCENTILE = 0.8;
 
 const TEST_DENOMS = ["ibc/E3FCBEDDBAC500B1BAB90395C7D1E4F33D9B9ECFE82A16ED7D7D141A0152323F"];
+
+export function CalculatePercentile(values: number[], rank: number): number {
+  const dataLen = values.length;
+  if (dataLen === 0 || rank < 0.0 || rank > 1.0) {
+    return 0;
+  }
+
+  // Sort values in ascending order
+  values.sort((a, b) => a - b);
+
+  // Calculate the position based on the rank
+  const position = Math.floor((dataLen - 1) * rank);
+
+  if (dataLen % 2 === 0) {
+    // Interpolate between two middle values
+    const lower = values[position];
+    const upper = values[position + 1];
+    return lower + (upper - lower) * rank;
+  } else {
+    return values[position];
+  }
+}
 
 class APRMonitorClass {
   private intervalId: NodeJS.Timer | null = null;

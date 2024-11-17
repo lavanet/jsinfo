@@ -1,8 +1,8 @@
 import { desc } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { RedisResourceBase } from '@jsinfo/redis/classes/RedisResourceBase';
-import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
-import { MinBigInt } from '../../../utils/utils';
+import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
+import { MinBigInt } from '@jsinfo/utils/bigint';
 
 export interface IndexStakesData {
     stakeSum: string;

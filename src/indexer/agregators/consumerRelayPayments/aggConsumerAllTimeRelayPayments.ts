@@ -3,7 +3,7 @@
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { sql, ne } from "drizzle-orm";
 import * as JsinfoConsumerAgrSchema from '../../../schemas/jsinfoSchema/consumerRelayPaymentsAgregation';
-import { logger } from "../../../utils/utils";
+import { logger } from "../../../utils/logger";
 import { PgColumn } from 'drizzle-orm/pg-core';
 
 export async function aggConsumerAllTimeRelayPayments(db: PostgresJsDatabase) {

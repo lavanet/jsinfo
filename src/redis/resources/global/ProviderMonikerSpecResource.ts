@@ -1,6 +1,6 @@
 import { RedisResourceBase } from '../../classes/RedisResourceBase';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
+import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { desc, sql } from 'drizzle-orm';
 
 interface ProviderSpecMoniker {
@@ -156,6 +156,13 @@ export class ProviderMonikerSpecResource extends RedisResourceBase<ProviderMonik
         });
 
         return Array.from(uniqueProviders);
+    }
+
+    public async IsValidProvider(provider: string): Promise<boolean> {
+        const data = await this.fetchAndPickDb();
+        if (!data) return false;
+
+        return data.providers.some(p => p.provider === provider);
     }
 }
 

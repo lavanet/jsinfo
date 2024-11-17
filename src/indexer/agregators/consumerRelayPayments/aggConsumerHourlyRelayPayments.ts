@@ -2,9 +2,10 @@
 
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { isNotNull, sql, and, ne } from "drizzle-orm";
-import * as JsinfoSchema from "../../../schemas/jsinfoSchema/jsinfoSchema";
-import * as JsinfoConsumerAgrSchema from '../../../schemas/jsinfoSchema/consumerRelayPaymentsAgregation';
-import { DoInChunks, logger } from "../../../utils/utils";
+import * as JsinfoSchema from "@jsinfo/schemas/jsinfoSchema/jsinfoSchema";
+import * as JsinfoConsumerAgrSchema from '@jsinfo/schemas/jsinfoSchema/consumerRelayPaymentsAgregation';
+import { DoInChunks } from '@jsinfo/utils/processing';
+import { logger } from '@jsinfo/utils/logger';
 import { PgColumn } from 'drizzle-orm/pg-core';
 
 export async function getConsumerAggHourlyTimeSpan(db: PostgresJsDatabase): Promise<{ startTime: Date | null, endTime: Date | null }> {

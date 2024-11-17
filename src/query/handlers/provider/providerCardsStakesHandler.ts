@@ -2,10 +2,10 @@
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryCheckJsinfoDbInstance, QueryGetJsinfoDbForQueryInstance } from '../../queryDb';
-import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
+import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { desc, eq } from "drizzle-orm";
 import { GetAndValidateProviderAddressFromRequest } from '../../utils/queryRequestArgParser';
-import { MinBigInt } from '../../../utils/utils';
+import { MinBigInt } from '@jsinfo/utils/bigint';
 
 export const ProviderCardsStakesHandlerOpts: RouteShorthandOptions = {
     schema: {

@@ -23,15 +23,15 @@
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { QueryCheckJsinfoDbInstance, QueryGetJsinfoDbForQueryInstance } from '../../queryDb';
-import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
+import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { desc, eq, gte, and } from "drizzle-orm";
-import { RedisCache } from '../../../redis/classes/RedisCache';
-import { JSONStringify, logger } from '../../../utils/utils';
-import { GetAndValidateConsumerAddressFromRequest } from '../../utils/queryRequestArgParser';
-import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '../../queryConsts';
-import { RequestHandlerBase } from '../../classes/RequestHandlerBase';
-import { Pagination } from '../../utils/queryPagination';
-import { CSVEscape } from '../../utils/queryUtils';
+import { RedisCache } from '@jsinfo/redis/classes/RedisCache';
+import { logger } from '@jsinfo/utils/logger';
+import { GetAndValidateConsumerAddressFromRequest } from '@jsinfo/query/utils/queryRequestArgParser';
+import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '@jsinfo/query/queryConsts';
+import { RequestHandlerBase } from '@jsinfo/query/classes/RequestHandlerBase';
+import { Pagination } from '@jsinfo/query/utils/queryPagination';
+import { CSVEscape, JSONStringify } from '@jsinfo/utils/fmt';
 
 type ConsumerSubscriptionRawEntry = {
     id: number;

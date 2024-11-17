@@ -3,7 +3,7 @@
 import { ProcessSubscriptionList } from "./SubscriptionListProcessor";
 import { ProcessProviderMonikerSpecs } from "./ProviderSpecMonikerProcessor";
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-import { logger } from "../../utils/utils";
+import { logger } from '@jsinfo/utils/logger';
 import { ProcessChainWalletApi } from "./ChainWalletApiProcessor";
 import { APRMonitor } from "./AprMonitor";
 import { DelegatorRewardsMonitor } from "./DelegatorRewardsMonitor";

@@ -4,8 +4,8 @@
 // curl http://localhost:8081/provider/lava@14shwrej05nrraem8mwsnlw50vrtefkajar75ge
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { GetLatestBlock, QueryCheckJsinfoDbInstance } from '../../queryDb';
-import { GetAndValidateProviderAddressFromRequest } from '../../utils/queryRequestArgParser';
-import { ProviderMonikerService } from '../../classes/QueryProviderMonikerService';
+import { GetAndValidateProviderAddressFromRequest } from '@jsinfo/query/utils/queryRequestArgParser';
+import { ProviderMonikerService } from '@jsinfo/redis/resources/global/ProviderMonikerSpecResource';
 
 export const ProviderPaginatedHandlerOpts: RouteShorthandOptions = {
     schema: {

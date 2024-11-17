@@ -1,6 +1,6 @@
 import { RedisResourceBase } from '../../classes/RedisResourceBase';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import * as JsinfoProviderAgrSchema from '../../../schemas/jsinfoSchema/providerRelayPaymentsAgregation';
+import * as JsinfoProviderAgrSchema from '@jsinfo/schemas/jsinfoSchema/providerRelayPaymentsAgregation';
 import { sql, gt } from "drizzle-orm";
 
 export interface Index30DayCuData {

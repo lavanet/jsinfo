@@ -1,7 +1,7 @@
-import { GetJsinfoDbForIndexer } from '@jsinfo/utils/dbUtils';
+import { GetJsinfoDbForIndexer } from '@jsinfo/utils/db';
 import { RedisCache } from './classes/RedisCache';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { IsIndexerProcess } from '@jsinfo/utils/utils';
+import { IsIndexerProcess } from '@jsinfo/utils/env';
 import { QueryGetJsinfoDbForQueryInstance } from '@jsinfo/query/queryDb';
 import { QueryCheckJsinfoDbInstance } from '@jsinfo/query/queryDb';
 

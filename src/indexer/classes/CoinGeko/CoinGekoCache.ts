@@ -1,6 +1,7 @@
-import { logger, TruncateError } from "../../../utils/utils";
-import { MemoryCache } from "../MemoryCache";
-import { FetchRestData } from "../../utils/restRpc";
+import { logger } from '@jsinfo/utils/logger';
+import { TruncateError } from '@jsinfo/utils/fmt';
+import { MemoryCache } from '@jsinfo/indexer/classes/MemoryCache';
+import { FetchRestData } from '@jsinfo/indexer/utils/restRpc';
 import denomsData from "./CoinGekoDenomMap.json" assert { type: "json" };
 
 export interface CoinGeckoRateResponse {

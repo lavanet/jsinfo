@@ -28,15 +28,14 @@ import { AutoCompleteLinksV2PaginatedHandler, AutoCompleteLinksV2PaginatedHandle
 
 // -- Index page ajax -- 
 import { Index30DayCuHandlerOpts, Index30DayCuHandler } from './handlers/index/index30DayCuHandler';
-import { IndexCachedMetricsHandlerOpts, IndexCachedMetricsHandler } from './handlers/index/indexCachedMetricsHandler';
 import { IndexLatestBlockHandlerOpts, IndexLatestBlockHandler } from './handlers/index/indexLatestBlockHandler';
 import { IndexTopChainsHandlerOpts, IndexTopChainsHandler } from './handlers/index/indexTopChainsHandler';
 import { IndexTotalCuHandlerOpts, IndexTotalCuHandler } from './handlers/index/indexTotalCuHandler';
 import { IndexStakesHandlerOpts, IndexStakesHandler } from './handlers/index/indexStakesHandler';
 
-import { IndexProvidersPaginatedHandler, IndexProvidersPaginatedHandlerOpts, IndexProvidersItemCountPaginatiedHandler, IndexProvidersCSVRawHandler } from './handlers/index/indexProvidersHandler';
-import { IndexProvidersActivePaginatedHandler, IndexProvidersActivePaginatedHandlerOpts, IndexProvidersActiveItemCountPaginatiedHandler, IndexProvidersActiveCSVRawHandler } from './handlers/index/indexProvidersActiveHandler';
-import { IndexChartsV3RawHandler, IndexChartsV3RawHandlerOpts } from './handlers/index/indexChartsV3Handler';
+import { IndexProvidersPaginatedHandler, IndexProvidersPaginatedHandlerOpts, IndexProvidersItemCountPaginatiedHandler, IndexProvidersCSVRawHandler, IndexProvidersCSVRawHandlerOpts, IndexProvidersItemCountPaginatiedHandlerOpts } from './handlers/index/indexProvidersHandler';
+import { IndexProvidersActivePaginatedHandler, IndexProvidersActivePaginatedHandlerOpts, IndexProvidersActiveItemCountPaginatiedHandler, IndexProvidersActiveCSVRawHandler, IndexProvidersActiveCSVRawHandlerOpts, IndexProvidersActiveItemCountPaginatiedHandlerOpts } from './handlers/index/indexProvidersActiveHandler';
+import { IndexChartsQuerystring, IndexChartsV3RawHandler, IndexChartsV3RawHandlerOpts } from './handlers/index/indexChartsV3Handler';
 
 // -- Provider page ajax --
 import { ProviderPaginatedHandler, ProviderPaginatedHandlerOpts } from './handlers/provider/providerHandler';
@@ -105,39 +104,40 @@ GetServerInstance().get('/healthz', HealthRawHandlerOpts, HealthRawHandler);
 GetServerInstance().get('/healthstatus', HealthStatusRawHandlerOpts, HealthStatusRawHandler);
 
 // -- Server supply ajax --
-RegisterRedisBackedHandler('/supply/total', SupplyRawHandlerOpts, TotalSupplyRawHandler, { cache_ttl: 60, is_text: true });
-RegisterRedisBackedHandler('/supply/circulating', SupplyRawHandlerOpts, CirculatingSupplyRawHandler, { cache_ttl: 60, is_text: true });
+GetServerInstance().get('/supply/total', SupplyRawHandlerOpts, TotalSupplyRawHandler);
+GetServerInstance().get('/supply/circulating', SupplyRawHandlerOpts, CirculatingSupplyRawHandler);
 
 // -- Server chain wallet api ajax --
-RegisterRedisBackedHandler('/lava_chain_stakers', ChainWalletApiHandlerOpts, LavaChainStakersHandler, { cache_ttl: 10 });
-RegisterRedisBackedHandler('/lava_chain_restakers', ChainWalletApiHandlerOpts, LavaChainRestakersHandler, { cache_ttl: 10 });
+GetServerInstance().get('/lava_chain_stakers', ChainWalletApiHandlerOpts, LavaChainStakersHandler);
+GetServerInstance().get('/lava_chain_restakers', ChainWalletApiHandlerOpts, LavaChainRestakersHandler);
 
 // -- Server APR ajax --
-RegisterRedisBackedHandler('/apr', APRRawHandlerOpts, APRRawHandler, { cache_ttl: 60 });
+GetServerInstance().get('/apr', APRRawHandlerOpts, APRRawHandler);
 
 // -- list all providers and monikers endpoint ---
-RegisterRedisBackedHandler('/listProviders', ListProvidersRawHandlerOpts, ListProvidersRawHandler, { cache_ttl: 10 * 60 });
+GetServerInstance().get('/listProviders', ListProvidersRawHandlerOpts, ListProvidersRawHandler);
 
 // -- Server meta ajax --
-RegisterRedisBackedHandler('/providers', ProvidersPaginatedHandlerOpts, ProvidersPaginatedHandler, { cache_ttl: 30 });
-RegisterRedisBackedHandler('/specs', SpecsPaginatedHandlerOpts, SpecsPaginatedHandler, { cache_ttl: 30 });
-RegisterRedisBackedHandler('/consumers', ConsumersPaginatedHandlerOpts, ConsumersPaginatedHandler, { cache_ttl: 30 });
+GetServerInstance().get('/providers', ProvidersPaginatedHandlerOpts, ProvidersPaginatedHandler);
+GetServerInstance().get('/specs', SpecsPaginatedHandlerOpts, SpecsPaginatedHandler);
+GetServerInstance().get('/consumers', ConsumersPaginatedHandlerOpts, ConsumersPaginatedHandler);
 
 // -- All pages ajax --
-RegisterRedisBackedHandler('/autoCompleteLinksV2Handler', AutoCompleteLinksV2PaginatedHandlerOpts, AutoCompleteLinksV2PaginatedHandler, { cache_ttl: 10 * 60 });
+GetServerInstance().get('/autoCompleteLinksV2Handler', AutoCompleteLinksV2PaginatedHandlerOpts, AutoCompleteLinksV2PaginatedHandler);
 
 // -- Index page ajax -- 
-RegisterRedisBackedHandler('/index30DayCu', Index30DayCuHandlerOpts, Index30DayCuHandler, { cache_ttl: 10 });
-RegisterRedisBackedHandler('/indexCachedMetrics', IndexCachedMetricsHandlerOpts, IndexCachedMetricsHandler, { cache_ttl: 10 });
-RegisterRedisBackedHandler('/indexLatestBlock', IndexLatestBlockHandlerOpts, IndexLatestBlockHandler, { cache_ttl: 10 });
-RegisterRedisBackedHandler('/indexTopChains', IndexTopChainsHandlerOpts, IndexTopChainsHandler, { cache_ttl: 10 });
-RegisterRedisBackedHandler('/indexTotalCu', IndexTotalCuHandlerOpts, IndexTotalCuHandler, { cache_ttl: 10 });
-RegisterRedisBackedHandler('/indexStakesHandler', IndexStakesHandlerOpts, IndexStakesHandler, { cache_ttl: 10 });
-RegisterPaginationServerHandler('/indexProviders', IndexProvidersPaginatedHandlerOpts, IndexProvidersPaginatedHandler, IndexProvidersItemCountPaginatiedHandler);
-RegisterPaginationServerHandler('/indexProvidersActive', IndexProvidersActivePaginatedHandlerOpts, IndexProvidersActivePaginatedHandler, IndexProvidersActiveItemCountPaginatiedHandler);
-GetServerInstance().get('/indexProvidersCsv', IndexProvidersCSVRawHandler);
-GetServerInstance().get('/indexProvidersActiveCsv', IndexProvidersActiveCSVRawHandler);
-GetServerInstance().get('/indexChartsV3', IndexChartsV3RawHandlerOpts, IndexChartsV3RawHandler);
+GetServerInstance().get('/index30DayCu', Index30DayCuHandlerOpts, Index30DayCuHandler);
+GetServerInstance().get('/indexLatestBlock', IndexLatestBlockHandlerOpts, IndexLatestBlockHandler);
+GetServerInstance().get('/indexTopChains', IndexTopChainsHandlerOpts, IndexTopChainsHandler);
+GetServerInstance().get('/indexTotalCu', IndexTotalCuHandlerOpts, IndexTotalCuHandler);
+GetServerInstance().get('/indexStakesHandler', IndexStakesHandlerOpts, IndexStakesHandler);
+GetServerInstance().get('/indexProviders', IndexProvidersPaginatedHandlerOpts, IndexProvidersPaginatedHandler);
+GetServerInstance().get('/item-count/indexProviders', IndexProvidersItemCountPaginatiedHandlerOpts, IndexProvidersItemCountPaginatiedHandler);
+GetServerInstance().get('/indexProvidersActive', IndexProvidersActivePaginatedHandlerOpts, IndexProvidersActivePaginatedHandler);
+GetServerInstance().get('/item-count/indexProvidersActive', IndexProvidersActiveItemCountPaginatiedHandlerOpts, IndexProvidersActiveItemCountPaginatiedHandler);
+GetServerInstance().get('/indexProvidersCsv', IndexProvidersCSVRawHandlerOpts, IndexProvidersCSVRawHandler);
+GetServerInstance().get('/indexProvidersActiveCsv', IndexProvidersActiveCSVRawHandlerOpts, IndexProvidersActiveCSVRawHandler);
+GetServerInstance().get<{ Querystring: IndexChartsQuerystring }>('/indexChartsV3', IndexChartsV3RawHandlerOpts, IndexChartsV3RawHandler);
 
 // -- Provider page ajax --
 RegisterRedisBackedHandler('/provider/:addr', ProviderPaginatedHandlerOpts, ProviderPaginatedHandler);

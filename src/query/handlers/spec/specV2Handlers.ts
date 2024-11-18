@@ -2,11 +2,11 @@
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { GetLatestBlock, QueryGetJsinfoDbForQueryInstance, QueryCheckJsinfoDbInstance } from '../../queryDb';
-import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
-import * as JsinfoProviderAgrSchema from '../../../schemas/jsinfoSchema/providerRelayPaymentsAgregation';
+import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
+import * as JsinfoProviderAgrSchema from '@jsinfo/schemas/jsinfoSchema/providerRelayPaymentsAgregation';
 import { sql, eq, count, and, gte, inArray } from "drizzle-orm";
 import { GetAndValidateSpecIdFromRequest } from '../../utils/queryRequestArgParser';
-import { RedisCache } from '../../classes/RedisCache';
+import { RedisCache } from '../../../redis/classes/RedisCache';
 
 // Spec CU, Relay, and Rewards Handler
 export const SpecCuRelayRewardsHandlerOpts: RouteShorthandOptions = {

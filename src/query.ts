@@ -1,7 +1,7 @@
 // jsinfo/src/query.ts
 
 import * as consts from './query/queryConsts'
-import { logger } from './utils/utils'
+import { logger } from './utils/logger'
 
 import { GetServerInstance } from './query/queryServer'
 import { QueryInitJsinfoDbInstance, QueryInitRelaysReadDbInstance, GetLatestBlock } from './query/queryDb'

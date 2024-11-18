@@ -2,7 +2,8 @@ import { existsSync, readFileSync, writeFileSync, unlinkSync, readdirSync, statS
 import * as path from 'path'; // Import path for using path.join
 import * as pako from 'pako';
 import { JSINFO_INDEXER_CACHE_PATH, JSINFO_INDEXER_CACHE_USE_READ, JSINFO_INDEXER_CACHE_USE_SAVE, JSINFO_INDEXER_CACHE_USE_PAKO_COMPRESSION, JSINFO_INDEXER_CACHE_MAX_SIZE } from './indexerConsts';
-import { JSONStringify, logger } from '../utils/utils';
+import { JSONStringify } from '@jsinfo/utils/fmt';
+import { logger } from '@jsinfo/utils/logger';
 
 class LavaBlockCache {
     private cacheSize: number = 0;

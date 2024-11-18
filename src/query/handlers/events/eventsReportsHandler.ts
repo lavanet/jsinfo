@@ -1,14 +1,14 @@
 // src/query/handlers/eventsReportsHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryGetJsinfoDbForQueryInstance, QueryCheckJsinfoDbInstance } from '../../queryDb';
-import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
+import { QueryGetJsinfoDbForQueryInstance, QueryCheckJsinfoDbInstance } from '@jsinfo/query/queryDb';
+import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { asc, desc, eq, sql } from "drizzle-orm";
-import { Pagination, ParsePaginationFromString } from '../../utils/queryPagination';
-import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '../../queryConsts';
-import { CSVEscape } from '../../utils/queryUtils';
-import { RequestHandlerBase } from '../../classes/RequestHandlerBase';
-import { MonikerCache } from '../../classes/QueryProviderMonikerCache';
+import { Pagination, ParsePaginationFromString } from '@jsinfo/query/utils/queryPagination';
+import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '@jsinfo/query/queryConsts';
+import { CSVEscape } from '@jsinfo/utils/fmt';
+import { RequestHandlerBase } from '@jsinfo/query/classes/RequestHandlerBase';
+import { ProviderMonikerService } from '@jsinfo/redis/resources/global/ProviderMonikerSpecResource';
 
 export interface EventsReportsResponse {
     provider: string | null;
@@ -82,12 +82,12 @@ class EventsReportsData extends RequestHandlerBase<EventsReportsResponse> {
             .offset(0)
             .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
 
-        const flattenedEvents = reportsRes.map(data => ({
+        const flattenedEvents = await Promise.all(reportsRes.map(async data => ({
             ...data,
-            moniker: MonikerCache.GetMonikerForProvider(data.provider),
-            monikerfull: MonikerCache.GetMonikerFullDescription(data.provider),
+            moniker: await ProviderMonikerService.GetMonikerForProvider(data.provider),
+            monikerfull: await ProviderMonikerService.GetMonikerFullDescription(data.provider),
             datetime: data.datetime?.toISOString() ?? null
-        }));
+        })));
 
         return flattenedEvents;
     }
@@ -160,12 +160,12 @@ class EventsReportsData extends RequestHandlerBase<EventsReportsResponse> {
                 .offset(offset)
                 .limit(finalPagination.count);
 
-            const flattenedReports = reportsRes.map(data => ({
+            const flattenedReports = await Promise.all(reportsRes.map(async data => ({
                 ...data.provider_reported,
-                moniker: MonikerCache.GetMonikerForProvider(data.provider_reported.provider),
-                monikerfull: MonikerCache.GetMonikerFullDescription(data.provider_reported.provider),
+                moniker: await ProviderMonikerService.GetMonikerForProvider(data.provider_reported.provider),
+                monikerfull: await ProviderMonikerService.GetMonikerFullDescription(data.provider_reported.provider),
                 datetime: data.provider_reported.datetime?.toISOString() ?? null
-            }));
+            })));
 
             return flattenedReports;
         }
@@ -177,12 +177,12 @@ class EventsReportsData extends RequestHandlerBase<EventsReportsResponse> {
             .offset(offset)
             .limit(finalPagination.count);
 
-        const flattenedReports = reportsRes.map(data => ({
+        const flattenedReports = await Promise.all(reportsRes.map(async data => ({
             ...data,
-            moniker: MonikerCache.GetMonikerForProvider(data.provider),
-            monikerfull: MonikerCache.GetMonikerFullDescription(data.provider),
+            moniker: await ProviderMonikerService.GetMonikerForProvider(data.provider),
+            monikerfull: await ProviderMonikerService.GetMonikerFullDescription(data.provider),
             datetime: data.datetime?.toISOString() ?? null
-        }));
+        })));
 
         return flattenedReports;
     }

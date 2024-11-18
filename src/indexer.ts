@@ -1,6 +1,10 @@
 // jsinfo/src/indexer.ts
 
-import { DoInChunks, logger, BackoffRetry, IsIndexerProcess, IsMeaningfulText } from "./utils/utils";
+import { logger } from '@jsinfo/utils/logger';
+import { DoInChunks } from '@jsinfo/utils/processing';
+import { BackoffRetry } from '@jsinfo/utils/retry';
+import { IsIndexerProcess } from '@jsinfo/utils/env';
+
 if (!IsIndexerProcess()) {
     console.log('indexer.ts', "not indexer process");
     process.exit();
@@ -18,10 +22,9 @@ import { GetOneLavaBlock } from './indexer/lavaBlock'
 import { LavaBlock } from './indexer/types'
 import { SyncBlockchainEntities } from './indexer/blockchainEntities/blockchainEntitiesSync'
 import { ConnectToRpc, RpcConnection } from "./indexer/utils/lavajsRpc";
-import { MigrateDb, GetJsinfoDbForIndexer } from "./utils/dbUtils";
+import { MigrateDb, GetJsinfoDbForIndexer } from "./utils/db";
 import { AggProviderAndConsumerRelayPayments, AggProviderAndConsumerRelayPaymentsSync } from "./indexer/agregators/aggProviderAndConsumerRelayPayments";
-import { SaveTokenSupplyToDB } from './indexer/supply/syncSupply';
-import { RestRpcAgreagorsCaller } from './indexer/restrpc_agregators/RestRpcAgregatorsCaller';
+import { BackgroundThreadCaller } from './indexer/backgroundThreadCaller';
 
 let static_blockchainEntitiesStakes: Map<string, JsinfoSchema.InsertProviderStake[]> = new Map()
 
@@ -173,10 +176,9 @@ const indexer = async (): Promise<void> => {
 
     await AggProviderAndConsumerRelayPaymentsSync(db);
     logger.info('Done AggProviderAndConsumerRelayPaymentsSync');
-    await RestRpcAgreagorsCaller(db);
-    logger.info('Done RestRpcAgreagorsCaller');
-    await SaveTokenSupplyToDB(db, rpcConnection.lavajsClient);
-    logger.info('Done SaveTokenSupplyToDB');
+    await BackgroundThreadCaller(db, rpcConnection.lavajsClient);
+    logger.info('Done BackgroundThreadCaller');
+
     await fillUpBackoffRetry(db, rpcConnection);
     logger.info('Done fillUpBackoffRetry');
 }
@@ -316,9 +318,7 @@ const fillUp = async (db: PostgresJsDatabase, rpcConnection: RpcConnection) => {
     }
 
     AggProviderAndConsumerRelayPayments(db);
-    RestRpcAgreagorsCaller(db);
-
-    await SaveTokenSupplyToDB(db, rpcConnection.lavajsClient);
+    BackgroundThreadCaller(db, rpcConnection.lavajsClient);
 
     fillUpBackoffRetryWTimeout(db, rpcConnection);
     logger.info('fillUp: process completed');

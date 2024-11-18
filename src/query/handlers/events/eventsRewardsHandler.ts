@@ -1,14 +1,14 @@
 // src/query/handlers/eventsRewardsHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryGetJsinfoDbForQueryInstance, QueryCheckJsinfoDbInstance } from '../../queryDb';
-import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
+import { QueryGetJsinfoDbForQueryInstance, QueryCheckJsinfoDbInstance } from '@jsinfo/query/queryDb';
+import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { asc, desc, eq, sql } from "drizzle-orm";
-import { Pagination, ParsePaginationFromString } from '../../utils/queryPagination';
-import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '../../queryConsts';
-import { CSVEscape } from '../../utils/queryUtils';
-import { RequestHandlerBase } from '../../classes/RequestHandlerBase';
-import { MonikerCache } from '../../classes/QueryProviderMonikerCache';
+import { Pagination, ParsePaginationFromString } from '@jsinfo/query/utils/queryPagination';
+import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '@jsinfo/query/queryConsts';
+import { CSVEscape } from '@jsinfo/utils/fmt';
+import { RequestHandlerBase } from '@jsinfo/query/classes/RequestHandlerBase';
+import { ProviderMonikerService } from '@jsinfo/redis/resources/global/ProviderMonikerSpecResource';
 
 export interface EventsRewardsResponse {
     id: number | null;
@@ -94,12 +94,12 @@ class EventsRewardsData extends RequestHandlerBase<EventsRewardsResponse> {
             .offset(0)
             .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
 
-        const flattenedRes = paymentsRes.map(data => ({
+        const flattenedRes = await Promise.all(paymentsRes.map(async data => ({
             ...data,
             pay: data.pay?.toString() || null,
-            moniker: MonikerCache.GetMonikerForProvider(data.provider),
-            monikerfull: MonikerCache.GetMonikerFullDescription(data.provider),
-        }));
+            moniker: await ProviderMonikerService.GetMonikerForProvider(data.provider),
+            monikerfull: await ProviderMonikerService.GetMonikerFullDescription(data.provider),
+        })));
 
         return flattenedRes;
     }
@@ -196,12 +196,12 @@ class EventsRewardsData extends RequestHandlerBase<EventsRewardsResponse> {
                 .offset(offset)
                 .limit(finalPagination.count);
 
-            const flattenedRewards = paymentsRes.map(data => ({
+            const flattenedRewards = await Promise.all(paymentsRes.map(async data => ({
                 ...data,
                 pay: data.pay?.toString() || null,
-                moniker: MonikerCache.GetMonikerForProvider(data.provider),
-                monikerfull: MonikerCache.GetMonikerFullDescription(data.provider),
-            }));
+                moniker: await ProviderMonikerService.GetMonikerForProvider(data.provider),
+                monikerfull: await ProviderMonikerService.GetMonikerFullDescription(data.provider),
+            })));
 
             return flattenedRewards;
         }
@@ -213,12 +213,12 @@ class EventsRewardsData extends RequestHandlerBase<EventsRewardsResponse> {
             .offset(offset)
             .limit(finalPagination.count);
 
-        const flattenedRewards = paymentsRes.map(data => ({
+        const flattenedRewards = await Promise.all(paymentsRes.map(async data => ({
             ...data,
             pay: data.pay?.toString() || null,
-            moniker: MonikerCache.GetMonikerForProvider(data.provider),
-            monikerfull: MonikerCache.GetMonikerFullDescription(data.provider),
-        }));
+            moniker: await ProviderMonikerService.GetMonikerForProvider(data.provider),
+            monikerfull: await ProviderMonikerService.GetMonikerFullDescription(data.provider),
+        })));
 
         return flattenedRewards;
     }

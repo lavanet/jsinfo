@@ -3,7 +3,7 @@
 import { StargateClient } from "@cosmjs/stargate"
 import { Tendermint37Client } from "@cosmjs/tendermint-rpc";
 import * as lavajs from '@lavanet/lavajs';
-import { logger } from "../../utils/utils";
+import { logger } from '@jsinfo/utils/logger';
 
 export interface RpcConnection {
     client: StargateClient;

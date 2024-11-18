@@ -26,6 +26,12 @@
       "bun-types",
       "jest"
     ],
+    "baseUrl": ".",
+    "paths": {
+      "@jsinfo/*": [
+        "src/*"
+      ]
+    }
   },
   "include": [
     "src",

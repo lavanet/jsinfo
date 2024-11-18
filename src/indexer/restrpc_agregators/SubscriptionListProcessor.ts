@@ -1,10 +1,11 @@
-import { IsMeaningfulText, logger } from "../../utils/utils";
-import { ReplaceForCompare } from "./DataProcessingUtils";
-import { QueryLavaRPC } from "../utils/restRpc";
-import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
+import { IsMeaningfulText } from "@jsinfo/utils/fmt";
+import { logger } from "@jsinfo/utils/logger";
+import { StringifyJsonForCompare } from "@jsinfo/utils/fmt";
+import { QueryLavaRPC } from "@jsinfo/indexer/utils/restRpc";
+import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { eq, desc } from "drizzle-orm";
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-import { MemoryCache } from "../classes/MemoryCache";
+import { MemoryCache } from "@jsinfo/indexer/classes/MemoryCache";
 interface Credit {
     denom: string;
     amount: string;
@@ -72,7 +73,7 @@ async function ProcessSubscription(db: PostgresJsDatabase, sub: SubInfo): Promis
 
     const existingFulltext = existingData[0]?.fulltext || '';
 
-    if (existingFulltext === '' || ReplaceForCompare(existingFulltext) !== ReplaceForCompare(dataString)) {
+    if (existingFulltext === '' || StringifyJsonForCompare(existingFulltext) !== StringifyJsonForCompare(dataString)) {
         const newSubscription: JsinfoSchema.InsertConsumerSubscriptionList = {
             consumer,
             plan,

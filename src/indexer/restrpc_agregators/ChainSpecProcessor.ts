@@ -1,7 +1,7 @@
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { RpcPeriodicEndpointCache } from "../classes/RpcPeriodicEndpointCache";
-import { keyValueStore } from "../../schemas/jsinfoSchema/jsinfoSchema";
-import { logger } from "../../utils/utils";
+import { keyValueStore } from "@jsinfo/schemas/jsinfoSchema/jsinfoSchema";
+import { logger } from "@jsinfo/utils/logger";
 import { eq } from "drizzle-orm";
 
 export async function ProcessChainSpecs(db: PostgresJsDatabase): Promise<void> {

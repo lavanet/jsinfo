@@ -1,9 +1,11 @@
-// src/dbUtils.ts
+// src/utils/db.ts
 
 import { drizzle, PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import postgres from 'postgres';
-import { GetEnvVar, Sleep, logger } from './utils';
+import { logger } from './logger';
+import { GetEnvVar } from './env';
+import { Sleep } from './sleep';
 
 let cachedPostgresUrl: string | null = null;
 
@@ -79,7 +81,6 @@ export async function GetRelaysReadDbForQuery(): Promise<PostgresJsDatabase> {
 export const MigrateDb = async () => {
     logger.info(`MigrateDb:: Starting database migration... ${new Date().toISOString()}`);
     let postgresUrl = await GetPostgresUrl();
-    // console.log("MigrateDb:: postgresUrl", postgresUrl);
     const migrationClient = postgres(postgresUrl, { max: 1 });
     logger.info(`MigrateDb:: Migration client created. ${new Date().toISOString()}`);
     await migrate(drizzle(migrationClient), { migrationsFolder: "drizzle" });

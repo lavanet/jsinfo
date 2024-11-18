@@ -3,10 +3,7 @@
 // curl http://localhost:8081/lava_chain_restakers
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryCheckJsinfoDbInstance, QueryGetJsinfoDbForQueryInstance } from '../../queryDb';
-import { keyValueStore } from '../../../schemas/jsinfoSchema/jsinfoSchema';
-import { eq } from 'drizzle-orm';
-import { logger } from '../../../utils/utils';
+import { ChainWalletResource, ChainWalletData } from '../../../redis/resources/ajax/ChainWalletResource';
 
 export const ChainWalletApiHandlerOpts: RouteShorthandOptions = {
     schema: {
@@ -17,53 +14,43 @@ export const ChainWalletApiHandlerOpts: RouteShorthandOptions = {
                     total: { type: 'string' },
                     monthly: { type: 'string' }
                 }
+            },
+            400: {
+                type: 'object',
+                properties: {
+                    error: {
+                        type: 'string'
+                    }
+                }
             }
         }
     }
 }
 
-async function getKeyValueFromStore(key: string): Promise<string> {
-    await QueryCheckJsinfoDbInstance();
-
-    const result = await QueryGetJsinfoDbForQueryInstance()
-        .select({ value: keyValueStore.value })
-        .from(keyValueStore)
-        .where(eq(keyValueStore.key, key));
-
-    if (result.length > 0 && result[0].value) {
-        return result[0].value;
-    } else {
-        logger.warn(`No value found for key: ${key}`);
-        return "0";
+export async function LavaChainStakersHandler(
+    request: FastifyRequest,
+    reply: FastifyReply
+): Promise<ChainWalletData> {
+    const resource = new ChainWalletResource();
+    const result = await resource.fetchAndPickDb({ type: 'stakers' });
+    if (!result) {
+        reply.status(400);
+        reply.send({ error: 'Failed to fetch stakers data' });
+        return reply;
     }
+    return result;
 }
 
-export async function LavaChainStakersHandler(request: FastifyRequest, reply: FastifyReply) {
-    try {
-        const total = await getKeyValueFromStore('stakers_current_unique_delegators');
-        const monthly = await getKeyValueFromStore('stakers_monthly_unique_delegators');
-
-        return {
-            total,
-            monthly
-        };
-    } catch (error) {
-        logger.error('Error in LavaChainStakersHandler', { error });
-        reply.status(500).send({ error: 'Internal Server Error' });
+export async function LavaChainRestakersHandler(
+    request: FastifyRequest,
+    reply: FastifyReply
+): Promise<ChainWalletData> {
+    const resource = new ChainWalletResource();
+    const result = await resource.fetchAndPickDb({ type: 'restakers' });
+    if (!result) {
+        reply.status(400);
+        reply.send({ error: 'Failed to fetch restakers data' });
+        return reply;
     }
-}
-
-export async function LavaChainRestakersHandler(request: FastifyRequest, reply: FastifyReply) {
-    try {
-        const total = await getKeyValueFromStore('restakers_current_unique_delegators');
-        const monthly = await getKeyValueFromStore('restakers_monthly_unique_delegators');
-
-        return {
-            total,
-            monthly
-        };
-    } catch (error) {
-        logger.error('Error in LavaChainRestakersHandler', { error });
-        reply.status(500).send({ error: 'Internal Server Error' });
-    }
+    return result;
 }

@@ -2,14 +2,14 @@
 
 import { FastifyReply, FastifyRequest, RouteShorthandOptions } from 'fastify';
 import { QueryCheckJsinfoDbInstance, QueryGetJsinfoDbForQueryInstance } from '../../queryDb';
-import * as JsinfoProviderAgrSchema from '../../../schemas/jsinfoSchema/providerRelayPaymentsAgregation';
+import * as JsinfoProviderAgrSchema from '@jsinfo/schemas/jsinfoSchema/providerRelayPaymentsAgregation';
 import { sql, gt, and, lt, desc, eq } from "drizzle-orm";
-import { DateToISOString, FormatDateItems } from '../../utils/queryDateUtils';
-import { RequestHandlerBase } from '../../classes/RequestHandlerBase';
-import { GetAndValidateProviderAddressFromRequest, GetAndValidateSpecIdFromRequestWithAll } from '../../utils/queryRequestArgParser';
+import { DateToISOString } from '@jsinfo/utils/date';
+import { RequestHandlerBase } from '@jsinfo/query/classes/RequestHandlerBase';
+import { GetAndValidateProviderAddressFromRequest, GetAndValidateSpecIdFromRequestWithAll } from '@jsinfo/query/utils/queryRequestArgParser';
 import { PgColumn } from 'drizzle-orm/pg-core';
-import { logger } from '../../../utils/utils';
-import { RedisCache } from '../../classes/RedisCache';
+import { logger } from '@jsinfo/utils/logger';
+import { RedisCache } from '@jsinfo/redis/classes/RedisCache';
 
 type ProviderChartDataPoint = {
     date: string;

@@ -1,11 +1,12 @@
 // src/indexer/blockchainEntities/blockchainEntitiesSync.ts
 
-import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
+import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { and, eq, ne } from "drizzle-orm";
-import { IsMeaningfulText, logger } from "../../utils/utils";
-import { LavaClient } from '../types';
-import { UpdateStakeInformation } from './blockchainEntitiesStakeUpdater';
+import { IsMeaningfulText } from '@jsinfo/utils/fmt';
+import { logger } from '@jsinfo/utils/logger';
+import { LavaClient } from '@jsinfo/indexer/types';
+import { UpdateStakeInformation } from '@jsinfo/indexer/blockchainEntities/blockchainEntitiesStakeUpdater';
 
 export async function SyncBlockchainEntities(
     db: PostgresJsDatabase,

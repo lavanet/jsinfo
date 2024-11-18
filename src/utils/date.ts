@@ -1,6 +1,7 @@
-// ./src/query/utils/dateUtils.ts
+// ./src/utils/date.ts
 
 import { parseISO } from 'date-fns';
+import { isAfter, isBefore, startOfDay, subMonths, differenceInCalendarDays } from 'date-fns';
 
 export function FormatDates(dataArray) {
     if (!dataArray || dataArray === '' || Array.isArray(dataArray) && dataArray.length === 0 || typeof dataArray === 'object' && Object.keys(dataArray).length === 0) {
@@ -88,4 +89,41 @@ export function DateToDayDateString(date: Date | string | null): string {
     const month = (date.getMonth() + 1).toString().padStart(2, '0');
     const day = date.getDate().toString().padStart(2, '0');
     return `${year}-${month}-${day}`;
+}
+
+export function NormalizeChartFetchDates(from: Date, to: Date): { from: Date, to: Date } {
+    if (isAfter(from, to)) {
+        [from, to] = [to, from];
+    }
+
+    from = startOfDay(from);
+    to = startOfDay(to);
+
+    if (isBefore(from, startOfDay(subMonths(GetUtcNow(), 6)))) {
+        throw new Error("From date cannot be more than 6 months in the past.");
+    }
+
+    if (isAfter(to, startOfDay(GetUtcNow()))) {
+        if (differenceInCalendarDays(to, GetUtcNow()) > 1) {
+            throw new Error("To date cannot be in the future.");
+        } else {
+            to = GetUtcNow();
+        }
+    }
+
+    return { from, to };
+}
+
+export function GetUtcNow(): Date {
+    const now = new Date();
+    const utcNow = new Date(Date.UTC(
+        now.getUTCFullYear(),
+        now.getUTCMonth(),
+        now.getUTCDate(),
+        now.getUTCHours(),
+        now.getUTCMinutes(),
+        now.getUTCSeconds(),
+        now.getUTCMilliseconds()
+    ));
+    return utcNow;
 }

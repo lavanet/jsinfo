@@ -9,10 +9,11 @@ import pino from 'pino';
 import { JSINFO_QUERY_HIGH_POST_BODY_LIMIT, JSINFO_QUERY_FASITY_PRINT_LOGS } from './queryConsts';
 import { AddErrorResponseToFastifyServerOpts, ItemCountOpts, WriteErrorToFastifyReply } from './utils/queryServerUtils';
 import { validatePaginationString } from './utils/queryPagination';
-import { JSONStringify, logger } from '../utils/utils';
+import { JSONStringify } from '@jsinfo/utils/fmt';
+import { logger } from '@jsinfo/utils/logger';
 
 // Local classes
-import { RedisCache } from './classes/RedisCache';
+import { RedisCache } from '@jsinfo/redis/classes/RedisCache';
 
 const FastifyLogger: FastifyBaseLogger = pino({
     level: 'warn',

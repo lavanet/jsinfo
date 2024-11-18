@@ -1,7 +1,7 @@
 // src/indexer/agregators/aggConsumerRelayPayments.ts
 
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { logger } from "../../../utils/utils";
+import { logger } from "../../../utils/logger";
 import { aggConsumerHourlyRelayPayments } from "./aggConsumerHourlyRelayPayments";
 import { aggConsumerDailyRelayPayments } from "./aggConsumerDailyRelayPayments";
 import { aggConsumerAllTimeRelayPayments } from "./aggConsumerAllTimeRelayPayments";

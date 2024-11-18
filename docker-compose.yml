@@ -21,16 +21,6 @@ services:
     volumes:
       - ../static/cache:/static/cache
 
-  # query_populate:
-  #   image: bun-docker
-  #   ports:
-  #     - "8081:8081"
-  #   env_file:
-  #     - dockercompose.env
-  #   entrypoint: ./scripts/startQueryPopulateContainer.sh
-  #   volumes:
-  #     - ../static/cache:/static/cache
-
   query:
     image: bun-docker
     ports:

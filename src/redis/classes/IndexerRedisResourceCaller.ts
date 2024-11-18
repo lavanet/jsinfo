@@ -30,12 +30,12 @@ export class IndexerRedisResourceCaller {
 
     static startIndexing(): void {
         if (this.isRunning) {
-            logger.warn('Indexer is already running');
+            logger.warn('RedisIndexer:: Indexer is already running');
             return;
         }
 
         this.isRunning = true;
-        logger.info('Starting Redis resource indexer');
+        logger.info('RedisIndexer:: Starting Redis resource indexer');
 
         // Start the indexing loop in the background
         this.runIndexingLoop();
@@ -43,7 +43,7 @@ export class IndexerRedisResourceCaller {
 
     static stopIndexing(): void {
         this.isRunning = false;
-        logger.info('Stopping Redis resource indexer');
+        logger.info('RedisIndexer:: Stopping Redis resource indexer');
     }
 
     private static async runIndexingLoop(): Promise<void> {
@@ -52,14 +52,14 @@ export class IndexerRedisResourceCaller {
                 await this.refreshAllResources();
                 await new Promise(resolve => setTimeout(resolve, this.REFRESH_INTERVAL));
             } catch (error) {
-                logger.error('Error in Redis indexer:', error);
+                logger.error('RedisIndexer:: Error in Redis indexer:', error);
             }
         }
     }
 
     private static async refreshAllResources(): Promise<void> {
         const startTime = Date.now();
-        logger.info('Refreshing Redis resources');
+        logger.info('RedisIndexer:: Refreshing Redis resources');
 
         const db = await GetJsinfoDbForIndexer();
         try {
@@ -71,9 +71,9 @@ export class IndexerRedisResourceCaller {
             ]);
 
             const duration = Date.now() - startTime;
-            logger.info(`Completed Redis resources refresh in ${duration}ms`);
+            logger.info(`RedisIndexer:: Completed Redis resources refresh in ${duration}ms`);
         } catch (error) {
-            logger.error('Failed to refresh Redis resources:', error);
+            logger.error('RedisIndexer:: Failed to refresh Redis resources:', error);
         }
     }
 

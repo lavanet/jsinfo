@@ -26,7 +26,7 @@ export class BackgroundThreadManager {
 
     public static async start(db: PostgresJsDatabase, lavajsClient: LavaClient): Promise<void> {
         if (this.isRunning) {
-            logger.info('Background Thread Manager is already running');
+            logger.info('BackgroundThreadManager:: is already running');
             return;
         }
 
@@ -40,14 +40,14 @@ export class BackgroundThreadManager {
             await this.processAggregations(db);
             await this.processTokenSupply(db, lavajsClient);
         } catch (error) {
-            logger.error('Failed to run aggregators:', error);
+            logger.error('BackgroundThreadManager:: Failed to run aggregators:', error);
         } finally {
             this.isRunning = false;
         }
     }
 
     private static async startBackgroundMonitors(): Promise<void> {
-        logger.info('Starting background monitors');
+        logger.info('BackgroundThreadManager:: Starting background monitors');
 
         // Only these monitors need lavajsClient
         APRMonitor.start();
@@ -79,14 +79,14 @@ export class BackgroundThreadManager {
         ];
 
         for (const processor of processors) {
-            logger.info(`${processor.name} processing started at: ${new Date().toISOString()}`);
+            logger.info(`BackgroundThreadManager:: ${processor.name} processing started at: ${new Date().toISOString()}`);
             try {
                 const start = Date.now();
                 await processor.process();
                 const executionTime = Date.now() - start;
-                logger.info(`Successfully executed ${processor.name}. Execution time: ${executionTime}ms`);
+                logger.info(`BackgroundThreadManager:: Successfully executed ${processor.name}. Execution time: ${executionTime}ms`);
             } catch (error) {
-                logger.error(`Failed to execute ${processor.name}:`, error);
+                logger.error(`BackgroundThreadManager:: Failed to execute ${processor.name}:`, error);
                 throw error;
             }
         }
@@ -94,15 +94,15 @@ export class BackgroundThreadManager {
 
     private static async processTokenSupply(db: PostgresJsDatabase, lavajsClient: LavaClient): Promise<void> {
         try {
-            logger.info('Starting token supply processing');
+            logger.info('BackgroundThreadManager:: Starting token supply processing');
             const start = Date.now();
 
             await SaveTokenSupplyToDB(db, lavajsClient);
 
             const executionTime = Date.now() - start;
-            logger.info(`Successfully processed token supply. Execution time: ${executionTime}ms`);
+            logger.info(`BackgroundThreadManager:: Successfully processed token supply. Execution time: ${executionTime}ms`);
         } catch (error) {
-            logger.error('Failed to process token supply:', error);
+            logger.error('BackgroundThreadManager:: Failed to process token supply:', error);
             throw error;
         }
     }

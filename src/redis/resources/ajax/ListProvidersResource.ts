@@ -132,7 +132,7 @@ const LavaProviderStakeStatusDict: { [key: number]: string } = {
     [JsinfoSchema.LavaProviderStakeStatus.Inactive]: "Inactive",
 };
 
-export class ProvidersResource extends RedisResourceBase<ProvidersData, {}> {
+export class ListProvidersResource extends RedisResourceBase<ProvidersData, {}> {
     protected redisKey = 'listProviders';
     protected ttlSeconds = 60;
 

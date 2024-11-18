@@ -24,8 +24,7 @@ import { SyncBlockchainEntities } from './indexer/blockchainEntities/blockchainE
 import { ConnectToRpc, RpcConnection } from "./indexer/utils/lavajsRpc";
 import { MigrateDb, GetJsinfoDbForIndexer } from "./utils/db";
 import { AggProviderAndConsumerRelayPayments, AggProviderAndConsumerRelayPaymentsSync } from "./indexer/agregators/aggProviderAndConsumerRelayPayments";
-import { SaveTokenSupplyToDB } from './indexer/supply/syncSupply';
-import { RestRpcAgreagorsCaller } from './indexer/restrpc_agregators/RestRpcAgregatorsCaller';
+import { BackgroundThreadCaller } from './indexer/backgroundThreadCaller';
 
 let static_blockchainEntitiesStakes: Map<string, JsinfoSchema.InsertProviderStake[]> = new Map()
 
@@ -177,10 +176,9 @@ const indexer = async (): Promise<void> => {
 
     await AggProviderAndConsumerRelayPaymentsSync(db);
     logger.info('Done AggProviderAndConsumerRelayPaymentsSync');
-    await RestRpcAgreagorsCaller(db);
-    logger.info('Done RestRpcAgreagorsCaller');
-    await SaveTokenSupplyToDB(db, rpcConnection.lavajsClient);
-    logger.info('Done SaveTokenSupplyToDB');
+    await BackgroundThreadCaller(db, rpcConnection.lavajsClient);
+    logger.info('Done BackgroundThreadCaller');
+
     await fillUpBackoffRetry(db, rpcConnection);
     logger.info('Done fillUpBackoffRetry');
 }
@@ -320,9 +318,7 @@ const fillUp = async (db: PostgresJsDatabase, rpcConnection: RpcConnection) => {
     }
 
     AggProviderAndConsumerRelayPayments(db);
-    RestRpcAgreagorsCaller(db);
-
-    await SaveTokenSupplyToDB(db, rpcConnection.lavajsClient);
+    BackgroundThreadCaller(db, rpcConnection.lavajsClient);
 
     fillUpBackoffRetryWTimeout(db, rpcConnection);
     logger.info('fillUp: process completed');

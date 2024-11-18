@@ -4,7 +4,7 @@
 // curl http://localhost:8081/listProviders | jq | grep ">"
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { ProvidersData, ProvidersResource } from '@jsinfo/redis/resources/ajax/ListProvidersResource';
+import { ProvidersData, ListProvidersResource } from '@jsinfo/redis/resources/ajax/ListProvidersResource';
 
 export const ListProvidersRawHandlerOpts: RouteShorthandOptions = {
     schema: {
@@ -67,7 +67,7 @@ export async function ListProvidersRawHandler(
     request: FastifyRequest,
     reply: FastifyReply
 ): Promise<{ data: ProvidersData }> {
-    const resource = new ProvidersResource();
+    const resource = new ListProvidersResource();
     const data = await resource.fetchAndPickDb();
     if (!data) {
         reply.status(400);

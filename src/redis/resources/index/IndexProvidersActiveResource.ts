@@ -16,7 +16,7 @@ import { ActiveProvidersResource } from './ActiveProvidersResource';
 
 const rewardSumSubQuery = sql`SELECT SUM(arp_sub.rewardSum) FROM(SELECT arp."provider", SUM(arp."rewardsum") AS rewardSum FROM ${JsinfoProviderAgrSchema.aggAllTimeRelayPayments} arp GROUP BY arp."provider") arp_sub WHERE arp_sub."provider" = ${JsinfoSchema.providerStakes.provider}`;
 
-interface IndexProvidersActiveResponse {
+export interface IndexProvidersActiveResponse {
     provider: string;
     moniker: string;
     monikerfull: string;
@@ -25,15 +25,15 @@ interface IndexProvidersActiveResponse {
     totalStake: string;
 }
 
-interface IndexProvidersActiveResourceResponse {
+export interface IndexProvidersActiveResourceResponse {
     type: IndexProvidersActiveQueryType;
     data?: IndexProvidersActiveResponse[];
     count?: number;
 }
 
-type IndexProvidersActiveQueryType = 'all' | 'count' | 'paginated';
+export type IndexProvidersActiveQueryType = 'all' | 'count' | 'paginated';
 
-interface IndexProvidersActiveQueryParams {
+export interface IndexProvidersActiveQueryParams {
     type?: IndexProvidersActiveQueryType;
     pagination?: Pagination | null;
 }

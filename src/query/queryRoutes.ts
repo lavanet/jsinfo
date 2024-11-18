@@ -33,8 +33,8 @@ import { IndexTopChainsHandlerOpts, IndexTopChainsHandler } from './handlers/ind
 import { IndexTotalCuHandlerOpts, IndexTotalCuHandler } from './handlers/index/indexTotalCuHandler';
 import { IndexStakesHandlerOpts, IndexStakesHandler } from './handlers/index/indexStakesHandler';
 
-import { IndexProvidersPaginatedHandler, IndexProvidersPaginatedHandlerOpts, IndexProvidersItemCountPaginatiedHandler, IndexProvidersCSVRawHandler, IndexProvidersCSVRawHandlerOpts } from './handlers/index/indexProvidersHandler';
-import { IndexProvidersActivePaginatedHandler, IndexProvidersActivePaginatedHandlerOpts, IndexProvidersActiveItemCountPaginatiedHandler, IndexProvidersActiveCSVRawHandler, IndexProvidersActiveCSVRawHandlerOpts } from './handlers/index/indexProvidersActiveHandler';
+import { IndexProvidersPaginatedHandler, IndexProvidersPaginatedHandlerOpts, IndexProvidersItemCountPaginatiedHandler, IndexProvidersCSVRawHandler, IndexProvidersCSVRawHandlerOpts, IndexProvidersItemCountPaginatiedHandlerOpts } from './handlers/index/indexProvidersHandler';
+import { IndexProvidersActivePaginatedHandler, IndexProvidersActivePaginatedHandlerOpts, IndexProvidersActiveItemCountPaginatiedHandler, IndexProvidersActiveCSVRawHandler, IndexProvidersActiveCSVRawHandlerOpts, IndexProvidersActiveItemCountPaginatiedHandlerOpts } from './handlers/index/indexProvidersActiveHandler';
 import { IndexChartsQuerystring, IndexChartsV3RawHandler, IndexChartsV3RawHandlerOpts } from './handlers/index/indexChartsV3Handler';
 
 // -- Provider page ajax --
@@ -132,7 +132,9 @@ GetServerInstance().get('/indexTopChains', IndexTopChainsHandlerOpts, IndexTopCh
 GetServerInstance().get('/indexTotalCu', IndexTotalCuHandlerOpts, IndexTotalCuHandler);
 GetServerInstance().get('/indexStakesHandler', IndexStakesHandlerOpts, IndexStakesHandler);
 GetServerInstance().get('/indexProviders', IndexProvidersPaginatedHandlerOpts, IndexProvidersPaginatedHandler);
+GetServerInstance().get('/item-count/indexProviders', IndexProvidersItemCountPaginatiedHandlerOpts, IndexProvidersItemCountPaginatiedHandler);
 GetServerInstance().get('/indexProvidersActive', IndexProvidersActivePaginatedHandlerOpts, IndexProvidersActivePaginatedHandler);
+GetServerInstance().get('/item-count/indexProvidersActive', IndexProvidersActiveItemCountPaginatiedHandlerOpts, IndexProvidersActiveItemCountPaginatiedHandler);
 GetServerInstance().get('/indexProvidersCsv', IndexProvidersCSVRawHandlerOpts, IndexProvidersCSVRawHandler);
 GetServerInstance().get('/indexProvidersActiveCsv', IndexProvidersActiveCSVRawHandlerOpts, IndexProvidersActiveCSVRawHandler);
 GetServerInstance().get<{ Querystring: IndexChartsQuerystring }>('/indexChartsV3', IndexChartsV3RawHandlerOpts, IndexChartsV3RawHandler);

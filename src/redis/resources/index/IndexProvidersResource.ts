@@ -15,7 +15,7 @@ import { ParsePaginationFromString } from '@jsinfo/query/utils/queryPagination';
 
 const rewardSumSubQuery = sql`SELECT SUM(arp_sub.rewardSum) FROM(SELECT arp."provider", SUM(arp."rewardsum") AS rewardSum FROM ${JsinfoProviderAgrSchema.aggAllTimeRelayPayments} arp GROUP BY arp."provider") arp_sub WHERE arp_sub."provider" = ${JsinfoSchema.providerStakes.provider}`
 
-interface IndexProvidersResponse {
+export interface IndexProvidersResponse {
     provider: string;
     moniker: string;
     monikerfull: string;
@@ -24,15 +24,15 @@ interface IndexProvidersResponse {
     totalStake: string;
 }
 
-interface IndexProvidersResourceResponse {
+export interface IndexProvidersResourceResponse {
     type: IndexProvidersQueryType;
     data?: IndexProvidersResponse[];
     count?: number;
 }
 
-type IndexProvidersQueryType = 'all' | 'count' | 'paginated';
+export type IndexProvidersQueryType = 'all' | 'count' | 'paginated';
 
-interface IndexProvidersQueryParams {
+export interface IndexProvidersQueryParams {
     type?: IndexProvidersQueryType;
     pagination?: Pagination | null;
 }

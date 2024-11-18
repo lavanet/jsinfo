@@ -5,16 +5,7 @@
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { ParsePaginationFromRequest } from '@jsinfo/query/utils/queryPagination';
 import { GetDataLength } from '@jsinfo/utils/fmt';
-import { IndexProvidersActiveResource } from '@jsinfo/redis/resources/index/IndexProvidersActiveResource';
-
-type IndexProvidersActiveResponse = {
-    provider: string,
-    moniker: string,
-    monikerfull: string,
-    rewardSum: number,
-    totalServices: string,
-    totalStake: string,
-};
+import { IndexProvidersActiveResource, IndexProvidersActiveResourceResponse } from '@jsinfo/redis/resources/index/IndexProvidersActiveResource';
 
 export const IndexProvidersActivePaginatedHandlerOpts: RouteShorthandOptions = {
     schema: {
@@ -30,7 +21,7 @@ export const IndexProvidersActivePaginatedHandlerOpts: RouteShorthandOptions = {
                                 provider: { type: 'string' },
                                 moniker: { type: 'string' },
                                 monikerfull: { type: 'string' },
-                                rewardSum: { type: ['number', 'null'] },
+                                rewardSum: { type: ['number', 'null', 'string'] },
                                 totalServices: { type: 'string' },
                                 totalStake: { type: ['string', 'null'] }
                             }
@@ -48,7 +39,7 @@ export const IndexProvidersActivePaginatedHandlerOpts: RouteShorthandOptions = {
     }
 }
 
-export async function IndexProvidersActivePaginatedHandler(request: FastifyRequest, reply: FastifyReply): Promise<IndexProvidersActiveResponse[]> {
+export async function IndexProvidersActivePaginatedHandler(request: FastifyRequest, reply: FastifyReply): Promise<IndexProvidersActiveResourceResponse> {
     const resource = new IndexProvidersActiveResource();
     const result = await resource.fetchAndPickDb({
         type: 'paginated',
@@ -59,10 +50,10 @@ export async function IndexProvidersActivePaginatedHandler(request: FastifyReque
         reply.send({ error: 'Failed to fetch active providers data' });
         return reply;
     }
-    return result.data;
+    return result;
 }
 
-export const IndexProvidersActiveItemCountHandlerOpts: RouteShorthandOptions = {
+export const IndexProvidersActiveItemCountPaginatiedHandlerOpts: RouteShorthandOptions = {
     schema: {
         response: {
             200: {
@@ -84,12 +75,13 @@ export const IndexProvidersActiveItemCountHandlerOpts: RouteShorthandOptions = {
 export async function IndexProvidersActiveItemCountPaginatiedHandler(request: FastifyRequest, reply: FastifyReply): Promise<{ itemCount: number }> {
     const resource = new IndexProvidersActiveResource();
     const result = await resource.fetchAndPickDb({ type: 'count' });
-    if (!result || typeof result.count !== 'number') {
+    if (!result || (typeof result.count !== 'number' && typeof result.count !== 'string')) {
         reply.status(400);
         reply.send({ error: 'Failed to fetch active providers count' });
         return reply;
     }
-    return { itemCount: result.count };
+    const count = typeof result.count === 'string' ? parseInt(result.count, 10) : result.count;
+    return { itemCount: count };
 }
 
 export const IndexProvidersActiveCSVRawHandlerOpts: RouteShorthandOptions = {

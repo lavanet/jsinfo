@@ -3,6 +3,7 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { ProviderMonikerService } from '@jsinfo/redis/resources/global/ProviderMonikerSpecResource';
 import { GetLatestBlock } from '@jsinfo/query/queryDb';
+import { desc } from 'drizzle-orm';
 
 interface ProviderEntry {
     provider: string;
@@ -181,7 +182,13 @@ export class ListProvidersResource extends RedisResourceBase<ProvidersData, {}> 
             return acc;
         }, []).sort((a, b) => a.provider.localeCompare(b.provider));
 
-        const { latestHeight, latestDatetime } = await GetLatestBlock();
+        const latestDbBlocks = await db.select().from(JsinfoSchema.blocks).orderBy(desc(JsinfoSchema.blocks.height)).limit(1)
+        let latestHeight = 0
+        let latestDatetime = 0
+        if (latestDbBlocks.length != 0) {
+            latestHeight = latestDbBlocks[0].height == null ? 0 : latestDbBlocks[0].height
+            latestDatetime = latestDbBlocks[0].datetime == null ? 0 : latestDbBlocks[0].datetime.getTime()
+        }
 
         return {
             height: latestHeight,

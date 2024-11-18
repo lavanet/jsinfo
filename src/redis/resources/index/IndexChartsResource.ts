@@ -46,6 +46,28 @@ export class IndexChartsResource extends RedisResourceBase<IndexChartResponse[],
         return `${this.redisKey}:${params.from.getTime()}:${params.to.getTime()}`;
     }
 
+    protected async fetchFromDb(db: PostgresJsDatabase, params?: QueryParams): Promise<IndexChartResponse[]> {
+        // Use default params if none provided
+        const queryParams = params || this.getDefaultParams();
+        const { from, to } = NormalizeChartFetchDates(queryParams.from, queryParams.to);
+
+        const topChainsResource = new IndexTopChainsResource();
+        const topChainsResult = await topChainsResource.fetch(db);
+        if (!topChainsResult || topChainsResult.allSpecs.length === 0) {
+            console.warn('IndexChartsResource: No top chains found');
+            return [];
+        }
+
+        const topChains = topChainsResult.allSpecs.map(spec => spec.chainId);
+
+        const [mainChartData, qosData] = await Promise.all([
+            this.getMainChartData(db, topChains, from, to),
+            this.getQosData(db, from, to)
+        ]);
+
+        return this.combineData(db, mainChartData, qosData);
+    }
+
     private getDefaultParams(): QueryParams {
         const to = new Date();
         const from = new Date(to);
@@ -197,25 +219,5 @@ export class IndexChartsResource extends RedisResourceBase<IndexChartResponse[],
             qos: qosData[date] || 0,
             data
         }));
-    }
-
-    protected async fetchFromDb(db: PostgresJsDatabase, params: QueryParams): Promise<IndexChartResponse[]> {
-        const { from, to } = NormalizeChartFetchDates(params.from, params.to);
-
-        const topChainsResource = new IndexTopChainsResource();
-        const topChainsResult = await topChainsResource.fetch(db);
-        if (!topChainsResult || topChainsResult.allSpecs.length === 0) {
-            console.warn('IndexChartsResource: No top chains found');
-            return [];
-        }
-
-        const topChains = topChainsResult.allSpecs.map(spec => spec.chainId);
-
-        const [mainChartData, qosData] = await Promise.all([
-            this.getMainChartData(db, topChains, from, to),
-            this.getQosData(db, from, to)
-        ]);
-
-        return this.combineData(db, mainChartData, qosData);
     }
 } 

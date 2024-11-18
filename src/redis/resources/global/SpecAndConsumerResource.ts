@@ -28,7 +28,6 @@ class SpecAndConsumerResource extends RedisResourceBase<{ specs: string[], consu
             .limit(1);
 
         if (result.length > 0 && result[0].value) {
-            logger.info('Fetched specs from key-value store');
             return result[0].value.split(',');
         }
 

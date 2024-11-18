@@ -34,8 +34,8 @@ interface IndexProvidersActiveResourceResponse {
 type IndexProvidersActiveQueryType = 'all' | 'count' | 'paginated';
 
 interface IndexProvidersActiveQueryParams {
-    type: IndexProvidersActiveQueryType;
-    pagination?: Pagination;
+    type?: IndexProvidersActiveQueryType;
+    pagination?: Pagination | null;
 }
 
 export class IndexProvidersActiveResource extends RedisResourceBase<IndexProvidersActiveResourceResponse, IndexProvidersActiveQueryParams> {
@@ -50,8 +50,16 @@ export class IndexProvidersActiveResource extends RedisResourceBase<IndexProvide
         return result;
     }
 
-    protected getRedisKey(params: IndexProvidersActiveQueryParams): string {
-        switch (params.type) {
+    protected getDefaultParams(): IndexProvidersActiveQueryParams {
+        return {
+            type: 'paginated',
+            pagination: null
+        };
+    }
+
+    protected getRedisKey(params: IndexProvidersActiveQueryParams = this.getDefaultParams()): string {
+        const queryType = params.type || 'paginated';
+        switch (queryType) {
             case 'all':
                 return `${this.redisKey}:all`;
             case 'count':
@@ -63,8 +71,11 @@ export class IndexProvidersActiveResource extends RedisResourceBase<IndexProvide
         }
     }
 
-    protected async fetchFromDb(db: PostgresJsDatabase, params: IndexProvidersActiveQueryParams): Promise<IndexProvidersActiveResourceResponse> {
-        switch (params.type) {
+    protected async fetchFromDb(db: PostgresJsDatabase, params?: IndexProvidersActiveQueryParams): Promise<IndexProvidersActiveResourceResponse> {
+        const queryParams = params || this.getDefaultParams();
+        const queryType = queryParams.type || 'paginated';
+
+        switch (queryType) {
             case 'all':
                 return {
                     type: 'all',
@@ -73,7 +84,7 @@ export class IndexProvidersActiveResource extends RedisResourceBase<IndexProvide
             case 'paginated':
                 return {
                     type: 'paginated',
-                    data: await this.fetchPaginatedRecords(db, params.pagination || null)
+                    data: await this.fetchPaginatedRecords(db, queryParams.pagination || null)
                 };
             case 'count':
                 return {
@@ -81,7 +92,7 @@ export class IndexProvidersActiveResource extends RedisResourceBase<IndexProvide
                     count: await this.fetchRecordCountFromDb(db)
                 };
             default:
-                throw new Error(`Unsupported query type: ${params.type}`);
+                throw new Error(`Unsupported query type: ${queryType}`);
         }
     }
 

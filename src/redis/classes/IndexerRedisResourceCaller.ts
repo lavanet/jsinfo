@@ -27,22 +27,63 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 export class IndexerRedisResourceCaller {
     private static readonly REFRESH_INTERVAL = 60 * 1000; // 1 minute
     private static isRunning = false;
+    private static intervalId: any | null = null;
 
-    static startIndexing(): void {
-        if (this.isRunning) {
-            logger.warn('RedisIndexer:: Indexer is already running');
-            return;
-        }
-
-        this.isRunning = true;
+    static async startIndexing(): Promise<void> {
         logger.info('RedisIndexer:: Starting Redis resource indexer');
 
-        // Start the indexing loop in the background
-        this.runIndexingLoop();
+        try {
+            // Always refresh immediately, regardless of previous state
+            logger.info('RedisIndexer:: Performing initial refresh');
+            await this.refreshAllResources().catch(error => {
+                logger.error('RedisIndexer:: Initial refresh failed:', error);
+            });
+
+            // Clear any existing interval
+            if (this.intervalId) {
+                clearInterval(this.intervalId);
+                this.intervalId = null;
+            }
+
+            // Set new interval
+            this.isRunning = true;
+            this.intervalId = setInterval(async () => {
+                if (!this.isRunning) return;
+
+                try {
+                    await this.refreshAllResources();
+                } catch (error) {
+                    logger.error('RedisIndexer:: Interval refresh failed:', error);
+                }
+            }, this.REFRESH_INTERVAL);
+
+            logger.info(`RedisIndexer:: Indexer started with ${this.REFRESH_INTERVAL}ms interval`);
+
+        } catch (error) {
+            logger.error('RedisIndexer:: Failed to start indexing:', error);
+
+            // Ensure interval is set even if something fails
+            if (!this.intervalId) {
+                logger.info('RedisIndexer:: Setting up fallback interval');
+                this.intervalId = setInterval(async () => {
+                    if (!this.isRunning) return;
+
+                    try {
+                        await this.refreshAllResources();
+                    } catch (error) {
+                        logger.error('RedisIndexer:: Fallback interval refresh failed:', error);
+                    }
+                }, this.REFRESH_INTERVAL);
+            }
+        }
     }
 
     static stopIndexing(): void {
         this.isRunning = false;
+        if (this.intervalId) {
+            clearInterval(this.intervalId);
+            this.intervalId = null;
+        }
         logger.info('RedisIndexer:: Stopping Redis resource indexer');
     }
 

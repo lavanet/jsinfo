@@ -16,7 +16,9 @@ export const IndexTopChainsHandlerOpts: RouteShorthandOptions = {
                             properties: {
                                 chainId: { type: 'string' },
                                 relaySum: { type: 'number' },
-                                cuSum: { type: 'number' }
+                                cuSum: { type: 'number' },
+                                relaySum30Days: { type: 'number' },
+                                cuSum30Days: { type: 'number' }
                             }
                         }
                     }

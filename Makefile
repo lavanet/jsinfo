@@ -102,6 +102,7 @@ redis_connect:
 	docker exec -it redis-stack redis-cli -a mypassword
 
 macos_psql_start:
+	# brew services restart postgresql@14
 	@echo "Checking if PostgreSQL@14 is installed..."
 	@if ! brew list postgresql@14 &>/dev/null; then \
 		echo "Installing PostgreSQL@14..."; \

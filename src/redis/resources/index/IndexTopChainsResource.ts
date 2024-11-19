@@ -6,6 +6,8 @@ import { RedisResourceBase } from '@jsinfo/redis/classes/RedisResourceBase';
 export interface IndexTopChainsData {
     allSpecs: {
         chainId: string;
+        relaySum30Days: number;
+        cuSum30Days: number;
         relaySum: number;
         cuSum: number;
     }[];
@@ -16,19 +18,60 @@ export class IndexTopChainsResource extends RedisResourceBase<IndexTopChainsData
     protected readonly ttlSeconds = 300; // 5 minutes cache
 
     protected async fetchFromDb(db: PostgresJsDatabase): Promise<IndexTopChainsData> {
-        const topSpecs = await db.select({
+        // Get 30 days stats
+        const thirtyDaysStats = await db.select({
             chainId: JsinfoProviderAgrSchema.aggDailyRelayPayments.specId,
-            relaySum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum}) as relaySum`,
-            cuSum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggDailyRelayPayments.cuSum}) as cuSum`,
-        }).from(JsinfoProviderAgrSchema.aggDailyRelayPayments)
-            .groupBy(sql`${JsinfoProviderAgrSchema.aggDailyRelayPayments.specId}`)
+            relaySum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum})`,
+            cuSum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggDailyRelayPayments.cuSum})`,
+        })
+            .from(JsinfoProviderAgrSchema.aggDailyRelayPayments)
             .where(gt(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday, sql<Date>`now() - interval '30 day'`))
-            .orderBy(sql`relaySum DESC`);
+            .groupBy(JsinfoProviderAgrSchema.aggDailyRelayPayments.specId);
+
+        // Get all time stats
+        const allTimeStats = await db.select({
+            chainId: JsinfoProviderAgrSchema.aggDailyRelayPayments.specId,
+            relaySum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum})`,
+            cuSum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggDailyRelayPayments.cuSum})`,
+        })
+            .from(JsinfoProviderAgrSchema.aggDailyRelayPayments)
+            .groupBy(JsinfoProviderAgrSchema.aggDailyRelayPayments.specId);
+
+        // Combine results
+        const statsMap = new Map<string, {
+            chainId: string;
+            relaySum30Days: number;
+            cuSum30Days: number;
+            relaySum: number;
+            cuSum: number;
+        }>();
+
+        // Initialize with 30-day stats instead of all-time stats
+        thirtyDaysStats
+            .filter((stat): stat is { chainId: string; relaySum: number; cuSum: number; } => stat.chainId !== null)
+            .forEach(stat => {
+                statsMap.set(stat.chainId, {
+                    chainId: stat.chainId,
+                    relaySum30Days: Number(stat.relaySum) || 0,
+                    cuSum30Days: Number(stat.cuSum) || 0,
+                    relaySum: 0,  // Will be updated with all-time stats
+                    cuSum: 0
+                });
+            });
+
+        // Add all-time stats only for chains that exist in 30-day window
+        allTimeStats
+            .filter((stat): stat is { chainId: string; relaySum: number; cuSum: number; } =>
+                stat.chainId !== null && statsMap.has(stat.chainId))
+            .forEach(stat => {
+                const existing = statsMap.get(stat.chainId)!;
+                existing.relaySum = Number(stat.relaySum) || 0;
+                existing.cuSum = Number(stat.cuSum) || 0;
+            });
 
         return {
-            allSpecs: topSpecs.filter((spec): spec is { chainId: string; relaySum: number; cuSum: number; } =>
-                spec.chainId !== null
-            )
+            allSpecs: Array.from(statsMap.values())
+                .sort((a, b) => b.relaySum30Days - a.relaySum30Days) // Sort by 30-day relays
         };
     }
 } 

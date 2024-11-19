@@ -174,10 +174,10 @@ const indexer = async (): Promise<void> => {
         return;
     }
 
-    await AggProviderAndConsumerRelayPaymentsSync(db);
-    logger.info('Done AggProviderAndConsumerRelayPaymentsSync');
-    await BackgroundThreadCaller(db, rpcConnection.lavajsClient);
-    logger.info('Done BackgroundThreadCaller');
+    // await AggProviderAndConsumerRelayPaymentsSync(db);
+    // logger.info('Done AggProviderAndConsumerRelayPaymentsSync');
+    // await BackgroundThreadCaller(db, rpcConnection.lavajsClient);
+    // logger.info('Done BackgroundThreadCaller');
 
     await fillUpBackoffRetry(db, rpcConnection);
     logger.info('Done fillUpBackoffRetry');

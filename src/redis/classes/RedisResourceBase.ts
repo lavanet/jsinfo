@@ -2,8 +2,7 @@ import { GetJsinfoDbForIndexer } from '@jsinfo/utils/db';
 import { RedisCache } from './RedisCache';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { IsIndexerProcess } from '@jsinfo/utils/env';
-import { QueryGetJsinfoDbForQueryInstance } from '@jsinfo/query/queryDb';
-import { QueryCheckJsinfoDbInstance } from '@jsinfo/query/queryDb';
+import { QueryGetJsinfoDbForQueryInstance, QueryInitJsinfoDbInstance } from '@jsinfo/query/queryDb';
 
 interface BaseArgs {
     [key: string]: any;
@@ -92,27 +91,60 @@ export abstract class RedisResourceBase<T, A extends BaseArgs = BaseArgs> {
         return null;
     }
 
-    async fetchAndPickDb(args?: A): Promise<T | null> {
+    protected async handleIndexerDb(args?: A): Promise<T | null> {
         try {
-            const db = await (IsIndexerProcess() ? GetJsinfoDbForIndexer() : QueryGetJsinfoDbForQueryInstance());
-            const result = await this.fetch(db, args);
+            const db = await GetJsinfoDbForIndexer();
+            return await this.fetch(db, args);
+        } catch (error) {
+            console.error(`[${this.redisKey}] Indexer DB error:`, {
+                message: (error as Error).message,
+                name: (error as Error).name,
+                stack: (error as Error).stack,
+                resourceKey: this.redisKey,
+                args,
+                timestamp: new Date().toISOString()
+            });
+            return null;
+        }
+    }
 
-            if (!result && !IsIndexerProcess()) {
-                // Log details when initial fetch fails
-                console.error(`[${this.redisKey}] Initial fetch returned no results:`, {
-                    args,
-                    timestamp: new Date().toISOString(),
-                    dbConnectionExists: !!db
-                });
+    protected async handleQueryDb(args?: A): Promise<T | null> {
+        try {
 
-                await QueryCheckJsinfoDbInstance();
-                const newDb = await QueryGetJsinfoDbForQueryInstance();
-                return await this.fetch(newDb, args);
+            let db: PostgresJsDatabase | null = null;
+            try {
+                db = await QueryGetJsinfoDbForQueryInstance();
+            } catch (dbError) {
+                await QueryInitJsinfoDbInstance();
             }
 
-            return result;
+            db = await QueryGetJsinfoDbForQueryInstance();
+            return await this.fetch(db, args);
         } catch (error) {
-            const errorDetails = {
+            console.error(`[${this.redisKey}] Query DB error:`, {
+                message: (error as Error).message,
+                name: (error as Error).name,
+                stack: (error as Error).stack,
+                resourceKey: this.redisKey,
+                args,
+                timestamp: new Date().toISOString()
+            });
+            try {
+                await QueryInitJsinfoDbInstance();
+            } catch (dbError) {
+                console.error(`[${this.redisKey}] Failed to initialize DB instance:`, dbError);
+            }
+            return null;
+        }
+    }
+
+    async fetchAndPickDb(args?: A): Promise<T | null> {
+        try {
+            return IsIndexerProcess()
+                ? await this.handleIndexerDb(args)
+                : await this.handleQueryDb(args);
+        } catch (error) {
+            console.error(`[${this.redisKey}] FetchAndPickDb error:`, {
                 message: (error as Error).message,
                 name: (error as Error).name,
                 stack: (error as Error).stack,
@@ -120,15 +152,7 @@ export abstract class RedisResourceBase<T, A extends BaseArgs = BaseArgs> {
                 args,
                 isIndexerProcess: IsIndexerProcess(),
                 timestamp: new Date().toISOString()
-            };
-
-            console.error(`[${this.redisKey}] FetchAndPickDb error:`, errorDetails);
-            console.error(`[${this.redisKey}] Full error object:`, error);
-
-            if (error instanceof Error) {
-                console.error(`[${this.redisKey}] Error type:`, error.constructor.name);
-                console.error(`[${this.redisKey}] Error properties:`, Object.getOwnPropertyNames(error));
-            }
+            });
             return null;
         }
     }

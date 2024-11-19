@@ -36,16 +36,36 @@ docker_sh:
 	docker run --privileged -it bun-docker /bin/sh
 
 docker_compose:
-	docker-compose -f docker-compose.yml up
+	docker compose -f docker-compose.yml up --build
 
-docker_compose_query_populate:
-	docker-compose up query_populate
+docker_compose_recreate:
+	docker compose down -v  # Remove containers and volumes
+	docker compose up --build --force-recreate
 
-docker_compose_query:
-	docker-compose up query
+docker_compose_clean:
+	docker compose down -v
+	docker volume rm $$(docker volume ls -q | grep jsinfo) || true
+	docker rm -f $$(docker ps -a -q --filter "name=jsinfo-*") || true
 
-docker_compose_indexer:
-	docker-compose up indexer
+# Useful additional commands
+docker_compose_logs:
+	docker compose logs -f
+
+docker_compose_ps:
+	docker compose ps
+
+docker_compose_restart:
+	docker compose restart
+
+# Restart specific services
+docker_compose_restart_query:
+	docker compose restart jsinfo-query
+
+docker_compose_restart_indexer:
+	docker compose restart jsinfo-indexer
+
+docker_compose_query_shell:
+	docker-compose exec -it jsinfo-query /bin/sh
 
 indexer:
 	IS_INDEXER_PROCESS=true NODE_TLS_REJECT_UNAUTHORIZED=0 bun run src/indexer.ts

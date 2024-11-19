@@ -58,7 +58,7 @@ export async function QueryInitJsinfoDbInstance() {
     }
 
     logger.info('Starting queryserver - connecting to jsinfoDb')
-    db = db || await GetJsinfoDbForQuery();
+    db = await GetJsinfoDbForQuery();
 }
 
 export async function QueryCheckRelaysReadDbInstance() {

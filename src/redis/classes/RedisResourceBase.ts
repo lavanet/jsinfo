@@ -34,11 +34,8 @@ export abstract class RedisResourceBase<T, A extends BaseArgs = BaseArgs> {
     // Helper for key generation with args
     protected getKeyWithArgs(args?: A): string {
         if (!args) return this.redisKey;
-        const argString = Object.entries(args)
-            .sort(([a], [b]) => a.localeCompare(b))
-            .map(([k, v]) => `${k}:${v}`)
-            .join(':');
-        return `${this.redisKey}:${argString}`;
+        const stableJson = JSON.stringify(args).toLowerCase();
+        return `${this.redisKey}:${stableJson}`;
     }
 
     protected abstract fetchFromDb(db: PostgresJsDatabase, args?: A): Promise<T>;

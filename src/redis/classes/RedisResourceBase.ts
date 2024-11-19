@@ -166,4 +166,81 @@ export abstract class RedisResourceBase<T, A extends BaseArgs = BaseArgs> {
     protected generateKey(prefix: string, id: string | number): string {
         return `${prefix}:${id}`;
     }
+
+    protected async withDbRetry<R>(
+        queryFn: (db: PostgresJsDatabase) => Promise<R>,
+        initialDb: PostgresJsDatabase,
+        options: {
+            checkEmpty?: boolean;
+            name?: string;
+            retryDelay?: number;
+            maxRetries?: number;
+        } = {}
+    ): Promise<R> {
+        const {
+            checkEmpty = false,
+            name = this.redisKey,
+            retryDelay = 500,
+            maxRetries = 3
+        } = options;
+
+        for (let attempt = 0; attempt < maxRetries; attempt++) {
+            try {
+                // Use initial DB on first attempt, get fresh connection on retries
+                let db = attempt === 0 ? initialDb : null;
+
+                if (!db) {
+                    if (IsIndexerProcess()) {
+                        db = await GetJsinfoDbForIndexer();
+                    } else {
+                        try {
+                            db = await QueryGetJsinfoDbForQueryInstance();
+                        } catch (dbError) {
+                            await QueryInitJsinfoDbInstance();
+                            db = await QueryGetJsinfoDbForQueryInstance();
+                        }
+                    }
+                }
+
+                const result = await queryFn(db);
+
+                if (!checkEmpty || (result && (!Array.isArray(result) || result.length > 0))) {
+                    return result;
+                }
+
+                if (attempt < maxRetries - 1) {
+                    console.warn(`[${name}] Empty result on attempt ${attempt + 1}/${maxRetries}, retrying...`);
+                    await new Promise(resolve => setTimeout(resolve, retryDelay));
+                }
+            } catch (error) {
+                const errorDetails = {
+                    message: (error as Error).message,
+                    stack: (error as Error).stack,
+                    name: (error as Error).name,
+                    attempt: `${attempt + 1}/${maxRetries}`,
+                    resourceKey: this.redisKey,
+                    timestamp: new Date().toISOString(),
+                    isIndexerProcess: IsIndexerProcess()
+                };
+
+                console.error(`[${name}] Query failed:`, errorDetails);
+
+                if (attempt < maxRetries - 1) {
+                    await new Promise(resolve => setTimeout(resolve, retryDelay));
+                    if (!IsIndexerProcess()) {
+                        try {
+                            await QueryInitJsinfoDbInstance();
+                        } catch (initError) {
+                            console.error(`[${name}] Failed to reinitialize DB:`, {
+                                message: (initError as Error).message,
+                                name: (initError as Error).name,
+                                attempt: `${attempt + 1}/${maxRetries}`
+                            });
+                        }
+                    }
+                }
+            }
+        }
+        throw new Error(`[${name}] Failed to get a valid result after ${maxRetries} attempts`);
+    }
 }

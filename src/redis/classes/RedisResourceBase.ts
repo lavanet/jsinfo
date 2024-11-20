@@ -19,7 +19,16 @@ export abstract class RedisResourceBase<T, A extends BaseArgs = BaseArgs> {
     }
 
     protected async get(args?: A): Promise<T | null> {
-        const cached = await RedisCache.get(this.getKeyWithArgs(args));
+        const key = this.getKeyWithArgs(args);
+        const cached = await RedisCache.get(key);
+
+        console.log(`RedisResourceBase:: [${this.redisKey}] Cache ${cached ? 'hit' : 'miss'}:`, {
+            key,
+            args: args ? JSON.stringify(args).slice(0, 100) + '...' : 'none',
+            dataPreview: cached ? cached.slice(0, 100) + '...' : null,
+            timestamp: new Date().toISOString()
+        });
+
         return cached ? this.deserialize(cached) : null;
     }
 

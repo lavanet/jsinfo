@@ -11,6 +11,7 @@ interface BaseArgs {
 export abstract class RedisResourceBase<T, A extends BaseArgs = BaseArgs> {
     protected abstract readonly redisKey: string;
     protected readonly ttlSeconds: number = 3600; // Default 1 hour TTL
+    private lastUpdateTime: number = 0;
 
     // Core cache operations with args support
     protected async set(data: T, args?: A): Promise<void> {
@@ -49,11 +50,22 @@ export abstract class RedisResourceBase<T, A extends BaseArgs = BaseArgs> {
             const data = await this.fetchFromDb(db, args);
             if (data) {
                 await this.set(data, args);
+                const now = Date.now();
+                console.log(`RedisResourceBase:: [${this.redisKey}] Fetched and cached data:`, {
+                    data,
+                    cacheInfo: {
+                        timeSinceLastUpdate: this.lastUpdateTime
+                            ? `${((now - this.lastUpdateTime) / 1000).toFixed(1)}s ago`
+                            : 'first cache',
+                        ttlSeconds: this.ttlSeconds
+                    }
+                });
+                this.lastUpdateTime = now;
                 return data;
             }
 
             // Detailed logging for empty data
-            console.error(`[${this.redisKey}] Fetch returned empty data:`, {
+            console.error(`RedisResourceBase:: [${this.redisKey}] Fetch returned empty data:`, {
                 args,
                 ttl: this.ttlSeconds,
                 key: this.getKeyWithArgs(args),
@@ -77,12 +89,12 @@ export abstract class RedisResourceBase<T, A extends BaseArgs = BaseArgs> {
                 isIndexerProcess: IsIndexerProcess()
             };
 
-            console.error(`[${this.redisKey}] Error fetching resource:`, errorDetails);
-            console.error(`[${this.redisKey}] Full error:`, error);
+            console.error(`RedisResourceBase:: [${this.redisKey}] Error fetching resource:`, errorDetails);
+            console.error(`RedisResourceBase:: [${this.redisKey}] Full error:`, error);
 
             if (error instanceof Error) {
-                console.error(`[${this.redisKey}] Error type:`, error.constructor.name);
-                console.error(`[${this.redisKey}] Error properties:`, Object.getOwnPropertyNames(error));
+                console.error(`RedisResourceBase:: [${this.redisKey}] Error type:`, error.constructor.name);
+                console.error(`RedisResourceBase:: [${this.redisKey}] Error properties:`, Object.getOwnPropertyNames(error));
             }
         }
         return null;
@@ -93,7 +105,7 @@ export abstract class RedisResourceBase<T, A extends BaseArgs = BaseArgs> {
             const db = await GetJsinfoDbForIndexer();
             return await this.fetch(db, args);
         } catch (error) {
-            console.error(`[${this.redisKey}] Indexer DB error:`, {
+            console.error(`RedisResourceBase:: [${this.redisKey}] Indexer DB error:`, {
                 message: (error as Error).message,
                 name: (error as Error).name,
                 stack: (error as Error).stack,
@@ -118,7 +130,7 @@ export abstract class RedisResourceBase<T, A extends BaseArgs = BaseArgs> {
             db = await QueryGetJsinfoDbForQueryInstance();
             return await this.fetch(db, args);
         } catch (error) {
-            console.error(`[${this.redisKey}] Query DB error:`, {
+            console.error(`RedisResourceBase:: [${this.redisKey}] Query DB error:`, {
                 message: (error as Error).message,
                 name: (error as Error).name,
                 stack: (error as Error).stack,
@@ -129,7 +141,7 @@ export abstract class RedisResourceBase<T, A extends BaseArgs = BaseArgs> {
             try {
                 await QueryInitJsinfoDbInstance();
             } catch (dbError) {
-                console.error(`[${this.redisKey}] Failed to initialize DB instance:`, dbError);
+                console.error(`RedisResourceBase:: [${this.redisKey}] Failed to initialize DB instance:`, dbError);
             }
             return null;
         }
@@ -141,7 +153,7 @@ export abstract class RedisResourceBase<T, A extends BaseArgs = BaseArgs> {
                 ? await this.handleIndexerDb(args)
                 : await this.handleQueryDb(args);
         } catch (error) {
-            console.error(`[${this.redisKey}] FetchAndPickDb error:`, {
+            console.error(`RedisResourceBase:: [${this.redisKey}] FetchAndPickDb error:`, {
                 message: (error as Error).message,
                 name: (error as Error).name,
                 stack: (error as Error).stack,

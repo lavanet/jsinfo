@@ -87,17 +87,6 @@ export class IndexerRedisResourceCaller {
         logger.info('RedisIndexer:: Stopping Redis resource indexer');
     }
 
-    private static async runIndexingLoop(): Promise<void> {
-        while (this.isRunning) {
-            try {
-                await this.refreshAllResources();
-                await new Promise(resolve => setTimeout(resolve, this.REFRESH_INTERVAL));
-            } catch (error) {
-                logger.error('RedisIndexer:: Error in Redis indexer:', error);
-            }
-        }
-    }
-
     private static async refreshAllResources(): Promise<void> {
         const startTime = Date.now();
         logger.info('RedisIndexer:: Refreshing Redis resources');

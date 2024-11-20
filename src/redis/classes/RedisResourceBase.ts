@@ -22,7 +22,7 @@ export abstract class RedisResourceBase<T, A extends BaseArgs = BaseArgs> {
         const key = this.getKeyWithArgs(args);
         const cached = await RedisCache.get(key);
 
-        console.log(`RedisResourceBase:: [${this.redisKey}] Cache ${cached ? 'hit' : 'miss'}:`, {
+        console.log(`RedisResourceBase::get:: [${this.redisKey}] Cache ${cached ? 'hit' : 'miss'}:`, {
             key,
             args: args ? JSON.stringify(args).slice(0, 100) + '...' : 'none',
             dataPreview: cached ? cached.slice(0, 100) + '...' : null,
@@ -60,7 +60,7 @@ export abstract class RedisResourceBase<T, A extends BaseArgs = BaseArgs> {
             if (data) {
                 await this.set(data, args);
                 const now = Date.now();
-                console.log(`RedisResourceBase:: [${this.redisKey}] Fetched and cached data:`, {
+                console.log(`RedisResourceBase::fetch:: [${this.redisKey}] Fetched and cached data:`, {
                     data: JSON.stringify(data).slice(0, 100) + '...',
                     cacheInfo: {
                         timeSinceLastUpdate: this.lastUpdateTime

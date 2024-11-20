@@ -29,18 +29,34 @@ class RedisCacheClass {
 
     private async connectAll() {
         this.log(`Attempting to connect to ${this.redisUrls.length} Redis instances...`);
+
+        const maxRetries = 3;
+        const retryDelay = 1000; // 1 second between retries
+
         this.clients = await Promise.all(this.redisUrls.map(async url => {
-            const client = createClient({
-                url,
-                socket: {
-                    connectTimeout: 5000,
-                },
-            }) as RedisClientType;
-            client.on('error', (err) => this.logError(`Redis Client Error for ${url}`, err));
-            await client.connect().catch((err) => {
-                this.logError(`Failed to connect to Redis at ${url}`, err);
-            });
-            return client;
+            for (let attempt = 0; attempt < maxRetries; attempt++) {
+                try {
+                    const client = createClient({
+                        url,
+                        socket: {
+                            connectTimeout: 2000,
+                        },
+                    }) as RedisClientType;
+
+                    client.on('error', (err) => this.logError(`Redis Client Error for ${url}`, err));
+
+                    await client.connect();
+                    this.log(`Connected to Redis at ${url} on attempt ${attempt + 1}`);
+                    return client;
+                } catch (err) {
+                    this.logError(`Failed to connect to Redis at ${url} (attempt ${attempt + 1}/${maxRetries})`, err);
+
+                    if (attempt < maxRetries - 1) {
+                        await new Promise(resolve => setTimeout(resolve, retryDelay));
+                    }
+                }
+            }
+            throw new Error(`Failed to connect to Redis at ${url} after ${maxRetries} attempts`);
         }));
     }
 

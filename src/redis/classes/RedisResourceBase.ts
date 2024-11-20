@@ -52,7 +52,7 @@ export abstract class RedisResourceBase<T, A extends BaseArgs = BaseArgs> {
                 await this.set(data, args);
                 const now = Date.now();
                 console.log(`RedisResourceBase:: [${this.redisKey}] Fetched and cached data:`, {
-                    data,
+                    data: JSON.stringify(data).slice(0, 100) + '...',
                     cacheInfo: {
                         timeSinceLastUpdate: this.lastUpdateTime
                             ? `${((now - this.lastUpdateTime) / 1000).toFixed(1)}s ago`

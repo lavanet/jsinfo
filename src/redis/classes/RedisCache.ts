@@ -9,110 +9,150 @@ import { JSONStringify } from '@jsinfo/utils/fmt';
 class RedisCacheClass {
     private clients: RedisClientType[] = [];
     private keyPrefix: string;
-    private debugLogs: boolean;
     private redisUrls: string[] = [];
+    private static activeGets = new Map<string, Promise<string | null>>();
+    private static activeSets = new Map<string, Promise<void>>();
 
-    constructor(keyPrefix: string, debugLogs: boolean = false) {
+    constructor(keyPrefix: string) {
         this.keyPrefix = keyPrefix;
-        this.debugLogs = debugLogs;
         this.initializeClients();
     }
 
     private initializeClients() {
         this.redisUrls = GetRedisUrls();
         if (!this.redisUrls.length) {
-            this.log('No Redis URLs configured');
+            logger.error('Redis initialization failed', {
+                reason: 'No Redis URLs configured'
+            });
             return;
         }
         this.connectAll();
     }
 
     private async connectAll() {
-        this.log(`Attempting to connect to ${this.redisUrls.length} Redis instances...`);
+        console.log(`Attempting to connect to ${this.redisUrls.length} Redis instances...`);
 
         const maxRetries = 3;
         const retryDelay = 1000; // 1 second between retries
 
-        this.clients = await Promise.all(this.redisUrls.map(async url => {
-            for (let attempt = 0; attempt < maxRetries; attempt++) {
-                try {
-                    const client = createClient({
-                        url,
-                        socket: {
-                            connectTimeout: 2000,
-                        },
-                    }) as RedisClientType;
+        try {
+            this.clients = await Promise.all(this.redisUrls.map(async url => {
+                for (let attempt = 0; attempt < maxRetries; attempt++) {
+                    try {
+                        const client = createClient({
+                            url,
+                            socket: {
+                                connectTimeout: 2000,
+                            },
+                        }) as RedisClientType;
 
-                    client.on('error', (err) => this.logError(`Redis Client Error for ${url}`, err));
+                        client.on('error', (err) => logger.error('Redis client error', {
+                            error: err as Error,
+                            url
+                        }));
 
-                    await client.connect();
-                    this.log(`Connected to Redis at ${url} on attempt ${attempt + 1}`);
-                    return client;
-                } catch (err) {
-                    this.logError(`Failed to connect to Redis at ${url} (attempt ${attempt + 1}/${maxRetries})`, err);
+                        await client.connect();
+                        console.log(`Connected to Redis at ${url} on attempt ${attempt + 1}`);
+                        return client;
+                    } catch (err) {
+                        logger.error('Redis connection attempt failed', {
+                            error: err as Error,
+                            url,
+                            attempt: attempt + 1,
+                            maxRetries
+                        });
 
-                    if (attempt < maxRetries - 1) {
-                        await new Promise(resolve => setTimeout(resolve, retryDelay));
+                        if (attempt < maxRetries - 1) {
+                            await new Promise(resolve => setTimeout(resolve, retryDelay));
+                        }
                     }
                 }
-            }
-            throw new Error(`Failed to connect to Redis at ${url} after ${maxRetries} attempts`);
-        }));
+                throw new Error(`Failed to connect to Redis at ${url} after ${maxRetries} attempts`);
+            }));
+        } catch (error) {
+            logger.error('Fatal: Redis connection failed', {
+                error: error as Error
+            });
+            process.exit(1);
+        }
     }
 
     private async reconnect() {
         try {
             await this.connectAll();
         } catch (error) {
-            this.logError(`Redis reconnect failed`, error);
+            logger.error(`Redis reconnect failed`, error);
         }
     }
 
     async get(key: string): Promise<string | null> {
-        if (!this.clients.length) {
-            this.log('No Redis clients available.');
-            return null;
+        const fullKey = this.keyPrefix + key;
+
+        const existingGet = RedisCacheClass.activeGets.get(fullKey);
+        if (existingGet) {
+            return existingGet;
         }
 
-        const fullKey = this.keyPrefix + key;
-        const startTime = Date.now();
-        try {
-            const promise = this.clients[0].get(fullKey);
-            const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 2000));
-            const result = await Promise.race([promise, timeout]);
-            const timeTaken = Date.now() - startTime;
-
-            if (!result) {
-                this.log(`Cache miss for key ${fullKey}. Time taken: ${timeTaken}ms`);
+        const getPromise = (async () => {
+            if (!this.clients.length) {
                 return null;
             }
-            this.log(`Cache hit for key ${fullKey}. Time taken: ${timeTaken}ms`);
-            return String(result);
-        } catch (error) {
-            const timeTaken = Date.now() - startTime;
-            this.logError(`Error getting key ${fullKey} from Redis. Time taken: ${timeTaken}ms`, error);
-            await this.reconnect();
-            return null;
-        }
+
+            try {
+                return await this.clients[0].get(fullKey);
+            } catch (error) {
+                logger.error('Redis GET operation failed', {
+                    error: error as Error,
+                    key: fullKey,
+                    operation: 'GET',
+                    timestamp: new Date().toISOString()
+                });
+                await this.reconnect();
+                return null;
+            } finally {
+                RedisCacheClass.activeGets.delete(fullKey);
+            }
+        })();
+
+        RedisCacheClass.activeGets.set(fullKey, getPromise);
+        return getPromise;
     }
 
-    async set(key: string, value: string, ttl: number = 30): Promise<void> {
-        if (!this.clients.length) {
-            this.log('No Redis clients available.');
-            return;
+    async set(key: string, value: string, ttlSeconds?: number): Promise<void> {
+        const fullKey = this.keyPrefix + key;
+
+        const existingSet = RedisCacheClass.activeSets.get(fullKey);
+        if (existingSet) {
+            return existingSet;
         }
 
-        const fullKey = this.keyPrefix + key;
-        try {
-            await Promise.all(this.clients.map(client =>
-                client.set(fullKey, value, {
-                    EX: ttl,
-                })
-            ));
-        } catch (error) {
-            this.logError(`Error setting key ${fullKey} in Redis`, error);
-            await this.reconnect();
-        }
+        const setPromise = (async () => {
+            if (!this.clients.length) {
+                return;
+            }
+
+            try {
+                if (ttlSeconds) {
+                    await this.clients[0].setEx(fullKey, ttlSeconds, value);
+                } else {
+                    await this.clients[0].set(fullKey, value);
+                }
+            } catch (error) {
+                logger.error('Redis SET operation failed', {
+                    error: error as Error,
+                    key: fullKey,
+                    operation: 'SET',
+                    ttlSeconds,
+                    timestamp: new Date().toISOString()
+                });
+                await this.reconnect();
+            } finally {
+                RedisCacheClass.activeSets.delete(fullKey);
+            }
+        })();
+
+        RedisCacheClass.activeSets.set(fullKey, setPromise);
+        return setPromise;
     }
 
     async IsAlive(): Promise<boolean> {
@@ -137,7 +177,11 @@ class RedisCacheClass {
         try {
             return JSON.parse(result);
         } catch (error) {
-            this.logError(`Error parsing JSON for key ${this.keyPrefix + key}`, error);
+            logger.error('Redis operation failed', {
+                error: error as Error,
+                key: this.keyPrefix + key,
+                operation: 'GET'
+            });
             return null;
         }
     }
@@ -147,7 +191,11 @@ class RedisCacheClass {
             const stringValue = JSONStringify(value);
             await this.set(key, stringValue, ttl);
         } catch (error) {
-            this.logError(`Error serializing array for key ${this.keyPrefix + key}`, error);
+            logger.error('Redis operation failed', {
+                error: error as Error,
+                key: this.keyPrefix + key,
+                operation: 'SET'
+            });
         }
     }
 
@@ -157,7 +205,11 @@ class RedisCacheClass {
         try {
             return JSON.parse(result);
         } catch (error) {
-            this.logError(`Error parsing JSON for key ${this.keyPrefix + key}`, error);
+            logger.error('Redis operation failed', {
+                error: error as Error,
+                key: this.keyPrefix + key,
+                operation: 'GET'
+            });
             return null;
         }
     }
@@ -168,7 +220,11 @@ class RedisCacheClass {
         try {
             return JSON.parse(result);
         } catch (error) {
-            this.logError(`Error parsing JSON for key ${this.keyPrefix + key}`, error);
+            logger.error('Redis operation failed', {
+                error: error as Error,
+                key: this.keyPrefix + key,
+                operation: 'GET'
+            });
             return null;
         }
     }
@@ -178,17 +234,36 @@ class RedisCacheClass {
             const stringValue = JSON.stringify(value);
             await this.set(key, stringValue, ttl);
         } catch (error) {
-            this.logError(`Error serializing dictionary for key ${this.keyPrefix + key}`, error);
+            logger.error('Redis operation failed', {
+                error: error as Error,
+                key: this.keyPrefix + key,
+                operation: 'SET'
+            });
         }
     }
 
-    private log(message: string) {
-        if (!this.debugLogs) return;
-        logger.info(`RedisCache: ${message}`);
-    }
+    async getTTL(key: string): Promise<number> {
+        const fullKey = this.keyPrefix + key;
 
-    private logError(message: string, error: any) {
-        logger.error(`RedisCache: ${message}`, error);
+        if (!this.clients.length) {
+            logger.error('Redis TTL check failed', {
+                reason: 'No clients available',
+                key: fullKey
+            });
+            return -2; // Redis convention: -2 means key doesn't exist
+        }
+
+        try {
+            const ttl = await this.clients[0].ttl(fullKey);
+            return ttl;
+        } catch (error) {
+            logger.error('Redis TTL check failed', {
+                error: error as Error,
+                key: fullKey
+            });
+            await this.reconnect();
+            return -2;
+        }
     }
 }
 

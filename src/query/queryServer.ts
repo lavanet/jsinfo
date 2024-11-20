@@ -111,7 +111,7 @@ export function RegisterRedisBackedHandler(
     handler: (request: FastifyRequest, reply: FastifyReply) => Promise<any>,
     options: { cache_ttl?: number, is_text?: boolean } = {}
 ) {
-    logger.info("Registering reddis handler for path: " + path);
+    logger.info("Registering redis handler for path: " + path);
     opts = AddErrorResponseToFastifyServerOpts(opts);
     server.get(path, opts, handleRequestWithRedisCache(handler, options?.cache_ttl, options?.is_text));
 }

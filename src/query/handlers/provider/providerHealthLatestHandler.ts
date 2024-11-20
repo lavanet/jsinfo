@@ -230,6 +230,12 @@ export async function ProviderHealthLatestPaginatedHandler(request: FastifyReque
             specsData[spec].overallStatus = 'frozen';
         } else if (statuses.every(status => status === 'jailed')) {
             specsData[spec].overallStatus = 'jailed';
+        } else if (statuses.every(status =>
+            status === 'frozen' ||
+            status === 'unhealthy' ||
+            status === 'jailed'
+        )) {
+            specsData[spec].overallStatus = 'unhealthy';
         } else {
             specsData[spec].overallStatus = 'degraded';
         }

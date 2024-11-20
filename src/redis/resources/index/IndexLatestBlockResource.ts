@@ -12,7 +12,7 @@ export class IndexLatestBlockResource extends RedisResourceBase<IndexLatestBlock
     protected readonly redisKey = 'index:latest:block';
     protected readonly ttlSeconds = 60; // 1 minute cache
 
-    protected async fetchFromDb(db: PostgresJsDatabase): Promise<IndexLatestBlockData> {
+    protected async fetchFromDb(): Promise<IndexLatestBlockData> {
         const latestDbBlocks = await db
             .select()
             .from(JsinfoSchema.blocks)

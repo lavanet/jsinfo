@@ -3,23 +3,27 @@
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { sql } from 'drizzle-orm';
 import { logger } from '@jsinfo/utils/logger';
+import { queryJsinfo } from '@jsinfo/utils/dbPool';
 
-export const AggProviderAndConsumerRelayPayments = async (db: PostgresJsDatabase) => {
+export const AggProviderAndConsumerRelayPayments = async () => {
     refreshMaterializedViews(db);
 }
 
-export const AggProviderAndConsumerRelayPaymentsSync = async (db: PostgresJsDatabase) => {
+export const AggProviderAndConsumerRelayPaymentsSync = async () => {
     await refreshMaterializedViews(db);
 }
 
-async function refreshMaterializedViews(db: PostgresJsDatabase) {
+async function refreshMaterializedViews() {
     try {
         logger.info('Starting to refresh materialized views');
 
         // Refresh continuous aggregates
         const measureExecutionTime = async (description: string, sqlCommand: string) => {
             const start = Date.now();
-            await db.execute(sql`${sql.raw(sqlCommand)}`);
+            await queryJsinfo(
+                async (db: PostgresJsDatabase) => db.execute(sql`${sql.raw(sqlCommand)}`),
+                `refreshMaterializedViews_${description}`
+            );
             const end = Date.now();
             const duration = end - start;
             logger.info(`${description} took ${duration}ms`);

@@ -3,7 +3,7 @@
 
 import * as RelaysSchema from '@jsinfo/schemas/relaysSchema';
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryCheckRelaysReadDbInstance, QueryGetRelaysReadDbForQueryInstance } from '@jsinfo/query/queryDb';
+import { QueryCheckRelaysReadDbInstance, QueryGetRelaysReadDbForQueryInstance } from '@jsinfo/query/utils/getLatestBlock';
 import { eq, desc, sql, asc } from "drizzle-orm";
 import { Pagination } from '@jsinfo/query/utils/queryPagination';
 import { CSVEscape } from '@jsinfo/utils/fmt';

@@ -4,7 +4,7 @@ import * as consts from './query/queryConsts'
 import { logger } from './utils/logger'
 
 import { GetServerInstance } from './query/queryServer'
-import { QueryInitJsinfoDbInstance, QueryInitRelaysReadDbInstance, GetLatestBlock } from './query/queryDb'
+import { QueryInitJsinfoDbInstance, QueryInitRelaysReadDbInstance, GetLatestBlock } from './query/utils/getLatestBlock'
 
 import './query/queryRoutes'
 

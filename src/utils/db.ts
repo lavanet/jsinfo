@@ -50,6 +50,7 @@ export async function GetJsinfoDbForIndexer(): Promise<PostgresJsDatabase> {
     const queryClient = postgres(await GetPostgresUrl(), {
         idle_timeout: 60 * 2,
         connect_timeout: 60 * 10,
+        max_lifetime: 60 * 4,
     });
     const db: PostgresJsDatabase = drizzle(queryClient/*, { logger: true }*/);
     return db;
@@ -58,10 +59,9 @@ export async function GetJsinfoDbForIndexer(): Promise<PostgresJsDatabase> {
 export async function GetJsinfoDbForQuery(): Promise<PostgresJsDatabase> {
     // use one db
     const queryClient = postgres(await GetPostgresUrl(), {
-        idle_timeout: 20,
-        connect_timeout: 20,
-        max_lifetime: 75,
-        max: 60,
+        idle_timeout: 60 * 2,
+        connect_timeout: 60 * 10,
+        max_lifetime: 60 * 4,
     });
     const db: PostgresJsDatabase = drizzle(queryClient/*, { logger: true }*/);
     return db;

@@ -107,7 +107,7 @@ export class IndexerRedisResourceCaller {
         }
     }
 
-    private static async refreshAjaxResources(db: PostgresJsDatabase): Promise<void> {
+    private static async refreshAjaxResources(): Promise<void> {
         // Supply Resources
         await new SupplyResource().fetch(db, { type: 'total' })
             .catch(e => logger.error('Failed to refresh total supply:', e));
@@ -129,7 +129,7 @@ export class IndexerRedisResourceCaller {
             .catch(e => logger.error('Failed to refresh providers list:', e));
     }
 
-    private static async refreshIndexResources(db: PostgresJsDatabase): Promise<void> {
+    private static async refreshIndexResources(): Promise<void> {
         // Basic Index Resources
         await new IndexStakesResource().fetch(db)
             .catch(e => logger.error('Failed to refresh index stakes:', e));
@@ -148,7 +148,7 @@ export class IndexerRedisResourceCaller {
         await this.refreshProviderIndexResources(db);
     }
 
-    private static async refreshProviderIndexResources(db: PostgresJsDatabase): Promise<void> {
+    private static async refreshProviderIndexResources(): Promise<void> {
         // Active Providers
         await new ActiveProvidersResource().fetch(db)
             .catch(e => logger.error('Failed to refresh active providers:', e));
@@ -166,7 +166,7 @@ export class IndexerRedisResourceCaller {
             .catch(e => logger.error('Failed to refresh active providers index (paginated):', e));
     }
 
-    private static async refreshGlobalResources(db: PostgresJsDatabase): Promise<void> {
+    private static async refreshGlobalResources(): Promise<void> {
         await SpecAndConsumerService.fetch(db)
             .catch(e => logger.error('Failed to refresh spec and consumer data:', e));
         await ProviderMonikerService.fetch(db)

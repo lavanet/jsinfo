@@ -4,8 +4,9 @@ import { StringifyJsonForCompare } from "@jsinfo/utils/fmt";
 import { QueryLavaRPC } from "@jsinfo/indexer/utils/restRpc";
 import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { eq, desc } from "drizzle-orm";
-import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import { queryJsinfo } from '@jsinfo/utils/dbPool';
 import { MemoryCache } from "@jsinfo/indexer/classes/MemoryCache";
+
 interface Credit {
     denom: string;
     amount: string;
@@ -34,12 +35,12 @@ export async function GetSubscriptionList(): Promise<SubscriptionListResponse> {
     return QueryLavaRPC<SubscriptionListResponse>("/lavanet/lava/subscription/list");
 }
 
-export async function ProcessSubscriptionList(db: PostgresJsDatabase): Promise<void> {
+export async function ProcessSubscriptionList(): Promise<void> {
     try {
         const subscriptionList = await GetSubscriptionList();
 
         for (const sub of subscriptionList.subs_info) {
-            await ProcessSubscription(db, sub);
+            await ProcessSubscription(sub);
         }
     } catch (error) {
         logger.error('Error processing subscription list', { error });
@@ -47,7 +48,7 @@ export async function ProcessSubscriptionList(db: PostgresJsDatabase): Promise<v
     }
 }
 
-async function ProcessSubscription(db: PostgresJsDatabase, sub: SubInfo): Promise<void> {
+async function ProcessSubscription(sub: SubInfo): Promise<void> {
     const { consumer, plan } = sub;
 
     if (!IsMeaningfulText(consumer) || !IsMeaningfulText(plan)) {
@@ -57,19 +58,19 @@ async function ProcessSubscription(db: PostgresJsDatabase, sub: SubInfo): Promis
     const cacheKey = `subscription-${consumer}-${plan}`;
     const cachedValue = await MemoryCache.getDict(cacheKey);
     if (cachedValue && cachedValue.processed) {
-        // Skip processing duplicate subscription
         return;
     }
 
     const dataString = JSON.stringify(sub);
-    // logger.info(`Processing subscription: ${dataString.slice(0, 1000)}`);
 
-    // Query for existing subscription data
-    const existingData = await db.select({ fulltext: JsinfoSchema.consumerSubscriptionList.fulltext })
-        .from(JsinfoSchema.consumerSubscriptionList)
-        .where(eq(JsinfoSchema.consumerSubscriptionList.consumer, consumer))
-        .orderBy(desc(JsinfoSchema.consumerSubscriptionList.createdAt))
-        .limit(1);
+    const existingData = await queryJsinfo(
+        async (db) => db.select({ fulltext: JsinfoSchema.consumerSubscriptionList.fulltext })
+            .from(JsinfoSchema.consumerSubscriptionList)
+            .where(eq(JsinfoSchema.consumerSubscriptionList.consumer, consumer))
+            .orderBy(desc(JsinfoSchema.consumerSubscriptionList.createdAt))
+            .limit(1),
+        'ProcessSubscription_select'
+    );
 
     const existingFulltext = existingData[0]?.fulltext || '';
 
@@ -80,11 +81,13 @@ async function ProcessSubscription(db: PostgresJsDatabase, sub: SubInfo): Promis
             fulltext: dataString,
         };
 
-        await db.insert(JsinfoSchema.consumerSubscriptionList).values(newSubscription);
+        await queryJsinfo(
+            async (db) => db.insert(JsinfoSchema.consumerSubscriptionList).values(newSubscription),
+            'ProcessSubscription_insert'
+        );
         logger.info('New subscription record inserted');
     }
 
-    // Update the cache after processing
     await MemoryCache.setDict(cacheKey, { processed: true }, 3600);
 }
 

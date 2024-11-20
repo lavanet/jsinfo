@@ -8,7 +8,7 @@ import { aggProviderAllTimeRelayPayments } from "./aggProviderAllTimeRelayPaymen
 
 let isRunning = false;
 
-export const aggProviderRelayPayments = async (db: PostgresJsDatabase) => {
+export const aggProviderRelayPayments = async () => {
     if (isRunning) {
         logger.info('aggProviderRelayPayments is already running. Exiting this call.');
         return;
@@ -19,7 +19,7 @@ export const aggProviderRelayPayments = async (db: PostgresJsDatabase) => {
     logger.info(`aggProviderHourlyRelayPayments started at: ${new Date().toISOString()}`);
     try {
         const start = Date.now();
-        await aggProviderHourlyRelayPayments(db);
+        await aggProviderHourlyRelayPayments();
         const executionTime = Date.now() - start;
         logger.info(`Successfully executed aggProviderHourlyRelayPayments. Execution time: ${executionTime} ms`);
     } catch (e) {
@@ -36,7 +36,7 @@ export const aggProviderRelayPayments = async (db: PostgresJsDatabase) => {
     logger.info(`aggProviderDailyRelayPayments started at: ${new Date().toISOString()}`);
     try {
         const start = Date.now();
-        await aggProviderDailyRelayPayments(db);
+        await aggProviderDailyRelayPayments();
         const executionTime = Date.now() - start;
         logger.info(`Successfully executed aggProviderDailyRelayPayments. Execution time: ${executionTime} ms`);
     } catch (e) {
@@ -48,7 +48,7 @@ export const aggProviderRelayPayments = async (db: PostgresJsDatabase) => {
     logger.info(`aggProviderAllTimeRelayPayments started at: ${new Date().toISOString()}`);
     try {
         const start = Date.now();
-        await aggProviderAllTimeRelayPayments(db);
+        await aggProviderAllTimeRelayPayments();
         const executionTime = Date.now() - start;
         logger.info(`Successfully executed aggProviderAllTimeRelayPayments. Execution time: ${executionTime} ms`);
     } catch (e) {

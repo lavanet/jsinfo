@@ -1,7 +1,7 @@
 // src/query/handlers/specProviderHealthHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryGetJsinfoDbForQueryInstance } from '../../queryDb';
+import { QueryGetJsinfoDbForQueryInstance } from '../../utils/getLatestBlock';
 import { eq, and, gte, desc } from "drizzle-orm";
 import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { GetAndValidateProviderAddressFromRequest, GetAndValidateSpecIdFromRequest } from '../../utils/queryRequestArgParser';

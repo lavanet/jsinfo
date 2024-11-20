@@ -4,6 +4,7 @@ import { RpcOnDemandEndpointCache } from '@jsinfo/indexer/classes/RpcOnDemandEnd
 import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { SpecAndConsumerService } from "@jsinfo/redis/resources/global/SpecAndConsumerResource";
 import { sql } from 'drizzle-orm';
+import { queryJsinfo } from '@jsinfo/utils/dbPool';
 
 export interface ProcessedSpecInfo {
     provider: string;
@@ -53,20 +54,21 @@ class SpecTrackedInfoMonitorClass {
             const db = await GetJsinfoDbForIndexer();
             const now = new Date();
 
-            await db.insert(JsinfoSchema.specTrackedInfo)
-                .values(deduplicatedInfo.map(info => ({
-                    provider: info.provider,
-                    chain_id: info.chain_id,
-                    iprpc_cu: info.iprpc_cu,
-                    timestamp: now
-                })))
-                .onConflictDoUpdate({
-                    target: [JsinfoSchema.specTrackedInfo.provider, JsinfoSchema.specTrackedInfo.chain_id],
-                    set: {
-                        iprpc_cu: sql`EXCLUDED.iprpc_cu`,
-                        timestamp: sql`EXCLUDED.timestamp`
-                    }
-                });
+            await queryJsinfo(
+                async (db) => db.insert(JsinfoSchema.specTrackedInfo)
+                    .values(deduplicatedInfo.map(info => ({
+                        provider: info.provider,
+                        chain_id: info.chain_id,
+                        iprpc_cu: info.iprpc_cu,
+                        timestamp: now
+                    })))
+                    .onConflictDoUpdate({
+                        target: [JsinfoSchema.specTrackedInfo.provider, JsinfoSchema.specTrackedInfo.chain_id],
+                        set: {
+                            iprpc_cu: sql`EXCLUDED.iprpc_cu`,
+                            timestamp: sql`EXCLUDED.timestamp`
+                        }
+                    });
 
         } catch (error) {
             logger.error(`SpecTrackedInfoMonitor::DB Update - Failed to update spec info`, { error });

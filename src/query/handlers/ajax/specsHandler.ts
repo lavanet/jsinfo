@@ -1,7 +1,7 @@
 // src/query/handlers/specsHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryCheckJsinfoDbInstance } from '../../queryDb';
+import { QueryCheckJsinfoDbInstance } from '../../utils/getLatestBlock';
 import { SpecAndConsumerService } from '@jsinfo/redis/resources/global/SpecAndConsumerResource';
 
 export const SpecsPaginatedHandlerOpts: RouteShorthandOptions = {

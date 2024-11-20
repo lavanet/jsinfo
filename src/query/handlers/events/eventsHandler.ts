@@ -1,7 +1,7 @@
 // src/query/handlers/eventsHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryCheckJsinfoDbInstance, GetLatestBlock } from '../../queryDb';
+import { QueryCheckJsinfoDbInstance, GetLatestBlock } from '../../utils/getLatestBlock';
 
 export const EventsPaginatedHandlerOpts: RouteShorthandOptions = {
     schema: {

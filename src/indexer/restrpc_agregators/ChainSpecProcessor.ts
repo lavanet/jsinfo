@@ -4,7 +4,7 @@ import { keyValueStore } from "@jsinfo/schemas/jsinfoSchema/jsinfoSchema";
 import { logger } from "@jsinfo/utils/logger";
 import { eq } from "drizzle-orm";
 
-export async function ProcessChainSpecs(db: PostgresJsDatabase): Promise<void> {
+export async function ProcessChainSpecs(): Promise<void> {
     try {
         const start = Date.now();
         const chainList = await RpcPeriodicEndpointCache.GetChainList();

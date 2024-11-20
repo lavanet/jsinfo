@@ -8,6 +8,7 @@ import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { sql } from 'drizzle-orm';
 import { MemoryCache } from "@jsinfo/indexer/classes/MemoryCache";
 import { SpecAndConsumerService } from "@jsinfo/redis/resources/global/SpecAndConsumerResource";
+import { queryJsinfo } from '@jsinfo/utils/dbPool';
 
 interface ProviderMonikerSpec {
     provider: string;
@@ -33,7 +34,7 @@ export async function GetProviderMonikerSpecs(spec: string): Promise<ProviderRes
     return await QueryLavaRPC<ProviderResponse>(`/lavanet/lava/pairing/providers/${spec}`);
 }
 
-export async function ProcessProviderMonikerSpecs(db: PostgresJsDatabase): Promise<void> {
+export async function ProcessProviderMonikerSpecs(): Promise<void> {
     try {
         const specs = await SpecAndConsumerService.GetAllSpecs();
         for (const spec of specs) {
@@ -82,7 +83,7 @@ async function batchAppend(db: PostgresJsDatabase, psmEntry: ProviderMonikerSpec
     await MemoryCache.setDict(cacheKey, { moniker: psmEntry.moniker }, 3600);
 }
 
-async function batchInsert(db: PostgresJsDatabase): Promise<void> {
+async function batchInsert(): Promise<void> {
     if (batchData.length === 0) {
         logger.warn('providerSpecMoniker:: batchInsert: No data to insert');
         return;
@@ -104,15 +105,18 @@ async function batchInsert(db: PostgresJsDatabase): Promise<void> {
         });
     }
     try {
-        await db.insert(JsinfoSchema.providerSpecMoniker)
-            .values(Array.from(uniqueEntriesByProviderSpec.values()))
-            .onConflictDoUpdate({
-                target: [JsinfoSchema.providerSpecMoniker.provider, JsinfoSchema.providerSpecMoniker.spec],
-                set: {
-                    moniker: sql.raw('EXCLUDED.moniker'),
-                    updatedAt: sql.raw('NOW()')
-                }
-            });
+        await queryJsinfo(
+            async (db) => db.insert(JsinfoSchema.providerSpecMoniker)
+                .values(Array.from(uniqueEntriesByProviderSpec.values()))
+                .onConflictDoUpdate({
+                    target: [JsinfoSchema.providerSpecMoniker.provider, JsinfoSchema.providerSpecMoniker.spec],
+                    set: {
+                        moniker: sql.raw('EXCLUDED.moniker'),
+                        updatedAt: sql.raw('NOW()')
+                    }
+                }),
+            'ProviderSpecMonikerProcessor::batchInsert'
+        );
 
         batchData = [];
         batchStartTime = new Date();

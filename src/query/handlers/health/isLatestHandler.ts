@@ -3,7 +3,7 @@
 // curl http://localhost:8081/islatest
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryCheckJsinfoDbInstance, GetLatestBlock } from '../../queryDb';
+import { QueryCheckJsinfoDbInstance, GetLatestBlock } from '../../utils/getLatestBlock';
 import { WriteErrorToFastifyReply } from '../../utils/queryServerUtils';
 
 export const IsLatestRawHandlerOpts: RouteShorthandOptions = {

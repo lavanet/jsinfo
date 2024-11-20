@@ -2,7 +2,7 @@ import { GetJsinfoDbForIndexer } from '@jsinfo/utils/db';
 import { RedisCache } from './RedisCache';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { IsIndexerProcess } from '@jsinfo/utils/env';
-import { QueryGetJsinfoDbForQueryInstance, QueryInitJsinfoDbInstance } from '@jsinfo/query/queryDb';
+import { QueryGetJsinfoDbForQueryInstance, QueryInitJsinfoDbInstance } from '@jsinfo/query/utils/getLatestBlock';
 import { logger } from '@jsinfo/utils/logger';
 
 interface BaseArgs {
@@ -245,7 +245,7 @@ export abstract class RedisResourceBase<T, A extends BaseArgs = BaseArgs> {
     }
 
     // Optional utility methods
-    protected async refresh(db: PostgresJsDatabase): Promise<void> {
+    protected async refresh(): Promise<void> {
         const data = await this.fetchFromDb(db);
         if (data) await this.set(data);
     }
@@ -255,7 +255,7 @@ export abstract class RedisResourceBase<T, A extends BaseArgs = BaseArgs> {
     }
 
     protected async withDbRetry<R>(
-        queryFn: (db: PostgresJsDatabase) => Promise<R>,
+        queryFn: () => Promise<R>,
         initialDb: PostgresJsDatabase,
         options: {
             checkEmpty?: boolean;

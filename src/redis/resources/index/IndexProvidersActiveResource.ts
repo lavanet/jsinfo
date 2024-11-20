@@ -13,6 +13,7 @@ import { ProviderMonikerService } from '@jsinfo/redis/resources/global/ProviderM
 import { CSVEscape } from '@jsinfo/utils/fmt';
 import { ParsePaginationFromString } from '@jsinfo/query/utils/queryPagination';
 import { ActiveProvidersResource } from './ActiveProvidersResource';
+import { queryJsinfo } from '@jsinfo/utils/dbPool';
 
 const rewardSumSubQuery = sql`SELECT SUM(arp_sub.rewardSum) FROM(SELECT arp."provider", SUM(arp."rewardsum") AS rewardSum FROM ${JsinfoProviderAgrSchema.aggAllTimeRelayPayments} arp GROUP BY arp."provider") arp_sub WHERE arp_sub."provider" = ${JsinfoSchema.providerStakes.provider}`;
 
@@ -42,7 +43,7 @@ export class IndexProvidersActiveResource extends RedisResourceBase<IndexProvide
     protected readonly redisKey = 'index:providers:active';
     protected readonly ttlSeconds = 600; // 10 minutes cache
 
-    protected async getActiveProviderAddresses(db: PostgresJsDatabase): Promise<string[]> {
+    protected async getActiveProviderAddresses(): Promise<string[]> {
         const result = await new ActiveProvidersResource().fetch(db);
         if (!result) {
             throw new Error("No active providers found");
@@ -79,17 +80,17 @@ export class IndexProvidersActiveResource extends RedisResourceBase<IndexProvide
             case 'all':
                 return {
                     type: 'all',
-                    data: await this.fetchAllRecords(db)
+                    data: await this.fetchAllRecords()
                 };
             case 'paginated':
                 return {
                     type: 'paginated',
-                    data: await this.fetchPaginatedRecords(db, queryParams.pagination || null)
+                    data: await this.fetchPaginatedRecords(queryParams.pagination || null)
                 };
             case 'count':
                 return {
                     type: 'count',
-                    count: await this.fetchRecordCountFromDb(db)
+                    count: await this.fetchRecordCountFromDb()
                 };
             default:
                 throw new Error(`Unsupported query type: ${queryType}`);
@@ -97,23 +98,27 @@ export class IndexProvidersActiveResource extends RedisResourceBase<IndexProvide
     }
 
 
-    protected async fetchAllRecords(db: PostgresJsDatabase): Promise<IndexProvidersActiveResponse[]> {
-        let activeProviders = await this.getActiveProviderAddresses(db);
+    protected async fetchAllRecords(): Promise<IndexProvidersActiveResponse[]> {
+        let activeProviders = await this.getActiveProviderAddresses();
 
         if (activeProviders.length === 0) {
             console.log("No active providers found");
             return [];
         }
 
-        const res = await db.select({
-            provider: JsinfoSchema.providerStakes.provider,
-            totalServices: sql<string>`CONCAT(SUM(CASE WHEN ${JsinfoSchema.providerStakes.status} = ${JsinfoSchema.LavaProviderStakeStatus.Active} THEN 1 ELSE 0 END), ' / ', COUNT(${JsinfoSchema.providerStakes.specId})) as totalServices`,
-            totalStake: sql<bigint>`COALESCE(SUM(CAST(${JsinfoSchema.providerStakes.stake} AS BIGINT) + LEAST(CAST(${JsinfoSchema.providerStakes.delegateTotal} AS BIGINT), CAST(${JsinfoSchema.providerStakes.delegateLimit} AS BIGINT))), 0) AS totalStake`,
-            rewardSum: sql<number>`COALESCE((${rewardSumSubQuery}), 0) as rewardSum`,
-        }).from(JsinfoSchema.providerStakes)
-            .where(inArray(JsinfoSchema.providerStakes.provider, activeProviders))
-            .groupBy(JsinfoSchema.providerStakes.provider)
-            .orderBy(sql`rewardSum DESC`)
+        const res = await queryJsinfo(
+            async (db: PostgresJsDatabase) => db.select({
+                provider: JsinfoSchema.providerStakes.provider,
+                totalServices: sql<string>`CONCAT(SUM(CASE WHEN ${JsinfoSchema.providerStakes.status} = ${JsinfoSchema.LavaProviderStakeStatus.Active} THEN 1 ELSE 0 END), ' / ', COUNT(${JsinfoSchema.providerStakes.specId})) as totalServices`,
+                totalStake: sql<bigint>`COALESCE(SUM(CAST(${JsinfoSchema.providerStakes.stake} AS BIGINT) + LEAST(CAST(${JsinfoSchema.providerStakes.delegateTotal} AS BIGINT), CAST(${JsinfoSchema.providerStakes.delegateLimit} AS BIGINT))), 0) AS totalStake`,
+                rewardSum: sql<number>`COALESCE((${rewardSumSubQuery}), 0) as rewardSum`,
+            })
+                .from(JsinfoSchema.providerStakes)
+                .where(inArray(JsinfoSchema.providerStakes.provider, activeProviders))
+                .groupBy(JsinfoSchema.providerStakes.provider)
+                .orderBy(sql`rewardSum DESC`),
+            'IndexProvidersActiveResource_fetchAllRecords'
+        );
 
         const providersDetails: IndexProvidersActiveResponse[] = await Promise.all(res.map(async provider => ({
             provider: provider.provider || "",
@@ -127,8 +132,8 @@ export class IndexProvidersActiveResource extends RedisResourceBase<IndexProvide
         return providersDetails;
     }
 
-    protected async fetchPaginatedRecords(db: PostgresJsDatabase, pagination: Pagination | null): Promise<IndexProvidersActiveResponse[]> {
-        let activeProviders = await this.getActiveProviderAddresses(db);
+    protected async fetchPaginatedRecords(pagination: Pagination | null): Promise<IndexProvidersActiveResponse[]> {
+        let activeProviders = await this.getActiveProviderAddresses();
 
         if (activeProviders.length === 0) {
             console.log("No active providers found");
@@ -171,20 +176,24 @@ export class IndexProvidersActiveResource extends RedisResourceBase<IndexProvide
         const orderFunction = finalPagination.direction === 'ascending' ? asc : desc;
 
         if (sortColumn === keyToColumnMap["moniker"]) {
-            const data = await db.select({
-                provider: JsinfoSchema.providerStakes.provider,
-                moniker: sql`MAX(${JsinfoSchema.providerSpecMoniker.moniker}) as moniker`,
-                totalServices: sql<string>`CONCAT(SUM(CASE WHEN ${JsinfoSchema.providerStakes.status} = ${JsinfoSchema.LavaProviderStakeStatus.Active} THEN 1 ELSE 0 END), ' / ', COUNT(${JsinfoSchema.providerStakes.specId})) as totalServices`,
-                totalStake: sql<bigint>`COALESCE(SUM(CAST(${JsinfoSchema.providerStakes.stake} AS BIGINT) + LEAST(CAST(${JsinfoSchema.providerStakes.delegateTotal} AS BIGINT), CAST(${JsinfoSchema.providerStakes.delegateLimit} AS BIGINT))), 0) AS totalStake`,
-                rewardSum: sql<number>`COALESCE((${rewardSumSubQuery}), 0) as rewardSum`,
-            })
-                .from(JsinfoSchema.providerStakes)
-                .leftJoin(JsinfoSchema.providerSpecMoniker, eq(JsinfoSchema.providerStakes.provider, JsinfoSchema.providerSpecMoniker.provider))
-                .where(inArray(JsinfoSchema.providerStakes.provider, activeProviders))
-                .groupBy(JsinfoSchema.providerStakes.provider)
-                .orderBy(orderFunction(sortColumn))
-                .offset((finalPagination.page - 1) * finalPagination.count)
-                .limit(finalPagination.count);
+            const data = await queryJsinfo(
+                async (db: PostgresJsDatabase) => db.select({
+                    provider: JsinfoSchema.providerStakes.provider,
+                    moniker: sql`MAX(${JsinfoSchema.providerSpecMoniker.moniker}) as moniker`,
+                    totalServices: sql<string>`CONCAT(SUM(CASE WHEN ${JsinfoSchema.providerStakes.status} = ${JsinfoSchema.LavaProviderStakeStatus.Active} THEN 1 ELSE 0 END), ' / ', COUNT(${JsinfoSchema.providerStakes.specId})) as totalServices`,
+                    totalStake: sql<bigint>`COALESCE(SUM(CAST(${JsinfoSchema.providerStakes.stake} AS BIGINT) + LEAST(CAST(${JsinfoSchema.providerStakes.delegateTotal} AS BIGINT), CAST(${JsinfoSchema.providerStakes.delegateLimit} AS BIGINT))), 0) AS totalStake`,
+                    rewardSum: sql<number>`COALESCE((${rewardSumSubQuery}), 0) as rewardSum`,
+                })
+                    .from(JsinfoSchema.providerStakes)
+                    .leftJoin(JsinfoSchema.providerSpecMoniker, eq(JsinfoSchema.providerStakes.provider, JsinfoSchema.providerSpecMoniker.provider))
+                    .where(inArray(JsinfoSchema.providerStakes.provider, activeProviders))
+                    .groupBy(JsinfoSchema.providerStakes.provider)
+                    .orderBy(orderFunction(sortColumn))
+                    .offset((finalPagination.page - 1) * finalPagination.count)
+                    .limit(finalPagination.count),
+                'IndexProvidersActiveResource_fetchPaginatedRecords_moniker'
+            );
+
 
             return Promise.all(data.map(async item => ({
                 provider: item.provider || "",
@@ -196,19 +205,22 @@ export class IndexProvidersActiveResource extends RedisResourceBase<IndexProvide
             })));
         }
 
-        const data = await db
-            .select({
-                provider: JsinfoSchema.providerStakes.provider,
-                totalServices: sql<string>`CONCAT(SUM(CASE WHEN ${JsinfoSchema.providerStakes.status} = ${JsinfoSchema.LavaProviderStakeStatus.Active} THEN 1 ELSE 0 END), ' / ', COUNT(${JsinfoSchema.providerStakes.specId})) as totalServices`,
-                totalStake: sql<bigint>`COALESCE(SUM(CAST(${JsinfoSchema.providerStakes.stake} AS BIGINT) + LEAST(CAST(${JsinfoSchema.providerStakes.delegateTotal} AS BIGINT), CAST(${JsinfoSchema.providerStakes.delegateLimit} AS BIGINT))), 0) AS totalStake`,
-                rewardSum: sql<number>`COALESCE((${rewardSumSubQuery}), 0) as rewardSum`,
-            })
-            .from(JsinfoSchema.providerStakes)
-            .where(inArray(JsinfoSchema.providerStakes.provider, activeProviders))
-            .groupBy(JsinfoSchema.providerStakes.provider)
-            .orderBy(orderFunction(sortColumn))
-            .offset((finalPagination.page - 1) * finalPagination.count)
-            .limit(finalPagination.count);
+        const data = await queryJsinfo(
+            async (db: PostgresJsDatabase) => db
+                .select({
+                    provider: JsinfoSchema.providerStakes.provider,
+                    totalServices: sql<string>`CONCAT(SUM(CASE WHEN ${JsinfoSchema.providerStakes.status} = ${JsinfoSchema.LavaProviderStakeStatus.Active} THEN 1 ELSE 0 END), ' / ', COUNT(${JsinfoSchema.providerStakes.specId})) as totalServices`,
+                    totalStake: sql<bigint>`COALESCE(SUM(CAST(${JsinfoSchema.providerStakes.stake} AS BIGINT) + LEAST(CAST(${JsinfoSchema.providerStakes.delegateTotal} AS BIGINT), CAST(${JsinfoSchema.providerStakes.delegateLimit} AS BIGINT))), 0) AS totalStake`,
+                    rewardSum: sql<number>`COALESCE((${rewardSumSubQuery}), 0) as rewardSum`,
+                })
+                .from(JsinfoSchema.providerStakes)
+                .where(inArray(JsinfoSchema.providerStakes.provider, activeProviders))
+                .groupBy(JsinfoSchema.providerStakes.provider)
+                .orderBy(orderFunction(sortColumn))
+                .offset((finalPagination.page - 1) * finalPagination.count)
+                .limit(finalPagination.count),
+            'IndexProvidersActiveResource_fetchPaginatedRecords'
+        );
 
         return Promise.all(data.map(async item => ({
             provider: item.provider || "",
@@ -220,19 +232,22 @@ export class IndexProvidersActiveResource extends RedisResourceBase<IndexProvide
         })));
     }
 
-    protected async fetchRecordCountFromDb(db: PostgresJsDatabase): Promise<number> {
-        let activeProviders = await this.getActiveProviderAddresses(db);
+    protected async fetchRecordCountFromDb(): Promise<number> {
+        let activeProviders = await this.getActiveProviderAddresses();
 
         if (activeProviders.length === 0) {
             console.log("No active providers found");
             return 0;
         }
 
-        const res = await db.select({
-            count: sql<number>`COUNT(DISTINCT ${JsinfoSchema.providerStakes.provider})`,
-        })
-            .from(JsinfoSchema.providerStakes)
-            .where(inArray(JsinfoSchema.providerStakes.provider, activeProviders))
+        const res = await queryJsinfo(
+            async (db: PostgresJsDatabase) => db.select({
+                count: sql<number>`COUNT(DISTINCT ${JsinfoSchema.providerStakes.provider})`,
+            })
+                .from(JsinfoSchema.providerStakes)
+                .where(inArray(JsinfoSchema.providerStakes.provider, activeProviders)),
+            'IndexProvidersActiveResource_fetchRecordCountFromDb'
+        );
 
         return res[0].count || 0;
     }

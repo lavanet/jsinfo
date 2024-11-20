@@ -1,7 +1,7 @@
 // src/query/handlers/LatestRawHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryCheckJsinfoDbInstance, GetLatestBlock } from '../../queryDb';
+import { QueryCheckJsinfoDbInstance, GetLatestBlock } from '../../utils/getLatestBlock';
 
 export const LatestRawHandlerOpts: RouteShorthandOptions = {
     schema: {

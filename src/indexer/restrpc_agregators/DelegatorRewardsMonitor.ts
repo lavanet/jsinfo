@@ -5,6 +5,7 @@ import { RpcOnDemandEndpointCache } from '@jsinfo/indexer/classes/RpcOnDemandEnd
 import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { ConvertToBaseDenom, GetUSDCValue } from "./CurrencyConverstionUtils";
 import { sql } from 'drizzle-orm';
+import { queryJsinfo } from '@jsinfo/utils/dbPool';
 
 export interface ProcessedRewardAmount {
     amount: number;
@@ -65,15 +66,18 @@ class DelegatorRewardsMonitorClass {
                 timestamp: item.timestamp
             }));
 
-            await db.insert(JsinfoSchema.delegatorRewards)
-                .values(values)
-                .onConflictDoUpdate({
-                    target: [JsinfoSchema.delegatorRewards.delegator],
-                    set: {
-                        data: sql`excluded.data`,
-                        timestamp: sql`excluded.timestamp`
-                    }
-                });
+            await queryJsinfo(
+                async (db) => db.insert(JsinfoSchema.delegatorRewards)
+                    .values(values)
+                    .onConflictDoUpdate({
+                        target: [JsinfoSchema.delegatorRewards.delegator],
+                        set: {
+                            data: sql`excluded.data`,
+                            timestamp: sql`excluded.timestamp`
+                        }
+                    }),
+                'DelegatorRewardsMonitor::batchInsert'
+            );
 
             logger.info(`DelegatorRewardsMonitor::DB Update - Batch updated rewards`, {
                 batchSize: this.rewardsBatch.length,

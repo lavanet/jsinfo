@@ -6,7 +6,7 @@ import { RedisResourceBase } from '../../RedisResourceBase';
 
 export class ActiveProvidersResource extends RedisResourceBase<string[], {}> {
     protected readonly redisKey = 'index:active_providers';
-    protected readonly ttlSeconds = 60; // 60 second cache
+    protected readonly ttlSeconds = 600; // 10 minutes cache
 
     protected async fetchFromDb(db: PostgresJsDatabase): Promise<string[]> {
         const data = await db

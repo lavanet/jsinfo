@@ -135,7 +135,7 @@ const LavaProviderStakeStatusDict: { [key: number]: string } = {
 
 export class ListProvidersResource extends RedisResourceBase<ProvidersData, {}> {
     protected redisKey = 'listProviders';
-    protected ttlSeconds = 60;
+    protected ttlSeconds = 300; // 5 minutes cache
 
     protected async fetchFromDb(db: PostgresJsDatabase): Promise<ProvidersData> {
         const stakesRes = await db.select({

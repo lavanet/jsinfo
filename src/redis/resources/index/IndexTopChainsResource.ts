@@ -15,7 +15,7 @@ export interface IndexTopChainsData {
 
 export class IndexTopChainsResource extends RedisResourceBase<IndexTopChainsData, {}> {
     protected readonly redisKey = 'index:top:chains';
-    protected readonly ttlSeconds = 300; // 5 minutes cache
+    protected readonly ttlSeconds = 600; // 10 minutes cache
 
     protected async fetchFromDb(db: PostgresJsDatabase): Promise<IndexTopChainsData> {
         // Get 30 days stats

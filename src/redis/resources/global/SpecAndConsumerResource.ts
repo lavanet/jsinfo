@@ -8,7 +8,7 @@ import { eq } from 'drizzle-orm';
 
 class SpecAndConsumerResource extends RedisResourceBase<{ specs: string[], consumers: string[] }, {}> {
     protected readonly redisKey = 'spec-and-consumer-cache';
-    protected ttlSeconds = 120; // 2 minutes
+    protected ttlSeconds = 600; // 10 minutes cache
 
     protected async fetchFromDb(db: PostgresJsDatabase): Promise<{ specs: string[], consumers: string[] }> {
         const [specs, consumers] = await Promise.all([

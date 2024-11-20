@@ -15,7 +15,7 @@ interface ProviderMonikerSpecData {
 
 export class ProviderMonikerSpecResource extends RedisResourceBase<ProviderMonikerSpecData, {}> {
     protected redisKey = 'providerMonikerSpec';
-    protected ttlSeconds = 120; // 2 minutes cache
+    protected ttlSeconds = 600; // 10 minutes cache
 
     private sanitizeAndTrimMoniker(moniker: string): string {
         if (moniker === null || moniker.trim() === "") {

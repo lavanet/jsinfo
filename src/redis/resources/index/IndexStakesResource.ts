@@ -10,7 +10,7 @@ export interface IndexStakesData {
 
 export class IndexStakesResource extends RedisResourceBase<IndexStakesData, {}> {
     protected readonly redisKey = 'index:stakes';
-    protected readonly ttlSeconds = 300; // 5 minutes cache
+    protected readonly ttlSeconds = 600; // 10 minutes cache
 
     protected async fetchFromDb(db: PostgresJsDatabase): Promise<IndexStakesData> {
         const stakesRes = await db

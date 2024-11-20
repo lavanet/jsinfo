@@ -17,7 +17,7 @@ export interface AutoCompleteData {
 
 export class AutoCompleteResource extends RedisResourceBase<AutoCompleteData, {}> {
     protected redisKey = 'autocomplete';
-    protected ttlSeconds = 60; // 1 minute cache
+    protected ttlSeconds = 600; // 10 minutes cache
 
     protected async fetchFromDb(db: PostgresJsDatabase): Promise<AutoCompleteData> {
         const baseUrls = {

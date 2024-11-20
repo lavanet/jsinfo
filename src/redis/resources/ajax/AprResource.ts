@@ -1,5 +1,5 @@
 import { RedisResourceBase } from '../../classes/RedisResourceBase';
-import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
+import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 
 export interface AprData {
@@ -8,7 +8,7 @@ export interface AprData {
 
 export class AprResource extends RedisResourceBase<AprData, {}> {
     protected redisKey = 'apr';
-    protected ttlSeconds = 300; // 5 minutes cache
+    protected ttlSeconds = 600; // 10 minutes cache
 
     protected async fetchFromDb(db: PostgresJsDatabase): Promise<AprData> {
         const result = await db

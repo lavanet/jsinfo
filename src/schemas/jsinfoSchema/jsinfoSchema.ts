@@ -257,10 +257,7 @@ export const providerSpecMoniker = pgTable('provider_spec_moniker', {
   updatedAt: timestamp('updatedat').default(sql`CURRENT_TIMESTAMP(3)`),
 }, (table) => {
   return {
-    psmIdx: uniqueIndex("psmidx").on(
-      table.provider,
-      table.spec
-    )
+    pk: primaryKey({ columns: [table.provider, table.spec] })
   };
 });
 

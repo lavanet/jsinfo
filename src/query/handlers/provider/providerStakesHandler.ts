@@ -2,7 +2,7 @@
 // src/query/handlers/providerStakesHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryCheckJsinfoDbInstance, QueryGetJsinfoDbForQueryInstance } from '@jsinfo/query/utils/getLatestBlock';
+
 import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { asc, desc, eq, sql } from "drizzle-orm";
 import { Pagination, ParsePaginationFromString } from '@jsinfo/query/utils/queryPagination';
@@ -12,6 +12,7 @@ import { GetAndValidateProviderAddressFromRequest } from '@jsinfo/query/utils/qu
 import { ReplaceArchive } from '@jsinfo/indexer/utils/indexerUtils';
 import { RequestHandlerBase } from '@jsinfo/query/classes/RequestHandlerBase';
 import { BigIntIsZero } from '@jsinfo/utils/bigint';
+import { queryJsinfo } from '@jsinfo/query/utils/queryJsinfo';
 
 type ProviderStakesResponse = {
     stake: string;
@@ -105,25 +106,31 @@ class ProviderStakesData extends RequestHandlerBase<ProviderStakesResponse> {
     }
 
     protected async fetchAllRecords(): Promise<ProviderStakesResponse[]> {
-        await QueryCheckJsinfoDbInstance();
+        ;
 
-        let stakesRes = await QueryGetJsinfoDbForQueryInstance().select({
-            stake: JsinfoSchema.providerStakes.stake,
-            delegateLimit: JsinfoSchema.providerStakes.delegateLimit,
-            delegateTotal: JsinfoSchema.providerStakes.delegateTotal,
-            delegateCommission: JsinfoSchema.providerStakes.delegateCommission,
-            appliedHeight: JsinfoSchema.providerStakes.appliedHeight,
-            geolocation: JsinfoSchema.providerStakes.geolocation,
-            addons: JsinfoSchema.providerStakes.addons,
-            extensions: JsinfoSchema.providerStakes.extensions,
-            status: JsinfoSchema.providerStakes.status,
-            provider: JsinfoSchema.providerStakes.provider,
-            specId: JsinfoSchema.providerStakes.specId,
-            blockId: JsinfoSchema.providerStakes.blockId,
-            totalStake: sql<bigint>`(${JsinfoSchema.providerStakes.stake} + LEAST(${JsinfoSchema.providerStakes.delegateTotal}, ${JsinfoSchema.providerStakes.delegateLimit})) as totalStake`,
-        }).from(JsinfoSchema.providerStakes).
-            where(eq(JsinfoSchema.providerStakes.provider, this.addr)).orderBy(desc(JsinfoSchema.providerStakes.stake)).
-            offset(0).limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
+        let stakesRes = await queryJsinfo<ProviderStakesResponse[]>(
+            async (db) => await db.select({
+                stake: JsinfoSchema.providerStakes.stake,
+                delegateLimit: JsinfoSchema.providerStakes.delegateLimit,
+                delegateTotal: JsinfoSchema.providerStakes.delegateTotal,
+                delegateCommission: JsinfoSchema.providerStakes.delegateCommission,
+                appliedHeight: JsinfoSchema.providerStakes.appliedHeight,
+                geolocation: JsinfoSchema.providerStakes.geolocation,
+                addons: JsinfoSchema.providerStakes.addons,
+                extensions: JsinfoSchema.providerStakes.extensions,
+                status: JsinfoSchema.providerStakes.status,
+                provider: JsinfoSchema.providerStakes.provider,
+                specId: JsinfoSchema.providerStakes.specId,
+                blockId: JsinfoSchema.providerStakes.blockId,
+                totalStake: sql<bigint>`(${JsinfoSchema.providerStakes.stake} + LEAST(${JsinfoSchema.providerStakes.delegateTotal}, ${JsinfoSchema.providerStakes.delegateLimit})) as totalStake`,
+            })
+                .from(JsinfoSchema.providerStakes)
+                .where(eq(JsinfoSchema.providerStakes.provider, this.addr))
+                .orderBy(desc(JsinfoSchema.providerStakes.stake))
+                .offset(0)
+                .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION),
+            'ProviderStakes_fetchAllRecords'
+        );
 
         const processedRes = stakesRes.map(item => ({
             ...item,
@@ -140,14 +147,16 @@ class ProviderStakesData extends RequestHandlerBase<ProviderStakesResponse> {
     }
 
     protected async fetchRecordCountFromDb(): Promise<number> {
-        await QueryCheckJsinfoDbInstance();
+        ;
 
-        const countResult = await QueryGetJsinfoDbForQueryInstance()
-            .select({
+        const countResult = await queryJsinfo<{ count: number }[]>(
+            async (db) => await db.select({
                 count: sql<number>`COUNT(*)`
             })
-            .from(JsinfoSchema.providerStakes)
-            .where(eq(JsinfoSchema.providerStakes.provider, this.addr));
+                .from(JsinfoSchema.providerStakes)
+                .where(eq(JsinfoSchema.providerStakes.provider, this.addr)),
+            'ProviderStakes_fetchRecordCount'
+        );
 
         return Math.min(countResult[0].count || 0, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION - 1);
     }
@@ -182,15 +191,15 @@ class ProviderStakesData extends RequestHandlerBase<ProviderStakesResponse> {
             throw new Error(`Invalid sort key: ${trimmedSortKey}`);
         }
 
-        await QueryCheckJsinfoDbInstance();
+        ;
 
         const sortColumn = keyToColumnMap[finalPagination.sortKey];
         const orderFunction = finalPagination.direction === 'ascending' ? asc : desc;
 
         const offset = (finalPagination.page - 1) * finalPagination.count;
 
-        const stakesRes = await QueryGetJsinfoDbForQueryInstance()
-            .select({
+        const stakesRes = await queryJsinfo<ProviderStakesResponse[]>(
+            async (db) => await db.select({
                 stake: JsinfoSchema.providerStakes.stake,
                 delegateLimit: JsinfoSchema.providerStakes.delegateLimit,
                 delegateTotal: JsinfoSchema.providerStakes.delegateTotal,
@@ -205,11 +214,13 @@ class ProviderStakesData extends RequestHandlerBase<ProviderStakesResponse> {
                 blockId: JsinfoSchema.providerStakes.blockId,
                 totalStake: sql<bigint>`(COALESCE(${JsinfoSchema.providerStakes.stake}, 0) + LEAST(COALESCE(${JsinfoSchema.providerStakes.delegateTotal}, 0), COALESCE(${JsinfoSchema.providerStakes.delegateLimit}, 0))) as totalStake`,
             })
-            .from(JsinfoSchema.providerStakes)
-            .where(eq(JsinfoSchema.providerStakes.provider, this.addr))
-            .orderBy(orderFunction(sortColumn))
-            .offset(offset)
-            .limit(finalPagination.count);
+                .from(JsinfoSchema.providerStakes)
+                .where(eq(JsinfoSchema.providerStakes.provider, this.addr))
+                .orderBy(orderFunction(sortColumn))
+                .offset(offset)
+                .limit(finalPagination.count),
+            'ProviderStakes_fetchPaginatedRecords'
+        );
 
         const processedRes = stakesRes.map(item => ({
             ...item,

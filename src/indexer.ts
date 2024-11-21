@@ -25,7 +25,7 @@ import { ConnectToRpc, RpcConnection } from "./indexer/utils/lavajsRpc";
 import { MigrateDb, GetJsinfoDbForIndexer } from "./utils/db";
 import { AggProviderAndConsumerRelayPayments, AggProviderAndConsumerRelayPaymentsSync } from "./indexer/agregators/aggProviderAndConsumerRelayPayments";
 import { BackgroundThreadCaller } from './indexer/backgroundThreadCaller';
-import { queryJsinfo } from './utils/dbPool';
+import { queryJsinfo } from './utils/db';
 
 let static_blockchainEntitiesStakes: Map<string, JsinfoSchema.InsertProviderStake[]> = new Map()
 

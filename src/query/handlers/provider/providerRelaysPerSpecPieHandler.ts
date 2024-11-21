@@ -1,7 +1,7 @@
 // src/query/handlers/provider/providerRelaysPerSpecPieHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryCheckJsinfoDbInstance, QueryGetJsinfoDbForQueryInstance } from '@jsinfo/query/utils/getLatestBlock';
+
 import * as JsinfoProviderAgrSchema from '@jsinfo/schemas/jsinfoSchema/providerRelayPaymentsAgregation';
 import { sql, eq, desc } from "drizzle-orm";
 import { GetAndValidateProviderAddressFromRequest } from '@jsinfo/query/utils/queryRequestArgParser';
@@ -35,7 +35,7 @@ export async function ProviderRelaysPerSpecPieHandler(request: FastifyRequest, r
         return null;
     }
 
-    await QueryCheckJsinfoDbInstance();
+    ;
 
     const relaysPerSpec = await QueryGetJsinfoDbForQueryInstance()
         .select({

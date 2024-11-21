@@ -4,7 +4,7 @@ import { StringifyJsonForCompare } from "@jsinfo/utils/fmt";
 import { QueryLavaRPC } from "@jsinfo/indexer/utils/restRpc";
 import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { eq, desc } from "drizzle-orm";
-import { queryJsinfo } from '@jsinfo/utils/dbPool';
+import { queryJsinfo } from '@jsinfo/utils/db';
 import { MemoryCache } from "@jsinfo/indexer/classes/MemoryCache";
 
 interface Credit {

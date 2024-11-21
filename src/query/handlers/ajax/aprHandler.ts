@@ -23,7 +23,7 @@ export const APRRawHandlerOpts: RouteShorthandOptions = {
 
 export async function APRRawHandler(request: FastifyRequest, reply: FastifyReply) {
     const resource = new AprResource();
-    const data = await resource.fetchAndPickDb();
+    const data = await resource.fetch();
     if (!data) {
         reply.status(400);
         reply.send({ error: 'Failed to fetch APR data' });

@@ -1,6 +1,6 @@
 // src/indexer/agregators/aggProviderAllTimeRelayPayments.ts
 
-import { queryJsinfo } from '@jsinfo/utils/dbPool';
+import { queryJsinfo } from '@jsinfo/utils/db';
 import { sql, ne } from "drizzle-orm";
 import * as JsinfoProviderAgrSchema from '@jsinfo/schemas/jsinfoSchema/providerRelayPaymentsAgregation';
 import { logger } from "../../../utils/logger";

@@ -1,7 +1,7 @@
 // src/query/handlers/providerEventsHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryCheckJsinfoDbInstance, QueryGetJsinfoDbForQueryInstance } from '@jsinfo/query/utils/getLatestBlock';
+
 import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { asc, desc, eq, sql, and, gte } from "drizzle-orm";
 import { Pagination, ParsePaginationFromString } from '@jsinfo/query/utils/queryPagination';
@@ -110,7 +110,7 @@ class ProviderEventsData extends RequestHandlerBase<ProviderEventsResponse> {
     }
 
     protected async fetchAllRecords(): Promise<ProviderEventsResponse[]> {
-        await QueryCheckJsinfoDbInstance();
+        ;
 
         const thirtyDaysAgo = getDateThirtyDaysAgo();
 
@@ -160,7 +160,7 @@ class ProviderEventsData extends RequestHandlerBase<ProviderEventsResponse> {
     }
 
     protected async fetchRecordCountFromDb(): Promise<number> {
-        await QueryCheckJsinfoDbInstance();
+        ;
 
         const thirtyDaysAgo = getDateThirtyDaysAgo();
 
@@ -215,7 +215,7 @@ class ProviderEventsData extends RequestHandlerBase<ProviderEventsResponse> {
             throw new Error(`Invalid sort key: ${trimmedSortKey}`);
         }
 
-        await QueryCheckJsinfoDbInstance();
+        ;
 
         const sortColumn = keyToColumnMap[finalPagination.sortKey];
         const orderFunction = finalPagination.direction === 'ascending' ? asc : desc;

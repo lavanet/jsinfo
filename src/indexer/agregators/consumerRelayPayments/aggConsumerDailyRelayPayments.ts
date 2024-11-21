@@ -1,6 +1,6 @@
 // src/indexer/agregators/aggConsumerDailyRelayPayments.ts
 
-import { queryJsinfo } from '@jsinfo/utils/dbPool';
+import { queryJsinfo } from '@jsinfo/utils/db';
 import { isNotNull, sql, and, ne } from "drizzle-orm";
 import * as JsinfoConsumerAgrSchema from '@jsinfo/schemas/jsinfoSchema/consumerRelayPaymentsAgregation';
 import { DoInChunks } from '@jsinfo/utils/processing';

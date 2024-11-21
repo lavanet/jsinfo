@@ -8,7 +8,7 @@ import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { sql } from 'drizzle-orm';
 import { MemoryCache } from "@jsinfo/indexer/classes/MemoryCache";
 import { SpecAndConsumerService } from "@jsinfo/redis/resources/global/SpecAndConsumerResource";
-import { queryJsinfo } from '@jsinfo/utils/dbPool';
+import { queryJsinfo } from '@jsinfo/utils/db';
 
 interface ProviderMonikerSpec {
     provider: string;

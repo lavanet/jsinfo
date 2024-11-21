@@ -41,7 +41,7 @@ export const IndexProvidersActivePaginatedHandlerOpts: RouteShorthandOptions = {
 
 export async function IndexProvidersActivePaginatedHandler(request: FastifyRequest, reply: FastifyReply): Promise<IndexProvidersActiveResourceResponse> {
     const resource = new IndexProvidersActiveResource();
-    const result = await resource.fetchAndPickDb({
+    const result = await resource.fetch({
         type: 'paginated',
         pagination: ParsePaginationFromRequest(request) ?? undefined
     });
@@ -74,7 +74,7 @@ export const IndexProvidersActiveItemCountPaginatiedHandlerOpts: RouteShorthandO
 
 export async function IndexProvidersActiveItemCountPaginatiedHandler(request: FastifyRequest, reply: FastifyReply): Promise<{ itemCount: number }> {
     const resource = new IndexProvidersActiveResource();
-    const result = await resource.fetchAndPickDb({ type: 'count' });
+    const result = await resource.fetch({ type: 'count' });
     if (!result || (typeof result.count !== 'number' && typeof result.count !== 'string')) {
         reply.status(400);
         reply.send({ error: 'Failed to fetch active providers count' });
@@ -102,7 +102,7 @@ export const IndexProvidersActiveCSVRawHandlerOpts: RouteShorthandOptions = {
 
 export async function IndexProvidersActiveCSVRawHandler(request: FastifyRequest, reply: FastifyReply) {
     const resource = new IndexProvidersActiveResource();
-    const result = await resource.fetchAndPickDb({ type: 'all' });
+    const result = await resource.fetch({ type: 'all' });
     if (!result) {
         reply.status(400);
         reply.send({ error: 'Failed to fetch active providers data' });

@@ -22,7 +22,6 @@
 */
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryCheckJsinfoDbInstance, QueryGetJsinfoDbForQueryInstance } from '../../utils/getLatestBlock';
 import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { desc, eq, gte, and } from "drizzle-orm";
 import { RedisCache } from '@jsinfo/redis/classes/RedisCache';
@@ -32,6 +31,7 @@ import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_
 import { RequestHandlerBase } from '@jsinfo/query/classes/RequestHandlerBase';
 import { Pagination } from '@jsinfo/query/utils/queryPagination';
 import { CSVEscape, JSONStringify } from '@jsinfo/utils/fmt';
+import { queryJsinfo } from '../../utils/db';
 
 type ConsumerSubscriptionRawEntry = {
     id: number;
@@ -93,21 +93,23 @@ export const ConsumerSubscriptionRawHandlerOpts: RouteShorthandOptions = {
 };
 
 async function fetchAllData(addr: string): Promise<ConsumerSubscriptionRawEntry[]> {
-    await QueryCheckJsinfoDbInstance();
-
     let nintyDaysAgo = new Date();
     nintyDaysAgo.setDate(nintyDaysAgo.getDate() - 90);
 
-    let reportsRes = await QueryGetJsinfoDbForQueryInstance().select().from(JsinfoSchema.consumerSubscriptionList)
-        .where(
-            and(
-                eq(JsinfoSchema.consumerSubscriptionList.consumer, addr),
-                gte(JsinfoSchema.consumerSubscriptionList.createdAt, nintyDaysAgo)
+    let reportsRes = await queryJsinfo<ConsumerSubscriptionRawEntry[]>(
+        async (db) => await db.select()
+            .from(JsinfoSchema.consumerSubscriptionList)
+            .where(
+                and(
+                    eq(JsinfoSchema.consumerSubscriptionList.consumer, addr),
+                    gte(JsinfoSchema.consumerSubscriptionList.createdAt, nintyDaysAgo)
+                )
             )
-        )
-        .orderBy(desc(JsinfoSchema.consumerSubscriptionList.id))
-        .offset(0)
-        .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
+            .orderBy(desc(JsinfoSchema.consumerSubscriptionList.id))
+            .offset(0)
+            .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION),
+        'ConsumerSubscription_fetchAllData'
+    );
 
     const uniqueEntries = new Map<string, ConsumerSubscriptionRawEntry>();
 

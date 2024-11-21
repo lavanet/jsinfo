@@ -1,7 +1,7 @@
 // src/query/handlers/events/eventsEventsHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryGetJsinfoDbForQueryInstance, QueryCheckJsinfoDbInstance } from '@jsinfo/query/utils/getLatestBlock';
+import { queryJsinfo } from '../../utils/db';
 import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { asc, desc, eq, sql } from "drizzle-orm";
 import { Pagination, ParsePaginationFromString } from '@jsinfo/query/utils/queryPagination';
@@ -91,15 +91,15 @@ class EventsEventsData extends RequestHandlerBase<EventsEventsResponse> {
     }
 
     protected async fetchAllRecords(): Promise<EventsEventsResponse[]> {
-        await QueryCheckJsinfoDbInstance()
-
-        const eventsRes = await QueryGetJsinfoDbForQueryInstance()
-            .select()
-            .from(JsinfoSchema.events)
-            .where(sql`timestamp >= NOW() - INTERVAL '30 days'`)
-            .orderBy(desc(JsinfoSchema.events.id))
-            .offset(0)
-            .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
+        const eventsRes = await queryJsinfo(
+            async (db) => await db.select()
+                .from(JsinfoSchema.events)
+                .where(sql`timestamp >= NOW() - INTERVAL '30 days'`)
+                .orderBy(desc(JsinfoSchema.events.id))
+                .offset(0)
+                .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION),
+            'EventsEventsData_fetchAllRecords'
+        );
 
         const flattenedEvents = await Promise.all(eventsRes.map(async event => ({
             ...event,
@@ -116,13 +116,13 @@ class EventsEventsData extends RequestHandlerBase<EventsEventsResponse> {
     }
 
     protected async fetchRecordCountFromDb(): Promise<number> {
-        await QueryCheckJsinfoDbInstance();
-
-        const countResult = await QueryGetJsinfoDbForQueryInstance()
-            .select({
-                count: sql<number>`COUNT(*)`
+        const countResult = await queryJsinfo<{ count: number }[]>(
+            async (db) => await db.select({
+                count: sql<number>`COUNT(*)::int`
             })
-            .from(JsinfoSchema.events)
+                .from(JsinfoSchema.events),
+            'EventsEventsData_fetchRecordCountFromDb'
+        );
 
         return Math.min(countResult[0].count || 0, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION - 1);
     }
@@ -176,7 +176,15 @@ class EventsEventsData extends RequestHandlerBase<EventsEventsResponse> {
             throw new Error(`Invalid sort key: ${trimmedSortKey}`);
         }
 
-        await QueryCheckJsinfoDbInstance()
+        await queryJsinfo(
+            async (db) => await db.select()
+                .from(JsinfoSchema.events)
+                .where(sql`timestamp >= NOW() - INTERVAL '30 days'`)
+                .orderBy(desc(JsinfoSchema.events.id))
+                .offset(0)
+                .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION),
+            'EventsEventsData_fetchAllRecords'
+        );
 
         const sortColumn = keyToColumnMap[finalPagination.sortKey] || JsinfoSchema.events.id; // Default to id if not found
 
@@ -186,22 +194,26 @@ class EventsEventsData extends RequestHandlerBase<EventsEventsResponse> {
 
         let eventsRes: any | null = null;
         if (sortColumn === keyToColumnMap["moniker"]) {
-            eventsRes = await QueryGetJsinfoDbForQueryInstance()
-                .select()
-                .from(JsinfoSchema.events)
-                .leftJoin(JsinfoSchema.providerSpecMoniker, eq(JsinfoSchema.events.provider, JsinfoSchema.providerSpecMoniker.provider))
-                .where(sql`timestamp >= NOW() - INTERVAL '30 days'`)
-                .orderBy(orderFunction(sortColumn))
-                .offset(offset)
-                .limit(finalPagination.count);
+            eventsRes = await queryJsinfo(
+                async (db) => await db.select()
+                    .from(JsinfoSchema.events)
+                    .leftJoin(JsinfoSchema.providerSpecMoniker, eq(JsinfoSchema.events.provider, JsinfoSchema.providerSpecMoniker.provider))
+                    .where(sql`timestamp >= NOW() - INTERVAL '30 days'`)
+                    .orderBy(orderFunction(sortColumn))
+                    .offset(offset)
+                    .limit(finalPagination.count),
+                'EventsEventsData_fetchPaginatedRecords_withMoniker'
+            );
         } else {
-            eventsRes = await QueryGetJsinfoDbForQueryInstance()
-                .select()
-                .from(JsinfoSchema.events)
-                .where(sql`timestamp >= NOW() - INTERVAL '30 days'`)
-                .orderBy(orderFunction(sortColumn))
-                .offset(offset)
-                .limit(finalPagination.count);
+            eventsRes = await queryJsinfo(
+                async (db) => await db.select()
+                    .from(JsinfoSchema.events)
+                    .where(sql`timestamp >= NOW() - INTERVAL '30 days'`)
+                    .orderBy(orderFunction(sortColumn))
+                    .offset(offset)
+                    .limit(finalPagination.count),
+                'EventsEventsData_fetchPaginatedRecords'
+            );
         }
 
         const flattenedEvents = await Promise.all(eventsRes.map(async event => ({

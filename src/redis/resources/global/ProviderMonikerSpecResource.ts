@@ -1,5 +1,4 @@
 import { RedisResourceBase } from '../../classes/RedisResourceBase';
-import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { desc, sql } from 'drizzle-orm';
 
@@ -35,7 +34,7 @@ export class ProviderMonikerSpecResource extends RedisResourceBase<ProviderMonik
         return lavaid;
     }
 
-    protected async fetchFromDb(db: PostgresJsDatabase): Promise<ProviderMonikerSpecData> {
+    protected async fetchFromDb(): Promise<ProviderMonikerSpecData> {
         const results = await db
             .select({
                 provider: JsinfoSchema.providerSpecMoniker.provider,
@@ -69,7 +68,7 @@ export class ProviderMonikerSpecResource extends RedisResourceBase<ProviderMonik
     }
 
     public async GetMonikerForSpec(provider: string | null, spec: string | null): Promise<string> {
-        const data = await this.fetchAndPickDb();
+        const data = await this.fetch();
         if (!data || !provider) return '';
 
         const providerKey = this.verifyLavaId(provider);
@@ -83,7 +82,7 @@ export class ProviderMonikerSpecResource extends RedisResourceBase<ProviderMonik
     }
 
     public async GetMonikerForProvider(provider: string | null): Promise<string> {
-        const data = await this.fetchAndPickDb();
+        const data = await this.fetch();
         if (!data || !provider) return '';
 
         const providerKey = this.verifyLavaId(provider);
@@ -109,7 +108,7 @@ export class ProviderMonikerSpecResource extends RedisResourceBase<ProviderMonik
     }
 
     public async GetMonikerFullDescription(provider: string | null): Promise<string> {
-        const data = await this.fetchAndPickDb();
+        const data = await this.fetch();
         if (!data || !provider) return '';
 
         const providerKey = this.verifyLavaId(provider);
@@ -145,7 +144,7 @@ export class ProviderMonikerSpecResource extends RedisResourceBase<ProviderMonik
     }
 
     public async GetAllProviders(): Promise<string[]> {
-        const data = await this.fetchAndPickDb();
+        const data = await this.fetch();
         if (!data) return [];
 
         const uniqueProviders = new Set<string>();
@@ -159,7 +158,7 @@ export class ProviderMonikerSpecResource extends RedisResourceBase<ProviderMonik
     }
 
     public async IsValidProvider(provider: string): Promise<boolean> {
-        const data = await this.fetchAndPickDb();
+        const data = await this.fetch();
         if (!data) return false;
 
         return data.providers.some(p => p.provider === provider);

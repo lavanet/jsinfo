@@ -13,7 +13,7 @@ import { ProviderMonikerService } from '@jsinfo/redis/resources/global/ProviderM
 import { CSVEscape } from '@jsinfo/utils/fmt';
 import { ParsePaginationFromString } from '@jsinfo/query/utils/queryPagination';
 import { ActiveProvidersResource } from './ActiveProvidersResource';
-import { queryJsinfo } from '@jsinfo/utils/dbPool';
+import { queryJsinfo } from '@jsinfo/utils/db';
 
 const rewardSumSubQuery = sql`SELECT SUM(arp_sub.rewardSum) FROM(SELECT arp."provider", SUM(arp."rewardsum") AS rewardSum FROM ${JsinfoProviderAgrSchema.aggAllTimeRelayPayments} arp GROUP BY arp."provider") arp_sub WHERE arp_sub."provider" = ${JsinfoSchema.providerStakes.provider}`;
 
@@ -72,7 +72,7 @@ export class IndexProvidersActiveResource extends RedisResourceBase<IndexProvide
         }
     }
 
-    protected async fetchFromDb(db: PostgresJsDatabase, params?: IndexProvidersActiveQueryParams): Promise<IndexProvidersActiveResourceResponse> {
+    protected async fetchFromDb(params?: IndexProvidersActiveQueryParams): Promise<IndexProvidersActiveResourceResponse> {
         const queryParams = params || this.getDefaultParams();
         const queryType = queryParams.type || 'paginated';
 

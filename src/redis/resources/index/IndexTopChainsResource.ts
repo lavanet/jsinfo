@@ -2,7 +2,7 @@ import { sql, gt } from "drizzle-orm";
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as JsinfoProviderAgrSchema from '@jsinfo/schemas/jsinfoSchema/providerRelayPaymentsAgregation';
 import { RedisResourceBase } from '@jsinfo/redis/classes/RedisResourceBase';
-import { queryJsinfo } from '@jsinfo/utils/dbPool';
+import { queryJsinfo } from '@jsinfo/utils/db';
 
 export interface IndexTopChainsData {
     allSpecs: {

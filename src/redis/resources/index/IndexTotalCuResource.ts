@@ -1,7 +1,7 @@
 import { sql } from 'drizzle-orm';
 import * as JsinfoProviderAgrSchema from '@jsinfo/schemas/jsinfoSchema/providerRelayPaymentsAgregation';
 import { RedisResourceBase } from '../../RedisResourceBase';
-import { queryJsinfo } from '../../../utils/dbPool';
+import { queryJsinfo } from '../../../utils/db';
 
 export interface IndexTotalCuData {
     cuSum: number;

@@ -4,7 +4,7 @@ import { RpcOnDemandEndpointCache } from '@jsinfo/indexer/classes/RpcOnDemandEnd
 import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { SpecAndConsumerService } from "@jsinfo/redis/resources/global/SpecAndConsumerResource";
 import { sql } from 'drizzle-orm';
-import { queryJsinfo } from '@jsinfo/utils/dbPool';
+import { queryJsinfo } from '@jsinfo/utils/db';
 
 export interface ProcessedSpecInfo {
     provider: string;

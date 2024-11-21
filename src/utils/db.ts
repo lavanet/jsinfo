@@ -1,88 +1,380 @@
-// src/utils/db.ts
-
 import { drizzle, PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { migrate } from "drizzle-orm/postgres-js/migrator";
-import postgres from 'postgres';
-import { logger } from './logger';
 import { GetEnvVar } from './env';
+import { logger } from './logger';
+import PQueue from 'p-queue';
 import { Sleep } from './sleep';
+import postgres from 'postgres';
+import { migrate } from "drizzle-orm/postgres-js/migrator";
 
-let cachedPostgresUrl: string | null = null;
+interface DbConnection {
+    db: PostgresJsDatabase;
+    lastUsed: number;
+    inUse: boolean;
+    createdAt: number;
+    id: string;
+}
 
-export async function GetPostgresUrl(): Promise<string> {
-    if (cachedPostgresUrl !== null) {
-        return cachedPostgresUrl;
+class DbConnectionPoolClass {
+    private connections: DbConnection[] = [];
+    private connectionString: "jsinfo" | "relays";
+    private activeQueries = new Map<string, Promise<any>>();
+    private queue: PQueue;
+    private readonly MAX_CONNECTIONS = 10;
+    private readonly CONNECTION_TTL = 1000 * 60 * 10;  // 10 minutes
+    private readonly CLEANUP_INTERVAL = 1000 * 60;     // 1 minute
+    private cachedPostgresUrl: string | null = null;
+    private cachedRelaysReadPostgresUrl: string | null = null;
+    private urlFailures: Map<string, { failures: number; lastFailure: number }> = new Map();
+    private readonly FAILURE_THRESHOLD = 3;
+    private readonly FAILURE_RESET_TIME = 1000 * 60 * 5; // 5 minutes
+    private currentUrlIndex = 0;
+
+    constructor(connectionString: "jsinfo" | "relays") {
+        this.queue = new PQueue({ concurrency: 60 });
+        this.connectionString = connectionString;
+        this.startConnectionManager();
+        this.migrateDb().catch(error => {
+            logger.error('Failed to run migrations on startup:', error);
+            process.exit(1);
+        });
     }
-    try {
-        cachedPostgresUrl = GetEnvVar("JSINFO_POSTGRESQL_URL");
-    } catch (error) {
-        try {
-            cachedPostgresUrl = GetEnvVar("POSTGRESQL_URL");
-        } catch (error) {
-            logger.error("Missing env var for POSTGRESQL_URL or JSINFO_POSTGRESQL_URL");
-            await Sleep(60000); // Sleep for one minute
+
+    private startConnectionManager() {
+        setInterval(() => this.cleanupConnections(), this.CLEANUP_INTERVAL);
+    }
+
+    private async cleanupConnections() {
+        const now = Date.now();
+        const staleConnections = this.connections.filter(conn => {
+            const isStale = !conn.inUse && (
+                now - conn.lastUsed > this.CONNECTION_TTL ||
+                now - conn.createdAt > this.CONNECTION_TTL
+            );
+
+            if (isStale) {
+                logger.info('Cleaning up stale connection', {
+                    connectionId: conn.id,
+                    age: now - conn.createdAt,
+                    idleTime: now - conn.lastUsed
+                });
+            }
+
+            return isStale;
+        });
+
+        // Remove stale connections
+        this.connections = this.connections.filter(conn =>
+            !staleConnections.includes(conn));
+
+        // Log pool status
+        logger.info('Connection pool status', {
+            totalConnections: this.connections.length,
+            activeQueries: this.activeQueries.size,
+            queueSize: this.queue.size,
+            staleConnectionsRemoved: staleConnections.length
+        });
+    }
+
+    private async getPostgresUrl(): Promise<string[]> {
+        if (this.cachedPostgresUrl !== null) {
+            return [this.cachedPostgresUrl];
+        }
+
+        const urls = new Set<string>();
+        for (const envVar of [
+            "JSINFO_POSTGRESQL_URL_1",
+            "JSINFO_POSTGRESQL_URL",
+            "POSTGRESQL_URL_1",
+            "POSTGRESQL_URL"
+        ]) {
+            try {
+                const url = GetEnvVar(envVar);
+                if (url) urls.add(url);
+            } catch (error) {
+                continue;
+            }
+        }
+
+        if (urls.size === 0) {
+            logger.error("Missing env var for any PostgreSQL URL");
+            await Sleep(60000);
             process.exit(1);
         }
+
+        this.cachedPostgresUrl = Array.from(urls)[0];
+        return Array.from(urls);
     }
-    return cachedPostgresUrl!;
-}
 
-let cachedRelaysReadPostgresUrl: string | null = null;
+    private async getRelaysReadPostgresUrl(): Promise<string[]> {
+        if (this.cachedRelaysReadPostgresUrl !== null) {
+            return [this.cachedRelaysReadPostgresUrl];
+        }
 
-export async function GetRelaysReadPostgresUrl(): Promise<string> {
-    if (cachedRelaysReadPostgresUrl !== null) {
-        return cachedRelaysReadPostgresUrl;
+        const urls = new Set<string>();
+        for (const envVar of [
+            "RELAYS_READ_POSTGRESQL_URL_1",
+            "RELAYS_READ_POSTGRESQL_URL"
+        ]) {
+            try {
+                const url = GetEnvVar(envVar);
+                if (url) urls.add(url);
+            } catch (error) {
+                continue;
+            }
+        }
+
+        if (urls.size === 0) {
+            logger.error("Missing env var for RELAYS_READ_POSTGRESQL_URL");
+            await Sleep(60000);
+            process.exit(1);
+        }
+
+        this.cachedRelaysReadPostgresUrl = Array.from(urls)[0];
+        return Array.from(urls);
     }
-    try {
-        cachedRelaysReadPostgresUrl = GetEnvVar("RELAYS_READ_POSTGRESQL_URL");
-    } catch (error) {
-        logger.error("Missing env var for RELAYS_READ_POSTGRESQL_URL or RELAYS_READ_POSTGRESQL_URL");
-        await Sleep(60000); // Sleep for one minute
-        process.exit(1);
+
+    private async getNextValidUrl(urls: string[]): Promise<string> {
+        const now = Date.now();
+
+        // Reset failure counts if enough time has passed
+        this.urlFailures.forEach((data, url) => {
+            if (now - data.lastFailure > this.FAILURE_RESET_TIME) {
+                this.urlFailures.delete(url);
+            }
+        });
+
+        // Try URLs in order, skipping ones that have failed too recently
+        for (let i = 0; i < urls.length; i++) {
+            const index = (this.currentUrlIndex + i) % urls.length;
+            const url = urls[index];
+            const failures = this.urlFailures.get(url);
+
+            if (!failures || failures.failures < this.FAILURE_THRESHOLD) {
+                this.currentUrlIndex = index;
+                return url;
+            }
+        }
+
+        // If all URLs are failing, use the least recently failed one
+        this.urlFailures.clear(); // Reset all failures
+        this.currentUrlIndex = 0;
+        return urls[0];
     }
-    return cachedRelaysReadPostgresUrl!;
+
+    private async createConnection(): Promise<DbConnection> {
+        const urls = this.connectionString === "jsinfo"
+            ? await this.getPostgresUrl()
+            : await this.getRelaysReadPostgresUrl();
+
+        let lastError: Error | null = null;
+
+        for (let attempt = 0; attempt < urls.length; attempt++) {
+            try {
+                const url = await this.getNextValidUrl(urls);
+                const db = await this.createDbConnection(url);
+                return {
+                    db,
+                    lastUsed: Date.now(),
+                    inUse: false,
+                    createdAt: Date.now(),
+                    id: `conn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+                };
+            } catch (error) {
+                lastError = error as Error;
+                const url = urls[this.currentUrlIndex];
+                const failures = this.urlFailures.get(url) || { failures: 0, lastFailure: 0 };
+
+                this.urlFailures.set(url, {
+                    failures: failures.failures + 1,
+                    lastFailure: Date.now()
+                });
+
+                logger.error('Database connection failed', {
+                    url: this.maskDatabaseUrl(url),
+                    attempt: attempt + 1,
+                    error: (error as Error).message
+                });
+            }
+        }
+
+        throw lastError || new Error('Failed to connect to any database URL');
+    }
+
+    private async createDbConnection(url: string): Promise<PostgresJsDatabase> {
+        const config = this.connectionString === "jsinfo"
+            ? {
+                idle_timeout: 60 * 2,
+                connect_timeout: 60 * 10,
+                max_lifetime: 60 * 4,
+            }
+            : {
+                idle_timeout: 20,
+                connect_timeout: 20,
+                max_lifetime: 75,
+                max: 60,
+            };
+
+        const queryClient = postgres(url, config);
+        return drizzle(queryClient);
+    }
+
+    private maskDatabaseUrl(url: string): string {
+        try {
+            const masked = new URL(url);
+            if (masked.password) {
+                masked.password = '****';
+            }
+            return masked.toString().replace(/(\w+:\/\/\w+:)[^@]+(@)/, '$1****$2');
+        } catch {
+            return url.replace(/(\w+:\/\/\w+:)[^@]+(@)/, '$1****$2');
+        }
+    }
+
+    private async getConnection(): Promise<DbConnection> {
+        // Create new connection for each query
+        const conn = await this.createConnection();
+        this.connections.push(conn);
+
+        logger.info('Created new connection for query', {
+            connectionId: conn.id,
+            totalConnections: this.connections.length
+        });
+
+        conn.inUse = true;
+        return conn;
+    }
+
+    async executeQuery<T extends Record<string, any>>(
+        queryFn: (db: PostgresJsDatabase) => Promise<T>,
+        queryKey: string
+    ): Promise<T> {
+        const existingQuery = this.activeQueries.get(queryKey);
+        if (existingQuery) {
+            logger.info('Reusing existing query', {
+                queryKey,
+                poolStats: {
+                    activeQueries: this.activeQueries.size,
+                    queueSize: this.queue.size
+                }
+            });
+            return existingQuery as Promise<T>;
+        }
+
+        // Wait if we've hit the connection limit
+        while (this.connections.length >= this.MAX_CONNECTIONS) {
+            logger.info('Max connections reached, waiting...', {
+                queryKey,
+                activeConnections: this.connections.length,
+                maxConnections: this.MAX_CONNECTIONS
+            });
+            await new Promise(resolve => setTimeout(resolve, 100));
+        }
+
+        const queryPromise = this.queue.add(async () => {
+            const startTime = Date.now();
+            const conn = await this.getConnection();
+            const maxRetries = 3;
+            const delays = [500, 1000, 1500];
+
+            for (let attempt = 0; attempt < maxRetries; attempt++) {
+                try {
+                    return await queryFn(conn.db).finally(async () => {
+                        // Close the postgres client
+                        if (this.connections.includes(conn)) return;
+
+                        await (conn.db as any).client.end();
+                        // Remove from connections array
+                        this.connections = this.connections.filter(c => c.id !== conn.id);
+
+                        const duration = Date.now() - startTime;
+                        if (duration > 1000) {
+                            logger.info('Slow query completed', {
+                                queryKey,
+                                duration,
+                                attempt: attempt + 1
+                            });
+                        }
+
+                        logger.info('Connection closed after query', {
+                            connectionId: conn.id,
+                            remainingConnections: this.connections.length
+                        });
+                    });
+                } catch (error) {
+                    const isLastAttempt = attempt === maxRetries - 1;
+                    logger.error('DB Query failed', {
+                        error: error as Error,
+                        queryKey,
+                        attempt: attempt + 1,
+                        connectionId: conn.id,
+                        connectionStats: {
+                            age: Date.now() - conn.createdAt,
+                            lastUsed: Date.now() - conn.lastUsed
+                        },
+                        poolStats: {
+                            totalConnections: this.connections.length,
+                            activeQueries: this.activeQueries.size,
+                            queueSize: this.queue.size
+                        }
+                    });
+
+                    if (!isLastAttempt) {
+                        await new Promise(resolve => setTimeout(resolve, delays[attempt]));
+                    } else {
+                        throw error;
+                    }
+                }
+            }
+
+            throw new Error('Query failed after all retries');
+        }).finally(() => {
+            this.activeQueries.delete(queryKey);
+        });
+
+        this.activeQueries.set(queryKey, queryPromise);
+        return queryPromise as Promise<T>;
+    }
+
+    public async migrateDb(): Promise<void> {
+        if (this.connectionString !== "jsinfo") {
+            return;
+        }
+
+        try {
+            const shouldMigrate = GetEnvVar("JSINFO_INDEXER_RUN_MIGRATIONS", "false") === "true";
+            if (!shouldMigrate) {
+                return;
+            }
+
+            logger.info(`MigrateDb:: Starting database migration... ${new Date().toISOString()}`);
+            const urls = await this.getPostgresUrl();
+            const url = await this.getNextValidUrl(urls);
+
+            const migrationClient = postgres(url, { max: 1 });
+            logger.info(`MigrateDb:: Migration client created. ${new Date().toISOString()}`);
+
+            await migrate(drizzle(migrationClient), { migrationsFolder: "drizzle" });
+            logger.info(`MigrateDb:: Database migration completed. ${new Date().toISOString()}`);
+        } catch (error) {
+            logger.error('Migration failed:', error);
+            throw error;
+        }
+    }
 }
 
-// https://github.com/porsager/postgres?tab=readme-ov-file#connection-timeout
+const DbConnectionPoolJsinfo = new DbConnectionPoolClass("jsinfo");
+const DbConnectionPoolRelays = new DbConnectionPoolClass("relays");
 
-
-export async function GetJsinfoDbForIndexer(): Promise<PostgresJsDatabase> {
-    const queryClient = postgres(await GetPostgresUrl(), {
-        idle_timeout: 60 * 2,
-        connect_timeout: 60 * 10,
-        max_lifetime: 60 * 4,
-    });
-    const db: PostgresJsDatabase = drizzle(queryClient/*, { logger: true }*/);
-    return db;
+export async function queryJsinfo<T extends Record<string, any>>(
+    queryFn: (db: PostgresJsDatabase) => Promise<T>,
+    queryKey: string
+): Promise<T> {
+    return DbConnectionPoolJsinfo.executeQuery<T>(queryFn, queryKey);
 }
 
-export async function GetJsinfoDbForQuery(): Promise<PostgresJsDatabase> {
-    // use one db
-    const queryClient = postgres(await GetPostgresUrl(), {
-        idle_timeout: 60 * 2,
-        connect_timeout: 60 * 10,
-        max_lifetime: 60 * 4,
-    });
-    const db: PostgresJsDatabase = drizzle(queryClient/*, { logger: true }*/);
-    return db;
-}
-
-export async function GetRelaysReadDbForQuery(): Promise<PostgresJsDatabase> {
-    const queryClient = postgres(await GetRelaysReadPostgresUrl(), {
-        idle_timeout: 20,
-        connect_timeout: 20,
-        max_lifetime: 75,
-        max: 60,
-    });
-    const db: PostgresJsDatabase = drizzle(queryClient/*, { logger: true }*/);
-    return db;
-}
-
-export const MigrateDb = async () => {
-    logger.info(`MigrateDb:: Starting database migration... ${new Date().toISOString()}`);
-    let postgresUrl = await GetPostgresUrl();
-    const migrationClient = postgres(postgresUrl, { max: 1 });
-    logger.info(`MigrateDb:: Migration client created. ${new Date().toISOString()}`);
-    await migrate(drizzle(migrationClient), { migrationsFolder: "drizzle" });
-    logger.info(`MigrateDb:: Database migration completed. ${new Date().toISOString()}`);
+export async function queryRelays<T extends Record<string, any>>(
+    queryFn: (db: PostgresJsDatabase) => Promise<T>,
+    queryKey: string
+): Promise<T> {
+    return DbConnectionPoolRelays.executeQuery<T>(queryFn, queryKey);
 }

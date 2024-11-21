@@ -46,7 +46,7 @@ export class IndexChartsResource extends RedisResourceBase<IndexChartResponse[],
         return `${this.redisKey}:${params.from.getTime()}:${params.to.getTime()}`;
     }
 
-    protected async fetchFromDb(db: PostgresJsDatabase, params?: QueryParams): Promise<IndexChartResponse[]> {
+    protected async fetchFromDb(params?: QueryParams): Promise<IndexChartResponse[]> {
         // Use default params if none provided
         const queryParams = params || this.getDefaultParams();
         const { from, to } = NormalizeChartFetchDates(queryParams.from, queryParams.to);

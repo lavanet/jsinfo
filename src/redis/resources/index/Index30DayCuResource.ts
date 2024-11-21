@@ -2,7 +2,7 @@ import { RedisResourceBase } from '../../classes/RedisResourceBase';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as JsinfoProviderAgrSchema from '@jsinfo/schemas/jsinfoSchema/providerRelayPaymentsAgregation';
 import { sql, gt } from "drizzle-orm";
-import { queryJsinfo } from '@jsinfo/utils/dbPool';
+import { queryJsinfo } from '@jsinfo/utils/db';
 
 export interface Index30DayCuData {
     cuSum30Days: number;

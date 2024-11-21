@@ -31,7 +31,7 @@ export async function AutoCompleteLinksV2PaginatedHandler(
     reply: FastifyReply
 ): Promise<AutoCompleteData> {
     const autoCompleteResource = new AutoCompleteResource();
-    const result = await autoCompleteResource.fetchAndPickDb();
+    const result = await autoCompleteResource.fetch();
     if (!result) {
         reply.status(400);
         reply.send({ error: 'Failed to fetch autocomplete data' });

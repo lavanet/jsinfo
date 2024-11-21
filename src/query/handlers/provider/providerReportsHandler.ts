@@ -2,7 +2,7 @@
 // src/query/handlers/providerReportsHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryCheckJsinfoDbInstance, QueryGetJsinfoDbForQueryInstance } from '../../utils/getLatestBlock';
+
 import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { asc, desc, eq, gte, sql, and } from "drizzle-orm";
 import { Pagination, ParsePaginationFromString } from '../../utils/queryPagination';
@@ -125,7 +125,7 @@ class ProviderReportsData extends RequestHandlerBase<ProviderReportsResponse> {
     }
 
     protected async fetchAllRecords(): Promise<ProviderReportsResponse[]> {
-        await QueryCheckJsinfoDbInstance();
+        ;
 
         const thirtyDaysAgo = this.getThirtyDaysAgo();
 
@@ -155,7 +155,7 @@ class ProviderReportsData extends RequestHandlerBase<ProviderReportsResponse> {
     }
 
     protected async fetchRecordCountFromDb(): Promise<number> {
-        await QueryCheckJsinfoDbInstance();
+        ;
 
         const thirtyDaysAgo = this.getThirtyDaysAgo();
 
@@ -206,7 +206,7 @@ class ProviderReportsData extends RequestHandlerBase<ProviderReportsResponse> {
             throw new Error(`Invalid sort key: ${trimmedSortKey}`);
         }
 
-        await QueryCheckJsinfoDbInstance();
+        ;
 
         const sortColumn = keyToColumnMap[finalPagination.sortKey];
         const orderFunction = finalPagination.direction === 'ascending' ? asc : desc;

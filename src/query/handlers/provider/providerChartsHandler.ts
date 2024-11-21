@@ -1,7 +1,7 @@
 // src/query/handlers/providerChartsHandler.ts
 
 import { FastifyReply, FastifyRequest, RouteShorthandOptions } from 'fastify';
-import { QueryCheckJsinfoDbInstance, QueryGetJsinfoDbForQueryInstance } from '@jsinfo/query/utils/getLatestBlock';
+
 import * as JsinfoProviderAgrSchema from '@jsinfo/schemas/jsinfoSchema/providerRelayPaymentsAgregation';
 import { sql, gt, and, lt, desc, eq } from "drizzle-orm";
 import { DateToISOString, FormatDateItems } from '@jsinfo/utils/date';
@@ -223,7 +223,7 @@ class ProviderChartsData extends RequestHandlerBase<ProviderChartResponse> {
     }
 
     protected async fetchDateRangeRecords(from: Date, to: Date): Promise<ProviderChartResponse[]> {
-        await QueryCheckJsinfoDbInstance();
+        ;
 
         const providerMainChartData = await this.getSpecRelayCuChartWithTopProviders(from, to);
         if (GetDataLength(providerMainChartData) === 0) {

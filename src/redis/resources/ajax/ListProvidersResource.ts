@@ -4,7 +4,7 @@ import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { ProviderMonikerService } from '@jsinfo/redis/resources/global/ProviderMonikerSpecResource';
 import { GetLatestBlock } from '@jsinfo/query/utils/getLatestBlock';
 import { desc } from 'drizzle-orm';
-import { queryJsinfo } from '@jsinfo/utils/dbPool';
+import { queryJsinfo } from '@jsinfo/utils/db';
 
 interface ProviderEntry {
     provider: string;

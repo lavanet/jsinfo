@@ -25,7 +25,7 @@ export const IndexLatestBlockHandlerOpts: RouteShorthandOptions = {
 
 export async function IndexLatestBlockHandler(request: FastifyRequest, reply: FastifyReply): Promise<IndexLatestBlockData> {
     const resource = new IndexLatestBlockResource();
-    const result = await resource.fetchAndPickDb();
+    const result = await resource.fetch();
     if (!result || result == null) {
         reply.status(400);
         reply.send({ error: 'Failed to fetch latest block data' });

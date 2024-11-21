@@ -1,7 +1,6 @@
 // src/query/handlers/consumerChartsHandler.ts
 
 import { FastifyReply, FastifyRequest, RouteShorthandOptions } from 'fastify';
-import { QueryCheckJsinfoDbInstance, QueryGetJsinfoDbForQueryInstance } from '../../utils/getLatestBlock';
 import * as JsinfoConsumerAgrSchema from '../../../schemas/jsinfoSchema/consumerRelayPaymentsAgregation';
 import { sql, gt, and, lt, desc, eq } from "drizzle-orm";
 import { DateToISOString, FormatDateItems } from '../../../utils/date';
@@ -10,6 +9,7 @@ import { GetDataLength } from '../../../utils/fmt';
 import { GetAndValidateConsumerAddressFromRequest } from '../../utils/queryRequestArgParser';
 import { PgColumn } from 'drizzle-orm/pg-core';
 import { JSONStringifySpaced } from '@jsinfo/utils/fmt';
+import { queryJsinfo } from '@jsinfo/utils/db';
 
 type ConsumerChartCuRelay = {
     specId: string;
@@ -102,20 +102,23 @@ class ConsumerChartsData extends RequestHandlerBase<ConsumerChartResponse> {
 
         const qosMetricWeightedAvg = (metric: PgColumn) => sql<number>`SUM(${metric} * ${JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.relaySum}) / SUM(CASE WHEN ${metric} IS NOT NULL THEN ${JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.relaySum} ELSE 0 END)`;
 
-        let monthlyData: ConsumerQosQueryData[] = await QueryGetJsinfoDbForQueryInstance().select({
-            date: JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.dateday,
-            qosSyncAvg: qosMetricWeightedAvg(JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.qosSyncAvg),
-            qosAvailabilityAvg: qosMetricWeightedAvg(JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.qosAvailabilityAvg),
-            qosLatencyAvg: qosMetricWeightedAvg(JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.qosLatencyAvg),
-        }).from(JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments)
-            .groupBy(JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.dateday)
-            .where(and(
-                eq(JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.consumer, this.consumer),
-                and(
-                    gt(JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.dateday, sql<Date>`${from}`),
-                    lt(JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.dateday, sql<Date>`${to}`)
-                )))
-            .orderBy(desc(JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.dateday));
+        let monthlyData: ConsumerQosQueryData[] = await queryJsinfo(
+            async (db) => await db.select({
+                date: JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.dateday,
+                qosSyncAvg: sql<number>`(${qosMetricWeightedAvg(JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.qosSyncAvg)})::float8`,
+                qosAvailabilityAvg: sql<number>`(${qosMetricWeightedAvg(JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.qosAvailabilityAvg)})::float8`,
+                qosLatencyAvg: sql<number>`(${qosMetricWeightedAvg(JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.qosLatencyAvg)})::float8`,
+            }).from(JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments)
+                .groupBy(JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.dateday)
+                .where(and(
+                    eq(JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.consumer, this.consumer),
+                    and(
+                        gt(JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.dateday, sql<Date>`${from}`),
+                        lt(JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.dateday, sql<Date>`${to}`)
+                    )))
+                .orderBy(desc(JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.dateday)),
+            'ConsumerChartsData_getConsumerQosData'
+        );
 
         monthlyData.forEach(item => {
             item.qosSyncAvg = Number(item.qosSyncAvg);
@@ -149,21 +152,24 @@ class ConsumerChartsData extends RequestHandlerBase<ConsumerChartResponse> {
     private async getSpecRelayCuChartWithTopConsumers(from: Date, to: Date): Promise<ConsumerCuRelayData[]> {
         const formatedData: ConsumerCuRelayData[] = [];
 
-        let monthlyData: ConsumerCuRelayQueryDataWithSpecId[] = await QueryGetJsinfoDbForQueryInstance().select({
-            date: JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.dateday,
-            specId: JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.specId,
-            cuSum: sql<number>`SUM(${JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.cuSum})`,
-            relaySum: sql<number>`SUM(${JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.relaySum})`,
-        }).from(JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments)
-            .groupBy(JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.dateday, JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.specId)
-            .where(and(
-                eq(JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.consumer, this.consumer),
-                and(
-                    gt(JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.dateday, sql<Date>`${from}`),
-                    lt(JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.dateday, sql<Date>`${to}`)
-                )
-            ))
-            .orderBy(JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.dateday);
+        let monthlyData: ConsumerCuRelayQueryDataWithSpecId[] = await queryJsinfo(
+            async (db) => await db.select({
+                date: JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.dateday,
+                specId: JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.specId,
+                cuSum: sql<number>`SUM(${JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.cuSum})::float8`,
+                relaySum: sql<number>`SUM(${JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.relaySum})::float8`,
+            }).from(JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments)
+                .groupBy(JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.dateday, JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.specId)
+                .where(and(
+                    eq(JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.consumer, this.consumer),
+                    and(
+                        gt(JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.dateday, sql<Date>`${from}`),
+                        lt(JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.dateday, sql<Date>`${to}`)
+                    )
+                ))
+                .orderBy(JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.dateday),
+            'ConsumerChartsData_getSpecRelayCuChartWithTopConsumers'
+        );
 
         let dateSums: { [date: string]: { cuSum: number, relaySum: number } } = {};
 
@@ -223,7 +229,7 @@ class ConsumerChartsData extends RequestHandlerBase<ConsumerChartResponse> {
     }
 
     protected async fetchDateRangeRecords(from: Date, to: Date): Promise<ConsumerChartResponse[]> {
-        await QueryCheckJsinfoDbInstance();
+        ;
 
         const consumerMainChartData = await this.getSpecRelayCuChartWithTopConsumers(from, to);
         if (GetDataLength(consumerMainChartData) === 0) {

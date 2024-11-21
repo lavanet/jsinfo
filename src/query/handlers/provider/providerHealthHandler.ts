@@ -2,7 +2,7 @@
 // src/query/handlers/providerHealth.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryCheckJsinfoDbInstance, QueryGetJsinfoDbForQueryInstance } from '../../utils/getLatestBlock';
+
 import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { eq, desc, asc, sql } from "drizzle-orm";
 import { Pagination, ParsePaginationFromString } from '@jsinfo/query/utils/queryPagination';
@@ -82,7 +82,7 @@ class ProviderHealthData extends RequestHandlerBase<HealthReportEntry> {
     }
 
     protected async fetchAllRecords(): Promise<HealthReportEntry[]> {
-        await QueryCheckJsinfoDbInstance();
+        ;
 
         const data = await QueryGetJsinfoDbForQueryInstance().select()
             .from(JsinfoSchema.providerHealth)
@@ -108,7 +108,7 @@ class ProviderHealthData extends RequestHandlerBase<HealthReportEntry> {
     }
 
     protected async fetchRecordCountFromDb(): Promise<number> {
-        await QueryCheckJsinfoDbInstance();
+        ;
 
         const countResult = await QueryGetJsinfoDbForQueryInstance()
             .select({
@@ -151,7 +151,7 @@ class ProviderHealthData extends RequestHandlerBase<HealthReportEntry> {
             throw new Error(`Invalid sort key: ${trimmedSortKey}`);
         }
 
-        await QueryCheckJsinfoDbInstance();
+        ;
 
         const sortColumn = keyToColumnMap[finalPagination.sortKey];
         const orderFunction = finalPagination.direction === 'ascending' ? asc : desc;

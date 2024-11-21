@@ -1,7 +1,7 @@
 // src/query/handlers/spec/specChartsV2Handler.ts
 
 import { FastifyReply, FastifyRequest, RouteShorthandOptions } from 'fastify';
-import { QueryCheckJsinfoDbInstance, QueryGetJsinfoDbForQueryInstance } from '@jsinfo/query/utils/getLatestBlock';
+import { QueryGetJsinfoDbForQueryInstance } from '@jsinfo/query/utils/getLatestBlock';
 import * as JsinfoProviderAgrSchema from '@jsinfo/schemas/jsinfoSchema/providerRelayPaymentsAgregation';
 import { sql, gt, and, lt, desc, eq } from "drizzle-orm";
 import { DateToISOString } from '@jsinfo/utils/date';
@@ -11,6 +11,7 @@ import { PgColumn } from 'drizzle-orm/pg-core';
 import { logger } from '@jsinfo/utils/logger';
 import { RedisCache } from '@jsinfo/redis/classes/RedisCache';
 import { ProviderMonikerService } from '@jsinfo/redis/resources/global/ProviderMonikerSpecResource';
+import { queryJsinfo } from '@jsinfo/query/utils/queryJsinfo';
 
 type SpecChartDataPoint = {
     date: string;
@@ -91,17 +92,18 @@ class SpecChartsV2Data extends RequestHandlerBase<SpecChartsV2Response> {
             const sixMonthsAgo = new Date();
             sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
-            const query = QueryGetJsinfoDbForQueryInstance()
-                .select({
+            const providers = await queryJsinfo<{ provider: string; latestDate: Date }[]>(
+                async (db) => await db.select({
                     provider: JsinfoProviderAgrSchema.aggDailyRelayPayments.provider,
                     latestDate: sql<Date>`MAX(${JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday})`
                 })
-                .from(JsinfoProviderAgrSchema.aggDailyRelayPayments)
-                .where(eq(JsinfoProviderAgrSchema.aggDailyRelayPayments.specId, this.spec))
-                .groupBy(JsinfoProviderAgrSchema.aggDailyRelayPayments.provider)
-                .having(gt(sql<Date>`MAX(${JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday})`, sixMonthsAgo));
+                    .from(JsinfoProviderAgrSchema.aggDailyRelayPayments)
+                    .where(eq(JsinfoProviderAgrSchema.aggDailyRelayPayments.specId, this.spec))
+                    .groupBy(JsinfoProviderAgrSchema.aggDailyRelayPayments.provider)
+                    .having(gt(sql<Date>`MAX(${JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday})`, sixMonthsAgo)),
+                'SpecChartsV2_getAllAvailableProviders'
+            );
 
-            const providers = await query;
             const result: { [key: string]: string } = { 'all': 'All Providers' };
 
             for (const p of providers) {
@@ -138,19 +140,28 @@ class SpecChartsV2Data extends RequestHandlerBase<SpecChartsV2Response> {
                 conditions = and(conditions, eq(JsinfoProviderAgrSchema.aggDailyRelayPayments.provider, this.provider));
             }
 
-            let query = QueryGetJsinfoDbForQueryInstance().select({
-                date: JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday,
-                qosSyncAvg: qosMetricWeightedAvg(JsinfoProviderAgrSchema.aggDailyRelayPayments.qosSyncAvg),
-                qosAvailabilityAvg: qosMetricWeightedAvg(JsinfoProviderAgrSchema.aggDailyRelayPayments.qosAvailabilityAvg),
-                qosLatencyAvg: qosMetricWeightedAvg(JsinfoProviderAgrSchema.aggDailyRelayPayments.qosLatencyAvg),
-                cus: sql<number>`SUM(${JsinfoProviderAgrSchema.aggDailyRelayPayments.cuSum})`,
-                relays: sql<number>`SUM(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum})`,
-            }).from(JsinfoProviderAgrSchema.aggDailyRelayPayments)
-                .groupBy(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday)
-                .where(conditions)
-                .orderBy(desc(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday));
-
-            let data = await query;
+            let data = await queryJsinfo<{
+                date: Date;
+                qosSyncAvg: number;
+                qosAvailabilityAvg: number;
+                qosLatencyAvg: number;
+                cus: number;
+                relays: number;
+            }[]>(
+                async (db) => await db.select({
+                    date: JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday,
+                    qosSyncAvg: qosMetricWeightedAvg(JsinfoProviderAgrSchema.aggDailyRelayPayments.qosSyncAvg),
+                    qosAvailabilityAvg: qosMetricWeightedAvg(JsinfoProviderAgrSchema.aggDailyRelayPayments.qosAvailabilityAvg),
+                    qosLatencyAvg: qosMetricWeightedAvg(JsinfoProviderAgrSchema.aggDailyRelayPayments.qosLatencyAvg),
+                    cus: sql<number>`SUM(${JsinfoProviderAgrSchema.aggDailyRelayPayments.cuSum})`,
+                    relays: sql<number>`SUM(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum})`,
+                })
+                    .from(JsinfoProviderAgrSchema.aggDailyRelayPayments)
+                    .groupBy(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday)
+                    .where(conditions)
+                    .orderBy(desc(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday)),
+                'SpecChartsV2_getSpecData'
+            );
 
             if (data.length === 0) {
                 logger.warn(`No data found for spec: ${this.spec}, provider: ${this.provider}, from: ${from.toISOString()}, to: ${to.toISOString()}`);
@@ -182,8 +193,6 @@ Context:
 
     protected async fetchDateRangeRecords(from: Date, to: Date): Promise<SpecChartsV2Response[]> {
         try {
-            await QueryCheckJsinfoDbInstance();
-
             const chartData = await this.getSpecData(from, to);
 
             const allAvailableProviders = await this.getAllAvailableProviders();

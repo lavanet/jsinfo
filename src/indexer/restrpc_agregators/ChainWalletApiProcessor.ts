@@ -1,7 +1,7 @@
 import { keyValueStore } from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { RpcPeriodicEndpointCache } from '@jsinfo/indexer/classes/RpcPeriodicEndpointCache';
 import { logger } from '@jsinfo/utils/logger';
-import { queryJsinfo } from '@jsinfo/utils/dbPool';
+import { queryJsinfo } from '@jsinfo/utils/db';
 
 async function saveToKeyValueStore(key: string, value: string): Promise<void> {
     try {

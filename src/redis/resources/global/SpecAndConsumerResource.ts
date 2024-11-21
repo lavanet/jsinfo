@@ -4,7 +4,7 @@ import { RedisResourceBase } from '../../classes/RedisResourceBase';
 import { logger } from '@jsinfo/utils/logger';
 import { GetUtcNow } from '@jsinfo/utils/date';
 import { eq } from 'drizzle-orm';
-import { queryJsinfo } from '@jsinfo/utils/dbPool';
+import { queryJsinfo } from '@jsinfo/utils/db';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 
 class SpecAndConsumerResource extends RedisResourceBase<{ specs: string[], consumers: string[] }, {}> {
@@ -77,22 +77,22 @@ class SpecAndConsumerResource extends RedisResourceBase<{ specs: string[], consu
     }
 
     public async IsValidSpec(specId: string): Promise<boolean> {
-        const data = await this.fetchAndPickDb();
+        const data = await this.fetch();
         return data?.specs.includes(specId.toUpperCase()) ?? false;
     }
 
     public async IsValidConsumer(consumer: string): Promise<boolean> {
-        const data = await this.fetchAndPickDb();
+        const data = await this.fetch();
         return data?.consumers.includes(consumer.toLowerCase()) ?? false;
     }
 
     public async GetAllSpecs(): Promise<string[]> {
-        const data = await this.fetchAndPickDb();
+        const data = await this.fetch();
         return data?.specs ?? [];
     }
 
     public async GetAllConsumers(): Promise<string[]> {
-        const data = await this.fetchAndPickDb();
+        const data = await this.fetch();
         return data?.consumers ?? [];
     }
 }

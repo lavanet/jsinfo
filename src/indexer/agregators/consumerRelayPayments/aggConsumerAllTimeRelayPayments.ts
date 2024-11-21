@@ -1,6 +1,6 @@
 // src/indexer/agregators/aggConsumerAllTimeRelayPayments.ts
 
-import { queryJsinfo } from '../../../utils/dbPool';
+import { queryJsinfo } from '../../../utils/db';
 import { sql, ne } from "drizzle-orm";
 import * as JsinfoConsumerAgrSchema from '../../../schemas/jsinfoSchema/consumerRelayPaymentsAgregation';
 import { logger } from "../../../utils/logger";

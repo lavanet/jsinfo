@@ -50,7 +50,7 @@ class SpecAndConsumerResource extends RedisResourceBase<{ specs: string[], consu
                 'SpecAndConsumerResource_fetchSpecTable_stakes'
             ),
             queryJsinfo(
-                async () => db.select({ specId: JsinfoSchema.providerHealth.spec })
+                async (db: PostgresJsDatabase) => db.select({ specId: JsinfoSchema.providerHealth.spec })
                     .from(JsinfoSchema.providerHealth)
                     .where(sql`${JsinfoSchema.providerHealth.timestamp} >= ${threeMonthsAgo}`)
                     .groupBy(JsinfoSchema.providerHealth.spec),

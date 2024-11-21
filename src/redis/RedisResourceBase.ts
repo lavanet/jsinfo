@@ -1,8 +1,4 @@
-import { GetJsinfoDbForIndexer } from '@jsinfo/utils/db';
 import { RedisCache } from './classes/RedisCache';
-import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { IsIndexerProcess } from '@jsinfo/utils/env';
-
 interface BaseArgs {
     [key: string]: any;
 }

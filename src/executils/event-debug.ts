@@ -3,7 +3,7 @@ import { ConnectToRpc, RpcConnection } from '../indexer/utils/lavajsRpc';
 import { GetRpcBlock, GetRpcTxs, GetRpcBlockResultEvents } from "../indexer/lavaBlock";
 // import { ProcessOneEvent } from "../indexer/eventProcessor";
 import * as JsinfoSchema from '../schemas/jsinfoSchema/jsinfoSchema';
-import { LavaBlock } from "../indexer/types";
+import { LavaBlock } from "../indexer/lavaTypes";
 import * as consts from '../indexer/indexerConsts';
 
 export const processEvent = (evt: any, height: number, lavaBlock: LavaBlock, source: string,
@@ -31,8 +31,8 @@ export const processEvent = (evt: any, height: number, lavaBlock: LavaBlock, sou
 export const EventDebugProcessBlock = async (startHeight: number, rpcConnection: RpcConnection, numInstances: number): Promise<void> => {
 
     for (let height = startHeight; height >= 0; height -= numInstances) {
-        const block = await GetRpcBlock(height, rpcConnection.client);
-        const txs = await GetRpcTxs(height, rpcConnection.client, block);
+        const block = await GetRpcBlock(height);
+        const txs = await GetRpcTxs(height, block);
 
         let blockchainEntitiesStakes: Map<string, JsinfoSchema.InsertProviderStake[]> = new Map();
 
@@ -58,7 +58,7 @@ export const EventDebugProcessBlock = async (startHeight: number, rpcConnection:
             });
         });
 
-        const evts = await GetRpcBlockResultEvents(height, rpcConnection.clientTm);
+        const evts = await GetRpcBlockResultEvents(height);
         evts.forEach((evt) => {
             processEvent(evt, height, lavaBlock, 'Block events', blockchainEntitiesStakes);
         });

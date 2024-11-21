@@ -105,7 +105,7 @@ export async function SpecEndpointHealthHandler(request: FastifyRequest, reply: 
     const twoDaysAgo = new Date();
     twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
 
-    const latestIds = await queryJsinfo<{ provider: string; spec: string; interface: string; maxId: number }[]>(
+    const latestIds = await queryJsinfo<{ provider: string | null; spec: string; interface: string | null; maxId: number }[]>(
         async (db) => await db.select({
             provider: JsinfoSchema.providerHealth.provider,
             spec: JsinfoSchema.providerHealth.spec,
@@ -159,7 +159,6 @@ export async function SpecEndpointHealthHandler(request: FastifyRequest, reply: 
     };
 }
 
-// Spec Cache Hit Rate Handler
 export const SpecCacheHitRateHandlerOpts: RouteShorthandOptions = {
     schema: {
         response: {

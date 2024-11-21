@@ -90,7 +90,7 @@ export class IndexProvidersResource extends RedisResourceBase<IndexProvidersReso
 
     protected async fetchAllRecords(): Promise<IndexProvidersResponse[]> {
         const res = await queryJsinfo(
-            async () => db.select({
+            async (db) => db.select({
                 provider: JsinfoSchema.providerStakes.provider,
                 totalServices: sql<string>`CONCAT(SUM(CASE WHEN ${JsinfoSchema.providerStakes.status} = ${JsinfoSchema.LavaProviderStakeStatus.Active} THEN 1 ELSE 0 END), ' / ', COUNT(${JsinfoSchema.providerStakes.specId})) as totalServices`,
                 totalStake: sql<bigint>`COALESCE(SUM(CAST(${JsinfoSchema.providerStakes.stake} AS BIGINT) + LEAST(CAST(${JsinfoSchema.providerStakes.delegateTotal} AS BIGINT), CAST(${JsinfoSchema.providerStakes.delegateLimit} AS BIGINT))), 0) AS totalStake`,
@@ -125,7 +125,7 @@ export class IndexProvidersResource extends RedisResourceBase<IndexProvidersReso
 
     protected async fetchRecordCountFromDb(): Promise<number> {
         const res = await queryJsinfo(
-            async () => db
+            async (db) => db
                 .select({
                     count: sql<number>`COUNT(DISTINCT ${JsinfoSchema.providerStakes.provider})`
                 })

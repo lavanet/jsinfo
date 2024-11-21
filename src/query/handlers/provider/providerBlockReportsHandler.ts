@@ -3,7 +3,7 @@
 // curl http://localhost:8081/providerBlockReports/lava@1tlkpa7t48fjl7qan4ete6xh0lsy679flnqdw57
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { queryJsinfo } from '../../utils/db';
+import { queryJsinfo } from '@jsinfo/utils/db';
 import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { asc, desc, eq, sql } from "drizzle-orm";
 import { Pagination, ParsePaginationFromString } from '../../utils/queryPagination';
@@ -139,24 +139,22 @@ class ProviderBlockReportsData extends RequestHandlerBase<BlockReportsResponse> 
             throw new Error(`Invalid sort key: ${trimmedSortKey}`);
         }
 
-        await queryJsinfo(
+        return await queryJsinfo(
             async (db) => await db.select()
                 .from(JsinfoSchema.providerLatestBlockReports)
                 .where(eq(JsinfoSchema.providerLatestBlockReports.provider, this.addr))
-                .orderBy(orderFunction(sortColumn))
+                .orderBy(finalPagination.direction === 'ascending' ? asc(keyToColumnMap[finalPagination.sortKey || defaultSortKey]) : desc(keyToColumnMap[finalPagination.sortKey || defaultSortKey]))
                 .offset((finalPagination.page - 1) * finalPagination.count)
                 .limit(finalPagination.count),
             'ProviderBlockReportsData_fetchPaginatedRecords'
-        );
-
-        return reportsRes.map(row => ({
+        ).then(reportsRes => reportsRes.map(row => ({
             id: row.id,
             blockId: row.blockId ?? 0,
             tx: row.tx ?? '',
             timestamp: row.timestamp ? row.timestamp.toISOString() : '',
             chainId: row.chainId,
             chainBlockHeight: row.chainBlockHeight ?? 0,
-        }));
+        })));
     }
 
 

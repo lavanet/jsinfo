@@ -1,6 +1,6 @@
 import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { Event } from "@cosmjs/stargate"
-import { LavaBlock } from "../types";
+import { LavaBlock } from "../lavaTypes";
 import { EventProcessAttributes } from "../eventUtils";
 
 import { JSONStringify } from '@jsinfo/utils/fmt';

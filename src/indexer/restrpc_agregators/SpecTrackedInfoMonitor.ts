@@ -1,4 +1,3 @@
-import { GetJsinfoDbForIndexer } from '@jsinfo/utils/db';
 import { logger } from '@jsinfo/utils/logger';
 import { RpcOnDemandEndpointCache } from '@jsinfo/indexer/classes/RpcOnDemandEndpointCache';
 import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
@@ -51,7 +50,7 @@ class SpecTrackedInfoMonitorClass {
                 }), {})
             );
 
-            const db = await GetJsinfoDbForIndexer();
+
             const now = new Date();
 
             await queryJsinfo(
@@ -68,7 +67,9 @@ class SpecTrackedInfoMonitorClass {
                             iprpc_cu: sql`EXCLUDED.iprpc_cu`,
                             timestamp: sql`EXCLUDED.timestamp`
                         }
-                    });
+                    }),
+                'specTrackedInfo'
+            );
 
         } catch (error) {
             logger.error(`SpecTrackedInfoMonitor::DB Update - Failed to update spec info`, { error });
@@ -80,7 +81,7 @@ class SpecTrackedInfoMonitorClass {
         const startTime = Date.now();
 
         try {
-            const db = await GetJsinfoDbForIndexer();
+
             const specs = await SpecAndConsumerService.GetAllSpecs();
             logger.info(`SpecTrackedInfoMonitor - Processing specs`, { specCount: specs.length });
 
@@ -88,10 +89,6 @@ class SpecTrackedInfoMonitorClass {
 
             for (const spec of specs) {
                 const specTrackedInfo = await RpcOnDemandEndpointCache.GetSpecTrackedInfo(spec);
-                // logger.info(`SpecTrackedInfoMonitor - Got spec info`, {
-                //     spec,
-                //     infoCount: specTrackedInfo.info.length
-                // });
 
                 allProcessedInfo.push(...specTrackedInfo.info.map(info => ({
                     provider: info.provider,

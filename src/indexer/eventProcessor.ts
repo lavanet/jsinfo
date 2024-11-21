@@ -4,7 +4,7 @@ import { Event } from "@cosmjs/stargate"
 
 import * as JsinfoSchema from '../schemas/jsinfoSchema/jsinfoSchema';
 
-import { LavaBlock } from './types';
+import { LavaBlock } from './lavaTypes';
 
 // Subscription Events
 import { ParseEventBuySubscription } from "./events/EventBuySubscription";

@@ -10,6 +10,7 @@ import { GetAndValidateProviderAddressFromRequest, GetAndValidateSpecIdFromReque
 import { PgColumn } from 'drizzle-orm/pg-core';
 import { logger } from '@jsinfo/utils/logger';
 import { RedisCache } from '@jsinfo/redis/classes/RedisCache';
+import { queryJsinfo } from '@jsinfo/utils/db';
 
 type ProviderChartDataPoint = {
     date: string;
@@ -85,11 +86,12 @@ class ProviderChartsV2Data extends RequestHandlerBase<ProviderChartsV2Response> 
                 return cachedSpecs;
             }
 
-            const query = QueryGetJsinfoDbForQueryInstance()
-                .select({ specId: JsinfoProviderAgrSchema.aggDailyRelayPayments.specId })
+            const query = queryJsinfo(db => db.select({ specId: JsinfoProviderAgrSchema.aggDailyRelayPayments.specId })
                 .from(JsinfoProviderAgrSchema.aggDailyRelayPayments)
                 .where(eq(JsinfoProviderAgrSchema.aggDailyRelayPayments.provider, this.provider))
-                .groupBy(JsinfoProviderAgrSchema.aggDailyRelayPayments.specId);
+                .groupBy(JsinfoProviderAgrSchema.aggDailyRelayPayments.specId),
+                'ProviderChartsV2Data::getAllAvailableSpecs'
+            );
 
             const specs = await query;
             const result = ['all', ...specs.filter(s => s.specId !== null).map(s => s.specId!)];
@@ -121,7 +123,7 @@ class ProviderChartsV2Data extends RequestHandlerBase<ProviderChartsV2Response> 
                 conditions = and(conditions, eq(JsinfoProviderAgrSchema.aggDailyRelayPayments.specId, this.chain));
             }
 
-            let query = QueryGetJsinfoDbForQueryInstance().select({
+            let query = queryJsinfo(db => db.select({
                 date: JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday,
                 qosSyncAvg: qosMetricWeightedAvg(JsinfoProviderAgrSchema.aggDailyRelayPayments.qosSyncAvg),
                 qosAvailabilityAvg: qosMetricWeightedAvg(JsinfoProviderAgrSchema.aggDailyRelayPayments.qosAvailabilityAvg),
@@ -131,7 +133,9 @@ class ProviderChartsV2Data extends RequestHandlerBase<ProviderChartsV2Response> 
             }).from(JsinfoProviderAgrSchema.aggDailyRelayPayments)
                 .groupBy(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday)
                 .where(conditions)
-                .orderBy(desc(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday));
+                .orderBy(desc(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday)),
+                'ProviderChartsV2Data::getProviderData'
+            );
 
             let data = await query;
 

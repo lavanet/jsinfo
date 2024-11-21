@@ -1,7 +1,6 @@
 // src/query/handlers/spec/specChartsV2Handler.ts
 
 import { FastifyReply, FastifyRequest, RouteShorthandOptions } from 'fastify';
-import { QueryGetJsinfoDbForQueryInstance } from '@jsinfo/query/utils/getLatestBlock';
 import * as JsinfoProviderAgrSchema from '@jsinfo/schemas/jsinfoSchema/providerRelayPaymentsAgregation';
 import { sql, gt, and, lt, desc, eq } from "drizzle-orm";
 import { DateToISOString } from '@jsinfo/utils/date';
@@ -11,7 +10,7 @@ import { PgColumn } from 'drizzle-orm/pg-core';
 import { logger } from '@jsinfo/utils/logger';
 import { RedisCache } from '@jsinfo/redis/classes/RedisCache';
 import { ProviderMonikerService } from '@jsinfo/redis/resources/global/ProviderMonikerSpecResource';
-import { queryJsinfo } from '@jsinfo/query/utils/queryJsinfo';
+import { queryJsinfo } from '@jsinfo/utils/db';
 
 type SpecChartDataPoint = {
     date: string;
@@ -92,7 +91,7 @@ class SpecChartsV2Data extends RequestHandlerBase<SpecChartsV2Response> {
             const sixMonthsAgo = new Date();
             sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
-            const providers = await queryJsinfo<{ provider: string; latestDate: Date }[]>(
+            const providers = await queryJsinfo(
                 async (db) => await db.select({
                     provider: JsinfoProviderAgrSchema.aggDailyRelayPayments.provider,
                     latestDate: sql<Date>`MAX(${JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday})`
@@ -140,14 +139,7 @@ class SpecChartsV2Data extends RequestHandlerBase<SpecChartsV2Response> {
                 conditions = and(conditions, eq(JsinfoProviderAgrSchema.aggDailyRelayPayments.provider, this.provider));
             }
 
-            let data = await queryJsinfo<{
-                date: Date;
-                qosSyncAvg: number;
-                qosAvailabilityAvg: number;
-                qosLatencyAvg: number;
-                cus: number;
-                relays: number;
-            }[]>(
+            let data = await queryJsinfo(
                 async (db) => await db.select({
                     date: JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday,
                     qosSyncAvg: qosMetricWeightedAvg(JsinfoProviderAgrSchema.aggDailyRelayPayments.qosSyncAvg),

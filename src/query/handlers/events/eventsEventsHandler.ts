@@ -1,7 +1,7 @@
 // src/query/handlers/events/eventsEventsHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { queryJsinfo } from '../../utils/db';
+import { queryJsinfo } from '@jsinfo/utils/db';
 import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { asc, desc, eq, sql } from "drizzle-orm";
 import { Pagination, ParsePaginationFromString } from '@jsinfo/query/utils/queryPagination';

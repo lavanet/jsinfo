@@ -125,21 +125,17 @@ export class RequestHandlerBase<T> {
     }
 
     public async PaginatedRecordsRequestHandler(request: FastifyRequest, reply: FastifyReply): Promise<{ data: T[] } | null> {
-        const startTime = Date.now();
-
         try {
             const pagination = ParsePaginationFromRequest(request);
-
             const key = `${this.dataKey}|${pagination ? SerializePagination(pagination) : "-"}`;
 
             const redisVal = await RedisCache.getArray(key);
             if (redisVal) {
-                this.logExecutionTime("PaginatedRecordsRequestHandler", startTime, `Cache hit: key: ${key}`);
                 return { data: redisVal as T[] };
             }
 
             const paginatedData = await this.fetchPaginatedRecords(pagination);
-            this.logExecutionTime("PaginatedRecordsRequestHandler", startTime, `PaginatedRecordsRequestHandler Cache miss: key: ${key}. paginated items length: ${GetDataLengthForPrints(paginatedData)}`);
+            this.log(`PaginatedRecordsRequestHandler Cache miss: key: ${key}. paginated items length: ${GetDataLengthForPrints(paginatedData)}`);
             await RedisCache.setArray(key, paginatedData, this.getTTL(key));
 
             return { data: paginatedData };
@@ -149,11 +145,6 @@ export class RequestHandlerBase<T> {
         }
     }
 
-    private logExecutionTime(source: string, startTime: number, message: string) {
-        const endTime = Date.now();
-        this.log(`${source}:: Execution time: ${endTime - startTime}ms ${message}`);
-    }
-
     private handleError(source: string, reply: FastifyReply, error: unknown) {
         const err = error as Error;
         WriteErrorToFastifyReply(reply, err.message);
@@ -161,7 +152,6 @@ export class RequestHandlerBase<T> {
     }
 
     public async DateRangeRequestHandler(request: FastifyRequest, reply: FastifyReply): Promise<{ data: T[] } | null> {
-        const startTime = Date.now();
         try {
             const query = request.query as { [key: string]: string };
             let from: Date;
@@ -171,7 +161,6 @@ export class RequestHandlerBase<T> {
                 from = ParseDateToUtc(query.f);
                 to = ParseDateToUtc(query.t);
             } else {
-                // Default to 3 months until now if either 'f' or 't' is not specified
                 to = GetUtcNow();
                 from = subMonths(to, 3);
             }
@@ -181,12 +170,11 @@ export class RequestHandlerBase<T> {
             const key = `${this.dataKey}|${normalizedFrom.toISOString()}|${normalizedTo.toISOString()}`;
             const redisVal = await RedisCache.getArray(key);
             if (redisVal) {
-                this.logExecutionTime("DateRangeRequestHandler", startTime, `(cache hit): ${key}`);
                 return { data: redisVal as T[] };
             }
 
             const filteredData = await this.fetchDateRangeRecords(normalizedFrom, normalizedTo);
-            this.logExecutionTime("DateRangeRequestHandler", startTime, `DateRangeRequestHandler (cache miss): ${key}`);
+            this.log(`DateRangeRequestHandler (cache miss): ${key}`);
             RedisCache.setArray(key, filteredData, this.getTTL(key));
             return { data: filteredData };
         } catch (error) {
@@ -196,17 +184,14 @@ export class RequestHandlerBase<T> {
     }
 
     public async getTotalItemCountPaginatedHandler(request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> {
-        const startTime = Date.now();
-        const key = `${this.dataKey}|itemCount`;
         try {
+            const key = `${this.dataKey}|itemCount`;
             const itemCountRedis = await RedisCache.get(key);
             if (itemCountRedis) {
-                this.logExecutionTime("getTotalItemCountPaginatedHandler", startTime, "Fetched item count from cache");
                 reply.send({ itemCount: parseInt(itemCountRedis) });
             } else {
                 const itemCount = await this.fetchRecordCountFromDb();
                 RedisCache.set(key, itemCount.toString(), this.getTTL(key));
-                this.logExecutionTime("getTotalItemCountPaginatedHandler", startTime, "Fetched item count from DB and cached");
                 reply.send({ itemCount: itemCount });
             }
             return reply;
@@ -217,12 +202,10 @@ export class RequestHandlerBase<T> {
     }
 
     public async CSVRequestHandler(request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> {
-        const startTime = Date.now();
-        const cacheKey = `${this.dataKey}|csvData`;
         try {
+            const cacheKey = `${this.dataKey}|csvData`;
             const csvRedis = await RedisCache.get(cacheKey);
             if (csvRedis) {
-                this.logExecutionTime("CSVRequestHandler", startTime, "CSV data fetched from cache");
                 reply.header('Content-Type', 'text/csv');
                 reply.header('Content-Disposition', `attachment; filename="${this.getCSVFileNameCached()}"`);
                 reply.send(csvRedis);
@@ -240,7 +223,6 @@ export class RequestHandlerBase<T> {
                 }
 
                 RedisCache.set(cacheKey, csv);
-                this.logExecutionTime("CSVRequestHandler", startTime, "CSV data prepared and cached");
                 reply.header('Content-Type', 'text/csv');
                 reply.header('Content-Disposition', `attachment; filename="${this.getCSVFileNameCached()}"`);
                 reply.send(csv);

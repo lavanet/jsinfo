@@ -1,8 +1,6 @@
 // src/indexer/restrpc_agregators/RestRpcAgregatorsCaller.ts
 
-import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { logger } from '@jsinfo/utils/logger';
-import { LavaClient } from '@jsinfo/indexer/types';
 
 // Monitors
 import { APRMonitor } from "./restrpc_agregators/AprMonitor";
@@ -16,6 +14,10 @@ import { ProcessChainWalletApi } from "./restrpc_agregators/ChainWalletApiProces
 import { ProcessChainSpecs } from "./restrpc_agregators/ChainSpecProcessor";
 
 // Redis Resource Manager
+
+import { AggConsumerRelayPayments } from '@jsinfo/indexer/agregators/consumerRelayPayments/aggConsumerRelayPayments';
+import { AggProviderRelayPayments } from '@jsinfo/indexer/agregators/providerRelayPayments/aggProviderRelayPayments';
+
 import { IndexerRedisResourceCaller } from "@jsinfo/redis/classes/IndexerRedisResourceCaller";
 
 // Supply Processor
@@ -23,22 +25,23 @@ import { SaveTokenSupplyToDB } from './lavarpc_agregators/SupplyProcessor';
 
 export class BackgroundThreadManager {
     private static isRunning = false;
+    private static runningProcesses = new Set<string>();
 
-    public static async start(db: PostgresJsDatabase, lavajsClient: LavaClient): Promise<void> {
+    public static async start(): Promise<void> {
         if (this.isRunning) {
             logger.info('BackgroundThreadManager:: is already running');
             return;
         }
 
         this.isRunning = true;
-        await this.runAggregators(db, lavajsClient);
+        await this.runAggregators();
     }
 
-    private static async runAggregators(db: PostgresJsDatabase, lavajsClient: LavaClient): Promise<void> {
+    private static async runAggregators(): Promise<void> {
         try {
             await this.startBackgroundMonitors();
-            await this.processAggregations(db);
-            await this.processTokenSupply(db, lavajsClient);
+            await this.processAggregations();
+            await this.processTokenSupply();
         } catch (error) {
             logger.error('BackgroundThreadManager:: Failed to run aggregators:', error);
         } finally {
@@ -58,23 +61,44 @@ export class BackgroundThreadManager {
         IndexerRedisResourceCaller.startIndexing();
     }
 
-    private static async processAggregations(db: PostgresJsDatabase): Promise<void> {
+    private static async runWithLock(name: string, fn: () => Promise<void>): Promise<void> {
+        if (this.runningProcesses.has(name)) {
+            return;
+        }
+
+        try {
+            this.runningProcesses.add(name);
+            await fn();
+        } finally {
+            this.runningProcesses.delete(name);
+        }
+    }
+
+    private static async processAggregations(): Promise<void> {
         const processors = [
             {
                 name: 'SubscriptionList',
-                process: () => ProcessSubscriptionList(db)
+                process: () => ProcessSubscriptionList()
             },
             {
                 name: 'ProviderMonikerSpecs',
-                process: () => ProcessProviderMonikerSpecs(db)
+                process: () => ProcessProviderMonikerSpecs()
             },
             {
                 name: 'ChainWalletApi',
-                process: () => ProcessChainWalletApi(db)
+                process: () => ProcessChainWalletApi()
             },
             {
                 name: 'ChainSpecs',
-                process: () => ProcessChainSpecs(db)
+                process: () => ProcessChainSpecs()
+            },
+            {
+                name: 'ProviderRelayPayments',
+                process: () => AggProviderRelayPayments()
+            },
+            {
+                name: 'ConsumerRelayPayments',
+                process: () => AggConsumerRelayPayments()
             }
         ];
 
@@ -82,22 +106,21 @@ export class BackgroundThreadManager {
             logger.info(`BackgroundThreadManager:: ${processor.name} processing started at: ${new Date().toISOString()}`);
             try {
                 const start = Date.now();
-                await processor.process();
+                await this.runWithLock(processor.name, processor.process);
                 const executionTime = Date.now() - start;
                 logger.info(`BackgroundThreadManager:: Successfully executed ${processor.name}. Execution time: ${executionTime}ms`);
             } catch (error) {
                 logger.error(`BackgroundThreadManager:: Failed to execute ${processor.name}:`, error);
-                throw error;
             }
         }
     }
 
-    private static async processTokenSupply(db: PostgresJsDatabase, lavajsClient: LavaClient): Promise<void> {
+    private static async processTokenSupply(): Promise<void> {
         try {
             logger.info('BackgroundThreadManager:: Starting token supply processing');
             const start = Date.now();
 
-            await SaveTokenSupplyToDB(db, lavajsClient);
+            await SaveTokenSupplyToDB();
 
             const executionTime = Date.now() - start;
             logger.info(`BackgroundThreadManager:: Successfully processed token supply. Execution time: ${executionTime}ms`);
@@ -108,7 +131,7 @@ export class BackgroundThreadManager {
     }
 }
 
-export async function BackgroundThreadCaller(db: PostgresJsDatabase, lavajsClient: LavaClient): Promise<void> {
-    await BackgroundThreadManager.start(db, lavajsClient);
+export async function BackgroundThreadCaller(): Promise<void> {
+    await BackgroundThreadManager.start();
 }
 

@@ -12,14 +12,14 @@ import { GetAndValidateProviderAddressFromRequest } from '@jsinfo/query/utils/qu
 import { ReplaceArchive } from '@jsinfo/indexer/utils/indexerUtils';
 import { RequestHandlerBase } from '@jsinfo/query/classes/RequestHandlerBase';
 import { BigIntIsZero } from '@jsinfo/utils/bigint';
-import { queryJsinfo } from '@jsinfo/query/utils/queryJsinfo';
+import { queryJsinfo } from '@jsinfo/utils/db';
 
 type ProviderStakesResponse = {
-    stake: string;
-    delegateLimit: string;
-    delegateTotal: string;
-    delegateCommission: string;
-    totalStake: string;
+    stake: string | null;
+    delegateLimit: string | null;
+    delegateTotal: string | null;
+    delegateCommission: string | null;
+    totalStake: string | null;
     appliedHeight: number | null;
     geolocation: number | null;
     addons: string | null;
@@ -108,7 +108,7 @@ class ProviderStakesData extends RequestHandlerBase<ProviderStakesResponse> {
     protected async fetchAllRecords(): Promise<ProviderStakesResponse[]> {
         ;
 
-        let stakesRes = await queryJsinfo<ProviderStakesResponse[]>(
+        let stakesRes = await queryJsinfo(
             async (db) => await db.select({
                 stake: JsinfoSchema.providerStakes.stake,
                 delegateLimit: JsinfoSchema.providerStakes.delegateLimit,
@@ -198,7 +198,7 @@ class ProviderStakesData extends RequestHandlerBase<ProviderStakesResponse> {
 
         const offset = (finalPagination.page - 1) * finalPagination.count;
 
-        const stakesRes = await queryJsinfo<ProviderStakesResponse[]>(
+        const stakesRes = await queryJsinfo(
             async (db) => await db.select({
                 stake: JsinfoSchema.providerStakes.stake,
                 delegateLimit: JsinfoSchema.providerStakes.delegateLimit,

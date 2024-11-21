@@ -1,8 +1,8 @@
-import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { RpcPeriodicEndpointCache } from "../classes/RpcPeriodicEndpointCache";
 import { keyValueStore } from "@jsinfo/schemas/jsinfoSchema/jsinfoSchema";
 import { logger } from "@jsinfo/utils/logger";
 import { eq } from "drizzle-orm";
+import { queryJsinfo } from "@jsinfo/utils/db";
 
 export async function ProcessChainSpecs(): Promise<void> {
     try {
@@ -14,7 +14,7 @@ export async function ProcessChainSpecs(): Promise<void> {
             .sort()
             .join(',');
 
-        await db
+        await queryJsinfo(db => db
             .insert(keyValueStore)
             .values({
                 key: 'specs',
@@ -28,7 +28,9 @@ export async function ProcessChainSpecs(): Promise<void> {
                     updatedAt: new Date(),
                 },
                 where: eq(keyValueStore.key, 'specs')
-            });
+            }),
+            'ChainSpecProcessor::processChainSpecs'
+        );
 
         const executionTime = Date.now() - start;
         logger.info(`Chain specs processed and stored. Count: ${chainList.length}, Execution time: ${executionTime}ms`);

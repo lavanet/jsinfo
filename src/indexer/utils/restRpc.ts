@@ -3,6 +3,8 @@ import { logger } from "@jsinfo/utils/logger";
 import { BackoffRetry } from "@jsinfo/utils/retry";
 
 const activeFetches: Record<string, Promise<any>> = {};
+const RATE_LIMIT_DELAY = 60000; // 1 minute in milliseconds
+const rateDelayCache = new Map<string, number>();
 
 export async function FetchRestData<T>(
     url: string,
@@ -14,8 +16,18 @@ export async function FetchRestData<T>(
     maxTimeout: number = 5000
 ): Promise<T> {
     if (url in activeFetches) {
-        // logger.debug(`FetchRestData:: Reusing existing fetch promise for ${url}`);
         return activeFetches[url] as Promise<T>;
+    }
+
+    // Check if we need to wait due to previous rate limit
+    const lastRateLimit = rateDelayCache.get(url);
+    if (lastRateLimit) {
+        const timeToWait = lastRateLimit + RATE_LIMIT_DELAY - Date.now();
+        if (timeToWait > 0) {
+            logger.info(`Rate limit cooling down for URL: ${url}, waiting ${timeToWait}ms`);
+            await new Promise(resolve => setTimeout(resolve, timeToWait));
+        }
+        rateDelayCache.delete(url);
     }
 
     const fetchFunc = async () => {

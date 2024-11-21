@@ -10,10 +10,12 @@ import { PgColumn } from 'drizzle-orm/pg-core';
 
 export async function getConsumerAggHourlyTimeSpan(): Promise<{ startTime: Date | null, endTime: Date | null }> {
     const lastRelayPayment = await queryJsinfo(
-        async (db) => db.select({
-            datehour: sql<string>`DATE_TRUNC('hour', MAX(${JsinfoSchema.relayPayments.datetime}))`,
-        }).from(JsinfoSchema.relayPayments)
-            .then(rows => rows[0]?.datehour),
+        async (db) => {
+            const result = await db.select({
+                datehour: sql<string>`DATE_TRUNC('hour', MAX(${JsinfoSchema.relayPayments.datetime}))`,
+            }).from(JsinfoSchema.relayPayments);
+            return result[0];
+        },
         'getConsumerAggHourlyTimeSpan_lastPayment'
     );
 
@@ -21,18 +23,20 @@ export async function getConsumerAggHourlyTimeSpan(): Promise<{ startTime: Date 
         logger.error("getConsumerAggHourlyTimeSpan: No relay payments found");
         return { startTime: null, endTime: null };
     }
-    const endTime = new Date(lastRelayPayment);
+    const endTime = new Date(lastRelayPayment.datehour);
 
     const lastAggHour = await queryJsinfo(
-        async (db) => db.select({
-            datehour: sql<string>`MAX(${JsinfoConsumerAgrSchema.aggConsumerHourlyRelayPayments.datehour})`,
-        }).from(JsinfoConsumerAgrSchema.aggConsumerHourlyRelayPayments)
-            .then(rows => rows[0]?.datehour),
+        async (db) => {
+            const result = await db.select({
+                datehour: sql<string>`MAX(${JsinfoConsumerAgrSchema.aggConsumerHourlyRelayPayments.datehour})`,
+            }).from(JsinfoConsumerAgrSchema.aggConsumerHourlyRelayPayments);
+            return result[0];
+        },
         'getConsumerAggHourlyTimeSpan_lastAgg'
     );
 
     let startTime: Date = lastAggHour
-        ? new Date(lastAggHour)
+        ? new Date(lastAggHour.datehour)
         : new Date("2000-01-01T00:00:00Z");
 
     return { startTime, endTime };
@@ -53,35 +57,39 @@ export async function aggConsumerHourlyRelayPayments() {
     const qosMetricWeightedAvg = (metric: PgColumn) => sql<number>`SUM(${metric} * ${JsinfoSchema.relayPayments.relays}) / SUM(CASE WHEN ${metric} IS NOT NULL THEN ${JsinfoSchema.relayPayments.relays} ELSE 0 END)`;
 
     const aggResults = await queryJsinfo(
-        async (db) => db.select({
-            consumer: sql<string>`${JsinfoSchema.relayPayments.consumer}`,
-            datehour: sql<string>`DATE_TRUNC('day', ${JsinfoSchema.relayPayments.datetime}) as datehour`,
-            specId: sql<string>`${JsinfoSchema.relayPayments.specId}`,
-            cuSum: sql<number>`SUM(${JsinfoSchema.relayPayments.cu})`,
-            relaySum: sql<number>`SUM(${JsinfoSchema.relayPayments.relays})`,
-            rewardSum: sql<number>`SUM(${JsinfoSchema.relayPayments.pay})`,
-            qosSyncAvg: qosMetricWeightedAvg(JsinfoSchema.relayPayments.qosSync),
-            qosAvailabilityAvg: qosMetricWeightedAvg(JsinfoSchema.relayPayments.qosAvailability),
-            qosLatencyAvg: qosMetricWeightedAvg(JsinfoSchema.relayPayments.qosLatency),
-            qosSyncExcAvg: qosMetricWeightedAvg(JsinfoSchema.relayPayments.qosSyncExc),
-            qosAvailabilityExcAvg: qosMetricWeightedAvg(JsinfoSchema.relayPayments.qosAvailabilityExc),
-            qosLatencyExcAvg: qosMetricWeightedAvg(JsinfoSchema.relayPayments.qosLatencyExc),
-        }).from(JsinfoSchema.relayPayments)
-            .where(
-                and(
-                    sql`${JsinfoSchema.relayPayments.datetime} >= ${startTime}`,
-                    isNotNull(JsinfoSchema.relayPayments.consumer),
-                    ne(JsinfoSchema.relayPayments.relays, 0)
+        async (db) => {
+            const result = await db.select({
+                consumer: sql<string>`${JsinfoSchema.relayPayments.consumer}`,
+                datehour: sql<string>`DATE_TRUNC('day', ${JsinfoSchema.relayPayments.datetime}) as datehour`,
+                specId: sql<string>`${JsinfoSchema.relayPayments.specId}`,
+                cuSum: sql<number>`SUM(${JsinfoSchema.relayPayments.cu})`,
+                relaySum: sql<number>`SUM(${JsinfoSchema.relayPayments.relays})`,
+                rewardSum: sql<number>`SUM(${JsinfoSchema.relayPayments.pay})`,
+                qosSyncAvg: qosMetricWeightedAvg(JsinfoSchema.relayPayments.qosSync),
+                qosAvailabilityAvg: qosMetricWeightedAvg(JsinfoSchema.relayPayments.qosAvailability),
+                qosLatencyAvg: qosMetricWeightedAvg(JsinfoSchema.relayPayments.qosLatency),
+                qosSyncExcAvg: qosMetricWeightedAvg(JsinfoSchema.relayPayments.qosSyncExc),
+                qosAvailabilityExcAvg: qosMetricWeightedAvg(JsinfoSchema.relayPayments.qosAvailabilityExc),
+                qosLatencyExcAvg: qosMetricWeightedAvg(JsinfoSchema.relayPayments.qosLatencyExc),
+            }).from(JsinfoSchema.relayPayments)
+                .where(
+                    and(
+                        sql`${JsinfoSchema.relayPayments.datetime} >= ${startTime}`,
+                        isNotNull(JsinfoSchema.relayPayments.consumer),
+                        ne(JsinfoSchema.relayPayments.relays, 0)
+                    )
                 )
-            )
-            .groupBy(
-                sql`datehour`,
-                JsinfoSchema.relayPayments.consumer,
-                JsinfoSchema.relayPayments.specId
-            )
-            .orderBy(
-                sql`datehour`,
-            )
+                .groupBy(
+                    sql`datehour`,
+                    JsinfoSchema.relayPayments.consumer,
+                    JsinfoSchema.relayPayments.specId
+                )
+                .orderBy(
+                    sql`datehour`,
+                )
+            return result;
+        },
+        'aggConsumerHourlyRelayPayments'
     );
 
     if (aggResults.length === 0) {
@@ -167,15 +175,16 @@ export async function aggConsumerHourlyRelayPayments() {
                     )
             }
 
-            //
-            // Insert new rows
             if (remainingData.length === 0) {
-                return;
+                return { success: true };
             }
+
             await DoInChunks(250, remainingData, async (arr: any) => {
                 await tx.insert(JsinfoConsumerAgrSchema.aggConsumerHourlyRelayPayments)
                     .values(arr)
             })
-        })
+            return { success: true };
+        }),
+        'aggConsumerHourlyRelayPayments_update'
     );
 }

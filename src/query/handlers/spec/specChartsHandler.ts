@@ -11,7 +11,7 @@ import { GetAndValidateSpecIdFromRequest } from '@jsinfo/query/utils/queryReques
 import { ProviderMonikerService } from '@jsinfo/redis/resources/global/ProviderMonikerSpecResource';
 import { PgColumn } from 'drizzle-orm/pg-core';
 import { JSONStringifySpaced } from '@jsinfo/utils/fmt';
-import { queryJsinfo } from '../../utils/db';
+import { queryJsinfo } from '@jsinfo/utils/db';
 
 type SpecChartCuRelay = {
     provider: string;
@@ -107,7 +107,7 @@ class SpecChartsData extends RequestHandlerBase<SpecChartResponse> {
         }
 
         // First query to get top 10 providers
-        let top10Providers = await queryJsinfo<{ provider: string }[]>(
+        let top10Providers = await queryJsinfo(
             async (db) => await db.select({
                 provider: JsinfoSchema.providerStakes.provider,
             })

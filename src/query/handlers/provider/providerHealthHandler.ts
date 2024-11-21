@@ -12,6 +12,7 @@ import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_
 import { RequestHandlerBase } from '@jsinfo/query/classes/RequestHandlerBase';
 import { ParseDateToUtc } from '@jsinfo/utils/date';
 import { logger } from '@jsinfo/utils/logger';
+import { queryJsinfo } from '@jsinfo/utils/db';
 
 export interface HealthReportEntry {
     message: string | null;
@@ -82,13 +83,13 @@ class ProviderHealthData extends RequestHandlerBase<HealthReportEntry> {
     }
 
     protected async fetchAllRecords(): Promise<HealthReportEntry[]> {
-        ;
-
-        const data = await QueryGetJsinfoDbForQueryInstance().select()
+        const data = await queryJsinfo(db => db.select()
             .from(JsinfoSchema.providerHealth)
             .where(eq(JsinfoSchema.providerHealth.provider, this.addr))
             .orderBy(desc(JsinfoSchema.providerHealth.id))
-            .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
+            .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION),
+            'ProviderHealthData::fetchAllRecords'
+        );
 
         const healthReportEntries: HealthReportEntry[] = data.map(item => ({
             id: item.id,
@@ -110,11 +111,12 @@ class ProviderHealthData extends RequestHandlerBase<HealthReportEntry> {
     protected async fetchRecordCountFromDb(): Promise<number> {
         ;
 
-        const countResult = await QueryGetJsinfoDbForQueryInstance()
-            .select({
-                count: sql<number>`COUNT(*)`
-            })
-            .from(JsinfoSchema.providerHealth);
+        const countResult = await queryJsinfo(db => db.select({
+            count: sql<number>`COUNT(*)`
+        })
+            .from(JsinfoSchema.providerHealth),
+            'ProviderHealthData::fetchRecordCountFromDb'
+        );
 
         return Math.min(countResult[0].count || 0, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION - 1);
     }
@@ -158,13 +160,15 @@ class ProviderHealthData extends RequestHandlerBase<HealthReportEntry> {
 
         const offset = (finalPagination.page - 1) * finalPagination.count;
 
-        const additionalData = await QueryGetJsinfoDbForQueryInstance()
+        const additionalData = await queryJsinfo(db => db
             .select()
             .from(JsinfoSchema.providerHealth)
             .where(eq(JsinfoSchema.providerHealth.provider, this.addr))
             .orderBy(orderFunction(sortColumn))
             .offset(offset)
-            .limit(finalPagination.count);
+            .limit(finalPagination.count),
+            'ProviderHealthData::fetchPaginatedRecords'
+        );
 
         const healthReportEntries: HealthReportEntry[] = additionalData.map(item => ({
             id: item.id,

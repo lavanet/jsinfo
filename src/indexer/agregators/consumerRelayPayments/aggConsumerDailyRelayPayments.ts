@@ -9,10 +9,12 @@ import { PgColumn } from 'drizzle-orm/pg-core';
 
 export async function getConsumerAggDailyTimeSpan(): Promise<{ startTime: Date | null, endTime: Date | null }> {
     const lastRelayPayment = await queryJsinfo(
-        async (db) => db.select({
-            dateday: sql<string>`DATE_TRUNC('day', MAX(${JsinfoConsumerAgrSchema.aggConsumerHourlyRelayPayments.datehour}))`,
-        }).from(JsinfoConsumerAgrSchema.aggConsumerHourlyRelayPayments)
-            .then(rows => rows[0]?.dateday),
+        async (db) => {
+            const result = await db.select({
+                dateday: sql<string>`DATE_TRUNC('day', MAX(${JsinfoConsumerAgrSchema.aggConsumerHourlyRelayPayments.datehour}))`,
+            }).from(JsinfoConsumerAgrSchema.aggConsumerHourlyRelayPayments);
+            return { dateday: result[0]?.dateday };
+        },
         'getConsumerAggDailyTimeSpan_lastRelayPayment'
     );
 
@@ -20,18 +22,20 @@ export async function getConsumerAggDailyTimeSpan(): Promise<{ startTime: Date |
         logger.error("getConsumerAggHourlyTimeSpan: No relay payments found");
         return { startTime: null, endTime: null };
     }
-    const endTime = new Date(lastRelayPayment);
+    const endTime = new Date(lastRelayPayment.dateday);
 
     const lastAggDay = await queryJsinfo(
-        async (db) => db.select({
-            dateday: sql<string>`MAX(${JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.dateday})`,
-        }).from(JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments)
-            .then(rows => rows[0]?.dateday),
+        async (db) => {
+            const result = await db.select({
+                dateday: sql<string>`MAX(${JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.dateday})`,
+            }).from(JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments);
+            return { dateday: result[0]?.dateday };
+        },
         'getConsumerAggDailyTimeSpan_lastAggDay'
     );
 
-    let startTime: Date = lastAggDay
-        ? new Date(lastAggDay)
+    let startTime: Date = lastAggDay?.dateday
+        ? new Date(lastAggDay.dateday)
         : new Date("2000-01-01T00:00:00Z");
 
     return { startTime, endTime };
@@ -97,12 +101,12 @@ export async function aggConsumerDailyRelayPayments() {
     );
 
     await queryJsinfo(
-        async (db) => db.transaction(async (tx) => {
-            for (const row of latestHourData) {
-                await tx.insert(JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments)
-                    .values(row as any)
-                    .onConflictDoUpdate(
-                        {
+        async (db) => {
+            await db.transaction(async (tx) => {
+                for (const row of latestHourData) {
+                    await tx.insert(JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments)
+                        .values(row as any)
+                        .onConflictDoUpdate({
                             target: [
                                 JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.dateday,
                                 JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.consumer,
@@ -119,17 +123,18 @@ export async function aggConsumerDailyRelayPayments() {
                                 qosAvailabilityExcAvg: row.qosAvailabilityExcAvg,
                                 qosLatencyExcAvg: row.qosLatencyExcAvg
                             } as any
-                        }
-                    )
-            }
+                        });
+                }
 
-            if (remainingData.length > 0) {
-                await DoInChunks(250, remainingData, async (arr: any) => {
-                    await tx.insert(JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments)
-                        .values(arr)
-                })
-            }
-        }),
+                if (remainingData.length > 0) {
+                    await DoInChunks(250, remainingData, async (arr: any) => {
+                        await tx.insert(JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments)
+                            .values(arr);
+                    });
+                }
+            });
+            return { success: true };
+        },
         'aggConsumerDailyRelayPayments_insert'
     );
 }

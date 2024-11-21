@@ -1,4 +1,4 @@
-// src/indexer/agregators/aggProviderRelayPayments.ts
+// src/indexer/agregators/AggProviderRelayPayments.ts
 
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { logger } from "../../../utils/logger";
@@ -8,9 +8,9 @@ import { aggProviderAllTimeRelayPayments } from "./aggProviderAllTimeRelayPaymen
 
 let isRunning = false;
 
-export const aggProviderRelayPayments = async () => {
+export const AggProviderRelayPayments = async () => {
     if (isRunning) {
-        logger.info('aggProviderRelayPayments is already running. Exiting this call.');
+        logger.info('AggProviderRelayPayments is already running. Exiting this call.');
         return;
     }
 

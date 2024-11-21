@@ -44,7 +44,7 @@ export class IndexProvidersActiveResource extends RedisResourceBase<IndexProvide
     protected readonly ttlSeconds = 600; // 10 minutes cache
 
     protected async getActiveProviderAddresses(): Promise<string[]> {
-        const result = await new ActiveProvidersResource().fetch(db);
+        const result = await new ActiveProvidersResource().fetch();
         if (!result) {
             throw new Error("No active providers found");
         }

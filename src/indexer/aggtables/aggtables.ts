@@ -6,11 +6,7 @@ import { logger } from '@jsinfo/utils/logger';
 import { queryJsinfo } from '@jsinfo/utils/db';
 
 export const AggProviderAndConsumerRelayPayments = async () => {
-    refreshMaterializedViews(db);
-}
-
-export const AggProviderAndConsumerRelayPaymentsSync = async () => {
-    await refreshMaterializedViews(db);
+    refreshMaterializedViews();
 }
 
 async function refreshMaterializedViews() {

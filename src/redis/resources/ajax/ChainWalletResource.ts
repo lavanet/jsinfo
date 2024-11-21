@@ -1,6 +1,6 @@
 import { RedisResourceBase } from '../../classes/RedisResourceBase';
-import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
+import { queryJsinfo } from '@jsinfo/utils/db';
+import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { eq } from 'drizzle-orm';
 
 export interface ChainWalletData {
@@ -16,18 +16,22 @@ export class ChainWalletResource extends RedisResourceBase<ChainWalletData, Chai
     protected readonly redisKey = 'chain_wallet';
     protected readonly ttlSeconds = 300; // 5 minutes cache
 
-    protected async fetchFromDb(db: PostgresJsDatabase, args: ChainWalletArgs): Promise<ChainWalletData> {
+    protected async fetchFromDb(args: ChainWalletArgs): Promise<ChainWalletData> {
         const prefix = args.type === 'stakers' ? 'stakers' : 'restakers';
 
-        const totalResult = await db
+        const totalResult = await queryJsinfo(db => db
             .select({ value: JsinfoSchema.keyValueStore.value })
             .from(JsinfoSchema.keyValueStore)
-            .where(eq(JsinfoSchema.keyValueStore.key, `${prefix}_current_unique_delegators`));
+            .where(eq(JsinfoSchema.keyValueStore.key, `${prefix}_current_unique_delegators`)),
+            'ChainWalletResource::fetchFromDb'
+        );
 
-        const monthlyResult = await db
+        const monthlyResult = await queryJsinfo(db => db
             .select({ value: JsinfoSchema.keyValueStore.value })
             .from(JsinfoSchema.keyValueStore)
-            .where(eq(JsinfoSchema.keyValueStore.key, `${prefix}_monthly_unique_delegators`));
+            .where(eq(JsinfoSchema.keyValueStore.key, `${prefix}_monthly_unique_delegators`)),
+            'ChainWalletResource::fetchFromDb'
+        );
 
         return {
             total: totalResult[0]?.value?.toString() || "0",

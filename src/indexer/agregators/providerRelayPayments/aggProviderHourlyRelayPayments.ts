@@ -10,29 +10,33 @@ import { PgColumn } from 'drizzle-orm/pg-core';
 
 export async function getProviderAggHourlyTimeSpan(): Promise<{ startTime: Date | null, endTime: Date | null }> {
     const lastRelayPayment = await queryJsinfo(
-        async (db) => db.select({
-            datehour: sql<string>`DATE_TRUNC('hour', MAX(${JsinfoSchema.relayPayments.datetime}))`,
-        }).from(JsinfoSchema.relayPayments)
-            .then(rows => rows[0]?.datehour),
+        async (db) => {
+            const result = await db.select({
+                datehour: sql<string>`DATE_TRUNC('hour', MAX(${JsinfoSchema.relayPayments.datetime}))`,
+            }).from(JsinfoSchema.relayPayments);
+            return result[0];
+        },
         'getProviderAggHourlyTimeSpan_lastPayment'
     );
 
-    if (!lastRelayPayment) {
+    if (!lastRelayPayment?.datehour) {
         logger.error("getProviderAggHourlyTimeSpan: No relay payments found");
         return { startTime: null, endTime: null };
     }
-    const endTime = new Date(lastRelayPayment);
+    const endTime = new Date(lastRelayPayment.datehour);
 
     const lastAggHour = await queryJsinfo(
-        async (db) => db.select({
-            datehour: sql<string>`MAX(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.datehour})`,
-        }).from(JsinfoProviderAgrSchema.aggHourlyRelayPayments)
-            .then(rows => rows[0]?.datehour),
+        async (db) => {
+            const result = await db.select({
+                datehour: sql<string>`MAX(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.datehour})`,
+            }).from(JsinfoProviderAgrSchema.aggHourlyRelayPayments);
+            return result[0];
+        },
         'getProviderAggHourlyTimeSpan_lastAgg'
     );
 
-    let startTime: Date = lastAggHour
-        ? new Date(lastAggHour)
+    let startTime: Date = lastAggHour?.datehour
+        ? new Date(lastAggHour.datehour)
         : new Date("2000-01-01T00:00:00Z");
 
     return { startTime, endTime };
@@ -110,37 +114,40 @@ export async function aggProviderHourlyRelayPayments() {
     );
 
     await queryJsinfo(
-        async (db) => db.transaction(async (tx) => {
-            for (const row of latestHourData) {
-                await tx.insert(JsinfoProviderAgrSchema.aggHourlyRelayPayments)
-                    .values(row as any)
-                    .onConflictDoUpdate({
-                        target: [
-                            JsinfoProviderAgrSchema.aggHourlyRelayPayments.datehour,
-                            JsinfoProviderAgrSchema.aggHourlyRelayPayments.provider,
-                            JsinfoProviderAgrSchema.aggHourlyRelayPayments.specId,
-                        ],
-                        set: {
-                            cuSum: row.cuSum,
-                            relaySum: row.relaySum,
-                            rewardSum: row.rewardSum,
-                            qosSyncAvg: row.qosSyncAvg,
-                            qosAvailabilityAvg: row.qosAvailabilityAvg,
-                            qosLatencyAvg: row.qosLatencyAvg,
-                            qosSyncExcAvg: row.qosSyncExcAvg,
-                            qosAvailabilityExcAvg: row.qosAvailabilityExcAvg,
-                            qosLatencyExcAvg: row.qosLatencyExcAvg
-                        } as any
-                    });
-            }
-
-            if (remainingData.length > 0) {
-                await DoInChunks(250, remainingData, async (arr: any) => {
+        async (db) => {
+            return db.transaction(async (tx) => {
+                for (const row of latestHourData) {
                     await tx.insert(JsinfoProviderAgrSchema.aggHourlyRelayPayments)
-                        .values(arr).onConflictDoNothing();
-                });
-            }
-        }),
+                        .values(row as any)
+                        .onConflictDoUpdate({
+                            target: [
+                                JsinfoProviderAgrSchema.aggHourlyRelayPayments.datehour,
+                                JsinfoProviderAgrSchema.aggHourlyRelayPayments.provider,
+                                JsinfoProviderAgrSchema.aggHourlyRelayPayments.specId,
+                            ],
+                            set: {
+                                cuSum: row.cuSum,
+                                relaySum: row.relaySum,
+                                rewardSum: row.rewardSum,
+                                qosSyncAvg: row.qosSyncAvg,
+                                qosAvailabilityAvg: row.qosAvailabilityAvg,
+                                qosLatencyAvg: row.qosLatencyAvg,
+                                qosSyncExcAvg: row.qosSyncExcAvg,
+                                qosAvailabilityExcAvg: row.qosAvailabilityExcAvg,
+                                qosLatencyExcAvg: row.qosLatencyExcAvg
+                            } as any
+                        });
+                }
+
+                if (remainingData.length > 0) {
+                    await DoInChunks(250, remainingData, async (arr: any) => {
+                        await tx.insert(JsinfoProviderAgrSchema.aggHourlyRelayPayments)
+                            .values(arr).onConflictDoNothing();
+                    });
+                }
+                return {};
+            });
+        },
         'aggProviderHourlyRelayPayments_insert'
     );
 }

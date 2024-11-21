@@ -1,5 +1,6 @@
 import { RedisResourceBase } from '../../classes/RedisResourceBase';
 import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
+import { queryJsinfo } from '@jsinfo/utils/db';
 import { desc, sql } from 'drizzle-orm';
 
 interface ProviderSpecMoniker {
@@ -35,19 +36,20 @@ export class ProviderMonikerSpecResource extends RedisResourceBase<ProviderMonik
     }
 
     protected async fetchFromDb(): Promise<ProviderMonikerSpecData> {
-        const results = await db
-            .select({
-                provider: JsinfoSchema.providerSpecMoniker.provider,
-                specId: JsinfoSchema.providerSpecMoniker.spec,
-                moniker: JsinfoSchema.providerSpecMoniker.moniker
-            })
+        const results = await queryJsinfo(db => db.select({
+            provider: JsinfoSchema.providerSpecMoniker.provider,
+            specId: JsinfoSchema.providerSpecMoniker.spec,
+            moniker: JsinfoSchema.providerSpecMoniker.moniker
+        })
             .from(JsinfoSchema.providerSpecMoniker)
             .groupBy(
                 JsinfoSchema.providerSpecMoniker.provider,
                 JsinfoSchema.providerSpecMoniker.spec,
                 JsinfoSchema.providerSpecMoniker.moniker
             )
-            .orderBy(desc(sql`MAX(${JsinfoSchema.providerSpecMoniker.updatedAt})`));
+            .orderBy(desc(sql`MAX(${JsinfoSchema.providerSpecMoniker.updatedAt})`)),
+            'ProviderMonikerSpecResource::fetchFromDb'
+        );
 
         const uniqueMap = new Map<string, ProviderSpecMoniker>();
 

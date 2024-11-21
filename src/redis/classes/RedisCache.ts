@@ -250,7 +250,7 @@ class RedisCacheClass {
                 reason: 'No clients available',
                 key: fullKey
             });
-            return -2; // Redis convention: -2 means key doesn't exist
+            return -2;
         }
 
         try {

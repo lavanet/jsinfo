@@ -54,8 +54,8 @@ class LavaBlockCache {
             const stringifiedData = JSONStringify(data);
             let writtenData = Buffer.from(stringifiedData, 'utf-8');
             if (JSINFO_INDEXER_CACHE_USE_PAKO_COMPRESSION) {
-                writtenData = this.compress(stringifiedData);
-                writeFileSync(filePath, new Uint8Array(writtenData));
+                const writtenData = this.compress(stringifiedData);
+                writeFileSync(filePath, Buffer.from(writtenData));
             } else {
                 writeFileSync(filePath, stringifiedData);
             }

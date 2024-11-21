@@ -9,10 +9,12 @@ import { PgColumn } from 'drizzle-orm/pg-core';
 
 export async function getProviderAggDailyTimeSpan(): Promise<{ startTime: Date | null, endTime: Date | null }> {
     const lastRelayPayment = await queryJsinfo(
-        async (db) => db.select({
-            dateday: sql<string>`DATE_TRUNC('day', MAX(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.datehour}))`,
-        }).from(JsinfoProviderAgrSchema.aggHourlyRelayPayments)
-            .then(rows => rows[0]?.dateday),
+        async (db) => {
+            const result = await db.select({
+                dateday: sql<string>`DATE_TRUNC('day', MAX(${JsinfoProviderAgrSchema.aggHourlyRelayPayments.datehour}))`,
+            }).from(JsinfoProviderAgrSchema.aggHourlyRelayPayments);
+            return result[0];
+        },
         'getProviderAggDailyTimeSpan_lastPayment'
     );
 
@@ -20,18 +22,20 @@ export async function getProviderAggDailyTimeSpan(): Promise<{ startTime: Date |
         logger.error("getProviderAggHourlyTimeSpan: No relay payments found");
         return { startTime: null, endTime: null };
     }
-    const endTime = new Date(lastRelayPayment);
+    const endTime = new Date(lastRelayPayment.dateday);
 
     const lastAggDay = await queryJsinfo(
-        async (db) => db.select({
-            dateday: sql<string>`MAX(${JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday})`,
-        }).from(JsinfoProviderAgrSchema.aggDailyRelayPayments)
-            .then(rows => rows[0]?.dateday),
+        async (db) => {
+            const result = await db.select({
+                dateday: sql<string>`MAX(${JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday})`,
+            }).from(JsinfoProviderAgrSchema.aggDailyRelayPayments);
+            return result[0];
+        },
         'getProviderAggDailyTimeSpan_lastAgg'
     );
 
     let startTime: Date = lastAggDay
-        ? new Date(lastAggDay)
+        ? new Date(lastAggDay.dateday)
         : new Date("2000-01-01T00:00:00Z");
 
     return { startTime, endTime };
@@ -135,7 +139,8 @@ export async function aggProviderDailyRelayPayments() {
                     await tx.insert(JsinfoProviderAgrSchema.aggDailyRelayPayments)
                         .values(arr)
                 })
-            })
+            });
+            return { success: true };
         },
         'aggProviderDailyRelayPayments_update'
     );

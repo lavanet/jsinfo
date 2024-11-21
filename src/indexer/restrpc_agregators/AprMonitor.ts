@@ -4,8 +4,8 @@ import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { logger } from '@jsinfo/utils/logger';
 import { RpcPeriodicEndpointCache } from '@jsinfo/indexer/classes/RpcPeriodicEndpointCache';
 import { EstimatedRewardsResponse, RpcOnDemandEndpointCache } from '@jsinfo/indexer/classes/RpcOnDemandEndpointCache';
-import { GetJsinfoDbForIndexer } from '@jsinfo/utils/db';
 import { ConvertToBaseDenom, GetUSDCValue } from './CurrencyConverstionUtils';
+import { queryJsinfo } from '@jsinfo/utils/db';
 
 // Constants
 const BENCHMARK_AMOUNT = 10_000_000_000;
@@ -208,24 +208,29 @@ class APRMonitorClass {
 
   private async updateAprInDb(key: string, value: number): Promise<void> {
     try {
-      const db = await GetJsinfoDbForIndexer();
       const now = new Date();
-
-      await db.transaction(async (tx) => {
-        await tx.insert(JsinfoSchema.apr)
-          .values({
-            key,
-            value,
-            timestamp: now
-          } as any)
-          .onConflictDoUpdate({
-            target: [JsinfoSchema.apr.key],
-            set: {
-              value,
-              timestamp: now,
-            } as any
+      await queryJsinfo(
+        async (db) => {
+          const result = await db.transaction(async (tx) => {
+            await tx.insert(JsinfoSchema.apr)
+              .values({
+                key,
+                value,
+                timestamp: now
+              } as any)
+              .onConflictDoUpdate({
+                target: [JsinfoSchema.apr.key],
+                set: {
+                  value,
+                  timestamp: now,
+                } as any
+              });
+            return { key, value, timestamp: now };
           });
-      });
+          return result;
+        },
+        "APRMonitor::updateAprInDb"
+      );
 
       logger.info(`APRMonitor::DB Update - Successfully updated ${key}`, {
         value,

@@ -1,6 +1,6 @@
 import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { Event } from "@cosmjs/stargate"
-import { LavaBlock } from "../types";
+import { LavaBlock } from "../lavaTypes";
 import { EventParseUlava, EventProcessAttributes, EventParseProviderAddress } from "../eventUtils";
 
 /* sample form 2aug24:

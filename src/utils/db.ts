@@ -5,6 +5,7 @@ import PQueue from 'p-queue';
 import { Sleep } from './sleep';
 import postgres from 'postgres';
 import { migrate } from "drizzle-orm/postgres-js/migrator";
+import { sql } from 'drizzle-orm';
 
 interface DbConnection {
     db: PostgresJsDatabase;
@@ -19,7 +20,7 @@ class DbConnectionPoolClass {
     private connectionString: "jsinfo" | "relays";
     private activeQueries = new Map<string, Promise<any>>();
     private queue: PQueue;
-    private readonly MAX_CONNECTIONS = 10;
+    private readonly MAX_CONNECTIONS = 90;
     private readonly CONNECTION_TTL = 1000 * 60 * 10;  // 10 minutes
     private readonly CLEANUP_INTERVAL = 1000 * 60;     // 1 minute
     private cachedPostgresUrl: string | null = null;
@@ -28,9 +29,11 @@ class DbConnectionPoolClass {
     private readonly FAILURE_THRESHOLD = 3;
     private readonly FAILURE_RESET_TIME = 1000 * 60 * 5; // 5 minutes
     private currentUrlIndex = 0;
+    private lastConnectionWarning = 0;
+    private readonly WARNING_INTERVAL = 10000; // Only log every 10 seconds
 
     constructor(connectionString: "jsinfo" | "relays") {
-        this.queue = new PQueue({ concurrency: 60 });
+        this.queue = new PQueue({ concurrency: 150 });
         this.connectionString = connectionString;
         this.startConnectionManager();
         this.migrateDb().catch(error => {
@@ -230,14 +233,15 @@ class DbConnectionPoolClass {
         }
     }
 
-    private async getConnection(): Promise<DbConnection> {
+    private async getConnection(queryKey: string): Promise<DbConnection> {
         // Create new connection for each query
         const conn = await this.createConnection();
         this.connections.push(conn);
 
         logger.info('Created new connection for query', {
             connectionId: conn.id,
-            totalConnections: this.connections.length
+            totalConnections: this.connections.length,
+            queryKey: queryKey
         });
 
         conn.inUse = true;
@@ -262,17 +266,21 @@ class DbConnectionPoolClass {
 
         // Wait if we've hit the connection limit
         while (this.connections.length >= this.MAX_CONNECTIONS) {
-            logger.info('Max connections reached, waiting...', {
-                queryKey,
-                activeConnections: this.connections.length,
-                maxConnections: this.MAX_CONNECTIONS
-            });
+            const now = Date.now();
+            if (now - this.lastConnectionWarning > this.WARNING_INTERVAL) {
+                logger.info('Max connections reached, waiting...', {
+                    queryKey,
+                    activeConnections: this.connections.length,
+                    maxConnections: this.MAX_CONNECTIONS
+                });
+                this.lastConnectionWarning = now;
+            }
             await new Promise(resolve => setTimeout(resolve, 100));
         }
 
         const queryPromise = this.queue.add(async () => {
             const startTime = Date.now();
-            const conn = await this.getConnection();
+            const conn = await this.getConnection(queryKey);
             const maxRetries = 3;
             const delays = [500, 1000, 1500];
 
@@ -302,21 +310,42 @@ class DbConnectionPoolClass {
                     });
                 } catch (error) {
                     const isLastAttempt = attempt === maxRetries - 1;
-                    logger.error('DB Query failed', {
-                        error: error as Error,
-                        queryKey,
-                        attempt: attempt + 1,
-                        connectionId: conn.id,
-                        connectionStats: {
-                            age: Date.now() - conn.createdAt,
-                            lastUsed: Date.now() - conn.lastUsed
+                    const errorObj = error as Error;
+                    const errorInfo = {
+                        error: {
+                            code: (errorObj as any).code,
+                            constraint: (errorObj as any).constraint,
+                            detail: (errorObj as any).detail,
+                            message: errorObj.message,
+                            name: errorObj.name,
+                            schema: (errorObj as any).schema,
+                            stack: errorObj.stack,
+                            table: (errorObj as any).table
                         },
-                        poolStats: {
-                            totalConnections: this.connections.length,
+                        query: {
+                            attempt: `${attempt + 1}/${maxRetries}`,
+                            connectionId: conn.id,
+                            key: queryKey
+                        },
+                        connection: {
+                            age: `${Math.round((Date.now() - conn.createdAt) / 1000)}s`,
+                            idleTime: `${Math.round((Date.now() - conn.lastUsed) / 1000)}s`
+                        },
+                        pool: {
                             activeQueries: this.activeQueries.size,
+                            connections: this.connections.length,
+                            maxConnections: this.MAX_CONNECTIONS,
                             queueSize: this.queue.size
                         }
-                    });
+                    };
+
+                    logger.error('DB Query failed\n' +
+                        JSON.stringify(
+                            JSON.parse(JSON.stringify(errorInfo, null, 4)),
+                            null,
+                            4
+                        )
+                    );
 
                     if (!isLastAttempt) {
                         await new Promise(resolve => setTimeout(resolve, delays[attempt]));
@@ -377,4 +406,41 @@ export async function queryRelays<T extends Record<string, any>>(
     queryKey: string
 ): Promise<T> {
     return DbConnectionPoolRelays.executeQuery<T>(queryFn, queryKey);
+}
+
+export async function CheckDatabaseStatus(): Promise<{ ok: boolean; details: string }> {
+    try {
+        // Test both connection pools with a simple query
+        await queryJsinfo(
+            async (db) => db.select({ now: sql`NOW()` }).from(sql`(SELECT 1)`).limit(1),
+            'health_check_jsinfo'
+        );
+        await queryRelays(
+            async (db) => db.select({ now: sql`NOW()` }).from(sql`(SELECT 1)`).limit(1),
+            'health_check_relays'
+        );
+
+        const poolStats = {
+            jsinfo: {
+                connections: DbConnectionPoolJsinfo['connections'].length,
+                activeQueries: DbConnectionPoolJsinfo['activeQueries'].size,
+                queueSize: DbConnectionPoolJsinfo['queue'].size
+            },
+            relays: {
+                connections: DbConnectionPoolRelays['connections'].length,
+                activeQueries: DbConnectionPoolRelays['activeQueries'].size,
+                queueSize: DbConnectionPoolRelays['queue'].size
+            }
+        };
+
+        return {
+            ok: true,
+            details: `Database connections healthy. Pool stats: ${JSON.stringify(poolStats)}`
+        };
+    } catch (error) {
+        return {
+            ok: false,
+            details: `Database connection error: ${(error as Error).message}`
+        };
+    }
 }

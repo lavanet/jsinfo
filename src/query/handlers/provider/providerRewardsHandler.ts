@@ -10,7 +10,7 @@ import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_
 import { CSVEscape } from '@jsinfo/utils/fmt';
 import { GetAndValidateProviderAddressFromRequest } from '@jsinfo/query/utils/queryRequestArgParser';
 import { RequestHandlerBase } from '@jsinfo/query/classes/RequestHandlerBase';
-import { queryJsinfo } from '../../utils/queryJsinfo';
+import { queryJsinfo } from '@jsinfo/utils/db';
 
 export type ProviderRewardsResponse = {
     relay_payments: {

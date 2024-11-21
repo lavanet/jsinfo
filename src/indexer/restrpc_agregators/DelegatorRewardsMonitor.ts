@@ -1,4 +1,3 @@
-import { GetJsinfoDbForQuery } from '@jsinfo/utils/db';
 import { logger } from '@jsinfo/utils/logger';
 import { RpcPeriodicEndpointCache } from '@jsinfo/indexer/classes/RpcPeriodicEndpointCache';
 import { RpcOnDemandEndpointCache } from '@jsinfo/indexer/classes/RpcOnDemandEndpointCache';
@@ -53,8 +52,6 @@ class DelegatorRewardsMonitorClass {
                 Date.now() - this.lastBatchUpdate >= this.BATCH_TIMEOUT;
 
             if (!shouldUpdate) return;
-
-            const db = await GetJsinfoDbForQuery();
 
             // Prepare batch values using individual timestamps
             const values = this.rewardsBatch.map(item => ({

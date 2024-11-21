@@ -31,7 +31,7 @@ import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_
 import { RequestHandlerBase } from '@jsinfo/query/classes/RequestHandlerBase';
 import { Pagination } from '@jsinfo/query/utils/queryPagination';
 import { CSVEscape, JSONStringify } from '@jsinfo/utils/fmt';
-import { queryJsinfo } from '../../utils/db';
+import { queryJsinfo } from '@jsinfo/utils/db';
 
 type ConsumerSubscriptionRawEntry = {
     id: number;

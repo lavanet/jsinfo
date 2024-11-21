@@ -6,7 +6,7 @@ import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { GetLatestBlock } from '../../utils/getLatestBlock';
 import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { sql } from "drizzle-orm";
-import { queryJsinfo } from '../../utils/queryJsinfo';
+import { queryJsinfo } from '@jsinfo/utils/db';
 
 export const ConsumersPageHandlerOpts: RouteShorthandOptions = {
     schema: {

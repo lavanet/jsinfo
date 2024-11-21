@@ -1,7 +1,7 @@
 // src/query/handlers/provider/providerCardsDelegatorRewardsHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { queryJsinfo } from '../../utils/db';
+import { queryJsinfo } from '@jsinfo/utils/db';
 import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { eq } from "drizzle-orm";
 import { GetAndValidateProviderAddressFromRequest } from '../../utils/queryRequestArgParser';

@@ -6,6 +6,7 @@ import { PgColumn } from 'drizzle-orm/pg-core';
 import { DateToDayDateString, NormalizeChartFetchDates } from '@jsinfo/utils/date';
 import { IndexTopChainsResource } from './IndexTopChainsResource';
 import { JSONStringifySpaced } from '@jsinfo/utils/fmt';
+import { queryJsinfo } from "@jsinfo/utils/db";
 
 interface CuRelayQueryData {
     date: string | null;
@@ -52,7 +53,7 @@ export class IndexChartsResource extends RedisResourceBase<IndexChartResponse[],
         const { from, to } = NormalizeChartFetchDates(queryParams.from, queryParams.to);
 
         const topChainsResource = new IndexTopChainsResource();
-        const topChainsResult = await topChainsResource.fetch(db);
+        const topChainsResult = await topChainsResource.fetch();
         if (!topChainsResult || topChainsResult.allSpecs.length === 0) {
             console.warn('IndexChartsResource: No top chains found');
             return [];
@@ -61,11 +62,11 @@ export class IndexChartsResource extends RedisResourceBase<IndexChartResponse[],
         const topChains = topChainsResult.allSpecs.map(spec => spec.chainId);
 
         const [mainChartData, qosData] = await Promise.all([
-            this.getMainChartData(db, topChains, from, to),
-            this.getQosData(db, from, to)
+            this.getMainChartData(topChains, from, to),
+            this.getQosData(from, to)
         ]);
 
-        return this.combineData(db, mainChartData, qosData);
+        return this.combineData(mainChartData, qosData);
     }
 
     private getDefaultParams(): QueryParams {
@@ -79,8 +80,8 @@ export class IndexChartsResource extends RedisResourceBase<IndexChartResponse[],
         };
     }
 
-    private async getMainChartData(db: PostgresJsDatabase, topChains: string[], from: Date, to: Date): Promise<CuRelayQueryData[]> {
-        const monthlyData = await db.select({
+    private async getMainChartData(topChains: string[], from: Date, to: Date): Promise<CuRelayQueryData[]> {
+        const monthlyData = await queryJsinfo(db => db.select({
             date: JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday,
             chainId: JsinfoProviderAgrSchema.aggDailyRelayPayments.specId,
             cuSum: sql<number>`SUM(COALESCE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.cuSum}, 0))`,
@@ -95,9 +96,9 @@ export class IndexChartsResource extends RedisResourceBase<IndexChartResponse[],
                     ),
                     inArray(JsinfoProviderAgrSchema.aggDailyRelayPayments.specId, topChains)
                 )
-            )
-            .groupBy(JsinfoProviderAgrSchema.aggDailyRelayPayments.specId, JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday)
-            .orderBy(desc(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday));
+            ),
+            'IndexChartsResource::getMainChartData'
+        );
 
         // Verify and format the data
         monthlyData.forEach(item => {
@@ -113,15 +114,15 @@ export class IndexChartsResource extends RedisResourceBase<IndexChartResponse[],
             }
         });
 
-        return this.addAllChains(db, monthlyData);
+        return this.addAllChains(monthlyData);
     }
 
-    private async getQosData(db: PostgresJsDatabase, from: Date, to: Date): Promise<{ [key: string]: number }> {
+    private async getQosData(from: Date, to: Date): Promise<{ [key: string]: number }> {
         const qosMetricWeightedAvg = (metric: PgColumn) =>
             sql<number>`SUM(${metric} * ${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum}) / 
             SUM(CASE WHEN ${metric} IS NOT NULL THEN ${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum} ELSE 0 END)`;
 
-        const monthlyData = await db.select({
+        const monthlyData = await queryJsinfo(db => db.select({
             date: JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday,
             qosSyncAvg: qosMetricWeightedAvg(JsinfoProviderAgrSchema.aggDailyRelayPayments.qosSyncAvg),
             qosAvailabilityAvg: qosMetricWeightedAvg(JsinfoProviderAgrSchema.aggDailyRelayPayments.qosAvailabilityAvg),
@@ -132,8 +133,9 @@ export class IndexChartsResource extends RedisResourceBase<IndexChartResponse[],
                 gt(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday, sql<Date>`${from}`),
                 lt(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday, sql<Date>`${to}`)
             ))
-            .groupBy(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday)
-            .orderBy(desc(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday));
+            .groupBy(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday),
+            'IndexChartsResource::getQosData'
+        );
 
         // Verify and format the data
         monthlyData.forEach(item => {
@@ -152,10 +154,10 @@ export class IndexChartsResource extends RedisResourceBase<IndexChartResponse[],
             }
         });
 
-        return this.formatQosData(db, monthlyData);
+        return this.formatQosData(monthlyData);
     }
 
-    private addAllChains(db: PostgresJsDatabase, data: CuRelayQueryData[]): CuRelayQueryData[] {
+    private addAllChains(data: CuRelayQueryData[]): CuRelayQueryData[] {
         const dateSums: Record<string, CuRelayQueryData> = {};
 
         data.forEach((item) => {
@@ -178,7 +180,7 @@ export class IndexChartsResource extends RedisResourceBase<IndexChartResponse[],
         return [...data, ...Object.values(dateSums)];
     }
 
-    private formatQosData(db: PostgresJsDatabase, data: QosQueryData[]): { [key: string]: number } {
+    private formatQosData(data: QosQueryData[]): { [key: string]: number } {
         const formatted: { [key: string]: number } = {};
 
         data.forEach((item) => {
@@ -196,7 +198,7 @@ export class IndexChartsResource extends RedisResourceBase<IndexChartResponse[],
         return formatted;
     }
 
-    private combineData(db: PostgresJsDatabase, mainChartData: CuRelayQueryData[], qosData: { [key: string]: number }): IndexChartResponse[] {
+    private combineData(mainChartData: CuRelayQueryData[], qosData: { [key: string]: number }): IndexChartResponse[] {
         const groupedData: Record<string, CuRelayItem[]> = {};
 
         mainChartData.forEach((item) => {

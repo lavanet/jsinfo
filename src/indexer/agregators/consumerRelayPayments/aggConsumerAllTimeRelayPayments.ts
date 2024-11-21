@@ -37,31 +37,34 @@ export async function aggConsumerAllTimeRelayPayments() {
     }
 
     await queryJsinfo(
-        async (db) => db.transaction(async (tx) => {
-            for (const row of aggResults) {
-                await tx.insert(JsinfoConsumerAgrSchema.aggConsumerAllTimeRelayPayments)
-                    .values(row as any)
-                    .onConflictDoUpdate(
-                        {
-                            target: [
-                                JsinfoConsumerAgrSchema.aggConsumerAllTimeRelayPayments.consumer,
-                                JsinfoConsumerAgrSchema.aggConsumerAllTimeRelayPayments.specId,
-                            ],
-                            set: {
-                                cuSum: row.cuSum,
-                                relaySum: row.relaySum,
-                                rewardSum: row.rewardSum,
-                                qosSyncAvg: row.qosSyncAvg,
-                                qosAvailabilityAvg: row.qosAvailabilityAvg,
-                                qosLatencyAvg: row.qosLatencyAvg,
-                                qosSyncExcAvg: row.qosSyncExcAvg,
-                                qosAvailabilityExcAvg: row.qosAvailabilityExcAvg,
-                                qosLatencyExcAvg: row.qosLatencyExcAvg
-                            } as any
-                        }
-                    )
-            }
-        }),
+        async (db) => {
+            await db.transaction(async (tx) => {
+                for (const row of aggResults) {
+                    await tx.insert(JsinfoConsumerAgrSchema.aggConsumerAllTimeRelayPayments)
+                        .values(row as any)
+                        .onConflictDoUpdate(
+                            {
+                                target: [
+                                    JsinfoConsumerAgrSchema.aggConsumerAllTimeRelayPayments.consumer,
+                                    JsinfoConsumerAgrSchema.aggConsumerAllTimeRelayPayments.specId,
+                                ],
+                                set: {
+                                    cuSum: row.cuSum,
+                                    relaySum: row.relaySum,
+                                    rewardSum: row.rewardSum,
+                                    qosSyncAvg: row.qosSyncAvg,
+                                    qosAvailabilityAvg: row.qosAvailabilityAvg,
+                                    qosLatencyAvg: row.qosLatencyAvg,
+                                    qosSyncExcAvg: row.qosSyncExcAvg,
+                                    qosAvailabilityExcAvg: row.qosAvailabilityExcAvg,
+                                    qosLatencyExcAvg: row.qosLatencyExcAvg
+                                } as any
+                            }
+                        )
+                }
+            });
+            return { success: true };
+        },
         'aggConsumerAllTimeRelayPayments_insert'
     );
 }

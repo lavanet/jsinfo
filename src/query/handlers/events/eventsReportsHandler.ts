@@ -8,7 +8,7 @@ import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_
 import { CSVEscape } from '@jsinfo/utils/fmt';
 import { RequestHandlerBase } from '@jsinfo/query/classes/RequestHandlerBase';
 import { ProviderMonikerService } from '@jsinfo/redis/resources/global/ProviderMonikerSpecResource';
-import { queryJsinfo } from '@jsinfo/query/utils/queryJsinfo';
+import { queryJsinfo } from '@jsinfo/utils/db';
 
 export interface EventsReportsResponse {
     provider: string | null;
@@ -75,7 +75,7 @@ class EventsReportsData extends RequestHandlerBase<EventsReportsResponse> {
     protected async fetchAllRecords(): Promise<EventsReportsResponse[]> {
 
 
-        const reportsRes = await queryJsinfo<EventsReportsResponse[]>(
+        const reportsRes = await queryJsinfo(
             async (db) => await db.select()
                 .from(JsinfoSchema.providerReported)
                 .orderBy(desc(JsinfoSchema.providerReported.id))
@@ -156,7 +156,7 @@ class EventsReportsData extends RequestHandlerBase<EventsReportsResponse> {
         const offset = (finalPagination.page - 1) * finalPagination.count;
 
         if (sortColumn === keyToColumnMap["moniker"]) {
-            const reportsRes = await queryJsinfo<any[]>(
+            const reportsRes = await queryJsinfo(
                 async (db) => await db.select()
                     .from(JsinfoSchema.providerReported)
                     .leftJoin(JsinfoSchema.providerSpecMoniker,
@@ -177,7 +177,7 @@ class EventsReportsData extends RequestHandlerBase<EventsReportsResponse> {
             return flattenedReports;
         }
 
-        const reportsRes = await queryJsinfo<EventsReportsResponse[]>(
+        const reportsRes = await queryJsinfo(
             async (db) => await db.select()
                 .from(JsinfoSchema.providerReported)
                 .orderBy(orderFunction(sortColumn))

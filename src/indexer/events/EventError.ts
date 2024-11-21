@@ -1,6 +1,6 @@
 import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { Attribute, Event } from "@cosmjs/stargate"
-import { LavaBlock } from "../types";
+import { LavaBlock } from "../lavaTypes";
 
 import { EventExtractKeyFromAttribute } from '../eventUtils';
 import { JSINFO_INDEXER_EVENT_ATTRIBUTE_KEY_COUNT_MAX, JSINFO_INDEXER_EVENT_ATTRIBUTE_VALUE_MAX_LENGTH } from '../indexerConsts';

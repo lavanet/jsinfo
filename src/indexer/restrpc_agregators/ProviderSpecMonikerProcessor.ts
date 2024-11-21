@@ -4,7 +4,6 @@ import { IsMeaningfulText } from '@jsinfo/utils/fmt';
 import { logger } from '@jsinfo/utils/logger';
 import { QueryLavaRPC } from '@jsinfo/indexer/utils/restRpc';
 import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
-import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { sql } from 'drizzle-orm';
 import { MemoryCache } from "@jsinfo/indexer/classes/MemoryCache";
 import { SpecAndConsumerService } from "@jsinfo/redis/resources/global/SpecAndConsumerResource";
@@ -50,11 +49,11 @@ export async function ProcessProviderMonikerSpecs(): Promise<void> {
                     continue;
                 }
 
-                await batchAppend(db, psmEntry);
+                await batchAppend(psmEntry);
             }
         }
 
-        await batchInsert(db);
+        await batchInsert();
     } catch (error) {
         logger.error('ProcessProviderMonikerSpecs: Error processing provider moniker specs', { error });
         throw error;
@@ -66,7 +65,7 @@ let batchStartTime: Date = new Date();
 const BATCH_SIZE = 100;
 const BATCH_INTERVAL = 60000; // 1 minute in milliseconds
 
-async function batchAppend(db: PostgresJsDatabase, psmEntry: ProviderMonikerSpec): Promise<void> {
+async function batchAppend(psmEntry: ProviderMonikerSpec): Promise<void> {
     const cacheKey = `providerSpecMoniker-batchAppend-${psmEntry.provider}-${psmEntry.spec}`;
 
     const cachedValue = await MemoryCache.getDict(cacheKey);
@@ -77,7 +76,7 @@ async function batchAppend(db: PostgresJsDatabase, psmEntry: ProviderMonikerSpec
     batchData.push(psmEntry);
 
     if (batchData.length >= BATCH_SIZE || Date.now() - batchStartTime.getTime() >= BATCH_INTERVAL) {
-        await batchInsert(db);
+        await batchInsert();
     }
 
     await MemoryCache.setDict(cacheKey, { moniker: psmEntry.moniker }, 3600);

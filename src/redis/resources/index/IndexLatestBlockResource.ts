@@ -1,7 +1,7 @@
 import { desc } from 'drizzle-orm';
-import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { RedisResourceBase } from '@jsinfo/redis/classes/RedisResourceBase';
+import { queryJsinfo } from '@jsinfo/utils/db';
 
 export interface IndexLatestBlockData {
     height: number;
@@ -13,11 +13,13 @@ export class IndexLatestBlockResource extends RedisResourceBase<IndexLatestBlock
     protected readonly ttlSeconds = 60; // 1 minute cache
 
     protected async fetchFromDb(): Promise<IndexLatestBlockData> {
-        const latestDbBlocks = await db
+        const latestDbBlocks = await queryJsinfo(db => db
             .select()
             .from(JsinfoSchema.blocks)
             .orderBy(desc(JsinfoSchema.blocks.height))
-            .limit(1);
+            .limit(1),
+            'IndexLatestBlockResource::fetchFromDb'
+        );
 
         let height = 0;
         let datetime = 0;

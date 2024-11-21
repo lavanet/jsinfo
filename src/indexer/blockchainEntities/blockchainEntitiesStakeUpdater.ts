@@ -3,8 +3,8 @@
 import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { StakeEntry } from '@lavanet/lavajs/dist/codegen/lavanet/lava/epochstorage/stake_entry';
 import { AppendUniqueItems, ToSignedBigIntOrMinusOne, ToSignedIntOrMinusOne } from '../utils/indexerUtils';
-import { LavaClient } from '../types';
 import { logger } from '../../utils/logger';
+import { queryRpc } from '../utils/lavajsRpc';
 
 /*
 providers with stake {
@@ -179,7 +179,6 @@ function processStakeEntry(
 }
 
 export async function UpdateStakeInformation(
-    client: LavaClient,
     height: number,
     dbStakes: Map<string, JsinfoSchema.InsertProviderStake[]>,
 ) {
@@ -187,14 +186,13 @@ export async function UpdateStakeInformation(
     try {
         logger.info(`UpdateStakeInformation: started`);
 
-        const lavaClient = client.lavanet.lava;
         dbStakes.clear();
 
-        await processRegularStakes(lavaClient, height, dbStakes);
+        await processRegularStakes(height, dbStakes);
         const processRegularTime = Date.now();
         logger.info(`UpdateStakeInformation: processRegularStakes completed, elapsed time: ${processRegularTime - startTime}ms`);
 
-        await processUnstakingStakes(lavaClient, height, dbStakes);
+        await processUnstakingStakes(height, dbStakes);
         const processUnstakingTime = Date.now();
         logger.info(`UpdateStakeInformation: processUnstakingStakes completed, elapsed time: ${processUnstakingTime - processRegularTime}ms`);
     } catch (error) {
@@ -208,13 +206,18 @@ export async function UpdateStakeInformation(
 }
 
 async function processRegularStakes(
-    lavaClient: any,
     height: number,
     dbStakes: Map<string, JsinfoSchema.InsertProviderStake[]>,
 ) {
-    let specs = await lavaClient.spec.showAllChains();
+    let specs = await queryRpc(
+        async (_, __, lavajsClient) => lavajsClient.spec.showAllChains(),
+        'getSpecs'
+    );
     await Promise.all(specs.chainInfoList.map(async (spec) => {
-        let providers = await lavaClient.pairing.providers({ chainID: spec.chainID, showFrozen: true });
+        let providers = await queryRpc(
+            async (_, __, lavajsClient) => lavajsClient.pairing.providers({ chainID: spec.chainID, showFrozen: true }),
+            'getProviders'
+        );
         providers.stakeEntry.forEach((stake) => {
             processStakeEntry(height, dbStakes, stake, false);
         });
@@ -222,16 +225,17 @@ async function processRegularStakes(
 }
 
 async function processUnstakingStakes(
-    lavaClient: any,
     height: number,
-
     dbStakes: Map<string, JsinfoSchema.InsertProviderStake[]>,
 ) {
     let unstaking;
     try {
-        unstaking = await lavaClient.epochstorage.stakeStorage({
-            index: 'Unstake'
-        });
+        unstaking = await queryRpc(
+            async (_, __, lavajsClient) => lavajsClient.epochstorage.stakeStorage({
+                index: 'Unstake'
+            }),
+            'getUnstaking'
+        );
     } catch (error) {
         if ((error + "").includes('rpc error: code = InvalidArgument desc = not found: invalid request')) {
             logger.info('The unstake list is empty.');

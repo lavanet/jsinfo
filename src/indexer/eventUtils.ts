@@ -3,7 +3,7 @@
 import { Event, Attribute } from "@cosmjs/stargate"
 import { JSINFO_INDEXER_EVENT_ATTRIBUTE_KEY_COUNT_MAX, JSINFO_INDEXER_EVENT_ATTRIBUTE_VALUE_MAX_LENGTH } from './indexerConsts';
 import { ParseEventError } from "./events/EventError";
-import { LavaBlock } from "./types";
+import { LavaBlock } from "./lavaTypes";
 import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { logger } from '@jsinfo/utils/logger';
 import { ParseUlavaToBigInt } from '@jsinfo/utils/bigint';

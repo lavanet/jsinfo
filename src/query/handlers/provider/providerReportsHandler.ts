@@ -10,6 +10,7 @@ import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_
 import { CSVEscape } from '@jsinfo/utils/fmt';
 import { GetAndValidateProviderAddressFromRequest } from '@jsinfo/query/utils/queryRequestArgParser';
 import { RequestHandlerBase } from '@jsinfo/query/classes/RequestHandlerBase';
+import { queryJsinfo } from '@jsinfo/utils/db';
 
 export type ProviderReportsResponse = {
     provider_reported: {
@@ -129,7 +130,7 @@ class ProviderReportsData extends RequestHandlerBase<ProviderReportsResponse> {
 
         const thirtyDaysAgo = this.getThirtyDaysAgo();
 
-        let reportsRes = await QueryGetJsinfoDbForQueryInstance()
+        let reportsRes = await queryJsinfo(db => db
             .select({
                 providerReported: JsinfoSchema.providerReported,
                 blocks: {
@@ -146,7 +147,9 @@ class ProviderReportsData extends RequestHandlerBase<ProviderReportsResponse> {
             )
             .orderBy(desc(JsinfoSchema.providerReported.id))
             .offset(0)
-            .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
+            .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION),
+            'ProviderReportsData::fetchAllRecords'
+        );
 
         return reportsRes.map(row => ({
             provider_reported: row.providerReported,
@@ -159,7 +162,7 @@ class ProviderReportsData extends RequestHandlerBase<ProviderReportsResponse> {
 
         const thirtyDaysAgo = this.getThirtyDaysAgo();
 
-        const countResult = await QueryGetJsinfoDbForQueryInstance()
+        const countResult = await queryJsinfo(db => db
             .select({
                 count: sql<number>`COUNT(*)`
             })
@@ -169,7 +172,9 @@ class ProviderReportsData extends RequestHandlerBase<ProviderReportsResponse> {
                     eq(JsinfoSchema.providerReported.provider, this.addr),
                     gte(JsinfoSchema.providerReported.datetime, thirtyDaysAgo)
                 )
-            );
+            ),
+            'ProviderReportsData::fetchRecordCountFromDb'
+        );
 
         return Math.min(countResult[0].count || 0, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION - 1);
     }
@@ -213,7 +218,7 @@ class ProviderReportsData extends RequestHandlerBase<ProviderReportsResponse> {
 
         const thirtyDaysAgo = this.getThirtyDaysAgo();
 
-        const reportsRes = await QueryGetJsinfoDbForQueryInstance()
+        const reportsRes = await queryJsinfo(db => db
             .select({
                 providerReported: {
                     id: JsinfoSchema.providerReported.id,
@@ -243,7 +248,9 @@ class ProviderReportsData extends RequestHandlerBase<ProviderReportsResponse> {
             )
             .orderBy(orderFunction(sortColumn))
             .offset((finalPagination.page - 1) * finalPagination.count)
-            .limit(finalPagination.count);
+            .limit(finalPagination.count),
+            'ProviderReportsData::fetchPaginatedRecords'
+        );
 
         return reportsRes.map(row => ({
             provider_reported: {

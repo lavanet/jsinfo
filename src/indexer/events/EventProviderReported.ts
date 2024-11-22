@@ -34,7 +34,7 @@ export const ParseEventProviderReported = (
   height: number,
   txHash: string | null,
   lavaBlock: LavaBlock,
-  blockchainEntitiesStakes: Map<string, JsinfoSchema.InsertProviderStake[]>,
+
 ) => {
   const dbEvent: JsinfoSchema.InsertProviderReported = {
     blockId: height,

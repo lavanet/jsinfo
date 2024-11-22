@@ -36,10 +36,7 @@ export const ParseEventConflictVoteGotCommit = (
   evt: Event,
   height: number,
   txHash: string | null,
-  lavaBlock: LavaBlock,
-
-
-  blockchainEntitiesStakes: Map<string, JsinfoSchema.InsertProviderStake[]>,
+  lavaBlock: LavaBlock
 ) => {
   const dbEvent: JsinfoSchema.InsertConflictVote = {
     blockId: height,

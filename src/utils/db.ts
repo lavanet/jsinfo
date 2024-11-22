@@ -85,7 +85,7 @@ class DbConnectionPoolClass {
         });
     }
 
-    private async getPostgresUrl(): Promise<string[]> {
+    private async GetJsinfoPostgresUrls(): Promise<string[]> {
         if (this.cachedPostgresUrl !== null) {
             return [this.cachedPostgresUrl];
         }
@@ -115,7 +115,7 @@ class DbConnectionPoolClass {
         return Array.from(urls);
     }
 
-    private async getRelaysReadPostgresUrl(): Promise<string[]> {
+    private async GetRelaysPostgresUrls(): Promise<string[]> {
         if (this.cachedRelaysReadPostgresUrl !== null) {
             return [this.cachedRelaysReadPostgresUrl];
         }
@@ -173,8 +173,8 @@ class DbConnectionPoolClass {
 
     private async createConnection(): Promise<DbConnection> {
         const urls = this.connectionString === "jsinfo"
-            ? await this.getPostgresUrl()
-            : await this.getRelaysReadPostgresUrl();
+            ? await this.GetJsinfoPostgresUrls()
+            : await this.GetRelaysPostgresUrls();
 
         let lastError: Error | null = null;
 
@@ -182,6 +182,7 @@ class DbConnectionPoolClass {
             try {
                 const url = await this.getNextValidUrl(urls);
                 const db = await this.createDbConnection(url);
+                await db.select({ now: sql`NOW()` }).from(sql`(SELECT 1) AS foo`).limit(1);
                 return {
                     db,
                     lastUsed: Date.now(),
@@ -380,7 +381,7 @@ class DbConnectionPoolClass {
                     }
 
                     logger.info(`MigrateDb:: Starting database migration...`);
-                    const urls = await this.getPostgresUrl();
+                    const urls = await this.GetJsinfoPostgresUrls();
                     const url = await this.getNextValidUrl(urls);
 
                     const migrationClient = postgres(url, { max: 1 });
@@ -398,7 +399,7 @@ class DbConnectionPoolClass {
                             errorStack: (error as Error)?.stack,
                             timestamp: new Date().toISOString(),
                             connectionString: MaskPassword(this.connectionString),
-                            postgresUrls: await this.getPostgresUrl().catch(e => `Failed to get URLs: ${e.message}`),
+                            postgresUrls: await this.GetJsinfoPostgresUrls().catch(e => `Failed to get URLs: ${e.message}`),
                             migrationState: {
                                 isComplete: globalMigrationLock.isComplete,
                                 hasExistingPromise: !!globalMigrationLock.promise,
@@ -442,11 +443,11 @@ export async function CheckDatabaseStatus(): Promise<{ ok: boolean; details: str
     try {
         // Test both connection pools with a simple query
         await queryJsinfo(
-            async (db) => db.select({ now: sql`NOW()` }).from(sql`(SELECT 1)`).limit(1),
+            async (db) => db.select({ now: sql`NOW()` }).from(sql`(SELECT 1) AS foo`).limit(1),
             'health_check_jsinfo'
         );
         await queryRelays(
-            async (db) => db.select({ now: sql`NOW()` }).from(sql`(SELECT 1)`).limit(1),
+            async (db) => db.select({ now: sql`NOW()` }).from(sql`(SELECT 1) AS foo`).limit(1),
             'health_check_relays'
         );
 

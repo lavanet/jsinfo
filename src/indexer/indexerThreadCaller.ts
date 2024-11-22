@@ -22,44 +22,70 @@ import { IndexerRedisResourceCaller } from "@jsinfo/redis/classes/IndexerRedisRe
 
 // Supply Processor
 import { SaveTokenSupplyToDB } from './lavarpc_agregators/SupplyProcessor';
+import { SyncBlockchainEntities } from './blockchainEntities/blockchainEntitiesSync';
+import { FillUpBlocks } from '@jsinfo/indexer/indexerFillupBlocks';
+import { JSINFO_INDEXER_GRACEFULL_EXIT_AFTER_X_HOURS } from './indexerConsts';
 
-export class BackgroundThreadManager {
+export class IndexerThreadManager {
     private static isRunning = false;
     private static runningProcesses = new Set<string>();
+    private static startTime: number | null = null;
 
     public static async start(): Promise<void> {
         if (this.isRunning) {
-            logger.info('BackgroundThreadManager:: is already running');
+            logger.info('IndexerThreadManager:: is already running');
             return;
         }
 
+        this.startTime = Date.now();
         this.isRunning = true;
-        await this.runAggregators();
+
+        this.startBackgroundMonitors();
+
+        while (true) {
+            try {
+                this.checkGracefulExit();
+                await this.processAggregations();
+                await new Promise(resolve => setTimeout(resolve, 1000)); // Small delay between iterations
+            } catch (error) {
+                logger.error('IndexerThreadManager:: Loop error:', error);
+                await new Promise(resolve => setTimeout(resolve, 1000)); // Wait before retrying
+            }
+        }
     }
 
-    private static async runAggregators(): Promise<void> {
-        try {
-            await Promise.all([
-                this.startBackgroundMonitors(),
-                this.processAggregations(),
-                this.processTokenSupply()
-            ]);
-        } catch (error) {
-            logger.error('BackgroundThreadManager:: Failed to run aggregators:', error);
-        } finally {
-            this.isRunning = false;
+    private static checkGracefulExit(): void {
+        if (this.startTime &&
+            Date.now() - this.startTime > JSINFO_INDEXER_GRACEFULL_EXIT_AFTER_X_HOURS * 60 * 60 * 1000) {
+            logger.info('IndexerThreadManager:: JSINFO_INDEXER_GRACEFULL_EXIT_AFTER_X_HOURS has passed. Exiting process.');
+            process.exit();
+        }
+    }
+
+    private static async startFillUpBlocksMonitor(): Promise<void> {
+        while (true) {
+            this.checkGracefulExit();
+            try {
+                await this.runWithLock('FillUpBlocks', async () => {
+                    await FillUpBlocks();
+                });
+            } catch (error) {
+                logger.error('IndexerThreadManager:: FillUpBlocks error:', error);
+            }
+            await new Promise(resolve => setTimeout(resolve, 1000));
         }
     }
 
     private static async startBackgroundMonitors(): Promise<void> {
-        logger.info('BackgroundThreadManager:: Starting background monitors');
+        logger.info('IndexerThreadManager:: Starting background monitors');
 
         // Start all monitors in parallel
         await Promise.all([
             APRMonitor.start(),
             DelegatorRewardsMonitor.start(),
             SpecTrackedInfoMonitor.start(),
-            IndexerRedisResourceCaller.startIndexing()
+            IndexerRedisResourceCaller.startIndexing(),
+            this.startFillUpBlocksMonitor()
         ]);
     }
 
@@ -101,40 +127,33 @@ export class BackgroundThreadManager {
             {
                 name: 'ConsumerRelayPayments',
                 process: () => AggConsumerRelayPayments()
+            },
+            {
+                name: 'SyncBlockchainEntities',
+                process: () => SyncBlockchainEntities()
+            },
+            {
+                name: 'ProcessTokenSupply',
+                process: () => SaveTokenSupplyToDB()
             }
         ];
 
         // Run all processors in parallel
         await Promise.all(processors.map(async processor => {
-            logger.info(`BackgroundThreadManager:: ${processor.name} processing started at: ${new Date().toISOString()}`);
+            logger.info(`IndexerThreadManager:: ${processor.name} processing started at: ${new Date().toISOString()}`);
             try {
                 const start = Date.now();
                 await this.runWithLock(processor.name, processor.process);
                 const executionTime = Date.now() - start;
-                logger.info(`BackgroundThreadManager:: Successfully executed ${processor.name}. Execution time: ${executionTime}ms`);
+                logger.info(`IndexerThreadManager:: Successfully executed ${processor.name}. Execution time: ${executionTime}ms`);
             } catch (error) {
-                logger.error(`BackgroundThreadManager:: Failed to execute ${processor.name}:`, error);
+                logger.error(`IndexerThreadManager:: Failed to execute ${processor.name}:`, error);
             }
         }));
     }
-
-    private static async processTokenSupply(): Promise<void> {
-        try {
-            logger.info('BackgroundThreadManager:: Starting token supply processing');
-            const start = Date.now();
-
-            await SaveTokenSupplyToDB();
-
-            const executionTime = Date.now() - start;
-            logger.info(`BackgroundThreadManager:: Successfully processed token supply. Execution time: ${executionTime}ms`);
-        } catch (error) {
-            logger.error('BackgroundThreadManager:: Failed to process token supply:', error);
-            throw error;
-        }
-    }
 }
 
-export async function BackgroundThreadCaller(): Promise<void> {
-    await BackgroundThreadManager.start();
+export async function IndexerThreadCallerStart(): Promise<void> {
+    await IndexerThreadManager.start();
 }
 

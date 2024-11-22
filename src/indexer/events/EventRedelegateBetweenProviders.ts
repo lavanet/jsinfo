@@ -35,10 +35,7 @@ export const ParseEventRedelegateBetweenProviders = (
   evt: Event,
   height: number,
   txHash: string | null,
-  lavaBlock: LavaBlock,
-
-
-  blockchainEntitiesStakes: Map<string, JsinfoSchema.InsertProviderStake[]>,
+  lavaBlock: LavaBlock
 ) => {
   let delegator: string | null = null;
   let from_provider: string | null = null;

@@ -47,6 +47,15 @@ export async function FetchRestData<T>(
 
     const fetchFunc = async () => {
         try {
+            const lastRateLimit = rateDelayCache.get(url);
+            if (lastRateLimit) {
+                const timeToWait = lastRateLimit - Date.now();
+                if (timeToWait > 0) {
+                    logger.info(`Rate limit cooling down for URL: ${url}, waiting ${timeToWait}ms`);
+                    await new Promise(resolve => setTimeout(resolve, timeToWait));
+                }
+                rateDelayCache.delete(url);
+            }
             const response = await fetch(url, options);
 
             // Handle rate limit (429) specifically

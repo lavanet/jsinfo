@@ -7,21 +7,21 @@ import { IsMeaningfulText } from '@jsinfo/utils/fmt';
 import { logger } from '@jsinfo/utils/logger';
 import { UpdateStakeInformation } from '@jsinfo/indexer/blockchainEntities/blockchainEntitiesStakeUpdater';
 import { queryJsinfo } from '@jsinfo/utils/db';
+import { GetLatestBlock } from '@jsinfo/query/utils/getLatestBlock';
 
-export async function SyncBlockchainEntities(
-    height: number,
-    blockchainEntitiesStakes: Map<string, JsinfoSchema.InsertProviderStake[]>
-) {
+export async function SyncBlockchainEntities() {
+    const { latestHeight } = await GetLatestBlock();
     const startTime = Date.now();
 
-    await UpdateStakeInformation(height, blockchainEntitiesStakes)
+    let dbStakes = new Map<string, JsinfoSchema.InsertProviderStake[]>();
+    await UpdateStakeInformation(latestHeight, dbStakes)
 
     await queryJsinfo(async (db: PostgresJsDatabase) => {
         return await db.transaction(async (tx: PostgresJsDatabase) => {
 
             const uniqueStakesMap = new Map<string, any>();
 
-            for (const stakes of blockchainEntitiesStakes.values()) {
+            for (const stakes of dbStakes.values()) {
                 stakes.forEach(stake => {
                     if (!IsMeaningfulText(stake.provider) || !IsMeaningfulText(stake.specId)) return;
 
@@ -48,7 +48,7 @@ export async function SyncBlockchainEntities(
                         set: {
                             stake: stake.stake,
                             appliedHeight: stake.appliedHeight,
-                            blockId: height,
+                            blockId: latestHeight,
                             geolocation: stake.geolocation,
                             addons: stake.addons,
                             extensions: stake.extensions,
@@ -69,7 +69,7 @@ export async function SyncBlockchainEntities(
                 .where(
                     and(
                         eq(JsinfoSchema.providerStakes.status, JsinfoSchema.LavaProviderStakeStatus.Active),
-                        ne(JsinfoSchema.providerStakes.blockId, height)
+                        ne(JsinfoSchema.providerStakes.blockId, latestHeight)
                     ));
 
             const endTime = Date.now();
@@ -77,5 +77,5 @@ export async function SyncBlockchainEntities(
 
             return { success: true };
         })
-    }, `SyncBlockchainEntities:${height}`)
+    }, `SyncBlockchainEntities:${latestHeight}`)
 }

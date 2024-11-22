@@ -64,8 +64,7 @@ export const GetRpcBlockResultEvents = async (
 }
 
 export const GetOneLavaBlock = async (
-    height: number,
-    blockchainEntitiesStakes: Map<string, JsinfoSchema.InsertProviderStake[]>,
+    height: number
 ): Promise<LavaBlock> => {
 
     const startTimeBlock = Date.now();
@@ -130,7 +129,6 @@ export const GetOneLavaBlock = async (
             lavaBlock,
             height,
             tx.hash,
-            blockchainEntitiesStakes
         ))
     });
 
@@ -139,7 +137,6 @@ export const GetOneLavaBlock = async (
         lavaBlock,
         height,
         null,
-        blockchainEntitiesStakes
     ))
 
     return lavaBlock;

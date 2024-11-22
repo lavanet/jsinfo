@@ -59,18 +59,18 @@ docker_compose_restart:
 
 docker_compose_postgres_logs:
 	docker compose logs -f jsinfo-postgres
-
+ 
 docker_compose_psql:
-	docker compose exec jsinfo-postgres psql -U jsinfo -d jsinfo
+	docker compose exec jsinfo-postgres psql -U jsinfo -d jsinfo -p 6452
 # Restart specific services
 docker_compose_restart_query:
 	docker compose restart jsinfo-query
 
+docker_compose_query_shell:
+	docker compose exec -it jsinfo-query /bin/sh
+
 docker_compose_restart_indexer:
 	docker compose restart jsinfo-indexer
-
-docker_compose_query_shell:
-	docker-compose exec -it jsinfo-query /bin/sh
 
 indexer:
 	IS_INDEXER_PROCESS=true NODE_TLS_REJECT_UNAUTHORIZED=0 bun run src/indexer.ts
@@ -132,6 +132,9 @@ macos_kill_query_port:
 	else \
 		echo "No process found listening on port 8081."; \
 	fi
+
+macos_psql_config_file:
+	code /opt/homebrew/var/postgresql@14/postgresql.conf
 
 macos_restart_docker:
 	ps aux | grep -i docker | awk '{print $2}' | while read pid; do sudo kill -9 $pid 2>/dev/null; done

@@ -73,16 +73,18 @@ services:
   jsinfo-postgres:
     image: postgres:15
     container_name: jsinfo-postgres
-    command: -c "port=6452"
     environment:
       - POSTGRES_USER=jsinfo
       - POSTGRES_PASSWORD=secret
       - POSTGRES_DB=jsinfo
+      - POSTGRES_MAX_CONNECTIONS=10000
     ports:
       - "6452:6452"
     volumes:
       - jsinfo-postgres-data:/var/lib/postgresql/data
       - ./docker-compose.init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    command: >
+      postgres -c 'port=6452' -c 'max_connections=10000'
 
 volumes:
   jsinfo-redis-data:

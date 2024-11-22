@@ -106,7 +106,6 @@ class ProviderStakesData extends RequestHandlerBase<ProviderStakesResponse> {
     }
 
     protected async fetchAllRecords(): Promise<ProviderStakesResponse[]> {
-        ;
 
         let stakesRes = await queryJsinfo(
             async (db) => await db.select({

@@ -3,8 +3,10 @@
 import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { StakeEntry } from '@lavanet/lavajs/dist/codegen/lavanet/lava/epochstorage/stake_entry';
 import { AppendUniqueItems, ToSignedBigIntOrMinusOne, ToSignedIntOrMinusOne } from '../utils/indexerUtils';
-import { logger } from '../../utils/logger';
+import { logger } from '@jsinfo/utils/logger';
 import { queryRpc } from '../utils/lavajsRpc';
+import { SpecAndConsumerService } from '@jsinfo/redis/resources/global/SpecAndConsumerResource';
+import { LavaClient } from '../lavaTypes';
 
 /*
 providers with stake {
@@ -209,19 +211,16 @@ async function processRegularStakes(
     height: number,
     dbStakes: Map<string, JsinfoSchema.InsertProviderStake[]>,
 ) {
-    let specs = await queryRpc(
-        async (_, __, lavajsClient) => lavajsClient.spec.showAllChains(),
-        'getSpecs'
-    );
-    await Promise.all(specs.chainInfoList.map(async (spec) => {
-        let providers = await queryRpc(
-            async (_, __, lavajsClient) => lavajsClient.pairing.providers({ chainID: spec.chainID, showFrozen: true }),
+    const allSpecs = await SpecAndConsumerService.GetAllSpecs();
+    for (const spec of allSpecs) {
+        const providers = await queryRpc(
+            async (_, __, lavaClient: LavaClient) => lavaClient.lavanet.lava.pairing.providers({ chainID: spec, showFrozen: true }),
             'getProviders'
         );
-        providers.stakeEntry.forEach((stake) => {
+        providers.stakeEntry.forEach(stake => {
             processStakeEntry(height, dbStakes, stake, false);
         });
-    }));
+    }
 }
 
 async function processUnstakingStakes(
@@ -231,9 +230,15 @@ async function processUnstakingStakes(
     let unstaking;
     try {
         unstaking = await queryRpc(
-            async (_, __, lavajsClient) => lavajsClient.epochstorage.stakeStorage({
-                index: 'Unstake'
-            }),
+            async (_, __, lavaClient: LavaClient) => {
+                console.log('lavajsClient:', JSON.stringify(lavaClient).substring(0, 1000));
+                console.log('lavajsClient.epochstorage:', JSON.stringify(lavaClient.lavanet.lava.epochstorage).substring(0, 1000));
+                const response = await lavaClient.lavanet.lava.epochstorage.stakeStorage({
+                    index: 'Unstake'
+                });
+                console.log('Response JSON:', JSON.stringify(response).substring(0, 1000));
+                return response;
+            },
             'getUnstaking'
         );
     } catch (error) {

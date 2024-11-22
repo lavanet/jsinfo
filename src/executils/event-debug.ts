@@ -6,8 +6,7 @@ import * as JsinfoSchema from '../schemas/jsinfoSchema/jsinfoSchema';
 import { LavaBlock } from "../indexer/lavaTypes";
 import * as consts from '../indexer/indexerConsts';
 
-export const processEvent = (evt: any, height: number, lavaBlock: LavaBlock, source: string,
-    blockchainEntitiesStakes: Map<string, JsinfoSchema.InsertProviderStake[]>) => {
+export const processEvent = (evt: any, height: number, lavaBlock: LavaBlock, source: string) => {
 
     if (evt.type.toLowerCase().includes('reported')) {
         logger.debug('Provider Report Event', {
@@ -24,7 +23,7 @@ export const processEvent = (evt: any, height: number, lavaBlock: LavaBlock, sou
     // }
 
     // if (EVENT_DEBUG_EXECUTE_PROCESS_ONE_EVENT) {
-    //     ProcessOneEvent(evt, lavaBlock, height, "0xEventDebugHash", blockchainEntitiesStakes);
+    //     ProcessOneEvent(evt, lavaBlock, height, "0xEventDebugHash");
     // }
 }
 
@@ -33,8 +32,6 @@ export const EventDebugProcessBlock = async (startHeight: number, rpcConnection:
     for (let height = startHeight; height >= 0; height -= numInstances) {
         const block = await GetRpcBlock(height);
         const txs = await GetRpcTxs(height, block);
-
-        let blockchainEntitiesStakes: Map<string, JsinfoSchema.InsertProviderStake[]> = new Map();
 
         const lavaBlock: LavaBlock = {
             height: height,
@@ -54,13 +51,13 @@ export const EventDebugProcessBlock = async (startHeight: number, rpcConnection:
             }
 
             tx.events.forEach((evt) => {
-                processEvent(evt, height, lavaBlock, 'Tx events', blockchainEntitiesStakes);
+                processEvent(evt, height, lavaBlock, 'Tx events');
             });
         });
 
         const evts = await GetRpcBlockResultEvents(height);
         evts.forEach((evt) => {
-            processEvent(evt, height, lavaBlock, 'Block events', blockchainEntitiesStakes);
+            processEvent(evt, height, lavaBlock, 'Block events');
         });
     }
 }

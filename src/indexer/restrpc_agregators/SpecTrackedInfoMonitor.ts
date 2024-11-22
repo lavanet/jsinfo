@@ -4,6 +4,7 @@ import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { SpecAndConsumerService } from "@jsinfo/redis/resources/global/SpecAndConsumerResource";
 import { sql } from 'drizzle-orm';
 import { queryJsinfo } from '@jsinfo/utils/db';
+import { HashJson } from '@jsinfo/utils/fmt';
 
 export interface ProcessedSpecInfo {
     provider: string;
@@ -68,7 +69,7 @@ class SpecTrackedInfoMonitorClass {
                             timestamp: sql`EXCLUDED.timestamp`
                         }
                     }),
-                'specTrackedInfo'
+                `specTrackedInfo:${HashJson(deduplicatedInfo)}`
             );
 
         } catch (error) {

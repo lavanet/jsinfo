@@ -1,4 +1,4 @@
-import { IsMeaningfulText } from "@jsinfo/utils/fmt";
+import { HashJson, IsMeaningfulText } from "@jsinfo/utils/fmt";
 import { logger } from "@jsinfo/utils/logger";
 import { StringifyJsonForCompare } from "@jsinfo/utils/fmt";
 import { QueryLavaRPC } from "@jsinfo/indexer/utils/restRpc";
@@ -83,7 +83,7 @@ async function ProcessSubscription(sub: SubInfo): Promise<void> {
 
         await queryJsinfo(
             async (db) => db.insert(JsinfoSchema.consumerSubscriptionList).values(newSubscription),
-            'ProcessSubscription_insert'
+            `ProcessSubscription_insert:${HashJson(newSubscription)}`
         );
         logger.info('New subscription record inserted');
     }

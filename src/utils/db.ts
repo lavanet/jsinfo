@@ -1,11 +1,12 @@
 import { drizzle, PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { GetEnvVar } from './env';
+import { GetEnvVar, IsIndexerProcess } from './env';
 import { logger } from './logger';
 import PQueue from 'p-queue';
 import { Sleep } from './sleep';
 import postgres from 'postgres';
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import { sql } from 'drizzle-orm';
+import { MaskPassword } from './fmt';
 
 interface DbConnection {
     db: PostgresJsDatabase;
@@ -14,6 +15,12 @@ interface DbConnection {
     createdAt: number;
     id: string;
 }
+
+const globalMigrationLock = {
+    promise: null as Promise<void> | null,
+    isComplete: false,
+    error: null as Error | null
+};
 
 class DbConnectionPoolClass {
     private connections: DbConnection[] = [];
@@ -70,7 +77,7 @@ class DbConnectionPoolClass {
             !staleConnections.includes(conn));
 
         // Log pool status
-        logger.info('Connection pool status', {
+        logger.info(this.connectionString === "jsinfo" ? 'Jsinfo DB Connection pool status' : 'Relays DB Connection pool status', {
             totalConnections: this.connections.length,
             activeQueries: this.activeQueries.size,
             queueSize: this.queue.size,
@@ -193,7 +200,7 @@ class DbConnectionPoolClass {
                 });
 
                 logger.error('Database connection failed', {
-                    url: this.maskDatabaseUrl(url),
+                    url: MaskPassword(url),
                     attempt: attempt + 1,
                     error: (error as Error).message
                 });
@@ -221,19 +228,10 @@ class DbConnectionPoolClass {
         return drizzle(queryClient);
     }
 
-    private maskDatabaseUrl(url: string): string {
-        try {
-            const masked = new URL(url);
-            if (masked.password) {
-                masked.password = '****';
-            }
-            return masked.toString().replace(/(\w+:\/\/\w+:)[^@]+(@)/, '$1****$2');
-        } catch {
-            return url.replace(/(\w+:\/\/\w+:)[^@]+(@)/, '$1****$2');
-        }
-    }
-
     private async getConnection(queryKey: string): Promise<DbConnection> {
+        // Wait for migrations to complete before allowing connections
+        await this.migrateDb();
+
         // Create new connection for each query
         const conn = await this.createConnection();
         this.connections.push(conn);
@@ -252,6 +250,8 @@ class DbConnectionPoolClass {
         queryFn: (db: PostgresJsDatabase) => Promise<T>,
         queryKey: string
     ): Promise<T> {
+        await this.migrateDb();
+
         const existingQuery = this.activeQueries.get(queryKey);
         if (existingQuery) {
             logger.info('Reusing existing query', {
@@ -268,7 +268,7 @@ class DbConnectionPoolClass {
         while (this.connections.length >= this.MAX_CONNECTIONS) {
             const now = Date.now();
             if (now - this.lastConnectionWarning > this.WARNING_INTERVAL) {
-                logger.info('Max connections reached, waiting...', {
+                logger.info(this.connectionString === "jsinfo" ? 'Jsinfo DB Connection pool status' : 'Relays DB Connection pool status', {
                     queryKey,
                     activeConnections: this.connections.length,
                     maxConnections: this.MAX_CONNECTIONS
@@ -310,42 +310,35 @@ class DbConnectionPoolClass {
                     });
                 } catch (error) {
                     const isLastAttempt = attempt === maxRetries - 1;
-                    const errorObj = error as Error;
-                    const errorInfo = {
-                        error: {
-                            code: (errorObj as any).code,
-                            constraint: (errorObj as any).constraint,
-                            detail: (errorObj as any).detail,
-                            message: errorObj.message,
-                            name: errorObj.name,
-                            schema: (errorObj as any).schema,
-                            stack: errorObj.stack,
-                            table: (errorObj as any).table
-                        },
-                        query: {
-                            attempt: `${attempt + 1}/${maxRetries}`,
-                            connectionId: conn.id,
-                            key: queryKey
-                        },
-                        connection: {
-                            age: `${Math.round((Date.now() - conn.createdAt) / 1000)}s`,
-                            idleTime: `${Math.round((Date.now() - conn.lastUsed) / 1000)}s`
-                        },
-                        pool: {
-                            activeQueries: this.activeQueries.size,
-                            connections: this.connections.length,
-                            maxConnections: this.MAX_CONNECTIONS,
-                            queueSize: this.queue.size
-                        }
-                    };
 
-                    logger.error('DB Query failed\n' +
-                        JSON.stringify(
-                            JSON.parse(JSON.stringify(errorInfo, null, 4)),
-                            null,
-                            4
-                        )
-                    );
+                    logger.error('DB Query failed - Error details:', {
+                        code: (error as any).code,
+                        constraint: (error as any).constraint,
+                        detail: (error as any).detail,
+                        message: (error as Error).message,
+                        name: (error as Error).name,
+                        schema: (error as any).schema,
+                        table: (error as any).table
+                    });
+
+                    logger.error('DB Query failed - Query info:', {
+                        attempt: `${attempt + 1}/${maxRetries}`,
+                        key: queryKey,
+                        connection: MaskPassword(this.connectionString),
+                        connectionId: conn.id,
+                    });
+
+                    logger.error('DB Query failed - Connection info:', {
+                        age: `${Math.round((Date.now() - conn.createdAt) / 1000)}s`,
+                        idleTime: `${Math.round((Date.now() - conn.lastUsed) / 1000)}s`
+                    });
+
+                    logger.error('DB Query failed - Pool stats:', {
+                        activeQueries: this.activeQueries.size,
+                        connections: this.connections.length,
+                        maxConnections: this.MAX_CONNECTIONS,
+                        queueSize: this.queue.size
+                    });
 
                     if (!isLastAttempt) {
                         await new Promise(resolve => setTimeout(resolve, delays[attempt]));
@@ -369,25 +362,62 @@ class DbConnectionPoolClass {
             return;
         }
 
-        try {
-            const shouldMigrate = GetEnvVar("JSINFO_INDEXER_RUN_MIGRATIONS", "false") === "true";
-            if (!shouldMigrate) {
-                return;
-            }
-
-            logger.info(`MigrateDb:: Starting database migration... ${new Date().toISOString()}`);
-            const urls = await this.getPostgresUrl();
-            const url = await this.getNextValidUrl(urls);
-
-            const migrationClient = postgres(url, { max: 1 });
-            logger.info(`MigrateDb:: Migration client created. ${new Date().toISOString()}`);
-
-            await migrate(drizzle(migrationClient), { migrationsFolder: "drizzle" });
-            logger.info(`MigrateDb:: Database migration completed. ${new Date().toISOString()}`);
-        } catch (error) {
-            logger.error('Migration failed:', error);
-            throw error;
+        if (!IsIndexerProcess()) {
+            return;
         }
+
+        if (globalMigrationLock.isComplete) {
+            return;
+        }
+
+        if (!globalMigrationLock.promise) {
+            globalMigrationLock.promise = (async () => {
+                try {
+                    const shouldMigrate = GetEnvVar("JSINFO_INDEXER_RUN_MIGRATIONS", "false") === "true";
+                    if (!shouldMigrate) {
+                        globalMigrationLock.isComplete = true;
+                        return;
+                    }
+
+                    logger.info(`MigrateDb:: Starting database migration...`);
+                    const urls = await this.getPostgresUrl();
+                    const url = await this.getNextValidUrl(urls);
+
+                    const migrationClient = postgres(url, { max: 1 });
+                    logger.info(`MigrateDb:: Migration client created.`);
+
+                    await migrate(drizzle(migrationClient), { migrationsFolder: "drizzle" });
+                    logger.info(`MigrateDb:: Database migration completed.`);
+                    globalMigrationLock.isComplete = true;
+                } catch (error) {
+                    logger.error('Migration failed:', {
+                        error,
+                        details: {
+                            errorName: (error as Error)?.name,
+                            errorMessage: (error as Error)?.message,
+                            errorStack: (error as Error)?.stack,
+                            timestamp: new Date().toISOString(),
+                            connectionString: MaskPassword(this.connectionString),
+                            postgresUrls: await this.getPostgresUrl().catch(e => `Failed to get URLs: ${e.message}`),
+                            migrationState: {
+                                isComplete: globalMigrationLock.isComplete,
+                                hasExistingPromise: !!globalMigrationLock.promise,
+                                error: globalMigrationLock.error?.message
+                            },
+                            environment: {
+                                JSINFO_INDEXER_RUN_MIGRATIONS: MaskPassword(GetEnvVar("JSINFO_INDEXER_RUN_MIGRATIONS", "false")),
+                                JSINFO_POSTGRESQL_URL: MaskPassword(GetEnvVar("JSINFO_POSTGRESQL_URL", "")),
+                                NODE_ENV: MaskPassword(process.env.NODE_ENV || "")
+                            }
+                        }
+                    });
+                    globalMigrationLock.promise = null;
+                    throw error;
+                }
+            })();
+        }
+
+        return await globalMigrationLock.promise;
     }
 }
 

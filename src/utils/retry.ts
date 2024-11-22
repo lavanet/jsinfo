@@ -20,6 +20,12 @@ export const BackoffRetry = async <T>(
             maxTimeout: maxTimeout, // The maximum number of milliseconds between two retries
             randomize: true, // Randomizes the timeouts by multiplying with a factor between 1 to 2
             onRetry: (error: any, attempt: any) => {
+                if (!(error instanceof Error) || !error.message.includes('429')) {
+                    logger.error(
+                        `[${title}] Attempt ${attempt}/${retries} failed: ${error instanceof Error ? error.message : String(error)}`
+                    );
+                    throw error;
+                }
                 let errorMessage = `[Backoff Retry] Function: ${title}\n`;
                 try {
                     errorMessage += `Attempt number: ${attempt} has failed.\n`;

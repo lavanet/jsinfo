@@ -268,7 +268,7 @@ class ConsumerSubscriptionData extends RequestHandlerBase<ConsumerSubscriptionEn
         return paginatedList;
     }
 
-    protected async convertRecordsToCsv(data: ConsumerSubscriptionEntry[]): Promise<string> {
+    public async ConvertRecordsToCsv(data: ConsumerSubscriptionEntry[]): Promise<string> {
         const columns = [
             { key: "plan", name: "Plan" },
             { key: "duration_bought", name: "Duration Bought" },

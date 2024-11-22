@@ -158,7 +158,7 @@ class ProviderBlockReportsData extends RequestHandlerBase<BlockReportsResponse> 
     }
 
 
-    protected async convertRecordsToCsv(data: BlockReportsResponse[]): Promise<string> {
+    public async ConvertRecordsToCsv(data: BlockReportsResponse[]): Promise<string> {
         let csv = 'time,blockId,tx,chainId,chainBlockHeight\n';
         data.forEach((item: BlockReportsResponse) => {
             csv += `${item.timestamp},${item.blockId},${item.chainId},${item.chainBlockHeight}\n`;

@@ -5,6 +5,7 @@ import { sql, ne } from "drizzle-orm";
 import * as JsinfoConsumerAgrSchema from '../../../schemas/jsinfoSchema/consumerRelayPaymentsAgregation';
 import { logger } from "../../../utils/logger";
 import { PgColumn } from 'drizzle-orm/pg-core';
+import { HashJson } from '@jsinfo/utils/fmt';
 
 export async function aggConsumerAllTimeRelayPayments() {
 
@@ -65,6 +66,6 @@ export async function aggConsumerAllTimeRelayPayments() {
             });
             return { success: true };
         },
-        'aggConsumerAllTimeRelayPayments_insert'
+        `aggConsumerAllTimeRelayPayments_insert:${HashJson(aggResults)}`
     );
 }

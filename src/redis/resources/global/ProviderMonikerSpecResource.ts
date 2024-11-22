@@ -47,7 +47,7 @@ export class ProviderMonikerSpecResource extends RedisResourceBase<ProviderMonik
                 JsinfoSchema.providerSpecMoniker.spec,
                 JsinfoSchema.providerSpecMoniker.moniker
             )
-            .orderBy(desc(sql`MAX(${JsinfoSchema.providerSpecMoniker.updatedAt})`)),
+            .orderBy(desc(sql`MAX(${JsinfoSchema.providerSpecMoniker.moniker})`)),
             'ProviderMonikerSpecResource::fetchFromDb'
         );
 

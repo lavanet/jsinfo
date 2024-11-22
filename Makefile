@@ -39,8 +39,8 @@ docker_compose:
 	docker compose -f docker-compose.yml up --build
 
 docker_compose_recreate:
-	docker compose down -v  # Remove containers and volumes
-	docker compose up --build --force-recreate
+	docker compose down -v
+	docker compose --verbose up --build --force-recreate --remove-orphans
 
 docker_compose_clean:
 	docker compose down -v
@@ -57,6 +57,11 @@ docker_compose_ps:
 docker_compose_restart:
 	docker compose restart
 
+docker_compose_postgres_logs:
+	docker compose logs -f jsinfo-postgres
+
+docker_compose_psql:
+	docker compose exec jsinfo-postgres psql -U jsinfo -d jsinfo
 # Restart specific services
 docker_compose_restart_query:
 	docker compose restart jsinfo-query
@@ -127,6 +132,10 @@ macos_kill_query_port:
 	else \
 		echo "No process found listening on port 8081."; \
 	fi
+
+macos_restart_docker:
+	ps aux | grep -i docker | awk '{print $2}' | while read pid; do sudo kill -9 $pid 2>/dev/null; done
+	open -a Docker
 
 query_endpoints_full_tests_all:
 	cd tests/query_endpoints && make query_endpoints_full_tests_all

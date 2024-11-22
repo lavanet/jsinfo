@@ -39,9 +39,11 @@ export class BackgroundThreadManager {
 
     private static async runAggregators(): Promise<void> {
         try {
-            await this.startBackgroundMonitors();
-            await this.processAggregations();
-            await this.processTokenSupply();
+            await Promise.all([
+                this.startBackgroundMonitors(),
+                this.processAggregations(),
+                this.processTokenSupply()
+            ]);
         } catch (error) {
             logger.error('BackgroundThreadManager:: Failed to run aggregators:', error);
         } finally {
@@ -52,13 +54,13 @@ export class BackgroundThreadManager {
     private static async startBackgroundMonitors(): Promise<void> {
         logger.info('BackgroundThreadManager:: Starting background monitors');
 
-        // Only these monitors need lavajsClient
-        APRMonitor.start();
-        DelegatorRewardsMonitor.start();
-        SpecTrackedInfoMonitor.start();
-
-        // This doesn't need lavajsClient
-        IndexerRedisResourceCaller.startIndexing();
+        // Start all monitors in parallel
+        await Promise.all([
+            APRMonitor.start(),
+            DelegatorRewardsMonitor.start(),
+            SpecTrackedInfoMonitor.start(),
+            IndexerRedisResourceCaller.startIndexing()
+        ]);
     }
 
     private static async runWithLock(name: string, fn: () => Promise<void>): Promise<void> {
@@ -102,7 +104,8 @@ export class BackgroundThreadManager {
             }
         ];
 
-        for (const processor of processors) {
+        // Run all processors in parallel
+        await Promise.all(processors.map(async processor => {
             logger.info(`BackgroundThreadManager:: ${processor.name} processing started at: ${new Date().toISOString()}`);
             try {
                 const start = Date.now();
@@ -112,7 +115,7 @@ export class BackgroundThreadManager {
             } catch (error) {
                 logger.error(`BackgroundThreadManager:: Failed to execute ${processor.name}:`, error);
             }
-        }
+        }));
     }
 
     private static async processTokenSupply(): Promise<void> {

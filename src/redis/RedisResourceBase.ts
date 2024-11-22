@@ -44,7 +44,7 @@ export abstract class RedisResourceBase<T, A extends BaseArgs = BaseArgs> {
             const cached = await this.get(args);
             if (cached) return cached;
 
-            const data = await this.fetch(args);
+            const data = await this.fetchFromDb(args);
             if (data) {
                 await this.set(data, args);
                 return data;

@@ -6,6 +6,7 @@ import * as JsinfoProviderAgrSchema from '@jsinfo/schemas/jsinfoSchema/providerR
 import { DoInChunks } from '@jsinfo/utils/processing';
 import { logger } from '@jsinfo/utils/logger';
 import { PgColumn } from 'drizzle-orm/pg-core';
+import { HashJson } from '@jsinfo/utils/fmt';
 
 export async function getProviderAggDailyTimeSpan(): Promise<{ startTime: Date | null, endTime: Date | null }> {
     const lastRelayPayment = await queryJsinfo(
@@ -142,6 +143,6 @@ export async function aggProviderDailyRelayPayments() {
             });
             return { success: true };
         },
-        'aggProviderDailyRelayPayments_update'
+        `aggProviderDailyRelayPayments_update:${HashJson(aggResults)}`
     );
 }

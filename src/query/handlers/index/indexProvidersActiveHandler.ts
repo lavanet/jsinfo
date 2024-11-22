@@ -40,17 +40,36 @@ export const IndexProvidersActivePaginatedHandlerOpts: RouteShorthandOptions = {
 }
 
 export async function IndexProvidersActivePaginatedHandler(request: FastifyRequest, reply: FastifyReply): Promise<IndexProvidersActiveResourceResponse> {
-    const resource = new IndexProvidersActiveResource();
-    const result = await resource.fetch({
-        type: 'paginated',
-        pagination: ParsePaginationFromRequest(request) ?? undefined
-    });
-    if (!result || !result.data) {
-        reply.status(400);
-        reply.send({ error: 'Failed to fetch active providers data' });
-        return reply;
+    console.time('handlers/index/indexProvidersActiveHandler.IndexProvidersActivePaginatedHandler.total');
+
+    try {
+        console.time('handlers/index/indexProvidersActiveHandler.resource_instantiation');
+        const resource = new IndexProvidersActiveResource();
+        console.timeEnd('handlers/index/indexProvidersActiveHandler.resource_instantiation');
+
+        console.time('handlers/index/indexProvidersActiveHandler.pagination_parsing');
+        const pagination = ParsePaginationFromRequest(request) ?? undefined;
+        console.timeEnd('handlers/index/indexProvidersActiveHandler.pagination_parsing');
+
+        console.time('handlers/index/indexProvidersActiveHandler.fetch');
+        const result = await resource.fetch({
+            type: 'paginated',
+            pagination
+        });
+        console.timeEnd('handlers/index/indexProvidersActiveHandler.fetch');
+
+        if (!result || !result.data) {
+            console.time('handlers/index/indexProvidersActiveHandler.error_response');
+            reply.status(400);
+            reply.send({ error: 'Failed to fetch active providers data' });
+            console.timeEnd('handlers/index/indexProvidersActiveHandler.error_response');
+            return reply;
+        }
+
+        return result;
+    } finally {
+        console.timeEnd('handlers/index/indexProvidersActiveHandler.IndexProvidersActivePaginatedHandler.total');
     }
-    return result;
 }
 
 export const IndexProvidersActiveItemCountPaginatiedHandlerOpts: RouteShorthandOptions = {

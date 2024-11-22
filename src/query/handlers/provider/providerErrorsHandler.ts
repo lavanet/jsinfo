@@ -149,7 +149,7 @@ class ProviderErrorsData extends RequestHandlerBase<ErrorsReportResponse> {
     }
 
 
-    protected async convertRecordsToCsv(data: ErrorsReportResponse[]): Promise<string> {
+    public async ConvertRecordsToCsv(data: ErrorsReportResponse[]): Promise<string> {
         let csv = 'date,chain,error\n';
         data.forEach((item: ErrorsReportResponse) => {
             csv += `${item.date},${CSVEscape(item.spec)},${CSVEscape(item.error)}\n`;

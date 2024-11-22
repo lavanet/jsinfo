@@ -158,46 +158,11 @@ class EventsRewardsData extends RequestHandlerBase<EventsRewardsResponse> {
             throw new Error(`Invalid sort key: ${trimmedSortKey}`);
         }
 
-        await queryJsinfo(
-            async (db) => await db.select({
-                id: JsinfoSchema.relayPayments.id,
-                provider: JsinfoSchema.relayPayments.provider,
-                relays: JsinfoSchema.relayPayments.relays,
-                cu: JsinfoSchema.relayPayments.cu,
-                pay: JsinfoSchema.relayPayments.pay,
-                datetime: JsinfoSchema.relayPayments.datetime,
-                qosSync: JsinfoSchema.relayPayments.qosSync,
-                qosAvailability: JsinfoSchema.relayPayments.qosAvailability,
-                qosLatency: JsinfoSchema.relayPayments.qosLatency,
-                qosSyncExc: JsinfoSchema.relayPayments.qosSyncExc,
-                qosAvailabilityExc: JsinfoSchema.relayPayments.qosAvailabilityExc,
-                qosLatencyExc: JsinfoSchema.relayPayments.qosLatencyExc,
-                specId: JsinfoSchema.relayPayments.specId,
-                blockId: JsinfoSchema.relayPayments.blockId,
-                consumer: JsinfoSchema.relayPayments.consumer,
-                tx: JsinfoSchema.relayPayments.tx,
-                moniker: sql<string>`MAX(${JsinfoSchema.providerSpecMoniker.moniker})`
-            })
-                .from(JsinfoSchema.relayPayments)
-                .leftJoin(
-                    JsinfoSchema.providerSpecMoniker,
-                    eq(JsinfoSchema.relayPayments.provider, JsinfoSchema.providerSpecMoniker.provider)
-                )
-                .groupBy(JsinfoSchema.relayPayments.id)
-                .orderBy(orderFunction(sortColumn))
-                .offset(offset)
-                .limit(finalPagination.count),
-            'EventsRewardsData_fetchPaginatedRecords_withMoniker'
-        );
-
         const sortColumn = keyToColumnMap[finalPagination.sortKey];
-        const orderFunction = finalPagination.direction === 'ascending' ? asc : desc;
 
-        const offset = (finalPagination.page - 1) * finalPagination.count;
-
-        if (sortColumn == keyToColumnMap.moniker) {
-            const paymentsRes = await queryJsinfo(
-                async (db) => await db.select({
+        const paymentsRes = await queryJsinfo(
+            async (db) => {
+                return await db.select({
                     id: JsinfoSchema.relayPayments.id,
                     provider: JsinfoSchema.relayPayments.provider,
                     relays: JsinfoSchema.relayPayments.relays,
@@ -222,29 +187,11 @@ class EventsRewardsData extends RequestHandlerBase<EventsRewardsResponse> {
                         eq(JsinfoSchema.relayPayments.provider, JsinfoSchema.providerSpecMoniker.provider)
                     )
                     .groupBy(JsinfoSchema.relayPayments.id)
-                    .orderBy(orderFunction(sortColumn))
-                    .offset(offset)
-                    .limit(finalPagination.count),
-                'EventsRewardsData_fetchPaginatedRecords_withMoniker'
-            );
-
-            const flattenedRewards = await Promise.all(paymentsRes.map(async data => ({
-                ...data,
-                pay: data.pay?.toString() || null,
-                moniker: await ProviderMonikerService.GetMonikerForProvider(data.provider),
-                monikerfull: await ProviderMonikerService.GetMonikerFullDescription(data.provider),
-            })));
-
-            return flattenedRewards;
-        }
-
-        const paymentsRes = await queryJsinfo(
-            async (db) => await db.select()
-                .from(JsinfoSchema.relayPayments)
-                .orderBy(orderFunction(sortColumn))
-                .offset(offset)
-                .limit(finalPagination.count),
-            'EventsRewardsData_fetchPaginatedRecords'
+                    .orderBy(finalPagination.direction === 'ascending' ? asc(sortColumn) : desc(sortColumn))
+                    .offset((finalPagination.page - 1) * finalPagination.count)
+                    .limit(finalPagination.count);
+            },
+            'EventsRewardsData_fetchPaginatedRecords_withMoniker'
         );
 
         const flattenedRewards = await Promise.all(paymentsRes.map(async data => ({
@@ -257,7 +204,7 @@ class EventsRewardsData extends RequestHandlerBase<EventsRewardsResponse> {
         return flattenedRewards;
     }
 
-    protected async convertRecordsToCsv(data: EventsRewardsResponse[]): Promise<string> {
+    public async ConvertRecordsToCsv(data: EventsRewardsResponse[]): Promise<string> {
         const columns = [
             { key: "relays", name: "Relays" },
             { key: "cu", name: "CU" },

@@ -236,7 +236,7 @@ class ProviderStakesData extends RequestHandlerBase<ProviderStakesResponse> {
         return processedRes;
     }
 
-    protected async convertRecordsToCsv(data: ProviderStakesResponse[]): Promise<string> {
+    public async ConvertRecordsToCsv(data: ProviderStakesResponse[]): Promise<string> {
         const columns = [
             { key: "specId", name: "Spec" },
             { key: "status", name: "Status" },

@@ -5,6 +5,7 @@ import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { ConvertToBaseDenom, GetUSDCValue } from "./CurrencyConverstionUtils";
 import { sql } from 'drizzle-orm';
 import { queryJsinfo } from '@jsinfo/utils/db';
+import { HashJson } from '@jsinfo/utils/fmt';
 
 export interface ProcessedRewardAmount {
     amount: number;
@@ -73,7 +74,7 @@ class DelegatorRewardsMonitorClass {
                             timestamp: sql`excluded.timestamp`
                         }
                     }),
-                'DelegatorRewardsMonitor::batchInsert'
+                `DelegatorRewardsMonitor::batchInsert:${HashJson(values)}`
             );
 
             logger.info(`DelegatorRewardsMonitor::DB Update - Batch updated rewards`, {

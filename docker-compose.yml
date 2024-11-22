@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   jsinfo-indexer:
     build:
@@ -24,10 +22,10 @@ services:
       - JSINFO_INDEXER_REDDIS_CACHE=redis://:mypassword@jsinfo-redis:6379
       - JSINFO_INDEXER_LAVA_RPC=https://testnet2-rpc.lavapro.xyz:443/
       - JSINFO_INDEXER_START_BLOCK=2220430
-      - JSINFO_INDEXER_RUN_MIGRATIONS=true
+      - JSINFO_INDEXER_RUN_MIGRATIONS=false
       - JSINFO_INDEXER_LAVA_REST_RPC_URL=https://lav1.rest.lava.build/
-      - JSINFO_POSTGRESQL_URL=postgres://jsinfo:secret@jsinfo-postgres:5432/jsinfo
-      - RELAYS_READ_POSTGRESQL_URL=postgres://jsinfo:secret@jsinfo-postgres:5432/relays
+      - JSINFO_POSTGRESQL_URL=postgres://jsinfo:secret@jsinfo-postgres:6452/jsinfo
+      - RELAYS_READ_POSTGRESQL_URL=postgres://jsinfo:secret@jsinfo-postgres:6452/relays
       - JSINFO_QUERY_PORT=8081
     depends_on:
       - jsinfo-redis
@@ -55,8 +53,8 @@ services:
       - JSINFO_QUERY_HOST=0.0.0.0
       - JSINFO_QUERY_FASITY_PRINT_LOGS=true
       - JSINFO_QUERY_REDDIS_CACHE=redis://:mypassword@jsinfo-redis:6379
-      - JSINFO_POSTGRESQL_URL=postgres://jsinfo:secret@jsinfo-postgres:5432/jsinfo
-      - RELAYS_READ_POSTGRESQL_URL=postgres://jsinfo:secret@jsinfo-postgres:5432/relays
+      - JSINFO_POSTGRESQL_URL=postgres://jsinfo:secret@jsinfo-postgres:6452/jsinfo
+      - RELAYS_READ_POSTGRESQL_URL=postgres://jsinfo:secret@jsinfo-postgres:6452/relays
     depends_on:
       - jsinfo-redis
       - jsinfo-postgres
@@ -75,12 +73,13 @@ services:
   jsinfo-postgres:
     image: postgres:15
     container_name: jsinfo-postgres
+    command: -c "port=6452"
     environment:
       - POSTGRES_USER=jsinfo
       - POSTGRES_PASSWORD=secret
       - POSTGRES_DB=jsinfo
     ports:
-      - "5432:5432"
+      - "6452:6452"
     volumes:
       - jsinfo-postgres-data:/var/lib/postgresql/data
       - ./docker-compose.init-db.sql:/docker-entrypoint-initdb.d/init-db.sql

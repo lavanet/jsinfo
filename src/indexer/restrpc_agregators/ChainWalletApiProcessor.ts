@@ -8,7 +8,7 @@ async function saveToKeyValueStore(key: string, value: string): Promise<void> {
         await queryJsinfo(
             async (db) => db.insert(keyValueStore).values({ key, value })
                 .onConflictDoUpdate({ target: keyValueStore.key, set: { value, updatedAt: new Date() } }),
-            'saveToKeyValueStore'
+            `saveToKeyValueStore:${key}:${value}`
         );
         logger.info(`Saved to key_value_store: ${key} = ${value}`);
     } catch (error) {

@@ -1,6 +1,6 @@
 // src/indexer/restrpc_agregators/ProviderSpecMoniker.ts
 
-import { IsMeaningfulText } from '@jsinfo/utils/fmt';
+import { HashJson, IsMeaningfulText } from '@jsinfo/utils/fmt';
 import { logger } from '@jsinfo/utils/logger';
 import { QueryLavaRPC } from '@jsinfo/indexer/utils/restRpc';
 import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
@@ -88,12 +88,12 @@ async function batchInsert(): Promise<void> {
         return;
     }
 
-    // console.log(`providerSpecMoniker:: batchInsert: Processing ${batchData.length} entries`);
+    logger.info(`providerSpecMoniker:: batchInsert: Processing ${batchData.length} entries`);
     const uniqueEntriesByProviderSpec = new Map<string, ProviderMonikerSpec>();
 
     for (const entry of batchData) {
         if (!IsMeaningfulText(entry.moniker) || !IsMeaningfulText(entry.spec)) {
-            // console.log(`batchInsert: Skipping invalid entry for provider ${entry.provider}`);
+            // cconsole.log(`batchInsert: Skipping invalid entry for provider ${entry.provider}`);
             continue;
         }
         const key = `${entry.provider.toLowerCase()}-${entry.spec.toLowerCase()}`;
@@ -111,10 +111,9 @@ async function batchInsert(): Promise<void> {
                     target: [JsinfoSchema.providerSpecMoniker.provider, JsinfoSchema.providerSpecMoniker.spec],
                     set: {
                         moniker: sql.raw('EXCLUDED.moniker'),
-                        updatedAt: sql.raw('NOW()')
                     }
                 }),
-            'ProviderSpecMonikerProcessor::batchInsert'
+            `ProviderSpecMonikerProcessor::batchInsert:${HashJson(batchData)}`
         );
 
         batchData = [];

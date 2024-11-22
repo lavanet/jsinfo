@@ -86,9 +86,8 @@ export class IndexChartsResource extends RedisResourceBase<IndexChartResponse[],
             chainId: JsinfoProviderAgrSchema.aggDailyRelayPayments.specId,
             cuSum: sql<number>`SUM(COALESCE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.cuSum}, 0))`,
             relaySum: sql<number>`SUM(COALESCE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum}, 0))`,
-        })
-            .from(JsinfoProviderAgrSchema.aggDailyRelayPayments)
-            .where(
+        }).from(JsinfoProviderAgrSchema.aggDailyRelayPayments).
+            where(
                 and(
                     and(
                         gt(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday, sql<Date>`${from}`),
@@ -96,7 +95,9 @@ export class IndexChartsResource extends RedisResourceBase<IndexChartResponse[],
                     ),
                     inArray(JsinfoProviderAgrSchema.aggDailyRelayPayments.specId, topChains)
                 )
-            ),
+            ).
+            groupBy(JsinfoProviderAgrSchema.aggDailyRelayPayments.specId, JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday).
+            orderBy(desc(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday)),
             'IndexChartsResource::getMainChartData'
         );
 
@@ -127,13 +128,13 @@ export class IndexChartsResource extends RedisResourceBase<IndexChartResponse[],
             qosSyncAvg: qosMetricWeightedAvg(JsinfoProviderAgrSchema.aggDailyRelayPayments.qosSyncAvg),
             qosAvailabilityAvg: qosMetricWeightedAvg(JsinfoProviderAgrSchema.aggDailyRelayPayments.qosAvailabilityAvg),
             qosLatencyAvg: qosMetricWeightedAvg(JsinfoProviderAgrSchema.aggDailyRelayPayments.qosLatencyAvg),
-        })
-            .from(JsinfoProviderAgrSchema.aggDailyRelayPayments)
-            .where(and(
+        }).from(JsinfoProviderAgrSchema.aggDailyRelayPayments).
+            orderBy(desc(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday)).
+            where(and(
                 gt(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday, sql<Date>`${from}`),
                 lt(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday, sql<Date>`${to}`)
-            ))
-            .groupBy(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday),
+            )).
+            groupBy(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday),
             'IndexChartsResource::getQosData'
         );
 

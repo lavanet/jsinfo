@@ -5,7 +5,6 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { and, eq, ne } from "drizzle-orm";
 import { IsMeaningfulText } from '@jsinfo/utils/fmt';
 import { logger } from '@jsinfo/utils/logger';
-import { LavaClient } from '@jsinfo/indexer/lavaTypes';
 import { UpdateStakeInformation } from '@jsinfo/indexer/blockchainEntities/blockchainEntitiesStakeUpdater';
 import { queryJsinfo } from '@jsinfo/utils/db';
 
@@ -78,5 +77,5 @@ export async function SyncBlockchainEntities(
 
             return { success: true };
         })
-    }, "SyncBlockchainEntities")
+    }, `SyncBlockchainEntities:${height}`)
 }

@@ -114,3 +114,36 @@ export function RemoveKeyFromJson(obj: any, keyToRemove: string): any {
 
     return obj;
 }
+
+export function MaskPassword(url: string): string {
+    try {
+        const masked = new URL(url);
+        if (masked.password) {
+            masked.password = '****';
+        }
+        return masked.toString().replace(/(\w+:\/\/\w+:)[^@]+(@)/, '$1****$2');
+    } catch {
+        return url.replace(/(\w+:\/\/\w+:)[^@]+(@)/, '$1****$2');
+    }
+}
+
+export function HashString(str: string): number {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        const char = str.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash; // Convert to 32-bit integer
+    }
+    return Math.abs(hash);
+}
+
+export function HashJson(json: any): number {
+    const jsonString = JSON.stringify(json);
+    let hash = 0;
+    for (let i = 0; i < jsonString.length; i++) {
+        const char = jsonString.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash; // Convert to 32-bit integer
+    }
+    return Math.abs(hash);
+}

@@ -3,6 +3,7 @@ import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import * as JsinfoProviderAgrSchema from '@jsinfo/schemas/jsinfoSchema/providerRelayPaymentsAgregation';
 import { RedisResourceBase } from '../../RedisResourceBase';
 import { queryJsinfo } from '@jsinfo/utils/db';
+import { logger } from '@jsinfo/utils/logger';
 
 export class ActiveProvidersResource extends RedisResourceBase<string[], {}> {
     protected readonly redisKey = 'index:active_providers';
@@ -37,6 +38,9 @@ export class ActiveProvidersResource extends RedisResourceBase<string[], {}> {
             'ActiveProvidersResource::fetchFromDb'
         );
 
-        return data.map(item => item.provider).filter((provider): provider is string => provider !== null);
+        return data
+            .map(item => item.provider)
+            .filter((provider): provider is string => provider !== null)
+            .map(provider => provider.toString());
     }
 } 

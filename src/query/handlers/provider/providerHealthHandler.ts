@@ -187,7 +187,7 @@ class ProviderHealthData extends RequestHandlerBase<HealthReportEntry> {
         return healthReportEntries;
     }
 
-    protected async convertRecordsToCsv(data: HealthReportEntry[]): Promise<string> {
+    public async ConvertRecordsToCsv(data: HealthReportEntry[]): Promise<string> {
         let csv = 'time,chain,interface,status,region,message\n';
         data.forEach((item: HealthReportEntry) => {
             csv += `${item.timestamp},${CSVEscape(item.spec)},${CSVEscape(item.interface || "")},${CSVEscape(item.status)},${CSVEscape(item.message || "")}\n`;

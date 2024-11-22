@@ -29,7 +29,7 @@ export async function ProcessChainSpecs(): Promise<void> {
                 },
                 where: eq(keyValueStore.key, 'specs')
             }),
-            'ChainSpecProcessor::processChainSpecs'
+            `ChainSpecProcessor::processChainSpecs:${specs}`
         );
 
         const executionTime = Date.now() - start;

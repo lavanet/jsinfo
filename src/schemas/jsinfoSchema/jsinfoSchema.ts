@@ -177,6 +177,10 @@ export const subscriptionBuys = pgTable('subscription_buys', {
   duration: integer('number'),
   plan: text('plan'),
   tx: text('tx'),
+}, (table) => {
+  return {
+    consumerIdx: index("subscription_buys_consumer_idx").on(table.consumer),
+  };
 });
 export type SubscriptionBuy = typeof subscriptionBuys.$inferSelect
 export type InsertSubscriptionBuy = typeof subscriptionBuys.$inferInsert
@@ -249,12 +253,9 @@ export type ProviderHealth = typeof providerHealth.$inferSelect;
 export type InsertProviderHealth = typeof providerHealth.$inferInsert;
 
 export const providerSpecMoniker = pgTable('provider_spec_moniker', {
-  id: serial('id').primaryKey(),
   provider: text('provider').notNull(),
   moniker: text('moniker'),
   spec: text('spec'),
-  createdAt: timestamp("createdat").defaultNow().notNull(),
-  updatedAt: timestamp('updatedat').default(sql`CURRENT_TIMESTAMP(3)`),
 }, (table) => {
   return {
     pk: primaryKey({ columns: [table.provider, table.spec] })

@@ -230,7 +230,7 @@ class EventsEventsData extends RequestHandlerBase<EventsEventsResponse> {
         return flattenedEvents;
     }
 
-    protected async convertRecordsToCsv(data: EventsEventsResponse[]): Promise<string> {
+    public async ConvertRecordsToCsv(data: EventsEventsResponse[]): Promise<string> {
         const columns = [
             { key: "provider", name: "Provider" },
             { key: "moniker", name: "Moniker" },

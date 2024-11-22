@@ -120,8 +120,8 @@ export class RequestHandlerBase<T> {
         throw new Error("Method 'fetchDateRangeRecords' must be implemented.");
     }
 
-    protected async convertRecordsToCsv(data: T[]): Promise<string> {
-        throw new Error("Method 'convertRecordsToCsv' must be implemented.");
+    public async ConvertRecordsToCsv(data: T[]): Promise<string> {
+        throw new Error("Method 'ConvertRecordsToCsv' must be implemented.");
     }
 
     public async PaginatedRecordsRequestHandler(request: FastifyRequest, reply: FastifyReply): Promise<{ data: T[] } | null> {
@@ -216,7 +216,7 @@ export class RequestHandlerBase<T> {
                     return reply;
                 }
 
-                const csv = await this.convertRecordsToCsv(data);
+                const csv = await this.ConvertRecordsToCsv(data);
                 if (csv == null) {
                     reply.send("Data is not available in CSV format");
                     return reply;

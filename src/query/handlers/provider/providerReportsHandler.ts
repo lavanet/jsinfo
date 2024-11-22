@@ -273,7 +273,7 @@ class ProviderReportsData extends RequestHandlerBase<ProviderReportsResponse> {
         }));
     }
 
-    protected async convertRecordsToCsv(data: ProviderReportsResponse[]): Promise<string> {
+    public async ConvertRecordsToCsv(data: ProviderReportsResponse[]): Promise<string> {
         const columns = [
             { key: "provider_reported.blockId", name: "Block" },
             { key: "blocks.datetime", name: "Time" },

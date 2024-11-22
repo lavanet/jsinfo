@@ -24,7 +24,7 @@ export abstract class RedisResourceBase<T, A extends BaseArgs = BaseArgs> {
     protected async get(args?: A): Promise<T | null> {
         const key = this.getKeyWithArgs(args);
         const cached = await RedisCache.get(key);
-        console.log(`RedisResourceBase:: [${this.redisKey}] Cache ${cached ? 'hit' : 'miss'}:`, {
+        logger.info(`RedisResourceBase:: [${this.redisKey}] Cache ${cached ? 'hit' : 'miss'}:`, {
             key,
             args: args ? JSON.stringify(args).slice(0, 100) + '...' : 'none',
             dataPreview: cached ? cached.slice(0, 100) + '...' : null,
@@ -56,27 +56,32 @@ export abstract class RedisResourceBase<T, A extends BaseArgs = BaseArgs> {
     async fetch(args?: A): Promise<T | null> {
         const key = this.getKeyWithArgs(args);
 
-        // Check for existing fetch
+
         const existingFetch = RedisResourceBase.activeFetches.get(key);
+
         if (existingFetch) {
-            return existingFetch as Promise<T | null>;
+            const result = existingFetch as Promise<T | null>;
+            return await result;
         }
 
         const fetchPromise = this.executeFetch(args, key);
         RedisResourceBase.activeFetches.set(key, fetchPromise);
 
-        return fetchPromise;
+        return await fetchPromise;
+
     }
 
     private async executeFetch(args?: A, key?: string): Promise<T | null> {
         try {
             const cached = await this.get(args);
+
             if (cached) {
-                this.handleCachedData(cached, args, key);
+                await this.handleCachedData(cached, args, key);
                 return cached;
             }
 
             return await this.fetchAndCacheData(args, key);
+
         } catch (error) {
             this.handleFetchError(error, args);
             return null;
@@ -88,10 +93,6 @@ export abstract class RedisResourceBase<T, A extends BaseArgs = BaseArgs> {
     private async fetchFromDbWithMutex(args?: A, key?: string): Promise<T | null> {
         const existingFetch = RedisResourceBase.activeDbFetches.get(key!);
         if (existingFetch) {
-            logger.info('Waiting for ongoing DB fetch', {
-                key,
-                redisKey: this.redisKey
-            });
             return existingFetch as Promise<T | null>;
         }
 
@@ -117,9 +118,9 @@ export abstract class RedisResourceBase<T, A extends BaseArgs = BaseArgs> {
             });
 
             // Background refresh using mutex
-            this.fetchFromDbWithMutex(args, key).then(data => {
+            this.fetchFromDbWithMutex(args, key).then(async data => {
                 if (data) {
-                    this.set(data, args);
+                    await this.set(data, args);
                     logger.info('Background cache refresh completed', {
                         key,
                         redisKey: this.redisKey

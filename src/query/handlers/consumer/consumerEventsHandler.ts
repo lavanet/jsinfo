@@ -273,7 +273,7 @@ class ConsumerEventsData extends RequestHandlerBase<ConsumerEventsResponse> {
         return eventsRes;
     }
 
-    protected async convertRecordsToCsv(data: ConsumerEventsResponse[]): Promise<string> {
+    public async ConvertRecordsToCsv(data: ConsumerEventsResponse[]): Promise<string> {
         const columns = [
             { key: "events.eventType", name: "Event Type" },
             { key: "blocks.height", name: "Block Height" },

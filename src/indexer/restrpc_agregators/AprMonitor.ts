@@ -229,7 +229,7 @@ class APRMonitorClass {
           });
           return result;
         },
-        "APRMonitor::updateAprInDb"
+        `APRMonitor::updateAprInDb:${key}:${value}`
       );
 
       logger.info(`APRMonitor::DB Update - Successfully updated ${key}`, {

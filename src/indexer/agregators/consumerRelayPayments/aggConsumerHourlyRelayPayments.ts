@@ -7,6 +7,7 @@ import * as JsinfoConsumerAgrSchema from '@jsinfo/schemas/jsinfoSchema/consumerR
 import { DoInChunks } from '@jsinfo/utils/processing';
 import { logger } from '@jsinfo/utils/logger';
 import { PgColumn } from 'drizzle-orm/pg-core';
+import { HashJson } from '@jsinfo/utils/fmt';
 
 export async function getConsumerAggHourlyTimeSpan(): Promise<{ startTime: Date | null, endTime: Date | null }> {
     const lastRelayPayment = await queryJsinfo(
@@ -185,6 +186,6 @@ export async function aggConsumerHourlyRelayPayments() {
             })
             return { success: true };
         }),
-        'aggConsumerHourlyRelayPayments_update'
+        `aggConsumerHourlyRelayPayments_update:${HashJson(aggResults)}`
     );
 }

@@ -86,7 +86,7 @@ export async function aggConsumerDailyRelayPayments() {
             .orderBy(
                 sql`dateday`,
             ),
-        'aggConsumerDailyRelayPayments_select'
+        `aggConsumerDailyRelayPayments_select_${startTime}_${endTime}`
     );
 
     if (aggResults.length === 0) {

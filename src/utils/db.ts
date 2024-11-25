@@ -14,6 +14,7 @@ interface DbConnection {
     inUse: boolean;
     createdAt: number;
     id: string;
+    connectionString: string;
 }
 
 const globalMigrationLock = {
@@ -37,7 +38,7 @@ class DbConnectionPoolClass {
     private readonly FAILURE_RESET_TIME = 1000 * 60 * 5; // 5 minutes
     private currentUrlIndex = 0;
     private lastConnectionWarning = 0;
-    private readonly WARNING_INTERVAL = 10000; // Only log every 10 seconds
+    private readonly WARNING_INTERVAL = 30000; // Only log every 10 seconds
 
     constructor(connectionString: "jsinfo" | "relays") {
         this.queue = new PQueue({ concurrency: 150 });
@@ -183,12 +184,16 @@ class DbConnectionPoolClass {
                 const url = await this.getNextValidUrl(urls);
                 const db = await this.createDbConnection(url);
                 await db.select({ now: sql`NOW()` }).from(sql`(SELECT 1) AS foo`).limit(1);
+                logger.info('Database connection established', {
+                    url: MaskPassword(url)
+                });
                 return {
                     db,
                     lastUsed: Date.now(),
                     inUse: false,
                     createdAt: Date.now(),
-                    id: `conn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+                    id: `conn_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
+                    connectionString: url
                 };
             } catch (error) {
                 lastError = error as Error;
@@ -367,6 +372,10 @@ class DbConnectionPoolClass {
             return;
         }
 
+        if (GetEnvVar("JSINFO_INDEXER_RUN_MIGRATIONS", "false") === "false") {
+            return;
+        }
+
         if (globalMigrationLock.isComplete) {
             return;
         }
@@ -374,11 +383,7 @@ class DbConnectionPoolClass {
         if (!globalMigrationLock.promise) {
             globalMigrationLock.promise = (async () => {
                 try {
-                    const shouldMigrate = GetEnvVar("JSINFO_INDEXER_RUN_MIGRATIONS", "false") === "true";
-                    if (!shouldMigrate) {
-                        globalMigrationLock.isComplete = true;
-                        return;
-                    }
+                    globalMigrationLock.isComplete = false;
 
                     logger.info(`MigrateDb:: Starting database migration...`);
                     const urls = await this.GetJsinfoPostgresUrls();

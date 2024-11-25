@@ -176,7 +176,7 @@ class ConsumerEventsData extends RequestHandlerBase<ConsumerEventsResponse> {
                         gte(JsinfoSchema.events.timestamp, thirtyDaysAgo)
                     )
                 ),
-            'ConsumerEventsData_fetchRecordCountFromDb'
+            `ConsumerEventsData_fetchRecordCountFromDb_${thirtyDaysAgo}`
         );
 
         return Math.min(countResult[0].count || 0, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION - 1);
@@ -261,7 +261,7 @@ class ConsumerEventsData extends RequestHandlerBase<ConsumerEventsResponse> {
                 .orderBy(orderFunction(sortColumn))
                 .offset((finalPagination.page - 1) * finalPagination.count)
                 .limit(finalPagination.count),
-            'ConsumerEventsData_fetchPaginatedRecords'
+            `ConsumerEventsData_fetchPaginatedRecords_${finalPagination.sortKey}_${finalPagination.direction}_${finalPagination.page}_${finalPagination.count}`
         );
 
         eventsRes.forEach((event) => {

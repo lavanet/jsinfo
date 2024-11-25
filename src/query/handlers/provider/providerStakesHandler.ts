@@ -128,7 +128,7 @@ class ProviderStakesData extends RequestHandlerBase<ProviderStakesResponse> {
                 .orderBy(desc(JsinfoSchema.providerStakes.stake))
                 .offset(0)
                 .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION),
-            'ProviderStakes_fetchAllRecords'
+            `ProviderStakes_fetchAllRecords_${this.addr}`
         );
 
         const processedRes = stakesRes.map(item => ({
@@ -154,7 +154,7 @@ class ProviderStakesData extends RequestHandlerBase<ProviderStakesResponse> {
             })
                 .from(JsinfoSchema.providerStakes)
                 .where(eq(JsinfoSchema.providerStakes.provider, this.addr)),
-            'ProviderStakes_fetchRecordCount'
+            `ProviderStakes_fetchRecordCount_${this.addr}`
         );
 
         return Math.min(countResult[0].count || 0, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION - 1);
@@ -218,7 +218,7 @@ class ProviderStakesData extends RequestHandlerBase<ProviderStakesResponse> {
                 .orderBy(orderFunction(sortColumn))
                 .offset(offset)
                 .limit(finalPagination.count),
-            'ProviderStakes_fetchPaginatedRecords'
+            `ProviderStakes_fetchPaginatedRecords_${finalPagination.sortKey}_${finalPagination.direction}_${finalPagination.page}_${finalPagination.count}_${this.addr}`
         );
 
         const processedRes = stakesRes.map(item => ({

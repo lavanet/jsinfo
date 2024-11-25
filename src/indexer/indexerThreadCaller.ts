@@ -26,12 +26,12 @@ import { SyncBlockchainEntities } from './blockchainEntities/blockchainEntitiesS
 import { FillUpBlocks } from '@jsinfo/indexer/indexerFillupBlocks';
 import { JSINFO_INDEXER_GRACEFULL_EXIT_AFTER_X_HOURS } from './indexerConsts';
 
-export class IndexerThreadManager {
-    private static isRunning = false;
-    private static runningProcesses = new Set<string>();
-    private static startTime: number | null = null;
+export class IndexerThreadManagerClass {
+    private isRunning = false;
+    private runningProcesses = new Set<string>();
+    private startTime: number | null = null;
 
-    public static async start(): Promise<void> {
+    public async start(): Promise<void> {
         if (this.isRunning) {
             logger.info('IndexerThreadManager:: is already running');
             return;
@@ -54,7 +54,7 @@ export class IndexerThreadManager {
         }
     }
 
-    private static checkGracefulExit(): void {
+    private checkGracefulExit(): void {
         if (this.startTime &&
             Date.now() - this.startTime > JSINFO_INDEXER_GRACEFULL_EXIT_AFTER_X_HOURS * 60 * 60 * 1000) {
             logger.info('IndexerThreadManager:: JSINFO_INDEXER_GRACEFULL_EXIT_AFTER_X_HOURS has passed. Exiting process.');
@@ -62,7 +62,7 @@ export class IndexerThreadManager {
         }
     }
 
-    private static async startFillUpBlocksMonitor(): Promise<void> {
+    private async startFillUpBlocksMonitor(): Promise<void> {
         while (true) {
             this.checkGracefulExit();
             try {
@@ -76,7 +76,7 @@ export class IndexerThreadManager {
         }
     }
 
-    private static async startBackgroundMonitors(): Promise<void> {
+    private async startBackgroundMonitors(): Promise<void> {
         logger.info('IndexerThreadManager:: Starting background monitors');
 
         // Start all monitors in parallel
@@ -89,7 +89,7 @@ export class IndexerThreadManager {
         ]);
     }
 
-    private static async runWithLock(name: string, fn: () => Promise<void>): Promise<void> {
+    private async runWithLock(name: string, fn: () => Promise<void>): Promise<void> {
         if (this.runningProcesses.has(name)) {
             return;
         }
@@ -102,7 +102,7 @@ export class IndexerThreadManager {
         }
     }
 
-    private static async processAggregations(): Promise<void> {
+    private async processAggregations(): Promise<void> {
         const processors = [
             {
                 name: 'SubscriptionList',
@@ -152,6 +152,8 @@ export class IndexerThreadManager {
         }));
     }
 }
+
+export const IndexerThreadManager = new IndexerThreadManagerClass();
 
 export async function IndexerThreadCallerStart(): Promise<void> {
     await IndexerThreadManager.start();

@@ -39,7 +39,7 @@ export async function ConsumersPageHandler(request: FastifyRequest, reply: Fasti
             count: sql<number>`COUNT(DISTINCT consumer)`
         })
             .from(JsinfoSchema.consumerSubscriptionList),
-        'ConsumersPage_getUniqueConsumerCount'
+        `ConsumersPage_getUniqueConsumerCount_${latestHeight}`
     );
 
     const consumerCountRes = uniqueConsumerCount[0].count || 0;

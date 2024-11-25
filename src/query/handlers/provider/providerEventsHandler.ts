@@ -148,7 +148,7 @@ class ProviderEventsData extends RequestHandlerBase<ProviderEventsResponse> {
             .orderBy(desc(JsinfoSchema.events.id))
             .offset(0)
             .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION),
-            'ProviderEventsData::fetchAllRecords'
+            `ProviderEventsData::fetchAllRecords_${this.addr}`
         );
 
         eventsRes.forEach((event) => {
@@ -172,7 +172,7 @@ class ProviderEventsData extends RequestHandlerBase<ProviderEventsResponse> {
                 eq(JsinfoSchema.events.provider, this.addr),
                 gte(JsinfoSchema.events.timestamp, thirtyDaysAgo)
             )),
-            'ProviderEventsData::fetchRecordCountFromDb'
+            `ProviderEventsData::fetchRecordCountFromDb_${this.addr}`
         );
 
         return Math.min(countResult[0].count || 0, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION - 1);
@@ -256,7 +256,7 @@ class ProviderEventsData extends RequestHandlerBase<ProviderEventsResponse> {
             .orderBy(orderFunction(sortColumn))
             .offset((finalPagination.page - 1) * finalPagination.count)
             .limit(finalPagination.count),
-            'ProviderEventsData::fetchPaginatedRecords'
+            `ProviderEventsData::fetchPaginatedRecords_${finalPagination.sortKey}_${finalPagination.direction}_${finalPagination.page}_${finalPagination.count}_${thirtyDaysAgo}`
         );
 
         eventsRes.forEach((event) => {

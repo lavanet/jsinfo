@@ -58,7 +58,7 @@ async function fetchConsumerEntries(): Promise<ConsumerEntry[]> {
             .groupBy(JsinfoSchema.consumerSubscriptionList.consumer, JsinfoSchema.consumerSubscriptionList.plan)
             .orderBy(asc(max(JsinfoSchema.consumerSubscriptionList.createdAt)))
             .limit(500),
-        'ConsumersPage_fetchConsumerEntries'
+        `ConsumersPage_fetchConsumerEntries_${ninetyDaysAgo}`
     );
 }
 

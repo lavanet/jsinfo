@@ -51,7 +51,7 @@ export async function ConsumerV2CahcedHandler(request: FastifyRequest, reply: Fa
         })
             .from(JsinfoConsumerAgrSchema.aggConsumerAllTimeRelayPayments)
             .where(eq(JsinfoConsumerAgrSchema.aggConsumerAllTimeRelayPayments.consumer, addr)),
-        'ConsumerV2_getTotals'
+        `ConsumerV2_getTotals_${addr}`
     );
 
     if (cuRelayAndRewardsTotalRes.length == 1) {

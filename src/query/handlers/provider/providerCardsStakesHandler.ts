@@ -26,7 +26,7 @@ async function getStakes(addr: string): Promise<bigint> {
             .from(JsinfoSchema.providerStakes)
             .where(eq(JsinfoSchema.providerStakes.provider, addr))
             .orderBy(desc(JsinfoSchema.providerStakes.stake)),
-        'ProviderCardsStakes_getStakes'
+        `ProviderCardsStakes_getStakes_${addr}`
     );
 
     let stakeSum = 0n;

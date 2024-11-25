@@ -33,7 +33,7 @@ async function getCuRelayAndRewardsTotal(addr: string) {
             rewardSum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggAllTimeRelayPayments.rewardSum})`,
         }).from(JsinfoProviderAgrSchema.aggAllTimeRelayPayments)
             .where(eq(JsinfoProviderAgrSchema.aggAllTimeRelayPayments.provider, addr)),
-        'ProviderCardsCuRelayAndRewards_getCuRelayAndRewardsTotal'
+        `ProviderCardsCuRelayAndRewards_getCuRelayAndRewardsTotal_${addr}`
     );
 
     if (result.length === 1) {

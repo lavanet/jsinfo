@@ -87,7 +87,7 @@ export async function aggProviderHourlyRelayPayments() {
             .orderBy(
                 sql`datehour`,
             ),
-        'aggProviderHourlyRelayPayments_select'
+        `aggProviderHourlyRelayPayments_select_${startTime}_${endTime}`
     );
 
     if (aggResults.length === 0) {

@@ -146,7 +146,7 @@ class ProviderBlockReportsData extends RequestHandlerBase<BlockReportsResponse> 
                 .orderBy(finalPagination.direction === 'ascending' ? asc(keyToColumnMap[finalPagination.sortKey || defaultSortKey]) : desc(keyToColumnMap[finalPagination.sortKey || defaultSortKey]))
                 .offset((finalPagination.page - 1) * finalPagination.count)
                 .limit(finalPagination.count),
-            'ProviderBlockReportsData_fetchPaginatedRecords'
+            `ProviderBlockReportsData_fetchPaginatedRecords_${finalPagination.sortKey}_${finalPagination.direction}_${finalPagination.page}_${finalPagination.count}`
         ).then(reportsRes => reportsRes.map(row => ({
             id: row.id,
             blockId: row.blockId ?? 0,

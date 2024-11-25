@@ -115,7 +115,7 @@ class SpecChartsData extends RequestHandlerBase<SpecChartResponse> {
                 .where(eq(JsinfoSchema.providerStakes.specId, this.spec))
                 .orderBy(desc(JsinfoSchema.providerStakes.stake))
                 .limit(10),
-            'SpecCharts_getSpecTop10Providers'
+            `SpecCharts_getSpecTop10Providers_${this.spec}`
         );
 
         // Check if any provider is an empty string
@@ -162,7 +162,7 @@ class SpecChartsData extends RequestHandlerBase<SpecChartResponse> {
                     eq(JsinfoProviderAgrSchema.aggDailyRelayPayments.specId, this.spec)
                 ))
                 .orderBy(desc(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday)),
-            'SpecCharts_getSpecQosData'
+            `SpecCharts_getSpecQosData_${from}_${to}_${this.spec}`
         );
 
         // Verify and format the data
@@ -214,7 +214,7 @@ class SpecChartsData extends RequestHandlerBase<SpecChartResponse> {
                     eq(JsinfoProviderAgrSchema.aggDailyRelayPayments.specId, this.spec)
                 ))
                 .orderBy(desc(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday)),
-            'SpecCharts_getAllProvidersMonthlyData'
+            `SpecCharts_getAllProvidersMonthlyData_${from}_${to}_${this.spec}`
         );
 
         allProvidersMonthlyData.forEach(item => {
@@ -247,7 +247,7 @@ class SpecChartsData extends RequestHandlerBase<SpecChartResponse> {
                     )
                 ))
                 .orderBy(desc(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday)),
-            'SpecCharts_getMonthlyData'
+            `SpecCharts_getMonthlyData_${from}_${to}_${this.spec}`
         );
 
         monthlyData.forEach(item => {

@@ -20,7 +20,7 @@ export class SupplyResource extends RedisResourceBase<SupplyData, SupplyArgs> {
             .select({ amount: JsinfoSchema.supply.amount })
             .from(JsinfoSchema.supply)
             .where(eq(JsinfoSchema.supply.key, args.type)),
-            'SupplyResource::fetchFromDb'
+            `SupplyResource::fetchFromDb_${args.type}`
         );
 
         if (result.length > 0 && result[0].amount) {

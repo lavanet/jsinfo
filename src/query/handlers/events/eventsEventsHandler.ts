@@ -176,16 +176,6 @@ class EventsEventsData extends RequestHandlerBase<EventsEventsResponse> {
             throw new Error(`Invalid sort key: ${trimmedSortKey}`);
         }
 
-        await queryJsinfo(
-            async (db) => await db.select()
-                .from(JsinfoSchema.events)
-                .where(sql`timestamp >= NOW() - INTERVAL '30 days'`)
-                .orderBy(desc(JsinfoSchema.events.id))
-                .offset(0)
-                .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION),
-            'EventsEventsData_fetchAllRecords'
-        );
-
         const sortColumn = keyToColumnMap[finalPagination.sortKey] || JsinfoSchema.events.id; // Default to id if not found
 
         const orderFunction = finalPagination.direction === 'ascending' ? asc : desc;
@@ -202,7 +192,7 @@ class EventsEventsData extends RequestHandlerBase<EventsEventsResponse> {
                     .orderBy(orderFunction(sortColumn))
                     .offset(offset)
                     .limit(finalPagination.count),
-                'EventsEventsData_fetchPaginatedRecords_withMoniker'
+                `EventsEventsData_fetchPaginatedRecords_withMoniker_${finalPagination.sortKey}_${finalPagination.direction}_${finalPagination.page}_${finalPagination.count}`
             );
         } else {
             eventsRes = await queryJsinfo(
@@ -212,7 +202,7 @@ class EventsEventsData extends RequestHandlerBase<EventsEventsResponse> {
                     .orderBy(orderFunction(sortColumn))
                     .offset(offset)
                     .limit(finalPagination.count),
-                'EventsEventsData_fetchPaginatedRecords'
+                `EventsEventsData_fetchPaginatedRecords_${finalPagination.sortKey}_${finalPagination.direction}_${finalPagination.page}_${finalPagination.count}`
             );
         }
 

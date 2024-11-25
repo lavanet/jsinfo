@@ -35,7 +35,7 @@ export async function ConsumerConflictsHandler(request: FastifyRequest, reply: F
     let conflictsRet = await queryJsinfo(
         async (db) => await db.select().from(JsinfoSchema.conflictResponses).where(eq(JsinfoSchema.conflictResponses.consumer, addr)).
             orderBy(desc(JsinfoSchema.conflictResponses.id)).offset(0).limit(50),
-        'ConsumerConflictsHandler'
+        `ConsumerConflictsHandler_${addr}`
     );
 
     return {

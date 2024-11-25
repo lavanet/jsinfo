@@ -206,7 +206,7 @@ export class IndexProvidersResource extends RedisResourceBase<IndexProvidersReso
                     .orderBy(orderFunction(sortColumn))
                     .offset((finalPagination.page - 1) * finalPagination.count)
                     .limit(finalPagination.count),
-                'IndexProvidersResource_fetchPaginatedRecords_moniker'
+                `IndexProvidersResource_fetchPaginatedRecords_moniker_${finalPagination.sortKey}_${finalPagination.direction}_${finalPagination.page}_${finalPagination.count}`
             );
 
             return Promise.all(data.map(async item => ({
@@ -240,7 +240,7 @@ export class IndexProvidersResource extends RedisResourceBase<IndexProvidersReso
                 .orderBy(orderFunction(sortColumn))
                 .offset((finalPagination.page - 1) * finalPagination.count)
                 .limit(finalPagination.count),
-            'IndexProvidersResource_fetchPaginatedRecords_other'
+            `IndexProvidersResource_fetchPaginatedRecords_other_${finalPagination.sortKey}_${finalPagination.direction}_${finalPagination.page}_${finalPagination.count}`
         );
 
         return Promise.all(data.map(async item => ({

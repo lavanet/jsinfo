@@ -156,7 +156,7 @@ export async function ProviderHealthLatestPaginatedHandler(request: FastifyReque
             )
             .orderBy(desc(JsinfoSchema.providerHealth.id))
             .limit(500),
-            'ProviderHealthLatestData::fetchHealthRecords'
+            `ProviderHealthLatestData::fetchHealthRecords_${provider}_${geolocation}`
         );
 
         allHealthRecords.push(...healthRecords);

@@ -23,7 +23,7 @@ async function getDelegatorRewards(addr: string) {
             .from(JsinfoSchema.delegatorRewards)
             .where(eq(JsinfoSchema.delegatorRewards.delegator, addr))
             .limit(1),
-        'ProviderCardsDelegatorRewards_getDelegatorRewards'
+        `ProviderCardsDelegatorRewards_getDelegatorRewards_${addr}`
     );
 
     return ret[0] || { "error": "No data found" };

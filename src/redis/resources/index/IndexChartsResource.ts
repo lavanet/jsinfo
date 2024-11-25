@@ -98,7 +98,7 @@ export class IndexChartsResource extends RedisResourceBase<IndexChartResponse[],
             ).
             groupBy(JsinfoProviderAgrSchema.aggDailyRelayPayments.specId, JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday).
             orderBy(desc(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday)),
-            'IndexChartsResource::getMainChartData'
+            `IndexChartsResource::getMainChartData_${from}_${to}`
         );
 
         // Verify and format the data
@@ -135,7 +135,7 @@ export class IndexChartsResource extends RedisResourceBase<IndexChartResponse[],
                 lt(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday, sql<Date>`${to}`)
             )).
             groupBy(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday),
-            'IndexChartsResource::getQosData'
+            `IndexChartsResource::getQosData_${from}_${to}`
         );
 
         // Verify and format the data

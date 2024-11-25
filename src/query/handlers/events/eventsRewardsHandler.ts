@@ -191,7 +191,7 @@ class EventsRewardsData extends RequestHandlerBase<EventsRewardsResponse> {
                     .offset((finalPagination.page - 1) * finalPagination.count)
                     .limit(finalPagination.count);
             },
-            'EventsRewardsData_fetchPaginatedRecords_withMoniker'
+            `EventsRewardsData_fetchPaginatedRecords_withMoniker_${finalPagination.sortKey}_${finalPagination.direction}_${finalPagination.page}_${finalPagination.count}`
         );
 
         const flattenedRewards = await Promise.all(paymentsRes.map(async data => ({

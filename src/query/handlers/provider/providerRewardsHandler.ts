@@ -166,7 +166,7 @@ class ProviderRewardsData extends RequestHandlerBase<ProviderRewardsResponse> {
                 .orderBy(desc(JsinfoSchema.relayPayments.id))
                 .offset(0)
                 .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION),
-            'ProviderRewards_fetchAllRecords'
+            `ProviderRewards_fetchAllRecords_${this.addr}`
         );
 
         paymentsRes.forEach((payment) => {
@@ -192,7 +192,7 @@ class ProviderRewardsData extends RequestHandlerBase<ProviderRewardsResponse> {
                         gte(JsinfoSchema.relayPayments.datetime, thirtyDaysAgo)
                     )
                 ),
-            'ProviderRewards_fetchRecordCount'
+            `ProviderRewards_fetchRecordCount_${this.addr}`
         );
 
         return Math.min(countResult[0].count || 0, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION - 1);
@@ -256,7 +256,7 @@ class ProviderRewardsData extends RequestHandlerBase<ProviderRewardsResponse> {
                 .orderBy(orderFunction(sortColumn))
                 .offset((finalPagination.page - 1) * finalPagination.count)
                 .limit(finalPagination.count),
-            'ProviderRewards_fetchPaginatedRecords'
+            `ProviderRewards_fetchPaginatedRecords_${finalPagination.sortKey}_${finalPagination.direction}_${finalPagination.page}_${finalPagination.count}_${thirtyDaysAgo}_${this.addr}`
         );
 
         paymentsRes.forEach((payment) => {

@@ -116,7 +116,6 @@ class RpcOnDemandEndpointCacheClass {
             );
         } catch (error) {
             logger.error(`Error fetching estimated validator rewards for ${validator}`, { error: TruncateError(error) });
-            throw error;
         }
     }
 

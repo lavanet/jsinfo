@@ -148,7 +148,7 @@ class ProviderReportsData extends RequestHandlerBase<ProviderReportsResponse> {
             .orderBy(desc(JsinfoSchema.providerReported.id))
             .offset(0)
             .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION),
-            'ProviderReportsData::fetchAllRecords'
+            `ProviderReportsData::fetchAllRecords_${this.addr}`
         );
 
         return reportsRes.map(row => ({
@@ -173,7 +173,7 @@ class ProviderReportsData extends RequestHandlerBase<ProviderReportsResponse> {
                     gte(JsinfoSchema.providerReported.datetime, thirtyDaysAgo)
                 )
             ),
-            'ProviderReportsData::fetchRecordCountFromDb'
+            `ProviderReportsData::fetchRecordCountFromDb_${this.addr}`
         );
 
         return Math.min(countResult[0].count || 0, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION - 1);
@@ -249,7 +249,7 @@ class ProviderReportsData extends RequestHandlerBase<ProviderReportsResponse> {
             .orderBy(orderFunction(sortColumn))
             .offset((finalPagination.page - 1) * finalPagination.count)
             .limit(finalPagination.count),
-            'ProviderReportsData::fetchPaginatedRecords'
+            `ProviderReportsData::fetchPaginatedRecords_${finalPagination.sortKey}_${finalPagination.direction}_${finalPagination.page}_${finalPagination.count}_${thirtyDaysAgo}_${this.addr}`
         );
 
         return reportsRes.map(row => ({

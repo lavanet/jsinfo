@@ -25,7 +25,7 @@ const globakWorkList: number[] = []
 async function isBlockInDb(height: number): Promise<boolean> {
     const dbBlock = await queryJsinfo(
         async (db) => db.select().from(JsinfoSchema.blocks).where(eq(JsinfoSchema.blocks.height, height)),
-        'isBlockInDb'
+        `isBlockInDb_${height}`
     );
     return dbBlock.length != 0;
 }

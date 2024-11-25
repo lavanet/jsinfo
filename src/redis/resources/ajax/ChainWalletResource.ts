@@ -23,14 +23,14 @@ export class ChainWalletResource extends RedisResourceBase<ChainWalletData, Chai
             .select({ value: JsinfoSchema.keyValueStore.value })
             .from(JsinfoSchema.keyValueStore)
             .where(eq(JsinfoSchema.keyValueStore.key, `${prefix}_current_unique_delegators`)),
-            'ChainWalletResource::fetchFromDb'
+            `ChainWalletResource::fetchFromDb_${args.type}`
         );
 
         const monthlyResult = await queryJsinfo(db => db
             .select({ value: JsinfoSchema.keyValueStore.value })
             .from(JsinfoSchema.keyValueStore)
             .where(eq(JsinfoSchema.keyValueStore.key, `${prefix}_monthly_unique_delegators`)),
-            'ChainWalletResource::fetchFromDb'
+            `ChainWalletResource::fetchFromDb_${args.type}`
         );
 
         return {

@@ -75,7 +75,7 @@ export async function SpecProviderHealthHandler(request: FastifyRequest, reply: 
             )
         )
         .limit(1000),
-        'SpecProviderHealthData::fetchHealthRecords'
+        `SpecProviderHealthData::fetchHealthRecords_${provider}_${spec}_${twoDaysAgo}`
     );
 
     if (healthRecords.length === 0) {

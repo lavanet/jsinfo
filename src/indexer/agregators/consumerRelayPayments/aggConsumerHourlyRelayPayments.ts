@@ -90,7 +90,7 @@ export async function aggConsumerHourlyRelayPayments() {
                 )
             return result;
         },
-        'aggConsumerHourlyRelayPayments'
+        `aggConsumerHourlyRelayPayments_${startTime}_${endTime}`
     );
 
     if (aggResults.length === 0) {

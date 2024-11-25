@@ -208,7 +208,7 @@ export class IndexProvidersActiveResource extends RedisResourceBase<IndexProvide
                         .orderBy(orderFunction(sortColumn))
                         .offset((finalPagination.page - 1) * finalPagination.count)
                         .limit(finalPagination.count),
-                    'IndexProvidersActiveResource_fetchPaginatedRecords_moniker'
+                    `IndexProvidersActiveResource_fetchPaginatedRecords_moniker_${finalPagination.sortKey}_${finalPagination.direction}_${finalPagination.page}_${finalPagination.count}`
                 );
 
 
@@ -236,7 +236,7 @@ export class IndexProvidersActiveResource extends RedisResourceBase<IndexProvide
                     .orderBy(orderFunction(sortColumn))
                     .offset((finalPagination.page - 1) * finalPagination.count)
                     .limit(finalPagination.count),
-                'IndexProvidersActiveResource_fetchPaginatedRecords'
+                `IndexProvidersActiveResource_fetchPaginatedRecords_${finalPagination.sortKey}_${finalPagination.direction}_${finalPagination.page}_${finalPagination.count}`
             );
 
             return Promise.all(data.map(async item => ({
@@ -268,7 +268,7 @@ export class IndexProvidersActiveResource extends RedisResourceBase<IndexProvide
                 })
                     .from(JsinfoSchema.providerStakes)
                     .where(inArray(JsinfoSchema.providerStakes.provider, activeProviders)),
-                'IndexProvidersActiveResource_fetchRecordCountFromDb'
+                `IndexProvidersActiveResource_fetchRecordCountFromDb_${JSON.stringify(activeProviders)}`
             );
 
             return res[0].count || 0;

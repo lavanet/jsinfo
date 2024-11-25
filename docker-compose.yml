@@ -21,7 +21,7 @@ services:
       - JSINFO_INDEXER_POLL_MS=5000
       - JSINFO_INDEXER_REDDIS_CACHE=redis://:mypassword@jsinfo-redis:6379
       - JSINFO_INDEXER_LAVA_RPC=https://testnet2-rpc.lavapro.xyz:443/
-      - JSINFO_INDEXER_START_BLOCK=2220430
+      - JSINFO_INDEXER_START_BLOCK=2242940
       - JSINFO_INDEXER_RUN_MIGRATIONS=false
       - JSINFO_INDEXER_LAVA_REST_RPC_URL=https://lav1.rest.lava.build/
       - JSINFO_POSTGRESQL_URL=postgres://jsinfo:secret@jsinfo-postgres:6452/jsinfo

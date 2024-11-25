@@ -100,7 +100,7 @@ class SpecChartsV2Data extends RequestHandlerBase<SpecChartsV2Response> {
                     .where(eq(JsinfoProviderAgrSchema.aggDailyRelayPayments.specId, this.spec))
                     .groupBy(JsinfoProviderAgrSchema.aggDailyRelayPayments.provider)
                     .having(gt(sql<Date>`MAX(${JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday})`, sixMonthsAgo)),
-                'SpecChartsV2_getAllAvailableProviders'
+                `SpecChartsV2_getAllAvailableProviders_${this.spec}`
             );
 
             const result: { [key: string]: string } = { 'all': 'All Providers' };
@@ -152,7 +152,7 @@ class SpecChartsV2Data extends RequestHandlerBase<SpecChartsV2Response> {
                     .groupBy(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday)
                     .where(conditions)
                     .orderBy(desc(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday)),
-                'SpecChartsV2_getSpecData'
+                `SpecChartsV2_getSpecData_${this.provider}_${from}_${to}_${this.spec}`
             );
 
             if (data.length === 0) {

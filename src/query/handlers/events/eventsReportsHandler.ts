@@ -148,8 +148,6 @@ class EventsReportsData extends RequestHandlerBase<EventsReportsResponse> {
             throw new Error(`Invalid sort key: ${trimmedSortKey}`);
         }
 
-
-
         const sortColumn = keyToColumnMap[finalPagination.sortKey]; // Use mapped column name for sorting
         const orderFunction = finalPagination.direction === 'ascending' ? asc : desc;
 
@@ -164,7 +162,7 @@ class EventsReportsData extends RequestHandlerBase<EventsReportsResponse> {
                     .orderBy(orderFunction(sortColumn))
                     .offset(offset)
                     .limit(finalPagination.count),
-                'EventsReports_fetchPaginatedRecords_moniker'
+                `EventsReports_fetchPaginatedRecords_moniker_${finalPagination.sortKey}_${finalPagination.direction}_${finalPagination.page}_${finalPagination.count}`
             );
 
             const flattenedReports = await Promise.all(reportsRes.map(async data => ({
@@ -183,7 +181,7 @@ class EventsReportsData extends RequestHandlerBase<EventsReportsResponse> {
                 .orderBy(orderFunction(sortColumn))
                 .offset(offset)
                 .limit(finalPagination.count),
-            'EventsReports_fetchPaginatedRecords'
+            `EventsReports_fetchPaginatedRecords_${finalPagination.sortKey}_${finalPagination.direction}_${finalPagination.page}_${finalPagination.count}`
         );
 
         const flattenedReports = await Promise.all(reportsRes.map(async data => ({

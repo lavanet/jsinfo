@@ -230,20 +230,19 @@ async function processUnstakingStakes(
     let unstaking;
     try {
         unstaking = await queryRpc(
-            async (_, __, lavaClient: LavaClient) => {
-                console.log('lavajsClient:', JSON.stringify(lavaClient).substring(0, 1000));
-                console.log('lavajsClient.epochstorage:', JSON.stringify(lavaClient.lavanet.lava.epochstorage).substring(0, 1000));
-                const response = await lavaClient.lavanet.lava.epochstorage.stakeStorage({
-                    index: 'Unstake'
-                });
-                console.log('Response JSON:', JSON.stringify(response).substring(0, 1000));
+            async (client, clientTm, lavaClient: LavaClient) => {
+                await lavaClient;
+                const index = 'Unstake';
+                console.log(`Requesting stake storage with index: ${index}`);
+                const response = await lavaClient.lavanet.lava.epochstorage.stakeStorage({ index });
                 return response;
             },
             'getUnstaking'
         );
     } catch (error) {
+        console.error(`Error fetching unstaking data with index 'Unstake': ${error}`);
         if ((error + "").includes('rpc error: code = InvalidArgument desc = not found: invalid request')) {
-            logger.info('The unstake list is empty.');
+            logger.info('The unstake list is empty or the index is invalid.');
             return;
         } else {
             throw error;

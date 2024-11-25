@@ -90,7 +90,7 @@ class ProviderChartsV2Data extends RequestHandlerBase<ProviderChartsV2Response> 
                 .from(JsinfoProviderAgrSchema.aggDailyRelayPayments)
                 .where(eq(JsinfoProviderAgrSchema.aggDailyRelayPayments.provider, this.provider))
                 .groupBy(JsinfoProviderAgrSchema.aggDailyRelayPayments.specId),
-                'ProviderChartsV2Data::getAllAvailableSpecs'
+                `ProviderChartsV2Data::getAllAvailableSpecs_${this.provider}`
             );
 
             const specs = await query;
@@ -134,7 +134,7 @@ class ProviderChartsV2Data extends RequestHandlerBase<ProviderChartsV2Response> 
                 .groupBy(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday)
                 .where(conditions)
                 .orderBy(desc(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday)),
-                'ProviderChartsV2Data::getProviderData'
+                `ProviderChartsV2Data::getProviderData_${from}_${to}_${this.provider}_${this.chain}`
             );
 
             let data = await query;

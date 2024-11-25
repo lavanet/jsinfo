@@ -42,8 +42,8 @@ export async function ConnectToRpc(rpc: string): Promise<RpcConnection> {
         logger.info(`ConnectToRpc:: fetched height ${height}`);
 
         const lavaClient = await lavajs.lavanet.ClientFactory.createRPCQueryClient({ rpcEndpoint: rpc })
-        const chains = await lavaClient.lavanet.lava.spec.showAllChains();
-        logger.info(`ConnectToRpc:: fetched chains ${StringifyWithBigInt(chains).substring(0, 1000)}`);
+        // const chains = await lavaClient.lavanet.lava.spec.showAllChains();
+        // logger.info(`ConnectToRpc:: fetched chains ${StringifyWithBigInt(chains).substring(0, 1000)}`);
 
         return { client, clientTm, chainId, height, lavaClient };
     } catch (error) {

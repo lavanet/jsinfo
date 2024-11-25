@@ -117,7 +117,7 @@ class ConsumerChartsData extends RequestHandlerBase<ConsumerChartResponse> {
                         lt(JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.dateday, sql<Date>`${to}`)
                     )))
                 .orderBy(desc(JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.dateday)),
-            'ConsumerChartsData_getConsumerQosData'
+            `ConsumerChartsData_getConsumerQosData_${from}_${to}`
         );
 
         monthlyData.forEach(item => {
@@ -168,7 +168,7 @@ class ConsumerChartsData extends RequestHandlerBase<ConsumerChartResponse> {
                     )
                 ))
                 .orderBy(JsinfoConsumerAgrSchema.aggConsumerDailyRelayPayments.dateday),
-            'ConsumerChartsData_getSpecRelayCuChartWithTopConsumers'
+            `ConsumerChartsData_getSpecRelayCuChartWithTopConsumers_${from}_${to}`
         );
 
         let dateSums: { [date: string]: { cuSum: number, relaySum: number } } = {};

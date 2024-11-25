@@ -117,7 +117,7 @@ class ProviderChartsData extends RequestHandlerBase<ProviderChartResponse> {
                     lt(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday, sql<Date>`${to}`)
                 )))
             .orderBy(desc(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday)),
-            'ProviderChartsData::getProviderQosData'
+            `ProviderChartsData::getProviderQosData_${from}_${to}`
         );
 
         monthlyData.forEach(item => {
@@ -167,7 +167,7 @@ class ProviderChartsData extends RequestHandlerBase<ProviderChartResponse> {
                 )
             ))
             .orderBy(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday),
-            'ProviderChartsData::getSpecRelayCuChartWithTopProviders'
+            `ProviderChartsData::getSpecRelayCuChartWithTopProviders_${from}_${to}`
         );
 
         let dateSums: { [date: string]: { cuSum: number, relaySum: number } } = {};

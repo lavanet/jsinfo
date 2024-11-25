@@ -45,7 +45,7 @@ export async function ProviderRelaysPerSpecPieHandler(request: FastifyRequest, r
         .where(eq(JsinfoProviderAgrSchema.aggAllTimeRelayPayments.provider, addr))
         .groupBy(JsinfoProviderAgrSchema.aggAllTimeRelayPayments.specId)
         .orderBy(desc(sql<number>`SUM(${JsinfoProviderAgrSchema.aggAllTimeRelayPayments.relaySum})`)),
-        'ProviderRelaysPerSpecPieData::fetchRelaysPerSpec'
+        `ProviderRelaysPerSpecPieData::fetchRelaysPerSpec_${addr}`
     );
 
     const topSpecs = relaysPerSpec.slice(0, 4);

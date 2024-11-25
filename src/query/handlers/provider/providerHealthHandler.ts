@@ -167,7 +167,7 @@ class ProviderHealthData extends RequestHandlerBase<HealthReportEntry> {
             .orderBy(orderFunction(sortColumn))
             .offset(offset)
             .limit(finalPagination.count),
-            'ProviderHealthData::fetchPaginatedRecords'
+            `ProviderHealthData::fetchPaginatedRecords_${finalPagination.sortKey}_${finalPagination.direction}_${finalPagination.page}_${finalPagination.count}`
         );
 
         const healthReportEntries: HealthReportEntry[] = additionalData.map(item => ({

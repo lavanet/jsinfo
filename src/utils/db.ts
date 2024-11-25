@@ -254,7 +254,8 @@ class DbConnectionPoolClass {
 
     async executeQuery<T extends Record<string, any>>(
         queryFn: (db: PostgresJsDatabase) => Promise<T>,
-        queryKey: string
+        queryKey: string,
+        priority: "low" | "normal" | "high" = "normal"
     ): Promise<T> {
         await this.migrateDb();
 
@@ -270,7 +271,14 @@ class DbConnectionPoolClass {
             return existingQuery as Promise<T>;
         }
 
-        // Wait if we've hit the connection limit
+        // If priority is high, skip connection limit checks
+        if (priority === "high") {
+            logger.info(`Executing high priority query immediately: ${queryKey}`);
+            const conn = await this.getConnection(queryKey);
+            return await queryFn(conn.db);
+        }
+
+        // Wait if we've hit the connection limit for normal/low priority
         while (this.connections.length >= this.MAX_CONNECTIONS) {
             const now = Date.now();
             if (now - this.lastConnectionWarning > this.WARNING_INTERVAL) {
@@ -432,16 +440,18 @@ const DbConnectionPoolRelays = new DbConnectionPoolClass("relays");
 
 export async function queryJsinfo<T extends Record<string, any>>(
     queryFn: (db: PostgresJsDatabase) => Promise<T>,
-    queryKey: string
+    queryKey: string,
+    priority: "low" | "normal" | "high" = "normal"
 ): Promise<T> {
-    return DbConnectionPoolJsinfo.executeQuery<T>(queryFn, queryKey);
+    return DbConnectionPoolJsinfo.executeQuery<T>(queryFn, queryKey, priority);
 }
 
 export async function queryRelays<T extends Record<string, any>>(
     queryFn: (db: PostgresJsDatabase) => Promise<T>,
-    queryKey: string
+    queryKey: string,
+    priority: "low" | "normal" | "high" = "normal"
 ): Promise<T> {
-    return DbConnectionPoolRelays.executeQuery<T>(queryFn, queryKey);
+    return DbConnectionPoolRelays.executeQuery<T>(queryFn, queryKey, priority);
 }
 
 export async function CheckDatabaseStatus(): Promise<{ ok: boolean; details: string }> {

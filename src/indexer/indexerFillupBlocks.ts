@@ -125,7 +125,8 @@ async function InsertBlock(block: LavaBlock) {
             });
             return { success: true };
         },
-        `insertBlock_${block.height}`
+        `insertBlock_${block.height}`,
+        "high"
     );
 }
 
@@ -141,7 +142,7 @@ const doBatch = async (
     globakWorkList.length = 0;
 
     for (let i = dbHeight + 1; i <= latestHeight; i++) {
-        if (blockList.length >= 100) {
+        if (blockList.length >= 1000) {
             break;
         }
         blockList.push(i);

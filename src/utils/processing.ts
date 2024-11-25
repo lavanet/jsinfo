@@ -1,7 +1,7 @@
 import { JSONStringify } from "./fmt";
 import { logger } from "./logger";
 
-export async function DoInChunks(size: number, arr: any[], callback: (arr: any[]) => Promise<any>) {
+export async function DoInChunks<T>(size: number, arr: T[], callback: (arr: T[]) => Promise<any>) {
     while (arr.length != 0) {
         const tmpArr = arr.splice(0, size);
         try {

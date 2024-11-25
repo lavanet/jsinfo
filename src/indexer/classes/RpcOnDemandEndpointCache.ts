@@ -198,7 +198,7 @@ class RpcOnDemandEndpointCacheClass {
 
     public async GetSpecTrackedInfo(chainId: string): Promise<SpecTrackedInfoResponse> {
         const cacheKey = CACHE_KEYS.SPEC_TRACKED_INFO(chainId);
-        let specTrackedInfo = await MemoryCache.get<SpecTrackedInfoResponse>(cacheKey);
+        let specTrackedInfo = await RedisCache.getDict(cacheKey) as SpecTrackedInfoResponse;
 
         if (!specTrackedInfo) {
             specTrackedInfo = await this.fetchAndCacheSpecTrackedInfo(chainId);
@@ -214,7 +214,7 @@ class RpcOnDemandEndpointCacheClass {
     private async fetchAndCacheSpecTrackedInfo(chainId: string): Promise<SpecTrackedInfoResponse> {
         try {
             const response = await QueryLavaRPC<SpecTrackedInfoResponse>(`/lavanet/lava/rewards/SpecTrackedInfo/${chainId}/`);
-            await MemoryCache.set(CACHE_KEYS.SPEC_TRACKED_INFO(chainId), response, this.cacheRefreshInterval);
+            await RedisCache.setDict(CACHE_KEYS.SPEC_TRACKED_INFO(chainId), response, this.cacheRefreshInterval);
             return response;
         } catch (error) {
             logger.error(`Error fetching SpecTrackedInfo for ${chainId}`, { error: TruncateError(error) });

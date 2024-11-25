@@ -134,10 +134,13 @@ function processStakeEntry(
     providerStake: StakeEntry,
     isUnstaking: boolean,
 ) {
+    // Log the start of processing for the provider stake
+    // logger.info(`processStakeEntry:: Processing stake entry for provider: ${providerStake.address}, height: ${height}, isUnstaking: ${isUnstaking}`);
 
     // init if needed
     if (dbStakes.get(providerStake.address) == undefined) {
-        dbStakes.set(providerStake.address, [])
+        dbStakes.set(providerStake.address, []);
+        // logger.info(`processStakeEntry::Initialized new stake entry for provider: ${providerStake.address}`);
     }
 
     // addons
@@ -147,6 +150,9 @@ function processStakeEntry(
         addons = AppendUniqueItems(addons, endPoint.addons);
         extensions = AppendUniqueItems(extensions, endPoint.extensions);
     });
+
+    // Log the collected addons and extensions
+    logger.info(`Collected addons: ${addons.join(', ')}, extensions: ${extensions.join(', ')} for provider: ${providerStake.address}`);
 
     let addonsStr = addons.join(',');
     let extensionsStr = extensions.join(',');
@@ -232,27 +238,16 @@ async function processUnstakingStakes(
     try {
         unstaking = await queryRpc(
             async (client, clientTm, lavaClient: LavaClient) => {
-                await lavaClient;
-                const index = 'Unstake';
-                console.log(`Requesting stake storage with index: ${index}`);
-                try {
-                    const response = await lavaClient.lavanet.lava.epochstorage.stakeStorage({ index: 'Unstake' });
-                    return response;
-                } catch (error) {
-                    const lavaRpc = GetEnvVar('JSINFO_INDEXER_LAVA_RPC');
-                    const lavaRpcConnection = await ConnectToRpc(lavaRpc);
-                    const response = await lavaRpcConnection.lavaClient.lavanet.lava.epochstorage.stakeStorage({ index: 'Unstake' });
-                    return response;
-                }
+                return await lavaClient.lavanet.lava.epochstorage.stakeStorage({ index: 'Unstake' });
             },
             'getUnstaking'
         );
     } catch (error) {
-        console.error(`Error fetching unstaking data with index 'Unstake': ${error}`);
         if ((error + "").includes('rpc error: code = InvalidArgument desc = not found: invalid request')) {
             logger.info('The unstake list is empty or the index is invalid.');
             return;
         } else {
+            console.error(`Error fetching unstaking data with index 'Unstake': ${error}`);
             throw error;
         }
     }

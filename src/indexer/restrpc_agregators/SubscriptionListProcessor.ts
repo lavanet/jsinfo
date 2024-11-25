@@ -5,7 +5,7 @@ import { QueryLavaRPC } from "@jsinfo/indexer/utils/restRpc";
 import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { eq, desc } from "drizzle-orm";
 import { queryJsinfo } from '@jsinfo/utils/db';
-import { MemoryCache } from "@jsinfo/indexer/classes/MemoryCache";
+import { RedisCache } from '@jsinfo/redis/classes/RedisCache';
 
 interface Credit {
     denom: string;
@@ -56,7 +56,7 @@ async function ProcessSubscription(sub: SubInfo): Promise<void> {
     }
 
     const cacheKey = `subscription-${consumer}-${plan}`;
-    const cachedValue = await MemoryCache.getDict(cacheKey);
+    const cachedValue = await RedisCache.getDict(cacheKey);
     if (cachedValue && cachedValue.processed) {
         return;
     }
@@ -88,7 +88,7 @@ async function ProcessSubscription(sub: SubInfo): Promise<void> {
         logger.info('New subscription record inserted');
     }
 
-    await MemoryCache.setDict(cacheKey, { processed: true }, 3600);
+    await RedisCache.setDict(cacheKey, { processed: true }, 3600);
 }
 
 

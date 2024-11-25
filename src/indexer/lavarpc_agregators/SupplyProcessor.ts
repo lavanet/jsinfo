@@ -3,7 +3,6 @@
 import { LavaClient } from "../lavaTypes";
 import { ContinuousVestingAccount, PeriodicVestingAccount } from "cosmjs-types/cosmos/vesting/v1beta1/vesting";
 import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
-import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { logger } from '@jsinfo/utils/logger';
 import { queryJsinfo } from "@jsinfo/utils/db";
 import { queryRpc } from "../utils/lavajsRpc";
@@ -100,13 +99,13 @@ export async function SaveTokenSupplyToDB() {
     logger.debug(`SaveTokenSupplyToDB: Current timestamp: ${now}`);
 
     const totalSupply = await queryRpc(
-        async (_, __, lavajsClient) => getTotalTokenSupply(lavajsClient),
+        async (_, __, lavaClient) => getTotalTokenSupply(lavaClient),
         'getTotalTokenSupply'
     );
     logger.debug(`SaveTokenSupplyToDB: Total token supply: ${totalSupply}`);
 
     const circulatingSupply = await queryRpc(
-        async (_, __, lavajsClient) => getCirculatingTokenSupply(now.getTime(), lavajsClient, totalSupply),
+        async (_, __, lavaClient) => getCirculatingTokenSupply(now.getTime(), lavaClient, totalSupply),
         'getCirculatingTokenSupply'
     );
     logger.debug(`SaveTokenSupplyToDB: Circulating supply: ${circulatingSupply}`);

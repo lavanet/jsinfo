@@ -86,7 +86,7 @@ export class RpcManager {
     }
 
     public async queryRpc<T>(
-        fn: (client: StargateClient, clientTm: Tendermint37Client, lavajsClient: LavaClient) => Promise<T>,
+        fn: (client: StargateClient, clientTm: Tendermint37Client, lavaClient: LavaClient) => Promise<T>,
         operationName: string,
         maxRetries: number = 3, // Maximum number of retries
         retryDelay: number = 1000 // Delay between retries in milliseconds
@@ -119,7 +119,7 @@ export class RpcManager {
 // Usage example:
 export const rpcManager = RpcManager.getInstance();
 export const queryRpc = async <T>(
-    fn: (client: StargateClient, clientTm: Tendermint37Client, lavajsClient: any) => Promise<T>,
+    fn: (client: StargateClient, clientTm: Tendermint37Client, lavaClient: any) => Promise<T>,
     operationName: string
 ): Promise<T> => {
     return await rpcManager.queryRpc(fn, operationName);

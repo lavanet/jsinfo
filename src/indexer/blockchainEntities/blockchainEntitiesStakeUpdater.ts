@@ -4,9 +4,10 @@ import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { StakeEntry } from '@lavanet/lavajs/dist/codegen/lavanet/lava/epochstorage/stake_entry';
 import { AppendUniqueItems, ToSignedBigIntOrMinusOne, ToSignedIntOrMinusOne } from '../utils/indexerUtils';
 import { logger } from '@jsinfo/utils/logger';
-import { queryRpc } from '../utils/lavajsRpc';
+import { ConnectToRpc, queryRpc } from '../utils/lavajsRpc';
 import { SpecAndConsumerService } from '@jsinfo/redis/resources/global/SpecAndConsumerResource';
 import { LavaClient } from '../lavaTypes';
+import { GetEnvVar } from '@jsinfo/utils/env';
 
 /*
 providers with stake {
@@ -234,8 +235,15 @@ async function processUnstakingStakes(
                 await lavaClient;
                 const index = 'Unstake';
                 console.log(`Requesting stake storage with index: ${index}`);
-                const response = await lavaClient.lavanet.lava.epochstorage.stakeStorage({ index });
-                return response;
+                try {
+                    const response = await lavaClient.lavanet.lava.epochstorage.stakeStorage({ index: 'Unstake' });
+                    return response;
+                } catch (error) {
+                    const lavaRpc = GetEnvVar('JSINFO_INDEXER_LAVA_RPC');
+                    const lavaRpcConnection = await ConnectToRpc(lavaRpc);
+                    const response = await lavaRpcConnection.lavaClient.lavanet.lava.epochstorage.stakeStorage({ index: 'Unstake' });
+                    return response;
+                }
             },
             'getUnstaking'
         );

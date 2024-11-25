@@ -2,7 +2,7 @@
 
 import { logger } from '@jsinfo/utils/logger';
 import { QueryLavaRPC } from '@jsinfo/indexer/utils/restRpc';
-import { MemoryCache } from '@jsinfo/indexer/classes/MemoryCache';
+import { RedisCache } from '@jsinfo/redis/classes/RedisCache';
 import { TruncateError } from '@jsinfo/utils/fmt';
 
 export interface DenomTraceResponse {
@@ -65,7 +65,7 @@ class RpcOnDemandEndpointCacheClass {
 
     public async GetDenomTrace(denom: string): Promise<DenomTraceResponse> {
         const cacheKey = CACHE_KEYS.DENOM_TRACE(denom);
-        let denomTrace = await MemoryCache.get<DenomTraceResponse>(cacheKey);
+        let denomTrace = await RedisCache.getDict(cacheKey) as DenomTraceResponse;
 
         if (!denomTrace) {
             denomTrace = await this.fetchAndCacheDenomTrace(denom);
@@ -81,7 +81,7 @@ class RpcOnDemandEndpointCacheClass {
     private async fetchAndCacheDenomTrace(denom: string): Promise<DenomTraceResponse> {
         try {
             const response = await QueryLavaRPC<DenomTraceResponse>(`/ibc/apps/transfer/v1/denom_traces/${denom}`);
-            await MemoryCache.set(`denom_trace_${denom}`, response, this.cacheRefreshInterval);
+            await RedisCache.setDict(CACHE_KEYS.DENOM_TRACE(denom), response, this.cacheRefreshInterval);
             logger.info(`Fetched and cached denom trace for ${denom} successfully.`);
             return response;
         } catch (error) {
@@ -92,11 +92,11 @@ class RpcOnDemandEndpointCacheClass {
 
     public async GetEstimatedValidatorRewards(validator: string, amount: number, denom: string): Promise<EstimatedRewardsResponse> {
         const cacheKey = CACHE_KEYS.VALIDATOR_REWARDS(validator, amount, denom);
-        let rewards = await MemoryCache.get<EstimatedRewardsResponse>(cacheKey);
+        let rewards = await RedisCache.getDict(cacheKey) as EstimatedRewardsResponse;
 
         if (!rewards) {
             await this.fetchAndCacheEstimatedValidatorRewards(validator, amount, denom);
-            rewards = await MemoryCache.get<EstimatedRewardsResponse>(cacheKey);
+            rewards = await RedisCache.getDict(cacheKey) as EstimatedRewardsResponse;
             if (!rewards) {
                 logger.warn(`No estimated validator rewards found in cache for ${validator}`);
                 return { info: [], total: [] };
@@ -109,7 +109,7 @@ class RpcOnDemandEndpointCacheClass {
     private async fetchAndCacheEstimatedValidatorRewards(validator: string, amount: number, denom: string): Promise<void> {
         try {
             const response = await QueryLavaRPC<EstimatedRewardsResponse>(`/lavanet/lava/subscription/estimated_validator_rewards/${validator}/${amount}${denom}`);
-            await MemoryCache.set(
+            await RedisCache.setDict(
                 CACHE_KEYS.VALIDATOR_REWARDS(validator, amount, denom),
                 response,
                 this.cacheRefreshInterval
@@ -121,11 +121,11 @@ class RpcOnDemandEndpointCacheClass {
 
     public async GetEstimatedProviderRewards(provider: string, amount: number, denom: string): Promise<EstimatedRewardsResponse> {
         const cacheKey = CACHE_KEYS.PROVIDER_REWARDS(provider, amount, denom);
-        let rewards = await MemoryCache.get<EstimatedRewardsResponse>(cacheKey);
+        let rewards = await RedisCache.getDict(cacheKey) as EstimatedRewardsResponse;
 
         if (!rewards) {
             await this.fetchEstimatedProviderRewards(provider, amount, denom);
-            rewards = await MemoryCache.get<EstimatedRewardsResponse>(cacheKey);
+            rewards = await RedisCache.getDict(cacheKey) as EstimatedRewardsResponse;
             if (!rewards) {
                 logger.warn(`No estimated provider rewards found in cache for ${provider}`);
                 return { info: [], total: [] };
@@ -138,7 +138,7 @@ class RpcOnDemandEndpointCacheClass {
     private async fetchEstimatedProviderRewards(provider: string, amount: number, denom: string): Promise<void> {
         try {
             const response = await QueryLavaRPC<EstimatedRewardsResponse>(`/lavanet/lava/subscription/estimated_provider_rewards/${provider}/${amount}${denom}`);
-            await MemoryCache.set(
+            await RedisCache.setDict(
                 CACHE_KEYS.PROVIDER_REWARDS(provider, amount, denom),
                 response,
                 this.cacheRefreshInterval
@@ -151,7 +151,7 @@ class RpcOnDemandEndpointCacheClass {
 
     public async GetDelegatorRewards(delegator: string): Promise<DelegatorRewardsResponse> {
         const cacheKey = CACHE_KEYS.DELEGATOR_REWARDS(delegator);
-        let rewards = await MemoryCache.get<DelegatorRewardsResponse>(cacheKey);
+        let rewards = await RedisCache.getDict(cacheKey) as DelegatorRewardsResponse;
 
         if (!rewards) {
             rewards = await this.fetchAndCacheDelegatorRewards(delegator);

@@ -40,30 +40,37 @@ async function InsertBlock(block: LavaBlock) {
                 await tx.insert(JsinfoSchema.blocks).values({ height: block.height, datetime: new Date(block.datetime) })
                 logger.debug(`Inserted block height: ${block.height} into blocks`);
 
+                logger.debug(`Inserting events for block height: ${block.height}`);
                 await DoInChunks(consts.JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, block.dbEvents, async (arr: any) => {
                     await tx.insert(JsinfoSchema.events).values(arr)
                 })
 
+                logger.debug(`Inserting payments for block height: ${block.height}, ${block.dbPayments.length} items`);
                 await DoInChunks(consts.JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, block.dbPayments, async (arr: any) => {
                     await tx.insert(JsinfoSchema.relayPayments).values(arr)
                 })
 
+                logger.debug(`Inserting conflict responses for block height: ${block.height}, ${block.dbConflictResponses.length} items`);
                 await DoInChunks(consts.JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, block.dbConflictResponses, async (arr: any) => {
                     await tx.insert(JsinfoSchema.conflictResponses).values(arr)
                 })
 
+                logger.debug(`Inserting subscription buys for block height: ${block.height}, ${block.dbSubscriptionBuys.length} items`);
                 await DoInChunks(consts.JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, block.dbSubscriptionBuys, async (arr: any) => {
                     await tx.insert(JsinfoSchema.subscriptionBuys).values(arr)
                 })
 
+                logger.debug(`Inserting conflict votes for block height: ${block.height}, ${block.dbConflictVote.length} items`);
                 await DoInChunks(consts.JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, block.dbConflictVote, async (arr: any) => {
                     await tx.insert(JsinfoSchema.conflictVotes).values(arr)
                 })
 
+                logger.debug(`Inserting provider reports for block height: ${block.height}, ${block.dbProviderReports.length} items`);
                 await DoInChunks(consts.JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, block.dbProviderReports, async (arr: any) => {
                     await tx.insert(JsinfoSchema.providerReported).values(arr)
                 })
 
+                logger.debug(`Inserting provider latest block reports for block height: ${block.height}, ${block.dbProviderLatestBlockReports.length} items`);
                 await DoInChunks(consts.JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, block.dbProviderLatestBlockReports, async (arr: any) => {
                     await tx.insert(JsinfoSchema.providerLatestBlockReports).values(arr)
                 })

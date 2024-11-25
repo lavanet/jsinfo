@@ -12,7 +12,6 @@ class RedisCacheClass {
     private redisUrls: string[] = [];
     private static activeGets = new Map<string, Promise<string | null>>();
     private static activeSets = new Map<string, Promise<void>>();
-    private lastGetCalls = new Map<string, number>();
 
     constructor(keyPrefix: string) {
         this.keyPrefix = keyPrefix;

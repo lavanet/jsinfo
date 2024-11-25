@@ -19,8 +19,25 @@ import { LavaBlock } from './lavaTypes'
 import { queryRpc } from "./utils/lavajsRpc";
 import { queryJsinfo } from '../utils/db';
 
-const globakWorkList: number[] = []
+const globakWorkList: number[] = [];
 
+let activityTimeout: any | null = null;
+
+const resetActivityTimeout = () => {
+    if (activityTimeout) {
+        clearTimeout(activityTimeout);
+    }
+    activityTimeout = setTimeout(() => {
+        console.log('No activity for 2 minutes, running a new filler blocks process...');
+        FillUpBlocks(); // Call the function to run the filler blocks logic
+    }, 2 * 60 * 1000); // 2 minutes in milliseconds
+};
+
+// Call this function whenever there is activity in the thread
+const onActivity = () => {
+    // console.log('Activity detected, resetting timeout.');
+    resetActivityTimeout();
+};
 
 async function isBlockInDb(height: number): Promise<boolean> {
     const dbBlock = await queryJsinfo(
@@ -32,62 +49,79 @@ async function isBlockInDb(height: number): Promise<boolean> {
 
 async function InsertBlock(block: LavaBlock) {
     logger.info(`Starting InsertBlock for block height: ${block.height}`);
+    onActivity(); // Reset activity timeout
 
     await queryJsinfo(
         async (db) => {
             await db.transaction(async (tx) => {
                 logger.debug(`Starting transaction for block height: ${block.height}`);
-                await tx.insert(JsinfoSchema.blocks).values({ height: block.height, datetime: new Date(block.datetime) })
+                await tx.insert(JsinfoSchema.blocks).values({ height: block.height, datetime: new Date(block.datetime) });
                 logger.debug(`Inserted block height: ${block.height} into blocks`);
+
+                onActivity();
 
                 if (block.dbEvents.length > 0) {
                     logger.debug(`Inserting events for block height: ${block.height}`);
                     await DoInChunks(consts.JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, block.dbEvents, async (arr: any) => {
-                        await tx.insert(JsinfoSchema.events).values(arr)
-                    })
+                        await tx.insert(JsinfoSchema.events).values(arr);
+                    });
                 }
+
+                onActivity();
 
                 if (block.dbPayments.length > 0) {
                     logger.debug(`Inserting payments for block height: ${block.height}, ${block.dbPayments.length} items`);
                     await DoInChunks(consts.JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, block.dbPayments, async (arr: any) => {
-                        await tx.insert(JsinfoSchema.relayPayments).values(arr)
-                    })
+                        await tx.insert(JsinfoSchema.relayPayments).values(arr);
+                    });
                 }
+
+                onActivity();
 
                 if (block.dbConflictResponses.length > 0) {
                     logger.debug(`Inserting conflict responses for block height: ${block.height}, ${block.dbConflictResponses.length} items`);
                     await DoInChunks(consts.JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, block.dbConflictResponses, async (arr: any) => {
-                        await tx.insert(JsinfoSchema.conflictResponses).values(arr)
-                    })
+                        await tx.insert(JsinfoSchema.conflictResponses).values(arr);
+                    });
                 }
+
+                onActivity();
 
                 if (block.dbSubscriptionBuys.length > 0) {
                     logger.debug(`Inserting subscription buys for block height: ${block.height}, ${block.dbSubscriptionBuys.length} items`);
                     await DoInChunks(consts.JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, block.dbSubscriptionBuys, async (arr: any) => {
-                        await tx.insert(JsinfoSchema.subscriptionBuys).values(arr)
-                    })
+                        await tx.insert(JsinfoSchema.subscriptionBuys).values(arr);
+                    });
                 }
+
+                onActivity();
 
                 if (block.dbConflictVote.length > 0) {
                     logger.debug(`Inserting conflict votes for block height: ${block.height}, ${block.dbConflictVote.length} items`);
                     await DoInChunks(consts.JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, block.dbConflictVote, async (arr: any) => {
-                        await tx.insert(JsinfoSchema.conflictVotes).values(arr)
-                    })
+                        await tx.insert(JsinfoSchema.conflictVotes).values(arr);
+                    });
                 }
+
+                onActivity();
 
                 if (block.dbProviderReports.length > 0) {
                     logger.debug(`Inserting provider reports for block height: ${block.height}, ${block.dbProviderReports.length} items`);
                     await DoInChunks(consts.JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, block.dbProviderReports, async (arr: any) => {
-                        await tx.insert(JsinfoSchema.providerReported).values(arr)
-                    })
+                        await tx.insert(JsinfoSchema.providerReported).values(arr);
+                    });
                 }
+
+                onActivity();
 
                 if (block.dbProviderLatestBlockReports.length > 0) {
                     logger.debug(`Inserting provider latest block reports for block height: ${block.height}, ${block.dbProviderLatestBlockReports.length} items`);
                     await DoInChunks(consts.JSINFO_INDEXER_DO_IN_CHUNKS_CHUNK_SIZE, block.dbProviderLatestBlockReports, async (arr: any) => {
-                        await tx.insert(JsinfoSchema.providerLatestBlockReports).values(arr)
-                    })
+                        await tx.insert(JsinfoSchema.providerLatestBlockReports).values(arr);
+                    });
                 }
+
+                onActivity();
             });
             return { success: true };
         },
@@ -100,10 +134,11 @@ const doBatch = async (
     latestHeight: number,
 ) => {
     logger.info(`doBatch: Starting doBatch with dbHeight: ${dbHeight}, latestHeight: ${latestHeight}`);
+    onActivity(); // Reset activity timeout
 
-    const blockList = [...globakWorkList]
+    const blockList = [...globakWorkList];
     logger.info(`doBatch: Initial blockList length: ${blockList.length}`);
-    globakWorkList.length = 0
+    globakWorkList.length = 0;
 
     for (let i = dbHeight + 1; i <= latestHeight; i++) {
         if (blockList.length >= 1000) {
@@ -112,7 +147,7 @@ const doBatch = async (
         blockList.push(i);
     }
 
-    const org_len = blockList.length
+    const org_len = blockList.length;
     logger.info(`doBatch: Updated blockList length: ${org_len}`);
     while (blockList.length > 0) {
         let start = performance.now();
@@ -125,13 +160,13 @@ const doBatch = async (
             .process(async (height) => {
                 if (await isBlockInDb(height)) {
                     logger.info(`doBatch: Block ${height} already in DB, skipping`);
-                    return
+                    return;
                 }
 
                 let block: null | LavaBlock = null;
-                block = await GetOneLavaBlock(height)
+                block = await GetOneLavaBlock(height);
                 if (block != null) {
-                    await InsertBlock(block)
+                    await InsertBlock(block);
                     logger.info(`doBatch: Inserted block ${height} into DB`);
                 } else {
                     logger.info(`doBatch: Failed getting block ${height}`);
@@ -141,7 +176,7 @@ const doBatch = async (
                 if (index > -1) {
                     globakWorkList.splice(index, 1);
                 }
-            })
+            });
 
         let timeTaken = performance.now() - start;
         logger.info(`
@@ -159,7 +194,6 @@ const doBatch = async (
 
             // Wait until globakWorkList has fewer than 100 items
             while (globakWorkList.length >= 1000) {
-                // logger.info(`doBatch: Waiting for globakWorkList to reduce below 100 items...`);
                 await new Promise(resolve => setTimeout(resolve, 1000)); // Wait for 100ms
             }
         }
@@ -191,6 +225,7 @@ export const FillUpBlocks = async () => {
             "getHeight"
         );
         logger.info(`fillUp: Successfully retrieved latest blockchain height: ${latestHeight}`);
+        onActivity(); // Reset activity timeout
 
         let latestDbBlockRes;
         try {
@@ -225,7 +260,9 @@ export const FillUpBlocks = async () => {
         logger.error('fillUp error:', error);
         throw error; // Let the BackoffRetry handle the retry
     }
-
 };
+
+// Initial call to set the timeout
+resetActivityTimeout();
 
 

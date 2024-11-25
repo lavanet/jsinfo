@@ -22,12 +22,14 @@ export function GetRedisUrls(): { read: string[]; write: string[] } {
 
     const redisUrls = GetEnvVar(envKey);
     const readUrls = GetEnvVar(envKey + '_READ');
+    const redisUrls1 = GetEnvVar(envKey + '_1');
+    const readUrls1 = GetEnvVar(envKey + '_READ_1');
 
-    const writeUrls = redisUrls.split(',')
+    const writeUrls = [...redisUrls.split(','), ...redisUrls1.split(',')]
         .map(url => url.trim())
         .filter(url => IsMeaningfulText(url));
 
-    const readUrlsArray = readUrls.split(',')
+    const readUrlsArray = [...readUrls.split(','), ...readUrls1.split(',')]
         .map(url => url.trim())
         .filter(url => IsMeaningfulText(url));
 

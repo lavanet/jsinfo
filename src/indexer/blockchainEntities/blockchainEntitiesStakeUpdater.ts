@@ -201,9 +201,9 @@ export async function UpdateStakeInformation(
         const processRegularTime = Date.now();
         logger.info(`UpdateStakeInformation: processRegularStakes completed, elapsed time: ${processRegularTime - startTime}ms`);
 
-        await processUnstakingStakes(height, dbStakes);
-        const processUnstakingTime = Date.now();
-        logger.info(`UpdateStakeInformation: processUnstakingStakes completed, elapsed time: ${processUnstakingTime - processRegularTime}ms`);
+        // await processUnstakingStakes(height, dbStakes);
+        // const processUnstakingTime = Date.now();
+        // logger.info(`UpdateStakeInformation: processUnstakingStakes completed, elapsed time: ${processUnstakingTime - processRegularTime}ms`);
     } catch (error) {
         const errorTime = Date.now();
         logger.error(`UpdateStakeInformation: An error occurred, elapsed time: ${errorTime - startTime}ms, error: ${error}`);
@@ -234,32 +234,32 @@ async function processUnstakingStakes(
     height: number,
     dbStakes: Map<string, JsinfoSchema.InsertProviderStake[]>,
 ) {
-    let unstaking;
-    try {
-        unstaking = await queryRpc(
-            async (client, clientTm, lavaClient: LavaClient) => {
-                return await lavaClient.lavanet.lava.epochstorage.stakeStorage({ index: 'Unstake' });
-            },
-            'getUnstaking'
-        );
-    } catch (error) {
-        if ((error + "").includes('rpc error: code = InvalidArgument desc = not found: invalid request')) {
-            logger.info('The unstake list is empty or the index is invalid.');
-            return;
-        } else {
-            console.error(`Error fetching unstaking data with index 'Unstake': ${error}`);
-            throw error;
-        }
-    }
+    // let unstaking;
+    // try {
+    //     unstaking = await queryRpc(
+    //         async (client, clientTm, lavaClient: LavaClient) => {
+    //             return await lavaClient.lavanet.lava.epochstorage.stakeStorage({ index: 'Unstake' });
+    //         },
+    //         'getUnstaking'
+    //     );
+    // } catch (error) {
+    //     if ((error + "").includes('rpc error: code = InvalidArgument desc = not found: invalid request')) {
+    //         logger.info('The unstake list is empty or the index is invalid.');
+    //         return;
+    //     } else {
+    //         console.error(`Error fetching unstaking data with index 'Unstake': ${error}`);
+    //         throw error;
+    //     }
+    // }
 
-    unstaking.stakeStorage.stakeEntries.forEach((stake) => {
-        if (dbStakes.get(stake.address) != undefined) {
-            dbStakes.get(stake.address)!.forEach((dbStake) => {
-                if (dbStake.specId == stake.chain) {
-                    return;
-                }
-            });
-        }
-        processStakeEntry(height, dbStakes, stake, true);
-    });
+    // unstaking.stakeStorage.stakeEntries.forEach((stake) => {
+    //     if (dbStakes.get(stake.address) != undefined) {
+    //         dbStakes.get(stake.address)!.forEach((dbStake) => {
+    //             if (dbStake.specId == stake.chain) {
+    //                 return;
+    //             }
+    //         });
+    //     }
+    //     processStakeEntry(height, dbStakes, stake, true);
+    // });
 }

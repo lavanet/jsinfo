@@ -28,9 +28,9 @@ const resetActivityTimeout = () => {
         clearTimeout(activityTimeout);
     }
     activityTimeout = setTimeout(() => {
-        console.log('No activity for 2 minutes, running a new filler blocks process...');
+        console.log('No activity for 1 minutes, running a new filler blocks process...');
         FillUpBlocks(); // Call the function to run the filler blocks logic
-    }, 2 * 60 * 1000); // 2 minutes in milliseconds
+    }, 1 * 60 * 1000); // 2 minutes in milliseconds
 };
 
 // Call this function whenever there is activity in the thread

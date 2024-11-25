@@ -68,7 +68,7 @@ export async function ListProvidersRawHandler(
     reply: FastifyReply
 ): Promise<{ data: ProvidersData }> {
     const resource = new ListProvidersResource();
-    const data = await resource.fetchAndPickDb();
+    const data = await resource.fetch();
     if (!data) {
         reply.status(400);
         reply.send({ error: 'Failed to fetch providers data' });

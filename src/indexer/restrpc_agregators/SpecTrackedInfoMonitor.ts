@@ -1,9 +1,10 @@
-import { GetJsinfoDbForIndexer } from '@jsinfo/utils/db';
 import { logger } from '@jsinfo/utils/logger';
 import { RpcOnDemandEndpointCache } from '@jsinfo/indexer/classes/RpcOnDemandEndpointCache';
 import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { SpecAndConsumerService } from "@jsinfo/redis/resources/global/SpecAndConsumerResource";
 import { sql } from 'drizzle-orm';
+import { queryJsinfo } from '@jsinfo/utils/db';
+import { HashJson } from '@jsinfo/utils/fmt';
 
 export interface ProcessedSpecInfo {
     provider: string;
@@ -50,23 +51,26 @@ class SpecTrackedInfoMonitorClass {
                 }), {})
             );
 
-            const db = await GetJsinfoDbForIndexer();
+
             const now = new Date();
 
-            await db.insert(JsinfoSchema.specTrackedInfo)
-                .values(deduplicatedInfo.map(info => ({
-                    provider: info.provider,
-                    chain_id: info.chain_id,
-                    iprpc_cu: info.iprpc_cu,
-                    timestamp: now
-                })))
-                .onConflictDoUpdate({
-                    target: [JsinfoSchema.specTrackedInfo.provider, JsinfoSchema.specTrackedInfo.chain_id],
-                    set: {
-                        iprpc_cu: sql`EXCLUDED.iprpc_cu`,
-                        timestamp: sql`EXCLUDED.timestamp`
-                    }
-                });
+            await queryJsinfo(
+                async (db) => db.insert(JsinfoSchema.specTrackedInfo)
+                    .values(deduplicatedInfo.map(info => ({
+                        provider: info.provider,
+                        chain_id: info.chain_id,
+                        iprpc_cu: info.iprpc_cu,
+                        timestamp: now
+                    })))
+                    .onConflictDoUpdate({
+                        target: [JsinfoSchema.specTrackedInfo.provider, JsinfoSchema.specTrackedInfo.chain_id],
+                        set: {
+                            iprpc_cu: sql`EXCLUDED.iprpc_cu`,
+                            timestamp: sql`EXCLUDED.timestamp`
+                        }
+                    }),
+                `specTrackedInfo:${HashJson(deduplicatedInfo)}`
+            );
 
         } catch (error) {
             logger.error(`SpecTrackedInfoMonitor::DB Update - Failed to update spec info`, { error });
@@ -78,7 +82,7 @@ class SpecTrackedInfoMonitorClass {
         const startTime = Date.now();
 
         try {
-            const db = await GetJsinfoDbForIndexer();
+
             const specs = await SpecAndConsumerService.GetAllSpecs();
             logger.info(`SpecTrackedInfoMonitor - Processing specs`, { specCount: specs.length });
 
@@ -86,10 +90,6 @@ class SpecTrackedInfoMonitorClass {
 
             for (const spec of specs) {
                 const specTrackedInfo = await RpcOnDemandEndpointCache.GetSpecTrackedInfo(spec);
-                // logger.info(`SpecTrackedInfoMonitor - Got spec info`, {
-                //     spec,
-                //     infoCount: specTrackedInfo.info.length
-                // });
 
                 allProcessedInfo.push(...specTrackedInfo.info.map(info => ({
                     provider: info.provider,

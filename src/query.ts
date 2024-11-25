@@ -4,15 +4,12 @@ import * as consts from './query/queryConsts'
 import { logger } from './utils/logger'
 
 import { GetServerInstance } from './query/queryServer'
-import { QueryInitJsinfoDbInstance, QueryInitRelaysReadDbInstance, GetLatestBlock } from './query/queryDb'
+import { GetLatestBlock } from './query/utils/getLatestBlock'
 
 import './query/queryRoutes'
 
 export const queryServerMain = async (): Promise<void> => {
     logger.info('Starting query server on port ' + consts.JSINFO_QUERY_PORT + ' host ' + consts.JSINFO_QUERY_HOST)
-
-    await QueryInitJsinfoDbInstance()
-    await QueryInitRelaysReadDbInstance()
 
     try {
         try {

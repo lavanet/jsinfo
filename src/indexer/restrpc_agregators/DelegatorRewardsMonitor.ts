@@ -1,10 +1,11 @@
-import { GetJsinfoDbForQuery } from '@jsinfo/utils/db';
 import { logger } from '@jsinfo/utils/logger';
 import { RpcPeriodicEndpointCache } from '@jsinfo/indexer/classes/RpcPeriodicEndpointCache';
 import { RpcOnDemandEndpointCache } from '@jsinfo/indexer/classes/RpcOnDemandEndpointCache';
 import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { ConvertToBaseDenom, GetUSDCValue } from "./CurrencyConverstionUtils";
 import { sql } from 'drizzle-orm';
+import { queryJsinfo } from '@jsinfo/utils/db';
+import { HashJson } from '@jsinfo/utils/fmt';
 
 export interface ProcessedRewardAmount {
     amount: number;
@@ -53,8 +54,6 @@ class DelegatorRewardsMonitorClass {
 
             if (!shouldUpdate) return;
 
-            const db = await GetJsinfoDbForQuery();
-
             // Prepare batch values using individual timestamps
             const values = this.rewardsBatch.map(item => ({
                 delegator: item.delegator,
@@ -65,15 +64,18 @@ class DelegatorRewardsMonitorClass {
                 timestamp: item.timestamp
             }));
 
-            await db.insert(JsinfoSchema.delegatorRewards)
-                .values(values)
-                .onConflictDoUpdate({
-                    target: [JsinfoSchema.delegatorRewards.delegator],
-                    set: {
-                        data: sql`excluded.data`,
-                        timestamp: sql`excluded.timestamp`
-                    }
-                });
+            await queryJsinfo(
+                async (db) => db.insert(JsinfoSchema.delegatorRewards)
+                    .values(values)
+                    .onConflictDoUpdate({
+                        target: [JsinfoSchema.delegatorRewards.delegator],
+                        set: {
+                            data: sql`excluded.data`,
+                            timestamp: sql`excluded.timestamp`
+                        }
+                    }),
+                `DelegatorRewardsMonitor::batchInsert:${HashJson(values)}`
+            );
 
             logger.info(`DelegatorRewardsMonitor::DB Update - Batch updated rewards`, {
                 batchSize: this.rewardsBatch.length,

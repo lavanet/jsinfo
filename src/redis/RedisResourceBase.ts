@@ -1,10 +1,4 @@
-import { GetJsinfoDbForIndexer } from '@jsinfo/utils/db';
 import { RedisCache } from './classes/RedisCache';
-import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { IsIndexerProcess } from '@jsinfo/utils/env';
-import { QueryGetJsinfoDbForQueryInstance } from '@jsinfo/query/queryDb';
-import { QueryCheckJsinfoDbInstance } from '@jsinfo/query/queryDb';
-
 interface BaseArgs {
     [key: string]: any;
 }
@@ -42,15 +36,15 @@ export abstract class RedisResourceBase<T, A extends BaseArgs = BaseArgs> {
         return `${this.redisKey}:${argString}`;
     }
 
-    protected abstract fetchFromDb(db: PostgresJsDatabase, args?: A): Promise<T>;
+    protected abstract fetchFromDb(args?: A): Promise<T>;
 
     // Main public method
-    async fetch(db: PostgresJsDatabase, args?: A): Promise<T | null> {
+    async fetch(args?: A): Promise<T | null> {
         try {
             const cached = await this.get(args);
             if (cached) return cached;
 
-            const data = await this.fetchFromDb(db, args);
+            const data = await this.fetchFromDb(args);
             if (data) {
                 await this.set(data, args);
                 return data;
@@ -69,22 +63,9 @@ export abstract class RedisResourceBase<T, A extends BaseArgs = BaseArgs> {
         return null;
     }
 
-    async fetchAndPickDb(args?: A): Promise<T | null> {
-        const db = await (IsIndexerProcess() ? GetJsinfoDbForIndexer() : QueryGetJsinfoDbForQueryInstance());
-        const result = await this.fetch(db, args);
-
-        if (!result && !IsIndexerProcess()) {
-            await QueryCheckJsinfoDbInstance();
-            const newDb = await QueryGetJsinfoDbForQueryInstance();
-            return await this.fetch(newDb, args);
-        }
-
-        return result;
-    }
-
     // Optional utility methods
-    protected async refresh(db: PostgresJsDatabase): Promise<void> {
-        const data = await this.fetchFromDb(db);
+    protected async refresh(): Promise<void> {
+        const data = await this.fetchFromDb();
         if (data) await this.set(data);
     }
 

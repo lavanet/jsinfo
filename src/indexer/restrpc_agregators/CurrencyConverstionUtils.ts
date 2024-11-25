@@ -1,6 +1,6 @@
 // src/indexer/restrpc_agregators/CurrencyConverstionUtils.ts
 
-import { MemoryCache } from "../classes/MemoryCache";
+import { RedisCache } from '@jsinfo/redis/classes/RedisCache';
 import { CoinGekoCache } from '../classes/CoinGeko/CoinGekoCache';
 import { RpcOnDemandEndpointCache } from "../classes/RpcOnDemandEndpointCache";
 
@@ -39,7 +39,7 @@ export async function ConvertToBaseDenom(amount: string, denom: string): Promise
 
     if (baseDenom.startsWith("ibc/")) {
 
-        const cachedValue = await MemoryCache.getDict(`denom-${denom}`);
+        const cachedValue = await RedisCache.getDict(`denom-${denom}`);
         if (cachedValue) {
             baseDenom = cachedValue.baseDenom;
         }
@@ -48,7 +48,7 @@ export async function ConvertToBaseDenom(amount: string, denom: string): Promise
             const denomWithoutPrefix = denom.slice(4);
             const denomTrace = await RpcOnDemandEndpointCache.GetDenomTrace(denomWithoutPrefix);
             baseDenom = denomTrace.denom_trace.base_denom;
-            await MemoryCache.setDict(`denom-${denom}`, { baseDenom }, CACHE_DURATION.DENOM_TRACE); // cache for 1 day
+            await RedisCache.setDict(`denom-${denom}`, { baseDenom }, CACHE_DURATION.DENOM_TRACE); // cache for 1 day
         }
     }
 

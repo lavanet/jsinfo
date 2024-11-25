@@ -1,8 +1,6 @@
-import { GetJsinfoDbForIndexer } from '@jsinfo/utils/db';
 import { RedisCache } from './RedisCache';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { IsIndexerProcess } from '@jsinfo/utils/env';
-import { QueryGetJsinfoDbForQueryInstance, QueryInitJsinfoDbInstance } from '@jsinfo/query/queryDb';
 import { logger } from '@jsinfo/utils/logger';
 
 interface BaseArgs {
@@ -26,7 +24,7 @@ export abstract class RedisResourceBase<T, A extends BaseArgs = BaseArgs> {
     protected async get(args?: A): Promise<T | null> {
         const key = this.getKeyWithArgs(args);
         const cached = await RedisCache.get(key);
-        console.log(`RedisResourceBase:: [${this.redisKey}] Cache ${cached ? 'hit' : 'miss'}:`, {
+        logger.info(`RedisResourceBase:: [${this.redisKey}] Cache ${cached ? 'hit' : 'miss'}:`, {
             key,
             args: args ? JSON.stringify(args).slice(0, 100) + '...' : 'none',
             dataPreview: cached ? cached.slice(0, 100) + '...' : null,
@@ -52,54 +50,55 @@ export abstract class RedisResourceBase<T, A extends BaseArgs = BaseArgs> {
         return `${this.redisKey}:${stableJson}`;
     }
 
-    protected abstract fetchFromDb(db: PostgresJsDatabase, args?: A): Promise<T>;
+    protected abstract fetchFromDb(args?: A): Promise<T>;
 
     // Main public method
-    async fetch(db: PostgresJsDatabase, args?: A): Promise<T | null> {
+    async fetch(args?: A): Promise<T | null> {
         const key = this.getKeyWithArgs(args);
 
-        // Check for existing fetch
+
         const existingFetch = RedisResourceBase.activeFetches.get(key);
+
         if (existingFetch) {
-            return existingFetch as Promise<T | null>;
+            const result = existingFetch as Promise<T | null>;
+            return await result;
         }
 
-        const fetchPromise = this.executeFetch(db, args, key);
+        const fetchPromise = this.executeFetch(args, key);
         RedisResourceBase.activeFetches.set(key, fetchPromise);
 
-        return fetchPromise;
+        return await fetchPromise;
+
     }
 
-    private async executeFetch(db: PostgresJsDatabase, args?: A, key?: string): Promise<T | null> {
+    private async executeFetch(args?: A, key?: string): Promise<T | null> {
         try {
             const cached = await this.get(args);
+
             if (cached) {
-                this.handleCachedData(cached, db, args, key);
+                await this.handleCachedData(cached, args, key);
                 return cached;
             }
 
-            return await this.fetchAndCacheData(db, args, key);
+            return await this.fetchAndCacheData(args, key);
+
         } catch (error) {
-            this.handleFetchError(error, args, db);
+            this.handleFetchError(error, args);
             return null;
         } finally {
             RedisResourceBase.activeFetches.delete(key!);
         }
     }
 
-    private async fetchFromDbWithMutex(db: PostgresJsDatabase, args?: A, key?: string): Promise<T | null> {
+    private async fetchFromDbWithMutex(args?: A, key?: string): Promise<T | null> {
         const existingFetch = RedisResourceBase.activeDbFetches.get(key!);
         if (existingFetch) {
-            logger.info('Waiting for ongoing DB fetch', {
-                key,
-                redisKey: this.redisKey
-            });
             return existingFetch as Promise<T | null>;
         }
 
         const fetchPromise = (async () => {
             try {
-                return await this.fetchFromDb(db, args);
+                return await this.fetchFromDb(args);
             } finally {
                 RedisResourceBase.activeDbFetches.delete(key!);
             }
@@ -109,7 +108,7 @@ export abstract class RedisResourceBase<T, A extends BaseArgs = BaseArgs> {
         return fetchPromise;
     }
 
-    private async handleCachedData(cached: T, db: PostgresJsDatabase, args?: A, key?: string): Promise<void> {
+    private async handleCachedData(cached: T, args?: A, key?: string): Promise<void> {
         const ttl = await RedisCache.getTTL(key!);
         if (ttl >= 0 && ttl < 30) {
             logger.info('Cache entry near expiration, triggering refresh', {
@@ -119,9 +118,9 @@ export abstract class RedisResourceBase<T, A extends BaseArgs = BaseArgs> {
             });
 
             // Background refresh using mutex
-            this.fetchFromDbWithMutex(db, args, key).then(data => {
+            this.fetchFromDbWithMutex(args, key).then(async data => {
                 if (data) {
-                    this.set(data, args);
+                    await this.set(data, args);
                     logger.info('Background cache refresh completed', {
                         key,
                         redisKey: this.redisKey
@@ -137,8 +136,8 @@ export abstract class RedisResourceBase<T, A extends BaseArgs = BaseArgs> {
         }
     }
 
-    private async fetchAndCacheData(db: PostgresJsDatabase, args?: A, key?: string): Promise<T | null> {
-        const data = await this.fetchFromDbWithMutex(db, args, key);
+    private async fetchAndCacheData(args?: A, key?: string): Promise<T | null> {
+        const data = await this.fetchFromDbWithMutex(args, key);
         if (data) {
             await this.set(data, args);
             const now = Date.now();
@@ -160,7 +159,6 @@ export abstract class RedisResourceBase<T, A extends BaseArgs = BaseArgs> {
             key,
             args,
             ttl: this.ttlSeconds,
-            dbConnectionExists: !!db,
             isIndexerProcess: IsIndexerProcess()
         });
         return null;
@@ -178,156 +176,7 @@ export abstract class RedisResourceBase<T, A extends BaseArgs = BaseArgs> {
         });
     }
 
-    protected async handleIndexerDb(args?: A): Promise<T | null> {
-        try {
-            const db = await GetJsinfoDbForIndexer();
-            return await this.fetch(db, args);
-        } catch (error) {
-            console.error(`RedisResourceBase:: [${this.redisKey}] Indexer DB error:`, {
-                message: (error as Error).message,
-                name: (error as Error).name,
-                stack: (error as Error).stack,
-                resourceKey: this.redisKey,
-                args,
-                timestamp: new Date().toISOString()
-            });
-            return null;
-        }
-    }
-
-    protected async handleQueryDb(args?: A): Promise<T | null> {
-        try {
-
-            let db: PostgresJsDatabase | null = null;
-            try {
-                db = await QueryGetJsinfoDbForQueryInstance();
-            } catch (dbError) {
-                await QueryInitJsinfoDbInstance();
-            }
-
-            db = await QueryGetJsinfoDbForQueryInstance();
-            return await this.fetch(db, args);
-        } catch (error) {
-            console.error(`RedisResourceBase:: [${this.redisKey}] Query DB error:`, {
-                message: (error as Error).message,
-                name: (error as Error).name,
-                stack: (error as Error).stack,
-                resourceKey: this.redisKey,
-                args,
-                timestamp: new Date().toISOString()
-            });
-            try {
-                await QueryInitJsinfoDbInstance();
-            } catch (dbError) {
-                console.error(`RedisResourceBase:: [${this.redisKey}] Failed to initialize DB instance:`, dbError);
-            }
-            return null;
-        }
-    }
-
-    async fetchAndPickDb(args?: A): Promise<T | null> {
-        try {
-            return IsIndexerProcess()
-                ? await this.handleIndexerDb(args)
-                : await this.handleQueryDb(args);
-        } catch (error) {
-            console.error(`RedisResourceBase:: [${this.redisKey}] FetchAndPickDb error:`, {
-                message: (error as Error).message,
-                name: (error as Error).name,
-                stack: (error as Error).stack,
-                resourceKey: this.redisKey,
-                args,
-                isIndexerProcess: IsIndexerProcess(),
-                timestamp: new Date().toISOString()
-            });
-            return null;
-        }
-    }
-
-    // Optional utility methods
-    protected async refresh(db: PostgresJsDatabase): Promise<void> {
-        const data = await this.fetchFromDb(db);
-        if (data) await this.set(data);
-    }
-
     protected generateKey(prefix: string, id: string | number): string {
         return `${prefix}:${id}`;
-    }
-
-    protected async withDbRetry<R>(
-        queryFn: (db: PostgresJsDatabase) => Promise<R>,
-        initialDb: PostgresJsDatabase,
-        options: {
-            checkEmpty?: boolean;
-            name?: string;
-            retryDelay?: number;
-            maxRetries?: number;
-        } = {}
-    ): Promise<R> {
-        const {
-            checkEmpty = false,
-            name = this.redisKey,
-            retryDelay = 500,
-            maxRetries = 3
-        } = options;
-
-        for (let attempt = 0; attempt < maxRetries; attempt++) {
-            try {
-                // Use initial DB on first attempt, get fresh connection on retries
-                let db = attempt === 0 ? initialDb : null;
-
-                if (!db) {
-                    if (IsIndexerProcess()) {
-                        db = await GetJsinfoDbForIndexer();
-                    } else {
-                        try {
-                            db = await QueryGetJsinfoDbForQueryInstance();
-                        } catch (dbError) {
-                            await QueryInitJsinfoDbInstance();
-                            db = await QueryGetJsinfoDbForQueryInstance();
-                        }
-                    }
-                }
-
-                const result = await queryFn(db);
-
-                if (!checkEmpty || (result && (!Array.isArray(result) || result.length > 0))) {
-                    return result;
-                }
-
-                if (attempt < maxRetries - 1) {
-                    console.warn(`[${name}] Empty result on attempt ${attempt + 1}/${maxRetries}, retrying...`);
-                    await new Promise(resolve => setTimeout(resolve, retryDelay));
-                }
-            } catch (error) {
-                const errorDetails = {
-                    message: (error as Error).message,
-                    stack: (error as Error).stack,
-                    name: (error as Error).name,
-                    attempt: `${attempt + 1}/${maxRetries}`,
-                    resourceKey: this.redisKey,
-                    timestamp: new Date().toISOString(),
-                    isIndexerProcess: IsIndexerProcess()
-                };
-
-                console.error(`[${name}] Query failed:`, errorDetails);
-
-                if (attempt < maxRetries - 1) {
-                    await new Promise(resolve => setTimeout(resolve, retryDelay));
-                    if (!IsIndexerProcess()) {
-                        try {
-                            await QueryInitJsinfoDbInstance();
-                        } catch (initError) {
-                            console.error(`[${name}] Failed to reinitialize DB:`, {
-                                message: (initError as Error).message,
-                                name: (initError as Error).name,
-                                attempt: `${attempt + 1}/${maxRetries}`
-                            });
-                        }
-                    }
-                }
-            }
-        }
-        throw new Error(`[${name}] Failed to get a valid result after ${maxRetries} attempts`);
     }
 }

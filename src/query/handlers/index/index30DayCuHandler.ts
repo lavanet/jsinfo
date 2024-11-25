@@ -31,7 +31,7 @@ export const Index30DayCuHandlerOpts: RouteShorthandOptions = {
 
 export async function Index30DayCuHandler(request: FastifyRequest, reply: FastifyReply): Promise<Index30DayCuData> {
     const resource = new Index30DayCuResource();
-    const result = await resource.fetchAndPickDb();
+    const result = await resource.fetch();
     if (!result) {
         reply.status(400);
         reply.send({ error: 'Failed to fetch 30 day CU data' });

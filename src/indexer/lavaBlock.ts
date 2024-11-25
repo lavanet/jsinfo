@@ -1,95 +1,85 @@
 // src/indexer/lavaBlock.ts
 
 import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
-import { StargateClient, IndexedTx, Block, Event } from "@cosmjs/stargate"
-import { Tendermint37Client } from "@cosmjs/tendermint-rpc";
+import { IndexedTx, Block, Event } from "@cosmjs/stargate"
 import { ProcessOneEvent } from './eventProcessor';
-import { LavaBlock } from './types';
+import { LavaBlock } from './lavaTypes';
 import LavaBlockCache from './lavaBlockCache';
 import { logger } from '@jsinfo/utils/logger';
+import { queryRpc } from './utils/lavajsRpc';
 
 const cache = new LavaBlockCache();
 
 export const GetRpcBlock = async (
     height: number,
-    client: StargateClient,
 ): Promise<Block> => {
-    return cache.getOrGenerate<Block>(height, "block", async () => {
-        const block = await client.getBlock(height);
-        if (block.header === undefined) {
-            throw new Error('block.header is undefined');
-        }
-        return block;
-    });
+    return queryRpc(
+        async (client, clientTm) => {
+            return cache.getOrGenerate<Block>(height, "block", async () => {
+                const block = await client.getBlock(height);
+                if (block.header === undefined) {
+                    throw new Error('block.header is undefined');
+                }
+                return block;
+            });
+        },
+        "GetRpcBlock"
+    );
 }
 
 export const GetRpcTxs = async (
     height: number,
-    client: StargateClient,
     block: Block,
 ): Promise<IndexedTx[]> => {
-    return cache.getOrGenerate<IndexedTx[]>(height, "txs", async () => {
-        const txs = await client.searchTx(`tx.height=${height}`);
-        if (txs.length === 0 && block.txs.length !== 0) {
-            console.warn('txs.length == 0 && block.txs.length != 0');
-        }
-        return txs;
-    });
+    return queryRpc(
+        async (client, clientTm) => {
+            return cache.getOrGenerate<IndexedTx[]>(height, "txs", async () => {
+                const txs = await client.searchTx(`tx.height=${height}`);
+                if (txs.length === 0 && block.txs.length !== 0) {
+                    console.warn('txs.length == 0 && block.txs.length != 0');
+                }
+                return txs;
+            });
+        },
+        "GetRpcTxs"
+    );
 }
 
 export const GetRpcBlockResultEvents = async (
     height: number,
-    client: Tendermint37Client
 ): Promise<Event[]> => {
-    return cache.getOrGenerate<Event[]>(height, "events", async () => {
-        const res = await client.blockResults(height);
-        const evts = [...res.beginBlockEvents, ...res.endBlockEvents];
-        if (res.height != height) {
-            throw new Error('res.height != height');
-        }
-        return evts;
-    });
-}
-
-function checkTimezoneConsistency(blockTime: Date) {
-    const localTime = blockTime.toString();
-    const utcTime = blockTime.toUTCString();
-    const isoTime = blockTime.toISOString();
-    const localHour = blockTime.getHours();
-    const utcHour = blockTime.getUTCHours();
-
-    if (localHour !== utcHour) {
-        console.warn(`Timezone mismatch detected
-        Local time: ${localTime}
-        UTC time:   ${utcTime}
-        ISO time:   ${isoTime}
-        This might indicate a timezone configuration issue.`);
-    }
+    return queryRpc(
+        async (client, clientTm) => {
+            return cache.getOrGenerate<Event[]>(height, "events", async () => {
+                const res = await clientTm.blockResults(height);
+                const evts = [...res.beginBlockEvents, ...res.endBlockEvents];
+                if (res.height != height) {
+                    throw new Error('res.height != height');
+                }
+                return evts;
+            });
+        },
+        "GetRpcBlockResultEvents"
+    );
 }
 
 export const GetOneLavaBlock = async (
-    height: number,
-    client: StargateClient,
-    clientTm: Tendermint37Client,
-
-
-    blockchainEntitiesStakes: Map<string, JsinfoSchema.InsertProviderStake[]>,
+    height: number
 ): Promise<LavaBlock> => {
 
     const startTimeBlock = Date.now();
-    const block = await GetRpcBlock(height, client);
+    const block = await GetRpcBlock(height);
     const endTimeBlock = Date.now();
     if (endTimeBlock - startTimeBlock > 30000) {
         logger.info('GetRpcBlock took', {
             duration: endTimeBlock - startTimeBlock,
             unit: 'milliseconds',
-            // returnedItems: block,
             blockHeight: height
         });
     }
 
     const startTimeTxs = Date.now();
-    const txs = await GetRpcTxs(height, client, block);
+    const txs = await GetRpcTxs(height, block);
     const endTimeTxs = Date.now();
     if (endTimeTxs - startTimeTxs > 30000) {
         logger.info('GetRpcTxs took', {
@@ -101,7 +91,7 @@ export const GetOneLavaBlock = async (
     }
 
     const startTimeEvts = Date.now();
-    const evts = await GetRpcBlockResultEvents(height, clientTm);
+    const evts = await GetRpcBlockResultEvents(height);
     const endTimeEvts = Date.now();
     if (endTimeEvts - startTimeEvts > 30000) {
         logger.info('GetRpcBlockResultEvents took', {
@@ -113,8 +103,6 @@ export const GetOneLavaBlock = async (
     }
 
     const blockTime = new Date(block!.header.time);
-
-    checkTimezoneConsistency(blockTime);
 
     const lavaBlock: LavaBlock = {
         height: height,
@@ -141,7 +129,6 @@ export const GetOneLavaBlock = async (
             lavaBlock,
             height,
             tx.hash,
-            blockchainEntitiesStakes
         ))
     });
 
@@ -150,7 +137,6 @@ export const GetOneLavaBlock = async (
         lavaBlock,
         height,
         null,
-        blockchainEntitiesStakes
     ))
 
     return lavaBlock;

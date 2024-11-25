@@ -1,7 +1,6 @@
 // src/query/handlers/specChartsHandler.ts
 
 import { FastifyReply, FastifyRequest, RouteShorthandOptions } from 'fastify';
-import { QueryGetJsinfoDbForQueryInstance } from '@jsinfo/query/queryDb';
 import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import * as JsinfoProviderAgrSchema from '@jsinfo/schemas/jsinfoSchema/providerRelayPaymentsAgregation';
 import { sql, desc, gt, and, lt, eq, inArray } from "drizzle-orm";
@@ -12,6 +11,7 @@ import { GetAndValidateSpecIdFromRequest } from '@jsinfo/query/utils/queryReques
 import { ProviderMonikerService } from '@jsinfo/redis/resources/global/ProviderMonikerSpecResource';
 import { PgColumn } from 'drizzle-orm/pg-core';
 import { JSONStringifySpaced } from '@jsinfo/utils/fmt';
+import { queryJsinfo } from '@jsinfo/utils/db';
 
 type SpecChartCuRelay = {
     provider: string;
@@ -107,12 +107,16 @@ class SpecChartsData extends RequestHandlerBase<SpecChartResponse> {
         }
 
         // First query to get top 10 providers
-        let top10Providers = await QueryGetJsinfoDbForQueryInstance().select({
-            provider: JsinfoSchema.providerStakes.provider,
-        }).from(JsinfoSchema.providerStakes)
-            .where(eq(JsinfoSchema.providerStakes.specId, this.spec))
-            .orderBy(desc(JsinfoSchema.providerStakes.stake))
-            .limit(10);
+        let top10Providers = await queryJsinfo(
+            async (db) => await db.select({
+                provider: JsinfoSchema.providerStakes.provider,
+            })
+                .from(JsinfoSchema.providerStakes)
+                .where(eq(JsinfoSchema.providerStakes.specId, this.spec))
+                .orderBy(desc(JsinfoSchema.providerStakes.stake))
+                .limit(10),
+            `SpecCharts_getSpecTop10Providers_${this.spec}`
+        );
 
         // Check if any provider is an empty string
         top10Providers.forEach(item => {
@@ -141,21 +145,25 @@ class SpecChartsData extends RequestHandlerBase<SpecChartResponse> {
 
         const qosMetricWeightedAvg = (metric: PgColumn) => sql<number>`SUM(${metric} * ${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum}) / SUM(CASE WHEN ${metric} IS NOT NULL THEN ${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum} ELSE 0 END)`;
 
-        let monthlyData: QosQueryData[] = await QueryGetJsinfoDbForQueryInstance().select({
-            date: JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday,
-            qosSyncAvg: qosMetricWeightedAvg(JsinfoProviderAgrSchema.aggDailyRelayPayments.qosSyncAvg),
-            qosAvailabilityAvg: qosMetricWeightedAvg(JsinfoProviderAgrSchema.aggDailyRelayPayments.qosAvailabilityAvg),
-            qosLatencyAvg: qosMetricWeightedAvg(JsinfoProviderAgrSchema.aggDailyRelayPayments.qosLatencyAvg),
-        }).from(JsinfoProviderAgrSchema.aggDailyRelayPayments)
-            .groupBy(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday)
-            .where(and(
-                and(
-                    gt(sql<Date>`DATE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday})`, sql<Date>`${from}`),
-                    lt(sql<Date>`DATE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday})`, sql<Date>`${to}`)
-                ),
-                eq(JsinfoProviderAgrSchema.aggDailyRelayPayments.specId, this.spec)
-            ))
-            .orderBy(desc(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday));
+        let monthlyData: QosQueryData[] = await queryJsinfo<QosQueryData[]>(
+            async (db) => await db.select({
+                date: JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday,
+                qosSyncAvg: qosMetricWeightedAvg(JsinfoProviderAgrSchema.aggDailyRelayPayments.qosSyncAvg),
+                qosAvailabilityAvg: qosMetricWeightedAvg(JsinfoProviderAgrSchema.aggDailyRelayPayments.qosAvailabilityAvg),
+                qosLatencyAvg: qosMetricWeightedAvg(JsinfoProviderAgrSchema.aggDailyRelayPayments.qosLatencyAvg),
+            })
+                .from(JsinfoProviderAgrSchema.aggDailyRelayPayments)
+                .groupBy(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday)
+                .where(and(
+                    and(
+                        gt(sql<Date>`DATE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday})`, sql<Date>`${from}`),
+                        lt(sql<Date>`DATE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday})`, sql<Date>`${to}`)
+                    ),
+                    eq(JsinfoProviderAgrSchema.aggDailyRelayPayments.specId, this.spec)
+                ))
+                .orderBy(desc(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday)),
+            `SpecCharts_getSpecQosData_${from}_${to}_${this.spec}`
+        );
 
         // Verify and format the data
         monthlyData.forEach(item => {
@@ -190,19 +198,24 @@ class SpecChartsData extends RequestHandlerBase<SpecChartResponse> {
     private async getSpecRelayCuChartWithTopProviders(from: Date, to: Date, top10Providers: any): Promise<SpecCuRelayData[]> {
         const formatedData: SpecCuRelayData[] = [];
 
-        let allProvidersMonthlyData: SpecCuRelayQueryData[] = await QueryGetJsinfoDbForQueryInstance().select({
-            date: JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday,
-            cuSum: sql<number>`SUM(COALESCE(NULLIF(${JsinfoProviderAgrSchema.aggDailyRelayPayments.cuSum}, 0), 0))`,
-            relaySum: sql<number>`SUM(COALESCE(NULLIF(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum}, 0), 0))`,
-        }).from(JsinfoProviderAgrSchema.aggDailyRelayPayments)
-            .groupBy(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday)
-            .where(and(
-                and(
-                    gt(sql<Date>`DATE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday})`, sql<Date>`${from}`),
-                    lt(sql<Date>`DATE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday})`, sql<Date>`${to}`)
-                ),
-                eq(JsinfoProviderAgrSchema.aggDailyRelayPayments.specId, this.spec)
-            )).orderBy(desc(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday));
+        let allProvidersMonthlyData: SpecCuRelayQueryData[] = await queryJsinfo<SpecCuRelayQueryData[]>(
+            async (db) => await db.select({
+                date: JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday,
+                cuSum: sql<number>`SUM(COALESCE(NULLIF(${JsinfoProviderAgrSchema.aggDailyRelayPayments.cuSum}, 0), 0))`,
+                relaySum: sql<number>`SUM(COALESCE(NULLIF(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum}, 0), 0))`,
+            })
+                .from(JsinfoProviderAgrSchema.aggDailyRelayPayments)
+                .groupBy(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday)
+                .where(and(
+                    and(
+                        gt(sql<Date>`DATE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday})`, sql<Date>`${from}`),
+                        lt(sql<Date>`DATE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday})`, sql<Date>`${to}`)
+                    ),
+                    eq(JsinfoProviderAgrSchema.aggDailyRelayPayments.specId, this.spec)
+                ))
+                .orderBy(desc(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday)),
+            `SpecCharts_getAllProvidersMonthlyData_${from}_${to}_${this.spec}`
+        );
 
         allProvidersMonthlyData.forEach(item => {
             formatedData.push({
@@ -214,23 +227,28 @@ class SpecChartsData extends RequestHandlerBase<SpecChartResponse> {
         });
 
         let providers = Object.keys(top10Providers);
-        let monthlyData: SpecCuRelayQueryDataWithProvider[] = await QueryGetJsinfoDbForQueryInstance().select({
-            date: JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday,
-            cuSum: sql<number>`SUM(COALESCE(NULLIF(${JsinfoProviderAgrSchema.aggDailyRelayPayments.cuSum}, 0), 0))`,
-            relaySum: sql<number>`SUM(COALESCE(NULLIF(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum}, 0), 0))`,
-            provider: JsinfoProviderAgrSchema.aggDailyRelayPayments.provider
-        }).from(JsinfoProviderAgrSchema.aggDailyRelayPayments)
-            .groupBy(JsinfoProviderAgrSchema.aggDailyRelayPayments.provider, JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday)
-            .where(and(
-                and(
-                    gt(sql<Date>`DATE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday})`, sql<Date>`${from}`),
-                    lt(sql<Date>`DATE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday})`, sql<Date>`${to}`)
-                ),
-                and(
-                    eq(JsinfoProviderAgrSchema.aggDailyRelayPayments.specId, this.spec),
-                    inArray(JsinfoProviderAgrSchema.aggDailyRelayPayments.provider, providers)
-                )
-            )).orderBy(desc(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday));
+        let monthlyData: SpecCuRelayQueryDataWithProvider[] = await queryJsinfo<SpecCuRelayQueryDataWithProvider[]>(
+            async (db) => await db.select({
+                date: JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday,
+                cuSum: sql<number>`SUM(COALESCE(NULLIF(${JsinfoProviderAgrSchema.aggDailyRelayPayments.cuSum}, 0), 0))`,
+                relaySum: sql<number>`SUM(COALESCE(NULLIF(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum}, 0), 0))`,
+                provider: JsinfoProviderAgrSchema.aggDailyRelayPayments.provider
+            })
+                .from(JsinfoProviderAgrSchema.aggDailyRelayPayments)
+                .groupBy(JsinfoProviderAgrSchema.aggDailyRelayPayments.provider, JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday)
+                .where(and(
+                    and(
+                        gt(sql<Date>`DATE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday})`, sql<Date>`${from}`),
+                        lt(sql<Date>`DATE(${JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday})`, sql<Date>`${to}`)
+                    ),
+                    and(
+                        eq(JsinfoProviderAgrSchema.aggDailyRelayPayments.specId, this.spec),
+                        inArray(JsinfoProviderAgrSchema.aggDailyRelayPayments.provider, providers)
+                    )
+                ))
+                .orderBy(desc(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday)),
+            `SpecCharts_getMonthlyData_${from}_${to}_${this.spec}`
+        );
 
         monthlyData.forEach(item => {
             let item_provider = item.provider!;

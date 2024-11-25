@@ -1,11 +1,11 @@
-
 // src/query/handlers/provider/providerCardsCuRelayAndRewardsHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryCheckJsinfoDbInstance, QueryGetJsinfoDbForQueryInstance } from '../../queryDb';
+
 import * as JsinfoProviderAgrSchema from '@jsinfo/schemas/jsinfoSchema/providerRelayPaymentsAgregation';
 import { sql, eq } from "drizzle-orm";
 import { GetAndValidateProviderAddressFromRequest } from '../../utils/queryRequestArgParser';
+import { queryJsinfo } from '@jsinfo/utils/db';
 
 export const ProviderCardsCuRelayAndRewardsHandlerOpts: RouteShorthandOptions = {
     schema: {
@@ -21,17 +21,20 @@ export const ProviderCardsCuRelayAndRewardsHandlerOpts: RouteShorthandOptions = 
         }
     }
 }
-
 async function getCuRelayAndRewardsTotal(addr: string) {
-    const result = await QueryGetJsinfoDbForQueryInstance()
-        .select({
+    const result = await queryJsinfo<{
+        cuSum: number | null,
+        relaySum: number | null,
+        rewardSum: number | null
+    }[]>(
+        async (db) => await db.select({
             cuSum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggAllTimeRelayPayments.cuSum})`,
             relaySum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggAllTimeRelayPayments.relaySum})`,
             rewardSum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggAllTimeRelayPayments.rewardSum})`,
-        })
-        .from(JsinfoProviderAgrSchema.aggAllTimeRelayPayments)
-        .where(eq(JsinfoProviderAgrSchema.aggAllTimeRelayPayments.provider, addr))
-        .groupBy(JsinfoProviderAgrSchema.aggAllTimeRelayPayments.provider);
+        }).from(JsinfoProviderAgrSchema.aggAllTimeRelayPayments)
+            .where(eq(JsinfoProviderAgrSchema.aggAllTimeRelayPayments.provider, addr)),
+        `ProviderCardsCuRelayAndRewards_getCuRelayAndRewardsTotal_${addr}`
+    );
 
     if (result.length === 1) {
         return {
@@ -50,7 +53,7 @@ export async function ProviderCardsCuRelayAndRewardsHandler(request: FastifyRequ
         return null;
     }
 
-    await QueryCheckJsinfoDbInstance();
+    ;
 
     const { cuSum, relaySum, rewardSum } = await getCuRelayAndRewardsTotal(addr);
 

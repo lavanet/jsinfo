@@ -1,10 +1,11 @@
 // src/indexer/supply/syncSupply.ts
 
-import { LavaClient } from "../types";
+import { LavaClient } from "../lavaTypes";
 import { ContinuousVestingAccount, PeriodicVestingAccount } from "cosmjs-types/cosmos/vesting/v1beta1/vesting";
 import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
-import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { logger } from '@jsinfo/utils/logger';
+import { queryJsinfo } from "@jsinfo/utils/db";
+import { queryRpc } from "../utils/lavajsRpc";
 
 async function getPoolsAmount(client: LavaClient): Promise<bigint> {
     const lavaClient = client.lavanet.lava.rewards;
@@ -93,14 +94,20 @@ async function getCirculatingTokenSupply(now: number, client: LavaClient, totalS
     return totalSupplyAmount - lockedTokens - poolsAmount;
 }
 
-export async function SaveTokenSupplyToDB(db: PostgresJsDatabase, client: LavaClient) {
+export async function SaveTokenSupplyToDB() {
     const now = new Date();
     logger.debug(`SaveTokenSupplyToDB: Current timestamp: ${now}`);
 
-    const totalSupply = await getTotalTokenSupply(client);
+    const totalSupply = await queryRpc(
+        async (_, __, lavaClient) => getTotalTokenSupply(lavaClient),
+        'getTotalTokenSupply'
+    );
     logger.debug(`SaveTokenSupplyToDB: Total token supply: ${totalSupply}`);
 
-    const circulatingSupply = await getCirculatingTokenSupply(now.getTime(), client, totalSupply);
+    const circulatingSupply = await queryRpc(
+        async (_, __, lavaClient) => getCirculatingTokenSupply(now.getTime(), lavaClient, totalSupply),
+        'getCirculatingTokenSupply'
+    );
     logger.debug(`SaveTokenSupplyToDB: Circulating supply: ${circulatingSupply}`);
 
     const rowTotalSupply: JsinfoSchema.InsertSupply = {
@@ -115,17 +122,20 @@ export async function SaveTokenSupplyToDB(db: PostgresJsDatabase, client: LavaCl
         timestamp: now,
     };
 
-    await db.transaction(async (tx) => {
-        for (const row of [rowTotalSupply, rowCirculating]) {
-            await tx.insert(JsinfoSchema.supply)
-                .values(row as any)
-                .onConflictDoUpdate({
-                    target: [JsinfoSchema.supply.key],
-                    set: {
-                        amount: row.amount.toString(),
-                        timestamp: row.timestamp,
-                    } as any
-                });
-        }
-    });
+    await queryJsinfo(async (db) => {
+        await db.transaction(async (tx) => {
+            for (const row of [rowTotalSupply, rowCirculating]) {
+                await tx.insert(JsinfoSchema.supply)
+                    .values(row as any)
+                    .onConflictDoUpdate({
+                        target: [JsinfoSchema.supply.key],
+                        set: {
+                            amount: row.amount.toString(),
+                            timestamp: row.timestamp,
+                        } as any
+                    });
+            }
+        });
+        return { success: true };
+    }, 'save_token_supply_to_db');
 }

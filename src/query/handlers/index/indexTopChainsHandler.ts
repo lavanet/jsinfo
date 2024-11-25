@@ -38,7 +38,7 @@ export const IndexTopChainsHandlerOpts: RouteShorthandOptions = {
 
 export async function IndexTopChainsHandler(request: FastifyRequest, reply: FastifyReply): Promise<IndexTopChainsData> {
     const resource = new IndexTopChainsResource();
-    const result = await resource.fetchAndPickDb();
+    const result = await resource.fetch();
     if (!result) {
         reply.status(400);
         reply.send({ error: 'Failed to fetch top chains data' });

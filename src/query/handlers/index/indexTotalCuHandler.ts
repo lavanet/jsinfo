@@ -31,7 +31,7 @@ export const IndexTotalCuHandlerOpts: RouteShorthandOptions = {
 
 export async function IndexTotalCuHandler(request: FastifyRequest, reply: FastifyReply): Promise<IndexTotalCuData> {
     const resource = new IndexTotalCuResource();
-    const result = await resource.fetchAndPickDb();
+    const result = await resource.fetch();
     if (!result) {
         reply.status(400);
         reply.send({ error: 'Failed to fetch total CU data' });

@@ -2,6 +2,7 @@ import { sql, gt } from "drizzle-orm";
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as JsinfoProviderAgrSchema from '@jsinfo/schemas/jsinfoSchema/providerRelayPaymentsAgregation';
 import { RedisResourceBase } from '@jsinfo/redis/classes/RedisResourceBase';
+import { queryJsinfo } from '@jsinfo/utils/db';
 
 export interface IndexTopChainsData {
     allSpecs: {
@@ -17,25 +18,31 @@ export class IndexTopChainsResource extends RedisResourceBase<IndexTopChainsData
     protected readonly redisKey = 'index:top:chains';
     protected readonly ttlSeconds = 600; // 10 minutes cache
 
-    protected async fetchFromDb(db: PostgresJsDatabase): Promise<IndexTopChainsData> {
+    protected async fetchFromDb(): Promise<IndexTopChainsData> {
         // Get 30 days stats
-        const thirtyDaysStats = await db.select({
-            chainId: JsinfoProviderAgrSchema.aggDailyRelayPayments.specId,
-            relaySum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum})`,
-            cuSum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggDailyRelayPayments.cuSum})`,
-        })
-            .from(JsinfoProviderAgrSchema.aggDailyRelayPayments)
-            .where(gt(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday, sql<Date>`now() - interval '30 day'`))
-            .groupBy(JsinfoProviderAgrSchema.aggDailyRelayPayments.specId);
+        const thirtyDaysStats = await queryJsinfo(
+            async (db: PostgresJsDatabase) => db.select({
+                chainId: JsinfoProviderAgrSchema.aggDailyRelayPayments.specId,
+                relaySum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum})`,
+                cuSum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggDailyRelayPayments.cuSum})`,
+            })
+                .from(JsinfoProviderAgrSchema.aggDailyRelayPayments)
+                .where(gt(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday, sql<Date>`now() - interval '30 day'`))
+                .groupBy(JsinfoProviderAgrSchema.aggDailyRelayPayments.specId),
+            'IndexTopChainsResource_fetchFromDb_30days'
+        );
 
         // Get all time stats
-        const allTimeStats = await db.select({
-            chainId: JsinfoProviderAgrSchema.aggDailyRelayPayments.specId,
-            relaySum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum})`,
-            cuSum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggDailyRelayPayments.cuSum})`,
-        })
-            .from(JsinfoProviderAgrSchema.aggDailyRelayPayments)
-            .groupBy(JsinfoProviderAgrSchema.aggDailyRelayPayments.specId);
+        const allTimeStats = await queryJsinfo(
+            async (db: PostgresJsDatabase) => db.select({
+                chainId: JsinfoProviderAgrSchema.aggDailyRelayPayments.specId,
+                relaySum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum})`,
+                cuSum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggDailyRelayPayments.cuSum})`,
+            })
+                .from(JsinfoProviderAgrSchema.aggDailyRelayPayments)
+                .groupBy(JsinfoProviderAgrSchema.aggDailyRelayPayments.specId),
+            'IndexTopChainsResource_fetchFromDb_alltime'
+        );
 
         // Combine results
         const statsMap = new Map<string, {

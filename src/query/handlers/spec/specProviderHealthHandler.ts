@@ -1,11 +1,11 @@
 // src/query/handlers/specProviderHealthHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryGetJsinfoDbForQueryInstance } from '../../queryDb';
 import { eq, and, gte, desc } from "drizzle-orm";
 import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { GetAndValidateProviderAddressFromRequest, GetAndValidateSpecIdFromRequest } from '../../utils/queryRequestArgParser';
 import { WriteErrorToFastifyReplyNoLog } from '../../utils/queryServerUtils';
+import { queryJsinfo } from '@jsinfo/utils/db';
 
 type HealthRecord = {
     id: number;
@@ -61,7 +61,7 @@ export async function SpecProviderHealthHandler(request: FastifyRequest, reply: 
     const twoDaysAgo = new Date();
     twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
 
-    const healthRecords: HealthRecord[] = await QueryGetJsinfoDbForQueryInstance()
+    const healthRecords: HealthRecord[] = await queryJsinfo(db => db
         .selectDistinctOn([JsinfoSchema.providerHealth.provider, JsinfoSchema.providerHealth.spec, JsinfoSchema.providerHealth.interface])
         .from(JsinfoSchema.providerHealth)
         .orderBy(JsinfoSchema.providerHealth.provider, JsinfoSchema.providerHealth.spec, JsinfoSchema.providerHealth.interface, JsinfoSchema.providerHealth.provider, JsinfoSchema.providerHealth.spec, desc(JsinfoSchema.providerHealth.timestamp))
@@ -74,7 +74,9 @@ export async function SpecProviderHealthHandler(request: FastifyRequest, reply: 
                 gte(JsinfoSchema.providerHealth.timestamp, twoDaysAgo)
             )
         )
-        .limit(1000);
+        .limit(1000),
+        `SpecProviderHealthData::fetchHealthRecords_${provider}_${spec}_${twoDaysAgo}`
+    );
 
     if (healthRecords.length === 0) {
         WriteErrorToFastifyReplyNoLog(reply, 'No recent health records for provider');

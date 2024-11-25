@@ -1,6 +1,6 @@
 import { RedisResourceBase } from '../../classes/RedisResourceBase';
-import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
+import { queryJsinfo } from '@jsinfo/utils/db';
 import { desc, sql } from 'drizzle-orm';
 
 interface ProviderSpecMoniker {
@@ -35,20 +35,21 @@ export class ProviderMonikerSpecResource extends RedisResourceBase<ProviderMonik
         return lavaid;
     }
 
-    protected async fetchFromDb(db: PostgresJsDatabase): Promise<ProviderMonikerSpecData> {
-        const results = await db
-            .select({
-                provider: JsinfoSchema.providerSpecMoniker.provider,
-                specId: JsinfoSchema.providerSpecMoniker.spec,
-                moniker: JsinfoSchema.providerSpecMoniker.moniker
-            })
+    protected async fetchFromDb(): Promise<ProviderMonikerSpecData> {
+        const results = await queryJsinfo(db => db.select({
+            provider: JsinfoSchema.providerSpecMoniker.provider,
+            specId: JsinfoSchema.providerSpecMoniker.spec,
+            moniker: JsinfoSchema.providerSpecMoniker.moniker
+        })
             .from(JsinfoSchema.providerSpecMoniker)
             .groupBy(
                 JsinfoSchema.providerSpecMoniker.provider,
                 JsinfoSchema.providerSpecMoniker.spec,
                 JsinfoSchema.providerSpecMoniker.moniker
             )
-            .orderBy(desc(sql`MAX(${JsinfoSchema.providerSpecMoniker.updatedAt})`));
+            .orderBy(desc(sql`MAX(${JsinfoSchema.providerSpecMoniker.moniker})`)),
+            'ProviderMonikerSpecResource::fetchFromDb'
+        );
 
         const uniqueMap = new Map<string, ProviderSpecMoniker>();
 
@@ -69,7 +70,7 @@ export class ProviderMonikerSpecResource extends RedisResourceBase<ProviderMonik
     }
 
     public async GetMonikerForSpec(provider: string | null, spec: string | null): Promise<string> {
-        const data = await this.fetchAndPickDb();
+        const data = await this.fetch();
         if (!data || !provider) return '';
 
         const providerKey = this.verifyLavaId(provider);
@@ -83,7 +84,7 @@ export class ProviderMonikerSpecResource extends RedisResourceBase<ProviderMonik
     }
 
     public async GetMonikerForProvider(provider: string | null): Promise<string> {
-        const data = await this.fetchAndPickDb();
+        const data = await this.fetch();
         if (!data || !provider) return '';
 
         const providerKey = this.verifyLavaId(provider);
@@ -109,7 +110,7 @@ export class ProviderMonikerSpecResource extends RedisResourceBase<ProviderMonik
     }
 
     public async GetMonikerFullDescription(provider: string | null): Promise<string> {
-        const data = await this.fetchAndPickDb();
+        const data = await this.fetch();
         if (!data || !provider) return '';
 
         const providerKey = this.verifyLavaId(provider);
@@ -145,7 +146,7 @@ export class ProviderMonikerSpecResource extends RedisResourceBase<ProviderMonik
     }
 
     public async GetAllProviders(): Promise<string[]> {
-        const data = await this.fetchAndPickDb();
+        const data = await this.fetch();
         if (!data) return [];
 
         const uniqueProviders = new Set<string>();
@@ -159,7 +160,7 @@ export class ProviderMonikerSpecResource extends RedisResourceBase<ProviderMonik
     }
 
     public async IsValidProvider(provider: string): Promise<boolean> {
-        const data = await this.fetchAndPickDb();
+        const data = await this.fetch();
         if (!data) return false;
 
         return data.providers.some(p => p.provider === provider);

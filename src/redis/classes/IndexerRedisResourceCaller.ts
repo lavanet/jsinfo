@@ -1,5 +1,4 @@
 import { logger } from '@jsinfo/utils/logger';
-import { GetJsinfoDbForIndexer } from '@jsinfo/utils/db';
 
 // Ajax Resources
 import { AprResource } from '../resources/ajax/AprResource';
@@ -91,13 +90,12 @@ export class IndexerRedisResourceCaller {
         const startTime = Date.now();
         logger.info('RedisIndexer:: Refreshing Redis resources');
 
-        const db = await GetJsinfoDbForIndexer();
         try {
             // These main groups still run in parallel for overall performance
             await Promise.all([
-                this.refreshAjaxResources(db),
-                this.refreshIndexResources(db),
-                this.refreshGlobalResources(db)
+                this.refreshAjaxResources(),
+                this.refreshIndexResources(),
+                this.refreshGlobalResources()
             ]);
 
             const duration = Date.now() - startTime;
@@ -107,69 +105,69 @@ export class IndexerRedisResourceCaller {
         }
     }
 
-    private static async refreshAjaxResources(db: PostgresJsDatabase): Promise<void> {
+    private static async refreshAjaxResources(): Promise<void> {
         // Supply Resources
-        await new SupplyResource().fetch(db, { type: 'total' })
+        await new SupplyResource().fetch({ type: 'total' })
             .catch(e => logger.error('Failed to refresh total supply:', e));
-        await new SupplyResource().fetch(db, { type: 'circulating' })
+        await new SupplyResource().fetch({ type: 'circulating' })
             .catch(e => logger.error('Failed to refresh circulating supply:', e));
 
         // Chain Wallet Resources
-        await new ChainWalletResource().fetch(db, { type: 'stakers' })
+        await new ChainWalletResource().fetch({ type: 'stakers' })
             .catch(e => logger.error('Failed to refresh stakers:', e));
-        await new ChainWalletResource().fetch(db, { type: 'restakers' })
+        await new ChainWalletResource().fetch({ type: 'restakers' })
             .catch(e => logger.error('Failed to refresh restakers:', e));
 
         // Other Ajax Resources
-        await new AprResource().fetch(db)
+        await new AprResource().fetch()
             .catch(e => logger.error('Failed to refresh APR data:', e));
-        await new AutoCompleteResource().fetch(db)
+        await new AutoCompleteResource().fetch()
             .catch(e => logger.error('Failed to refresh autocomplete data:', e));
-        await new ListProvidersResource().fetch(db)
+        await new ListProvidersResource().fetch()
             .catch(e => logger.error('Failed to refresh providers list:', e));
     }
 
-    private static async refreshIndexResources(db: PostgresJsDatabase): Promise<void> {
+    private static async refreshIndexResources(): Promise<void> {
         // Basic Index Resources
-        await new IndexStakesResource().fetch(db)
+        await new IndexStakesResource().fetch()
             .catch(e => logger.error('Failed to refresh index stakes:', e));
-        await new IndexLatestBlockResource().fetch(db)
+        await new IndexLatestBlockResource().fetch()
             .catch(e => logger.error('Failed to refresh latest block:', e));
-        await new IndexTotalCuResource().fetch(db)
+        await new IndexTotalCuResource().fetch()
             .catch(e => logger.error('Failed to refresh index total CU:', e));
-        await new IndexTopChainsResource().fetch(db)
+        await new IndexTopChainsResource().fetch()
             .catch(e => logger.error('Failed to refresh index top chains:', e));
-        await new IndexChartsResource().fetch(db)
+        await new IndexChartsResource().fetch()
             .catch(e => logger.error('Failed to refresh index charts:', e));
-        await new Index30DayCuResource().fetch(db)
+        await new Index30DayCuResource().fetch()
             .catch(e => logger.error('Failed to refresh index 30-day CU:', e));
 
         // Provider-related Index Resources
-        await this.refreshProviderIndexResources(db);
+        await this.refreshProviderIndexResources();
     }
 
-    private static async refreshProviderIndexResources(db: PostgresJsDatabase): Promise<void> {
+    private static async refreshProviderIndexResources(): Promise<void> {
         // Active Providers
-        await new ActiveProvidersResource().fetch(db)
+        await new ActiveProvidersResource().fetch()
             .catch(e => logger.error('Failed to refresh active providers:', e));
 
         // Index Providers
-        await new IndexProvidersResource().fetch(db, { type: 'count' })
+        await new IndexProvidersResource().fetch({ type: 'count' })
             .catch(e => logger.error('Failed to refresh index providers (count):', e));
-        await new IndexProvidersResource().fetch(db, { type: 'paginated' })
+        await new IndexProvidersResource().fetch({ type: 'paginated' })
             .catch(e => logger.error('Failed to refresh index providers (paginated):', e));
 
         // Index Providers Active
-        await new IndexProvidersActiveResource().fetch(db, { type: 'count' })
+        await new IndexProvidersActiveResource().fetch({ type: 'count' })
             .catch(e => logger.error('Failed to refresh active providers index (count):', e));
-        await new IndexProvidersActiveResource().fetch(db, { type: 'paginated' })
+        await new IndexProvidersActiveResource().fetch({ type: 'paginated' })
             .catch(e => logger.error('Failed to refresh active providers index (paginated):', e));
     }
 
-    private static async refreshGlobalResources(db: PostgresJsDatabase): Promise<void> {
-        await SpecAndConsumerService.fetch(db)
+    private static async refreshGlobalResources(): Promise<void> {
+        await SpecAndConsumerService.fetch()
             .catch(e => logger.error('Failed to refresh spec and consumer data:', e));
-        await ProviderMonikerService.fetch(db)
+        await ProviderMonikerService.fetch()
             .catch(e => logger.error('Failed to refresh provider moniker spec data:', e));
     }
 }

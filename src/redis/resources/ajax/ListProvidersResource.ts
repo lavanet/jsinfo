@@ -2,8 +2,9 @@ import { RedisResourceBase } from '@jsinfo/redis/classes/RedisResourceBase';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { ProviderMonikerService } from '@jsinfo/redis/resources/global/ProviderMonikerSpecResource';
-import { GetLatestBlock } from '@jsinfo/query/queryDb';
+import { GetLatestBlock } from '@jsinfo/query/utils/getLatestBlock';
 import { desc } from 'drizzle-orm';
+import { queryJsinfo } from '@jsinfo/utils/db';
 
 interface ProviderEntry {
     provider: string;
@@ -137,18 +138,21 @@ export class ListProvidersResource extends RedisResourceBase<ProvidersData, {}> 
     protected redisKey = 'listProviders';
     protected ttlSeconds = 300; // 5 minutes cache
 
-    protected async fetchFromDb(db: PostgresJsDatabase): Promise<ProvidersData> {
-        const stakesRes = await db.select({
-            provider: JsinfoSchema.providerStakes.provider,
-            specId: JsinfoSchema.providerStakes.specId,
-            status: JsinfoSchema.providerStakes.status,
-            stake: JsinfoSchema.providerStakes.stake,
-            addons: JsinfoSchema.providerStakes.addons,
-            extensions: JsinfoSchema.providerStakes.extensions,
-            delegateCommission: JsinfoSchema.providerStakes.delegateCommission,
-            delegateLimit: JsinfoSchema.providerStakes.delegateLimit,
-            delegateTotal: JsinfoSchema.providerStakes.delegateTotal,
-        }).from(JsinfoSchema.providerStakes);
+    protected async fetchFromDb(): Promise<ProvidersData> {
+        const stakesRes = await queryJsinfo(
+            async (db) => db.select({
+                provider: JsinfoSchema.providerStakes.provider,
+                specId: JsinfoSchema.providerStakes.specId,
+                status: JsinfoSchema.providerStakes.status,
+                stake: JsinfoSchema.providerStakes.stake,
+                addons: JsinfoSchema.providerStakes.addons,
+                extensions: JsinfoSchema.providerStakes.extensions,
+                delegateCommission: JsinfoSchema.providerStakes.delegateCommission,
+                delegateLimit: JsinfoSchema.providerStakes.delegateLimit,
+                delegateTotal: JsinfoSchema.providerStakes.delegateTotal,
+            }).from(JsinfoSchema.providerStakes),
+            'ListProvidersResource_fetchFromDb'
+        );
 
         // First get all monikers
         const monikerPromises = stakesRes.map(stake =>
@@ -182,7 +186,10 @@ export class ListProvidersResource extends RedisResourceBase<ProvidersData, {}> 
             return acc;
         }, []).sort((a, b) => a.provider.localeCompare(b.provider));
 
-        const latestDbBlocks = await db.select().from(JsinfoSchema.blocks).orderBy(desc(JsinfoSchema.blocks.height)).limit(1)
+        const latestDbBlocks = await queryJsinfo(
+            async (db) => db.select().from(JsinfoSchema.blocks).orderBy(desc(JsinfoSchema.blocks.height)).limit(1),
+            'ListProvidersResource_latestDbBlocks'
+        );
         let latestHeight = 0
         let latestDatetime = 0
         if (latestDbBlocks.length != 0) {

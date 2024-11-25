@@ -15,13 +15,13 @@ export const SupplyRawHandlerOpts: RouteShorthandOptions = {
 
 export async function TotalSupplyRawHandler(request: FastifyRequest, reply: FastifyReply) {
     const supplyResource = new SupplyResource();
-    const result = await supplyResource.fetchAndPickDb({ type: 'total' });
+    const result = await supplyResource.fetch({ type: 'total' });
     return result?.amount || 0;
 }
 
 export async function CirculatingSupplyRawHandler(request: FastifyRequest, reply: FastifyReply) {
     const supplyResource = new SupplyResource();
-    const result = await supplyResource.fetchAndPickDb({ type: 'circulating' });
+    const result = await supplyResource.fetch({ type: 'circulating' });
     return result?.amount || 0;
 }
 

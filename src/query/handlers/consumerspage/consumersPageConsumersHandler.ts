@@ -3,10 +3,11 @@
 // curl http://localhost:8081/consumerspageConsumers | jq
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryCheckJsinfoDbInstance, QueryGetJsinfoDbForQueryInstance } from '../../queryDb';
+import { queryJsinfo } from '@jsinfo/utils/db';
 import { asc, gte, max } from "drizzle-orm";
 import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import * as JsinfoConsumerAgrSchema from '@jsinfo/schemas/jsinfoSchema/consumerRelayPaymentsAgregation';
+import { sql } from 'drizzle-orm';
 
 export const ConsumersPageConsumersRawHandlerOpts = {
     schema: {
@@ -41,26 +42,24 @@ type ConsumerEntry = {
     plan: string | null;
 };
 async function fetchConsumerEntries(): Promise<ConsumerEntry[]> {
-    await QueryCheckJsinfoDbInstance();
-
     let ninetyDaysAgo = new Date();
     ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
 
-    let reportsRes = await QueryGetJsinfoDbForQueryInstance()
-        .select({
+    return await queryJsinfo<ConsumerEntry[]>(
+        async (db) => await db.select({
             consumer: JsinfoSchema.consumerSubscriptionList.consumer,
             plan: JsinfoSchema.consumerSubscriptionList.plan,
             earliestCreatedAt: max(JsinfoSchema.consumerSubscriptionList.createdAt)
         })
-        .from(JsinfoSchema.consumerSubscriptionList)
-        .where(
-            gte(JsinfoSchema.consumerSubscriptionList.createdAt, ninetyDaysAgo)
-        )
-        .groupBy(JsinfoSchema.consumerSubscriptionList.consumer, JsinfoSchema.consumerSubscriptionList.plan)
-        .orderBy(asc(max(JsinfoSchema.consumerSubscriptionList.createdAt)))
-        .limit(500);
-
-    return reportsRes;
+            .from(JsinfoSchema.consumerSubscriptionList)
+            .where(
+                gte(JsinfoSchema.consumerSubscriptionList.createdAt, ninetyDaysAgo)
+            )
+            .groupBy(JsinfoSchema.consumerSubscriptionList.consumer, JsinfoSchema.consumerSubscriptionList.plan)
+            .orderBy(asc(max(JsinfoSchema.consumerSubscriptionList.createdAt)))
+            .limit(500),
+        `ConsumersPage_fetchConsumerEntries_${ninetyDaysAgo}`
+    );
 }
 
 type ConsumerAgrEntry = {
@@ -73,14 +72,18 @@ type ConsumerAgrEntry = {
 }
 
 async function fetchConsumerAgrResultsEntries(): Promise<ConsumerAgrEntry[]> {
-    return await QueryGetJsinfoDbForQueryInstance().select({
-        consumer: JsinfoConsumerAgrSchema.aggConsumerAllTimeRelayPayments.consumer,
-        cuSum: JsinfoConsumerAgrSchema.aggConsumerAllTimeRelayPayments.cuSum,
-        relaySum: JsinfoConsumerAgrSchema.aggConsumerAllTimeRelayPayments.relaySum,
-        rewardSum: JsinfoConsumerAgrSchema.aggConsumerAllTimeRelayPayments.rewardSum,
-        qosSyncAvg: JsinfoConsumerAgrSchema.aggConsumerAllTimeRelayPayments.qosSyncAvg,
-        qosSyncExcAvg: JsinfoConsumerAgrSchema.aggConsumerAllTimeRelayPayments.qosSyncExcAvg
-    }).from(JsinfoConsumerAgrSchema.aggConsumerAllTimeRelayPayments);
+    return await queryJsinfo<ConsumerAgrEntry[]>(
+        async (db) => await db.select({
+            consumer: JsinfoConsumerAgrSchema.aggConsumerAllTimeRelayPayments.consumer,
+            cuSum: sql<number>`${JsinfoConsumerAgrSchema.aggConsumerAllTimeRelayPayments.cuSum}::float8`,
+            relaySum: sql<number>`${JsinfoConsumerAgrSchema.aggConsumerAllTimeRelayPayments.relaySum}::float8`,
+            rewardSum: sql<number>`${JsinfoConsumerAgrSchema.aggConsumerAllTimeRelayPayments.rewardSum}::float8`,
+            qosSyncAvg: sql<number>`${JsinfoConsumerAgrSchema.aggConsumerAllTimeRelayPayments.qosSyncAvg}::float8`,
+            qosSyncExcAvg: sql<number>`${JsinfoConsumerAgrSchema.aggConsumerAllTimeRelayPayments.qosSyncExcAvg}::float8`
+        })
+            .from(JsinfoConsumerAgrSchema.aggConsumerAllTimeRelayPayments),
+        'ConsumersPage_fetchConsumerAgrResultsEntries'
+    );
 }
 
 type CombinedConsumerEntry = {

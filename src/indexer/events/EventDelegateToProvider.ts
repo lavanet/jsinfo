@@ -1,6 +1,6 @@
 import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { Event } from "@cosmjs/stargate"
-import { LavaBlock } from "../types";
+import { LavaBlock } from "../lavaTypes";
 import { EventProcessAttributes, EventParseProviderAddress } from "../eventUtils";
 
 /*
@@ -96,10 +96,7 @@ export const ParseEventDelegateToProvider = (
   evt: Event,
   height: number,
   txHash: string | null,
-  lavaBlock: LavaBlock,
-
-
-  blockchainEntitiesStakes: Map<string, JsinfoSchema.InsertProviderStake[]>,
+  lavaBlock: LavaBlock
 ) => {
   let delegator: string | null = null;
   let provider: string | null = null;

@@ -48,7 +48,7 @@ export async function IndexChartsV3RawHandler(request: FastifyRequest<{ Querystr
     const to = t ? new Date(t) : new Date();
 
     const resource = new IndexChartsResource();
-    const result = await resource.fetchAndPickDb({ from, to });
+    const result = await resource.fetch({ from, to });
 
     return reply.send({ data: result });
 }

@@ -2,7 +2,7 @@
 // src/query/handlers/providerReportsHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryCheckJsinfoDbInstance, QueryGetJsinfoDbForQueryInstance } from '../../queryDb';
+
 import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { asc, desc, eq, gte, sql, and } from "drizzle-orm";
 import { Pagination, ParsePaginationFromString } from '../../utils/queryPagination';
@@ -10,6 +10,7 @@ import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_
 import { CSVEscape } from '@jsinfo/utils/fmt';
 import { GetAndValidateProviderAddressFromRequest } from '@jsinfo/query/utils/queryRequestArgParser';
 import { RequestHandlerBase } from '@jsinfo/query/classes/RequestHandlerBase';
+import { queryJsinfo } from '@jsinfo/utils/db';
 
 export type ProviderReportsResponse = {
     provider_reported: {
@@ -125,11 +126,11 @@ class ProviderReportsData extends RequestHandlerBase<ProviderReportsResponse> {
     }
 
     protected async fetchAllRecords(): Promise<ProviderReportsResponse[]> {
-        await QueryCheckJsinfoDbInstance();
+        ;
 
         const thirtyDaysAgo = this.getThirtyDaysAgo();
 
-        let reportsRes = await QueryGetJsinfoDbForQueryInstance()
+        let reportsRes = await queryJsinfo(db => db
             .select({
                 providerReported: JsinfoSchema.providerReported,
                 blocks: {
@@ -146,7 +147,9 @@ class ProviderReportsData extends RequestHandlerBase<ProviderReportsResponse> {
             )
             .orderBy(desc(JsinfoSchema.providerReported.id))
             .offset(0)
-            .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
+            .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION),
+            `ProviderReportsData::fetchAllRecords_${this.addr}`
+        );
 
         return reportsRes.map(row => ({
             provider_reported: row.providerReported,
@@ -155,11 +158,11 @@ class ProviderReportsData extends RequestHandlerBase<ProviderReportsResponse> {
     }
 
     protected async fetchRecordCountFromDb(): Promise<number> {
-        await QueryCheckJsinfoDbInstance();
+        ;
 
         const thirtyDaysAgo = this.getThirtyDaysAgo();
 
-        const countResult = await QueryGetJsinfoDbForQueryInstance()
+        const countResult = await queryJsinfo(db => db
             .select({
                 count: sql<number>`COUNT(*)`
             })
@@ -169,7 +172,9 @@ class ProviderReportsData extends RequestHandlerBase<ProviderReportsResponse> {
                     eq(JsinfoSchema.providerReported.provider, this.addr),
                     gte(JsinfoSchema.providerReported.datetime, thirtyDaysAgo)
                 )
-            );
+            ),
+            `ProviderReportsData::fetchRecordCountFromDb_${this.addr}`
+        );
 
         return Math.min(countResult[0].count || 0, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION - 1);
     }
@@ -206,14 +211,14 @@ class ProviderReportsData extends RequestHandlerBase<ProviderReportsResponse> {
             throw new Error(`Invalid sort key: ${trimmedSortKey}`);
         }
 
-        await QueryCheckJsinfoDbInstance();
+        ;
 
         const sortColumn = keyToColumnMap[finalPagination.sortKey];
         const orderFunction = finalPagination.direction === 'ascending' ? asc : desc;
 
         const thirtyDaysAgo = this.getThirtyDaysAgo();
 
-        const reportsRes = await QueryGetJsinfoDbForQueryInstance()
+        const reportsRes = await queryJsinfo(db => db
             .select({
                 providerReported: {
                     id: JsinfoSchema.providerReported.id,
@@ -243,7 +248,9 @@ class ProviderReportsData extends RequestHandlerBase<ProviderReportsResponse> {
             )
             .orderBy(orderFunction(sortColumn))
             .offset((finalPagination.page - 1) * finalPagination.count)
-            .limit(finalPagination.count);
+            .limit(finalPagination.count),
+            `ProviderReportsData::fetchPaginatedRecords_${finalPagination.sortKey}_${finalPagination.direction}_${finalPagination.page}_${finalPagination.count}_${thirtyDaysAgo}_${this.addr}`
+        );
 
         return reportsRes.map(row => ({
             provider_reported: {
@@ -266,7 +273,7 @@ class ProviderReportsData extends RequestHandlerBase<ProviderReportsResponse> {
         }));
     }
 
-    protected async convertRecordsToCsv(data: ProviderReportsResponse[]): Promise<string> {
+    public async ConvertRecordsToCsv(data: ProviderReportsResponse[]): Promise<string> {
         const columns = [
             { key: "provider_reported.blockId", name: "Block" },
             { key: "blocks.datetime", name: "Time" },

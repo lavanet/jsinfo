@@ -32,7 +32,7 @@ export async function LavaChainStakersHandler(
     reply: FastifyReply
 ): Promise<ChainWalletData> {
     const resource = new ChainWalletResource();
-    const result = await resource.fetchAndPickDb({ type: 'stakers' });
+    const result = await resource.fetch({ type: 'stakers' });
     if (!result) {
         reply.status(400);
         reply.send({ error: 'Failed to fetch stakers data' });
@@ -46,7 +46,7 @@ export async function LavaChainRestakersHandler(
     reply: FastifyReply
 ): Promise<ChainWalletData> {
     const resource = new ChainWalletResource();
-    const result = await resource.fetchAndPickDb({ type: 'restakers' });
+    const result = await resource.fetch({ type: 'restakers' });
     if (!result) {
         reply.status(400);
         reply.send({ error: 'Failed to fetch restakers data' });

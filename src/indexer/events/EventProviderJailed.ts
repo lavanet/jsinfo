@@ -1,6 +1,6 @@
 import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { Event } from "@cosmjs/stargate"
-import { LavaBlock } from "../types";
+import { LavaBlock } from "../lavaTypes";
 import { EventProcessAttributes, EventParseProviderAddress, EventParseBigInt } from "../eventUtils";
 
 /*
@@ -22,10 +22,7 @@ export const ParseEventProviderJailed = (
   evt: Event,
   height: number,
   txHash: string | null,
-  lavaBlock: LavaBlock,
-
-
-  blockchainEntitiesStakes: Map<string, JsinfoSchema.InsertProviderStake[]>,
+  lavaBlock: LavaBlock
 ) => {
   const dbEvent: JsinfoSchema.InsertEvent = {
     tx: txHash,

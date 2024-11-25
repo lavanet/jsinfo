@@ -1,26 +1,8 @@
--- Create role if not exists
-DO $$ 
-BEGIN
-  CREATE ROLE jsinfo LOGIN PASSWORD 'secret';
-  EXCEPTION WHEN DUPLICATE_OBJECT THEN
-  RAISE NOTICE 'Role jsinfo already exists';
-END
-$$;
+CREATE INDEX IF NOT EXISTS "subscription_buys_consumer_idx" ON "subscription_buys" ("consumer");--> statement-breakpoint
+ALTER TABLE "provider_spec_moniker" DROP COLUMN IF EXISTS "id";--> statement-breakpoint
+ALTER TABLE "provider_spec_moniker" DROP COLUMN IF EXISTS "createdat";--> statement-breakpoint
+ALTER TABLE "provider_spec_moniker" DROP COLUMN IF EXISTS "updatedat";
 
--- Create databases if they don't exist
-SELECT 'CREATE DATABASE relays OWNER jsinfo'
-WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'relays')\gexec
-
-SELECT 'CREATE DATABASE jsinfo OWNER jsinfo'
-WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'jsinfo')\gexec
-
--- Grant privileges
-ALTER ROLE jsinfo WITH LOGIN CREATEDB SUPERUSER;
-GRANT ALL PRIVILEGES ON DATABASE relays TO jsinfo;
-GRANT ALL PRIVILEGES ON DATABASE jsinfo TO jsinfo;
-
--- Connect to jsinfo database and create schema
-\c jsinfo jsinfo;
 
 CREATE TABLE IF NOT EXISTS "agg_consumer_alltime_relay_payments" (
 	"consumer" text,

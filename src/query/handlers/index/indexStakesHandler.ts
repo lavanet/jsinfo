@@ -28,7 +28,7 @@ export const IndexStakesHandlerOpts: RouteShorthandOptions = {
 
 export async function IndexStakesHandler(request: FastifyRequest, reply: FastifyReply): Promise<IndexStakesData> {
     const resource = new IndexStakesResource();
-    const result = await resource.fetchAndPickDb();
+    const result = await resource.fetch();
     if (!result) {
         reply.status(400);
         reply.send({ error: 'Failed to fetch stakes data' });

@@ -31,7 +31,7 @@ export async function SyncBlockchainEntities() {
 
         let dbStakes = new Map<string, JsinfoSchema.InsertProviderStake[]>();
         await UpdateStakeInformation(latestHeight, dbStakes);
-        console.log(`SyncBlockchainEntities: Retrieved ${dbStakes.size} stake entries from UpdateStakeInformation`);
+        // console.log(`SyncBlockchainEntities: Retrieved ${dbStakes.size} stake entries from UpdateStakeInformation`);
 
         await queryJsinfo(async (db: PostgresJsDatabase) => {
             return await db.transaction(async (tx: PostgresJsDatabase) => {
@@ -41,12 +41,12 @@ export async function SyncBlockchainEntities() {
                 for (const stakes of dbStakes.values()) {
                     stakes.forEach(stake => {
                         if (!IsMeaningfulText(stake.provider) || !IsMeaningfulText(stake.specId)) {
-                            console.log(`Skipping stake due to invalid provider or specId: provider=${stake.provider}, specId=${stake.specId}`);
+                            // console.log(`Skipping stake due to invalid provider or specId: provider=${stake.provider}, specId=${stake.specId}`);
                             return;
                         }
 
                         const key = `${stake.provider}-${stake.specId}`;
-                        console.log(`Processing stake: key=${key}, stake=${stake.stake}`);
+                        // console.log(`Processing stake: key=${key}, stake=${stake.stake}`);
 
                         if (uniqueStakesMap.has(key)) {
                             const existingStake = uniqueStakesMap.get(key);
@@ -54,7 +54,7 @@ export async function SyncBlockchainEntities() {
                                 console.log(`Updating stake for key=${key} from ${existingStake.stake} to ${stake.stake}`);
                                 uniqueStakesMap.set(key, stake);
                             } else {
-                                console.log(`Existing stake for key=${key} is greater or equal, not updating.`);
+                                // console.log(`Existing stake for key=${key} is greater or equal, not updating.`);
                             }
                         } else {
                             uniqueStakesMap.set(key, stake);
@@ -64,11 +64,11 @@ export async function SyncBlockchainEntities() {
                 }
 
                 const uniqueStakesArray = Array.from(uniqueStakesMap.values());
-                console.log(`SyncBlockchainEntities: Unique stakes to insert/update: ${uniqueStakesArray.length}`);
+                // console.log(`SyncBlockchainEntities: Unique stakes to insert/update: ${uniqueStakesArray.length}`);
 
                 await Promise.all(uniqueStakesArray.map(async (stake) => {
                     try {
-                        console.log(`Inserting/updating stake: ${StringifyWithBigInt(stake)}`);
+                        // console.log(`Inserting/updating stake: ${StringifyWithBigInt(stake)}`);
                         await tx.insert(JsinfoSchema.providerStakes)
                             .values(stake)
                             .onConflictDoUpdate({
@@ -86,7 +86,7 @@ export async function SyncBlockchainEntities() {
                                     delegateTotal: stake.delegateTotal,
                                 },
                             });
-                        console.log(`Successfully inserted/updated stake for provider=${stake.provider}, specId=${stake.specId}`);
+                        // console.log(`Successfully inserted/updated stake for provider=${stake.provider}, specId=${stake.specId}`);
                     } catch (error) {
                         console.error(`Error inserting/updating stake for provider=${stake.provider}, specId=${stake.specId}:`, error);
                     }

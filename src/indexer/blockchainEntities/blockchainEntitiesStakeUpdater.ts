@@ -152,7 +152,7 @@ function processStakeEntry(
     });
 
     // Log the collected addons and extensions
-    logger.info(`Collected addons: ${addons.join(', ')}, extensions: ${extensions.join(', ')} for provider: ${providerStake.address}`);
+    // logger.info(`Collected addons: ${addons.join(', ')}, extensions: ${extensions.join(', ')} for provider: ${providerStake.address}`);
 
     let addonsStr = addons.join(',');
     let extensionsStr = extensions.join(',');

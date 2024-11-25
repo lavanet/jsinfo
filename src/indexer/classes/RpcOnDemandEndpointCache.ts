@@ -98,7 +98,7 @@ class RpcOnDemandEndpointCacheClass {
             await this.fetchAndCacheEstimatedValidatorRewards(validator, amount, denom);
             rewards = await RedisCache.getDict(cacheKey) as EstimatedRewardsResponse;
             if (!rewards) {
-                logger.warn(`No estimated validator rewards found in cache for ${validator}`);
+                //logger.warn(`No estimated validator rewards found in cache for ${validator}`);
                 return { info: [], total: [] };
             }
         }
@@ -127,7 +127,7 @@ class RpcOnDemandEndpointCacheClass {
             await this.fetchEstimatedProviderRewards(provider, amount, denom);
             rewards = await RedisCache.getDict(cacheKey) as EstimatedRewardsResponse;
             if (!rewards) {
-                logger.warn(`No estimated provider rewards found in cache for ${provider}`);
+                // logger.warn(`No estimated provider rewards found in cache for ${provider}`);
                 return { info: [], total: [] };
             }
         }

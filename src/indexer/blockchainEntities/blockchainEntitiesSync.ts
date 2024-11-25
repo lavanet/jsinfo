@@ -93,7 +93,7 @@ export async function SyncBlockchainEntities() {
                 }));
 
                 // Update old stakes
-                console.log("SyncBlockchainEntities: Updating old stakes to inactive status");
+                // console.log("SyncBlockchainEntities: Updating old stakes to inactive status");
                 await tx.update(JsinfoSchema.providerStakes)
                     .set({
                         status: JsinfoSchema.LavaProviderStakeStatus.Inactive

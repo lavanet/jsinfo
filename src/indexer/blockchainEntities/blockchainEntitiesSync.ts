@@ -8,7 +8,7 @@ import { logger } from '@jsinfo/utils/logger';
 import { UpdateStakeInformation } from '@jsinfo/indexer/blockchainEntities/blockchainEntitiesStakeUpdater';
 import { queryJsinfo } from '@jsinfo/utils/db';
 import { GetLatestBlock } from '@jsinfo/query/utils/getLatestBlock';
-import { StringifyWithBigInt } from '@jsinfo/utils/bigint';
+// import { StringifyWithBigInt } from '@jsinfo/utils/bigint';
 
 let lastExecutedHeight: number | null = null; // Track the last executed height
 let runningPromise: Promise<void> | null = null; // Track the running promise
@@ -58,7 +58,7 @@ export async function SyncBlockchainEntities() {
                             }
                         } else {
                             uniqueStakesMap.set(key, stake);
-                            console.log(`Adding new stake for key=${key}: ${stake}`);
+                            // console.log(`Adding new stake for key=${key}: ${stake}`);
                         }
                     });
                 }

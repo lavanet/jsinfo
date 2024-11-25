@@ -32,7 +32,7 @@ class RedisCacheClass {
     private async connectAll() {
         console.log(`Attempting to connect to ${this.redisUrls.write.length} write Redis instances...`);
 
-        const maxRetries = 3;
+        const maxRetries = 10;
         const retryDelay = 1000; // 1 second between retries
 
         try {

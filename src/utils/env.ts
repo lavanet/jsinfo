@@ -1,3 +1,5 @@
+import { IsMeaningfulText } from "./fmt";
+
 export function GetEnvVar(key: string, alt?: string): string {
     const value = process.env[key];
     if (!value) {
@@ -21,8 +23,13 @@ export function GetRedisUrls(): { read: string[]; write: string[] } {
     const redisUrls = GetEnvVar(envKey);
     const readUrls = GetEnvVar(envKey + '_READ');
 
-    const writeUrls = redisUrls.split(',').map(url => url.trim()).filter(url => url);
-    const readUrlsArray = readUrls.split(',').map(url => url.trim()).filter(url => url);
+    const writeUrls = redisUrls.split(',')
+        .map(url => url.trim())
+        .filter(url => IsMeaningfulText(url));
+
+    const readUrlsArray = readUrls.split(',')
+        .map(url => url.trim())
+        .filter(url => IsMeaningfulText(url));
 
     return {
         read: readUrlsArray,

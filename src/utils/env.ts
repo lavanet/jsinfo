@@ -13,11 +13,19 @@ export function IsIndexerProcess(): boolean {
     return GetEnvVar("IS_INDEXER_PROCESS", "false") === "true";
 }
 
-export function GetRedisUrls(): string[] {
+export function GetRedisUrls(): { read: string[]; write: string[] } {
     const envKey = IsIndexerProcess()
         ? "JSINFO_INDEXER_REDDIS_CACHE"
         : "JSINFO_QUERY_REDDIS_CACHE";
 
     const redisUrls = GetEnvVar(envKey);
-    return redisUrls.split(',').map(url => url.trim());
+    const readUrls = GetEnvVar(envKey + '_READ');
+
+    const writeUrls = redisUrls.split(',').map(url => url.trim()).filter(url => url);
+    const readUrlsArray = readUrls.split(',').map(url => url.trim()).filter(url => url);
+
+    return {
+        read: readUrlsArray,
+        write: writeUrls
+    };
 }

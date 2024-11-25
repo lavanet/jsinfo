@@ -9,7 +9,7 @@ import { JSONStringify, MaskPassword } from '@jsinfo/utils/fmt';
 class RedisCacheClass {
     private clients: RedisClientType[] = [];
     private keyPrefix: string;
-    private redisUrls: string[] = [];
+    private redisUrls: { read: string[]; write: string[] } = { read: [], write: [] };
     private static activeGets = new Map<string, Promise<string | null>>();
     private static activeSets = new Map<string, Promise<void>>();
 
@@ -20,9 +20,9 @@ class RedisCacheClass {
 
     private initializeClients() {
         this.redisUrls = GetRedisUrls();
-        if (!this.redisUrls.length) {
+        if (!this.redisUrls.write.length) {
             logger.error('Redis initialization failed', {
-                reason: 'No Redis URLs configured'
+                reason: 'No write Redis URLs configured'
             });
             return;
         }
@@ -30,16 +30,16 @@ class RedisCacheClass {
     }
 
     private async connectAll() {
-        console.log(`Attempting to connect to ${this.redisUrls.length} Redis instances...`);
+        console.log(`Attempting to connect to ${this.redisUrls.write.length} write Redis instances...`);
 
         const maxRetries = 3;
         const retryDelay = 1000; // 1 second between retries
 
         try {
-            this.clients = await Promise.all(this.redisUrls.map(async url => {
+            this.clients = await Promise.all(this.redisUrls.write.map(async url => {
                 for (let attempt = 0; attempt < maxRetries; attempt++) {
                     try {
-                        console.log(`Connecting to Redis at ${MaskPassword(url)} on attempt ${attempt + 1}`);
+                        console.log(`Connecting to write Redis at ${MaskPassword(url)} on attempt ${attempt + 1}`);
                         const client = createClient({
                             url,
                             socket: {
@@ -53,7 +53,7 @@ class RedisCacheClass {
                         }));
 
                         await client.connect();
-                        console.log(`Connected to Redis at ${MaskPassword(url)} on attempt ${attempt + 1}`);
+                        console.log(`Connected to write Redis at ${MaskPassword(url)} on attempt ${attempt + 1}`);
                         return client;
                     } catch (err) {
                         logger.error('Redis connection attempt failed', {
@@ -68,8 +68,10 @@ class RedisCacheClass {
                         }
                     }
                 }
-                throw new Error(`Failed to connect to Redis at ${MaskPassword(url)} after ${maxRetries} attempts`);
+                throw new Error(`Failed to connect to write Redis at ${MaskPassword(url)} after ${maxRetries} attempts`);
             }));
+
+            console.log(`Attempting to connect to ${this.redisUrls.read.length} read Redis instances...`);
         } catch (error) {
             logger.error('Fatal: Redis connection failed', {
                 error: error as Error
@@ -84,6 +86,13 @@ class RedisCacheClass {
         } catch (error) {
             logger.error(`Redis reconnect failed`, error);
         }
+    }
+
+    private async connectReadClient(url: string): Promise<RedisClientType> {
+        const client = createClient({ url }) as RedisClientType;
+        client.on('error', (err) => logger.error('Redis client error', { error: err as Error, url }));
+        await client.connect();
+        return client;
     }
 
     async get(key: string): Promise<string | null> {
@@ -107,6 +116,23 @@ class RedisCacheClass {
                 operation: 'GET',
                 timestamp: new Date().toISOString()
             });
+
+            // Attempt to connect to a read Redis URL if available
+            if (this.redisUrls.read.length > 0) {
+                const readClient = await this.connectReadClient(this.redisUrls.read[0]);
+                try {
+                    return await readClient.get(fullKey);
+                } catch (readError) {
+                    logger.error('Redis GET operation failed on read client', {
+                        error: readError as Error,
+                        key: fullKey,
+                        operation: 'GET'
+                    });
+                } finally {
+                    await readClient.quit();
+                }
+            }
+
             await this.reconnect();
             return null;
         } finally {

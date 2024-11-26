@@ -22,15 +22,23 @@ import { queryJsinfo } from '../utils/db';
 const globakWorkList: number[] = [];
 
 let activityTimeout: any | null = null;
+let inactivityCount = 0; // Counter for inactivity messages
 
 const resetActivityTimeout = () => {
     if (activityTimeout) {
         clearTimeout(activityTimeout);
     }
     activityTimeout = setTimeout(() => {
+        inactivityCount++; // Increment the inactivity count
         console.log('No activity for 1 minutes, running a new filler blocks process...');
+
+        if (inactivityCount > 5) { // Check if the count exceeds 5
+            console.error('Inactivity limit exceeded. Terminating process...');
+            process.exit(1); // Kill the process with an error code
+        }
+
         FillUpBlocks(); // Call the function to run the filler blocks logic
-    }, 1 * 60 * 1000); // 2 minutes in milliseconds
+    }, 1 * 60 * 1000); // 1 minute in milliseconds
 };
 
 // Call this function whenever there is activity in the thread

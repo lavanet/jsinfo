@@ -1,4 +1,4 @@
-import { IsMeaningfulText } from "./fmt";
+import { IsMeaningfulText, JSONStringify, MaskPassword } from "./fmt";
 
 export function GetEnvVar(key: string, alt?: string): string {
     const value = process.env[key];
@@ -38,3 +38,5 @@ export function GetRedisUrls(): { read: string[]; write: string[] } {
         write: writeUrls
     };
 }
+
+console.log("RedisUrls::", MaskPassword(JSONStringify(GetRedisUrls())));

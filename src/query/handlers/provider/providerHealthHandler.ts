@@ -1,10 +1,9 @@
-
 // src/query/handlers/providerHealth.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 
 import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
-import { eq, desc, asc, sql } from "drizzle-orm";
+import { eq, desc, asc, sql, gte, and } from "drizzle-orm";
 import { Pagination, ParsePaginationFromString } from '@jsinfo/query/utils/queryPagination';
 import { CSVEscape } from '@jsinfo/utils/fmt';
 import { GetAndValidateProviderAddressFromRequest } from '@jsinfo/query/utils/queryRequestArgParser';
@@ -83,9 +82,17 @@ class ProviderHealthData extends RequestHandlerBase<HealthReportEntry> {
     }
 
     protected async fetchAllRecords(): Promise<HealthReportEntry[]> {
+        const oneMonthAgo = new Date();
+        oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1); // Calculate the date one month ago
+
         const data = await queryJsinfo(db => db.select()
             .from(JsinfoSchema.providerHealth)
-            .where(eq(JsinfoSchema.providerHealth.provider, this.addr))
+            .where(
+                and(
+                    eq(JsinfoSchema.providerHealth.provider, this.addr),
+                    gte(JsinfoSchema.providerHealth.timestamp, oneMonthAgo)
+                )
+            )
             .orderBy(desc(JsinfoSchema.providerHealth.id))
             .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION),
             'ProviderHealthData::fetchAllRecords'
@@ -109,12 +116,19 @@ class ProviderHealthData extends RequestHandlerBase<HealthReportEntry> {
     }
 
     protected async fetchRecordCountFromDb(): Promise<number> {
-        ;
+        const oneMonthAgo = new Date();
+        oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1); // Calculate the date one month ago
 
         const countResult = await queryJsinfo(db => db.select({
             count: sql<number>`COUNT(*)`
         })
-            .from(JsinfoSchema.providerHealth),
+            .from(JsinfoSchema.providerHealth)
+            .where(
+                and(
+                    eq(JsinfoSchema.providerHealth.provider, this.addr),
+                    gte(JsinfoSchema.providerHealth.timestamp, oneMonthAgo)
+                )
+            ),
             'ProviderHealthData::fetchRecordCountFromDb'
         );
 
@@ -122,6 +136,9 @@ class ProviderHealthData extends RequestHandlerBase<HealthReportEntry> {
     }
 
     public async fetchPaginatedRecords(pagination: Pagination | null): Promise<HealthReportEntry[]> {
+        const oneMonthAgo = new Date();
+        oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1); // Calculate the date one month ago
+
         const defaultSortKey = "id";
         let finalPagination: Pagination;
 
@@ -163,7 +180,12 @@ class ProviderHealthData extends RequestHandlerBase<HealthReportEntry> {
         const additionalData = await queryJsinfo(db => db
             .select()
             .from(JsinfoSchema.providerHealth)
-            .where(eq(JsinfoSchema.providerHealth.provider, this.addr))
+            .where(
+                and(
+                    eq(JsinfoSchema.providerHealth.provider, this.addr),
+                    gte(JsinfoSchema.providerHealth.timestamp, oneMonthAgo)
+                )
+            )
             .orderBy(orderFunction(sortColumn))
             .offset(offset)
             .limit(finalPagination.count),

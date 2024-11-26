@@ -61,7 +61,7 @@ docker_compose_postgres_logs:
 	docker compose logs -f jsinfo-postgres
  
 docker_compose_psql:
-	docker compose exec jsinfo-postgres psql -U jsinfo -d jsinfo -p 6452
+	docker compose exec jsinfo-postgres psql -U postgres -d jsinfo -p 6452
 # Restart specific services
 docker_compose_restart_query:
 	docker compose restart jsinfo-query

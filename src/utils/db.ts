@@ -23,12 +23,29 @@ const globalMigrationLock = {
     error: null as Error | null
 };
 
+const JSINFO_PSQL_MAX_CONNECTIONS = parseInt(GetEnvVar("JSINFO_PSQL_MAX_CONNECTIONS", "1000"), 10);
+const JSINFO_PSQL_MAX_CONNECTIONS_CONCURRENT = parseInt(GetEnvVar("JSINFO_PSQL_MAX_CONNECTIONS_CONCURRENT", "1000"), 10);
+const RELAYS_PSQL_MAX_CONNECTIONS = parseInt(GetEnvVar("RELAYS_PSQL_MAX_CONNECTIONS", "500"), 10);
+const RELAYS_PSQL_MAX_CONNECTIONS_CONCURRENT = parseInt(GetEnvVar("RELAYS_PSQL_MAX_CONNECTIONS_CONCURRENT", "500"), 10);
+
+// Validate that all constants are positive integers
+const validatePositiveInteger = (value: number, name: string) => {
+    if (isNaN(value) || value <= 0) {
+        throw new Error(`Invalid value for ${name}: ${value}. It must be a positive integer.`);
+    }
+};
+
+validatePositiveInteger(JSINFO_PSQL_MAX_CONNECTIONS, "JSINFO_PSQL_MAX_CONNECTIONS");
+validatePositiveInteger(JSINFO_PSQL_MAX_CONNECTIONS_CONCURRENT, "JSINFO_PSQL_MAX_CONNECTIONS_CONCURRENT");
+validatePositiveInteger(RELAYS_PSQL_MAX_CONNECTIONS, "RELAYS_PSQL_MAX_CONNECTIONS");
+validatePositiveInteger(RELAYS_PSQL_MAX_CONNECTIONS_CONCURRENT, "RELAYS_PSQL_MAX_CONNECTIONS_CONCURRENT");
+
 class DbConnectionPoolClass {
     private connections: DbConnection[] = [];
     private connectionString: "jsinfo" | "relays";
     private activeQueries = new Map<string, Promise<any>>();
     private queue: PQueue;
-    private readonly MAX_CONNECTIONS = 90;
+    private readonly MAX_CONNECTIONS: number = 90;
     private readonly CONNECTION_TTL = 1000 * 60 * 10;  // 10 minutes
     private readonly CLEANUP_INTERVAL = 1000 * 60;     // 1 minute
     private cachedPostgresUrl: string | null = null;
@@ -41,7 +58,11 @@ class DbConnectionPoolClass {
     private readonly WARNING_INTERVAL = 30000; // Only log every 10 seconds
 
     constructor(connectionString: "jsinfo" | "relays") {
-        this.queue = new PQueue({ concurrency: 150 });
+
+        this.MAX_CONNECTIONS = connectionString === "jsinfo" ? JSINFO_PSQL_MAX_CONNECTIONS : RELAYS_PSQL_MAX_CONNECTIONS;
+        const max_connections_concurently = connectionString === "jsinfo" ? JSINFO_PSQL_MAX_CONNECTIONS_CONCURRENT : RELAYS_PSQL_MAX_CONNECTIONS;
+
+        this.queue = new PQueue({ concurrency: max_connections_concurently });
         this.connectionString = connectionString;
         this.startConnectionManager();
         this.migrateDb().catch(error => {

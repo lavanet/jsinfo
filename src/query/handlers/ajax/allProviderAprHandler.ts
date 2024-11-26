@@ -5,19 +5,7 @@ export const AllProviderAPRRawHandlerOpts: RouteShorthandOptions = {
     schema: {
         response: {
             200: {
-                type: 'array',
-                items: {
-                    type: 'object',
-                    properties: {
-                        address: { type: 'string' },
-                        moniker: { type: 'string' },
-                        apr: { type: 'string' },
-                        commission: { type: 'any' },
-                        '30_days_cu_served': { type: 'any' },
-                        tokens: { type: 'object' }
-                    },
-                    required: ['address', 'moniker', 'apr']
-                }
+                type: 'string',
             },
             400: {
                 type: 'object',

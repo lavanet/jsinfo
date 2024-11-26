@@ -110,6 +110,13 @@ export abstract class RedisResourceBase<T, A extends BaseArgs = BaseArgs> {
 
     private async handleCachedData(cached: T, args?: A, key?: string): Promise<void> {
         const ttl = await RedisCache.getTTL(key!);
+        if (ttl === undefined) {
+            logger.error('Cache TTL check failed', {
+                key,
+                redisKey: this.redisKey
+            });
+            return;
+        }
         if (ttl >= 0 && ttl < 30) {
             logger.info('Cache entry near expiration, triggering refresh', {
                 key,

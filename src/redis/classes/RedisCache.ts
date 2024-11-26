@@ -198,9 +198,10 @@ class RedisCacheClass {
 
         try {
             const testKey = this.keyPrefix + "test";
-            await Promise.all(this.clients.map(client =>
+            await Promise.all(this.clients.map(client => {
+                if (!client) return;
                 client.set(testKey, "test", { EX: 1 })
-            ));
+            }));
             return true;
         } catch (error) {
             return false;
@@ -278,7 +279,7 @@ class RedisCacheClass {
         }
     }
 
-    async getTTL(key: string): Promise<number> {
+    async getTTL(key: string): Promise<number | undefined> {
         const fullKey = this.keyPrefix + key;
 
         if (!this.clients.length) {
@@ -290,8 +291,11 @@ class RedisCacheClass {
         }
 
         try {
-            const ttl = await this.clients[0].ttl(fullKey);
-            return ttl;
+            for (const client of this.clients) {
+                if (!client) continue;
+                const ttl = await client.ttl(fullKey);
+                return ttl;
+            }
         } catch (error) {
             logger.error('Redis TTL check failed', {
                 error: error as Error,
@@ -300,6 +304,7 @@ class RedisCacheClass {
             await this.reconnect();
             return -2;
         }
+        return undefined;
     }
 }
 

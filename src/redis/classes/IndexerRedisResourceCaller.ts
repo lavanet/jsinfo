@@ -21,7 +21,7 @@ import { IndexStakesResource } from '../resources/index/IndexStakesResource';
 import { IndexTopChainsResource } from '../resources/index/IndexTopChainsResource';
 import { IndexTotalCuResource } from '../resources/index/IndexTotalCuResource';
 import { ActiveProvidersResource } from '../resources/index/ActiveProvidersResource';
-import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import { AllProviderAPRResource } from '../resources/ajax/AllProviderAprResource';
 
 export class IndexerRedisResourceCaller {
     private static readonly REFRESH_INTERVAL = 60 * 1000; // 1 minute
@@ -106,6 +106,10 @@ export class IndexerRedisResourceCaller {
     }
 
     private static async refreshAjaxResources(): Promise<void> {
+        // AllProviderAPRResource
+        await new AllProviderAPRResource().fetch()
+            .catch(e => logger.error('Failed to refresh all provider APR:', e));
+
         // Supply Resources
         await new SupplyResource().fetch({ type: 'total' })
             .catch(e => logger.error('Failed to refresh total supply:', e));
@@ -125,6 +129,7 @@ export class IndexerRedisResourceCaller {
             .catch(e => logger.error('Failed to refresh autocomplete data:', e));
         await new ListProvidersResource().fetch()
             .catch(e => logger.error('Failed to refresh providers list:', e));
+
     }
 
     private static async refreshIndexResources(): Promise<void> {

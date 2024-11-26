@@ -246,10 +246,16 @@ export const FillUpBlocks = async () => {
             logger.error('fillUp: Failed to get latest db block:', error);
         }
 
-        const latestDbBlock = latestDbBlockRes?.[0]?.height || 0;
-        const cBlockHeight = latestDbBlock != 0 ?
-            Math.max(consts.JSINFO_INDEXER_START_BLOCK, latestDbBlock) :
-            consts.JSINFO_INDEXER_START_BLOCK;
+        let latestDbBlock = latestDbBlockRes[0]?.height || 0; // Retrieve latest block height from the database
+
+        let cBlockHeight;
+        if (consts.JSINFO_INDEXER_START_BLOCK === "latest") { // Check if the start block is "latest"
+            cBlockHeight = latestDbBlock - 1; // Start from the latest block in the database
+        } else {
+            cBlockHeight = latestDbBlock !== 0 ?
+                Math.max(consts.JSINFO_INDEXER_START_BLOCK, latestDbBlock) :
+                consts.JSINFO_INDEXER_START_BLOCK;
+        }
 
         logger.info(`fillUp: Starting batch process for DB height ${cBlockHeight} and blockchain height ${latestHeight}`);
         await doBatch(cBlockHeight, latestHeight);
@@ -258,7 +264,7 @@ export const FillUpBlocks = async () => {
         // Verify completion
         const latestDbBlock2 = (await queryJsinfo(
             async (db) => db.select().from(JsinfoSchema.blocks).orderBy(desc(JsinfoSchema.blocks.height)).limit(1),
-            'getLatestDbBlock2'
+            'getLatestDbBlock'
         ))[0]?.height || 0;
 
         if (latestDbBlock2 === 0 || latestHeight !== latestDbBlock2) {

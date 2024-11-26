@@ -20,10 +20,10 @@ export function GetRedisUrls(): { read: string[]; write: string[] } {
         ? "JSINFO_INDEXER_REDDIS_CACHE"
         : "JSINFO_QUERY_REDDIS_CACHE";
 
-    const redisUrls = GetEnvVar(envKey);
-    const readUrls = GetEnvVar(envKey + '_READ');
-    const redisUrls1 = GetEnvVar(envKey + '_1');
-    const readUrls1 = GetEnvVar(envKey + '_READ_1');
+    const redisUrls = GetEnvVar(envKey, "-");
+    const readUrls = GetEnvVar(envKey + '_READ', "-");
+    const redisUrls1 = GetEnvVar(envKey + '_1', "-");
+    const readUrls1 = GetEnvVar(envKey + '_READ_1', "-");
 
     const writeUrls = [...redisUrls.split(','), ...redisUrls1.split(',')]
         .map(url => url.trim())

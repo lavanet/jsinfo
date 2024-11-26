@@ -38,9 +38,16 @@ export function CalculatePercentile(values: number[], rank: number): number {
   }
 }
 
+interface AprPerProviderUpdateBatch {
+  type: string;
+  value: number;
+  provider: string;
+  estimatedRewards: EstimatedRewardsResponse;
+}
+
 class APRMonitorClass {
   private intervalId: NodeJS.Timer | null = null;
-  private aprPerProviderUpdateBatch: { type: string; value: number; provider: string; }[] = [];
+  private aprPerProviderUpdateBatch: AprPerProviderUpdateBatch[] = [];
   private aprPerProviderUpdateTimer: any | null = null;
 
   public start(): void {
@@ -262,17 +269,19 @@ class APRMonitorClass {
           const result = await db.transaction(async (tx) => {
             // Perform batch insert
             await tx.insert(JsinfoSchema.aprPerProvider)
-              .values(updates.map(({ type, value, provider }) => ({
+              .values(updates.map(({ type, value, provider, estimatedRewards }) => ({
                 type,
                 value,
                 timestamp: now,
-                provider
+                provider,
+                estimatedRewards,
               })))
               .onConflictDoUpdate({
                 target: [JsinfoSchema.aprPerProvider.provider, JsinfoSchema.aprPerProvider.type],
                 set: {
                   value: sql`EXCLUDED.value`, // Use the new value
                   timestamp: now,
+                  estimatedRewards: sql`EXCLUDED.estimated_rewards`,
                 } as any
               });
             return updates; // Return the updates for logging
@@ -304,8 +313,8 @@ class APRMonitorClass {
     }, 60 * 1000); // 1 minute
   }
 
-  private async updateAprInDbPerProvider(type: string, value: number, provider: string): Promise<void> {
-    this.aprPerProviderUpdateBatch.push({ type, value, provider }); // Add to the batch
+  private async updateAprInDbPerProvider(type: string, value: number, estimatedRewards: EstimatedRewardsResponse, provider: string): Promise<void> {
+    this.aprPerProviderUpdateBatch.push({ type, value, provider, estimatedRewards }); // Add to the batch
 
     logger.info(`APRMonitor::Batch Update - Current batch size: ${this.aprPerProviderUpdateBatch.length}, Type: ${type}, Provider: ${provider}`);
 
@@ -319,7 +328,6 @@ class APRMonitorClass {
   }
 
   public async ProcessAPR() {
-    const startTime = Date.now();
 
     const retry = async (fn: () => Promise<any>, retries: number = 3): Promise<any> => {
       for (let i = 0; i < retries; i++) {
@@ -354,12 +362,13 @@ class APRMonitorClass {
         const updateRestakingAPR = async () => {
           const providers = await RpcPeriodicEndpointCache.GetProviders();
           for (const provider of providers) {
+            const estimatedRewards = await RpcOnDemandEndpointCache.GetEstimatedProviderRewards(provider, BENCHMARK_AMOUNT, BENCHMARK_DENOM);
             const apr = await retry(() => this.calculateAPRForEntities(
               () => Promise.resolve([provider]),
-              (provider) => RpcOnDemandEndpointCache.GetEstimatedProviderRewards(provider, BENCHMARK_AMOUNT, BENCHMARK_DENOM),
+              (provider) => Promise.resolve(estimatedRewards),
               `Restaking APR for ${provider}`
             ));
-            promises.push(this.updateAprInDbPerProvider('restaking', apr, provider));
+            promises.push(this.updateAprInDbPerProvider('restaking', apr, estimatedRewards, provider));
           }
         };
 
@@ -381,12 +390,13 @@ class APRMonitorClass {
         const updateValidatorAPR = async () => {
           const validators = await RpcPeriodicEndpointCache.GetAllValidators();
           for (const validator of validators) {
+            const estimatedRewards = await RpcOnDemandEndpointCache.GetEstimatedValidatorRewards(validator, BENCHMARK_AMOUNT, BENCHMARK_DENOM);
             const apr = await retry(() => this.calculateAPRForEntities(
               () => Promise.resolve([validator]),
-              (validator) => RpcOnDemandEndpointCache.GetEstimatedValidatorRewards(validator, BENCHMARK_AMOUNT, BENCHMARK_DENOM),
+              (validator) => Promise.resolve(estimatedRewards),
               `Staking APR for ${validator}`
             ));
-            promises.push(this.updateAprInDbPerProvider('staking', apr, validator));
+            promises.push(this.updateAprInDbPerProvider('staking', apr, estimatedRewards, validator));
           }
         };
 

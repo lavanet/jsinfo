@@ -63,7 +63,7 @@ export async function FetchRestData<T>(
                 logger.warn(`Rate limit hit for ${url}, waiting 60 seconds before retry`);
                 rateDelayCache.set(url, Date.now() + RATE_LIMIT_DELAY);
                 await new Promise(resolve => setTimeout(resolve, RATE_LIMIT_DELAY));
-                throw new Error('Rate limited - retrying after delay');
+                throw new Error(`Rate limited - retrying after delay on ${url}`);
             }
 
             if (!response.ok) {

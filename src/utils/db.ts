@@ -6,7 +6,7 @@ import { Sleep } from './sleep';
 import postgres from 'postgres';
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import { sql } from 'drizzle-orm';
-import { MaskPassword } from './fmt';
+import { IsMeaningfulText, MaskPassword } from './fmt';
 
 interface DbConnection {
     db: PostgresJsDatabase;
@@ -120,8 +120,8 @@ class DbConnectionPoolClass {
             "POSTGRESQL_URL"
         ]) {
             try {
-                const url = GetEnvVar(envVar);
-                if (url) urls.add(url);
+                const url = GetEnvVar(envVar, "-");
+                if (IsMeaningfulText(url)) urls.add(url);
             } catch (error) {
                 continue;
             }

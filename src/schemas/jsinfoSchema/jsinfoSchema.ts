@@ -363,6 +363,7 @@ export const aprPerProvider = pgTable('apr_per_provider', {
   type: text('type').notNull(),
   value: real('value').notNull(),
   timestamp: timestamp('timestamp', { mode: "date" }).defaultNow().notNull(),
+  estimatedRewards: jsonb('estimated_rewards'),
 }, (table) => {
   return {
     appidx: primaryKey({ columns: [table.provider, table.type] }),

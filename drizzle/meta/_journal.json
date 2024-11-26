@@ -288,6 +288,13 @@
       "when": 1732623552395,
       "tag": "0040_cultured_scourge",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "5",
+      "when": 1732656666543,
+      "tag": "0041_productive_wendell_vaughn",
+      "breakpoints": true
     }
   ]
 }

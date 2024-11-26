@@ -51,7 +51,7 @@ export const IsMeaningfulText = (text: string | null | undefined): boolean => {
     }
 
     const trimmedTextLower = trimmedText.toLowerCase();
-    const meaninglessValues = ['null', 'undefined', 'none', 'n/a', 'na', 'nil', 'false', '0'];
+    const meaninglessValues = ['null', 'undefined', 'none', 'n/a', 'na', 'nil', 'false', '0', '-'];
     if (meaninglessValues.includes(trimmedTextLower)) {
         return false
     }

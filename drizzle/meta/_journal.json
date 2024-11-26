@@ -281,6 +281,13 @@
       "when": 1732285456869,
       "tag": "0039_stale_meggan",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "5",
+      "when": 1732623552395,
+      "tag": "0040_cultured_scourge",
+      "breakpoints": true
     }
   ]
 }

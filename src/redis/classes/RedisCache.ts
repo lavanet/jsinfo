@@ -7,7 +7,7 @@ import { GetRedisUrls } from '@jsinfo/utils/env';
 import { JSONStringify, MaskPassword } from '@jsinfo/utils/fmt';
 
 class RedisCacheClass {
-    private clients: RedisClientType[] = [];
+    private clients: (RedisClientType | null)[] = [];
     private keyPrefix: string;
     private redisUrls: { read: string[]; write: string[] } = { read: [], write: [] };
     private static activeGets = new Map<string, Promise<string | null>>();
@@ -32,7 +32,7 @@ class RedisCacheClass {
     private async connectAll() {
         console.log(`Attempting to connect to ${this.redisUrls.write.length} write Redis instances...`);
 
-        const maxRetries = 10;
+        const maxRetries = 100;
         const retryDelay = 1000; // 1 second between retries
 
         try {
@@ -68,8 +68,13 @@ class RedisCacheClass {
                         }
                     }
                 }
-                throw new Error(`Failed to connect to write Redis at ${MaskPassword(url)} after ${maxRetries} attempts`);
+                logger.warn(`Failed to connect to write Redis at ${MaskPassword(url)} after ${maxRetries} attempts. Proceeding without this client.`);
+                return null;
             }));
+
+            this.clients = this.clients.filter(client => client !== null) as RedisClientType[];
+
+            console.log(`Connected to ${this.clients.length} write Redis instances.`);
 
             console.log(`Attempting to connect to ${this.redisUrls.read.length} read Redis instances...`);
         } catch (error) {
@@ -108,16 +113,22 @@ class RedisCacheClass {
         }
 
         try {
-            return await this.clients[0].get(fullKey);
-        } catch (error) {
-            logger.error('Redis GET operation failed', {
-                error: error as Error,
-                key: fullKey,
-                operation: 'GET',
-                timestamp: new Date().toISOString()
-            });
+            for (const client of this.clients) {
+                if (!client) continue;
+                try {
+                    return await client.get(fullKey); // Attempt to get from each client
+                } catch (error) {
+                    logger.error('Redis GET operation failed', {
+                        error: error as Error,
+                        key: fullKey,
+                        operation: 'GET',
+                        client: MaskPassword(client.options?.url || ''), // Log the client URL for debugging
+                        timestamp: new Date().toISOString()
+                    });
+                }
+            }
 
-            // Attempt to connect to a read Redis URL if available
+            // If all clients failed, attempt to connect to a read Redis URL if available
             if (this.redisUrls.read.length > 0) {
                 const readClient = await this.connectReadClient(this.redisUrls.read[0]);
                 try {
@@ -155,6 +166,7 @@ class RedisCacheClass {
 
             try {
                 await Promise.all(this.clients.map(async client => {
+                    if (!client) return;
                     if (ttlSeconds) {
                         await client.setEx(fullKey, ttlSeconds, value);
                     } else {

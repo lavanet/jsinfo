@@ -312,3 +312,11 @@ CREATE INDEX IF NOT EXISTS "supplyIdx" ON "supply" ("key");--> statement-breakpo
 CREATE UNIQUE INDEX IF NOT EXISTS "aggAllTimeIdx" ON "agg_alltime_relay_payments" ("spec_id","provider");--> statement-breakpoint
 CREATE UNIQUE INDEX IF NOT EXISTS "aggDailyIdx" ON "agg_daily_relay_payments" ("dateday","spec_id","provider");--> statement-breakpoint
 CREATE UNIQUE INDEX IF NOT EXISTS "aggHourlyIdx" ON "agg_hourly_relay_payments" ("datehour","spec_id","provider");
+
+CREATE TABLE IF NOT EXISTS "apr_per_provider" (
+	"provider" text NOT NULL,
+	"type" text NOT NULL,
+	"value" real NOT NULL,
+	"timestamp" timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT "apr_per_provider_provider_type_pk" PRIMARY KEY("provider","type")
+);

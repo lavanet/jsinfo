@@ -357,3 +357,17 @@ export const specTrackedInfo = pgTable('spec_tracked_info', {
 
 export type SpecTrackedInfo = typeof specTrackedInfo.$inferSelect;
 export type InsertSpecTrackedInfo = typeof specTrackedInfo.$inferInsert;
+
+export const aprPerProvider = pgTable('apr_per_provider', {
+  provider: text('provider').notNull(),
+  type: text('type').notNull(),
+  value: real('value').notNull(),
+  timestamp: timestamp('timestamp', { mode: "date" }).defaultNow().notNull(),
+}, (table) => {
+  return {
+    appidx: primaryKey({ columns: [table.provider, table.type] }),
+  };
+});
+
+export type AprPerProvider = typeof aprPerProvider.$inferSelect;
+export type InsertAprPerProvider = typeof aprPerProvider.$inferInsert;

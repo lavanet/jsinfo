@@ -146,11 +146,11 @@ class APRMonitorClass {
       const entities = await getEntities();
       const totalEntities = entities.length;
 
-      logger.info(`APRMonitor::${caller} - Starting calculation`, {
-        totalEntities,
-        numThreads,
-        timestamp: new Date().toISOString()
-      });
+      // logger.info(`APRMonitor::${caller} - Starting calculation`, {
+      //   totalEntities,
+      //   numThreads,
+      //   timestamp: new Date().toISOString()
+      // });
 
       // Progress tracking callback
       const updateProgress = (increment: number) => {
@@ -351,15 +351,19 @@ class APRMonitorClass {
         );
 
         // 2) Update APR for each provider concurrently
-        const providers = await RpcPeriodicEndpointCache.GetProviders();
-        const updateProviderPromises = providers.map(provider =>
-          retry(() => this.calculateAPRForEntities(
-            () => Promise.resolve([provider]),
-            (provider) => RpcOnDemandEndpointCache.GetEstimatedProviderRewards(provider, BENCHMARK_AMOUNT, BENCHMARK_DENOM),
-            `Restaking APR for ${provider}`
-          )).then(apr => this.updateAprInDbPerProvider('restaking', apr, provider))
-        );
-        promises.push(...updateProviderPromises); // Add provider update promises to the array
+        const updateRestakingAPR = async () => {
+          const providers = await RpcPeriodicEndpointCache.GetProviders();
+          for (const provider of providers) {
+            const apr = await retry(() => this.calculateAPRForEntities(
+              () => Promise.resolve([provider]),
+              (provider) => RpcOnDemandEndpointCache.GetEstimatedProviderRewards(provider, BENCHMARK_AMOUNT, BENCHMARK_DENOM),
+              `Restaking APR for ${provider}`
+            ));
+            promises.push(this.updateAprInDbPerProvider('restaking', apr, provider));
+          }
+        };
+
+        promises.push(updateRestakingAPR()); // Call the function and push the promise
 
         // 3) Calculate Staking APR and update the database
         promises.push(
@@ -374,15 +378,19 @@ class APRMonitorClass {
         );
 
         // 4) Update APR for each validator concurrently
-        const validators = await RpcPeriodicEndpointCache.GetAllValidators();
-        const updateValidatorPromises = validators.map(validator =>
-          retry(() => this.calculateAPRForEntities(
-            () => Promise.resolve([validator]),
-            (validator) => RpcOnDemandEndpointCache.GetEstimatedValidatorRewards(validator, BENCHMARK_AMOUNT, BENCHMARK_DENOM),
-            `Staking APR for ${validator}`
-          )).then(apr => this.updateAprInDbPerProvider('staking', apr, validator))
-        );
-        promises.push(...updateValidatorPromises); // Add validator update promises to the array
+        const updateValidatorAPR = async () => {
+          const validators = await RpcPeriodicEndpointCache.GetAllValidators();
+          for (const validator of validators) {
+            const apr = await retry(() => this.calculateAPRForEntities(
+              () => Promise.resolve([validator]),
+              (validator) => RpcOnDemandEndpointCache.GetEstimatedValidatorRewards(validator, BENCHMARK_AMOUNT, BENCHMARK_DENOM),
+              `Staking APR for ${validator}`
+            ));
+            promises.push(this.updateAprInDbPerProvider('staking', apr, validator));
+          }
+        };
+
+        promises.push(updateValidatorAPR()); // Call the function and push the promise
 
         // Wait for all promises to complete
         await Promise.all(promises);

@@ -100,6 +100,50 @@ Returns the 80th percentile APR values for both staking and restaking options in
 }
 ```
 
+#### `/all_providers_apr`
+
+This endpoint returns a list of all providers along with their APR, commission rates, and other relevant information.
+
+### Response Format
+
+The response is a JSON array of objects, where each object contains the following fields:
+
+```json
+[
+  {
+    "address": "string", // The address of the provider
+    "moniker": "string", // The display name of the provider (moniker)
+    "apr": "string" or "-" // The APR value as a string (percentage) or "-" if not available
+    "commission": "string" or "-" // The commission rate as a string (formatted percentage) or "-" if not available
+    "30_days_cu_served": "string" or "-" // The cumulative units served in the last 30 days as a string or "-" if not available
+    "rewards": "array" or "-" // An array of rewards or "-" if no rewards
+  }
+]
+```
+
+### Example Response
+
+```json
+[
+  {
+    "address": "lava@1gnkhmyhfd4vf03zwwczw2j4wmpckq5wgv2eugv",
+    "moniker": "-",
+    "apr": "-",
+    "commission": "100.0%",
+    "30_days_cu_served": "-",
+    "rewards": "-"
+  },
+  {
+    "address": "lava@1gpl2h7wwnwmzcxmlmg95rn2pr2m6epddg0ede4",
+    "moniker": "DTEAM",
+    "apr": "0.0115%",
+    "commission": "50.0%",
+    "30_days_cu_served": "158635270",
+    "rewards": [{ "denom": "lava", "amount": "0.096037" }]
+  }
+]
+```
+
 ### Calculation Method
 
 #### APR Calculation Method

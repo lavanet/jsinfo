@@ -11,10 +11,9 @@ import { ConvertToBaseDenom } from '@jsinfo/indexer/restrpc_agregators/CurrencyC
 interface AllAprProviderData {
     address: string;
     moniker: string;
-    restaking_apr?: string | null;
-    stacking_apr?: string | null;
+    apr?: string | null;
     commission?: string | null;
-    cu_served_30days?: string | null;
+    '30_days_cu_served'?: string | null;
     rewards: EstimatedRewardsResponse;
 }
 
@@ -23,7 +22,6 @@ function ValueOrDash(provider: string | undefined): string {
     return IsMeaningfulText("" + provider) ? String(provider) : '-';
 }
 
-// Helper function to format the average
 function formatToFourDecimals(value: number): string {
     const formattedToFour = value.toFixed(4);
     if (formattedToFour === '0.0000') {
@@ -32,6 +30,11 @@ function formatToFourDecimals(value: number): string {
         return formattedToTen;
     }
     return formattedToFour;
+}
+
+function formatToPercent(value: number): string {
+    if (!IsMeaningfulText("" + value)) return '-'; // Return '-' if the value is not a number
+    return (value * 100).toFixed(4) + '%'; // Convert to percentage and format to one decimal place
 }
 
 // Helper function to safely format commission
@@ -157,12 +160,14 @@ export class AllProviderAPRResource extends RedisResourceBase<AllAprProviderData
                     addressAndAprDataRewardsById[address].total = await this.processRewards(addressAndAprDataRewardsById[address].total, true);
                 }
 
-                if (addressAndAprDataRewardsById[address] && addressAndAprDataRewardsById[address].info.length == 0) {
-                    delete addressAndAprDataRewardsById[address].info;
-                }
-
-                if (addressAndAprDataRewardsById[address] && addressAndAprDataRewardsById[address].total.length == 0) {
-                    delete addressAndAprDataRewardsById[address].total;
+                if (addressAndAprDataRewardsById[address]) {
+                    if (addressAndAprDataRewardsById[address].total.length != 0) {
+                        delete addressAndAprDataRewardsById[address].info;
+                        addressAndAprDataRewardsById[address] = addressAndAprDataRewardsById[address].total;
+                    } else {
+                        delete addressAndAprDataRewardsById[address].total;
+                        addressAndAprDataRewardsById[address] = addressAndAprDataRewardsById[address].info;
+                    }
                 }
 
                 if (curr.type.toLowerCase().trim() === 'restaking') {
@@ -210,7 +215,7 @@ export class AllProviderAPRResource extends RedisResourceBase<AllAprProviderData
             const total = dataMap[address].reduce((a, b) => a + b, 0);
             const count = dataMap[address].length;
             const average = count > 0 ? (total / count) : 0; // Calculate average or set to 0
-            dataMap[address] = formatToFourDecimals(average); // Use the helper function to format the average
+            dataMap[address] = formatToPercent(average); // Use the helper function to format the average
         }
     }
 
@@ -229,10 +234,10 @@ export class AllProviderAPRResource extends RedisResourceBase<AllAprProviderData
             const ret: AllAprProviderData = {
                 address: address,
                 moniker: ValueOrDash(moniker),
-                restaking_apr: ValueOrDash(String(addressAndAprDataRestakingById[address])),
-                stacking_apr: ValueOrDash(String(addressAndAprDataStackingById[address])),
+                apr: ValueOrDash(String(addressAndAprDataRestakingById[address])),
+                // stacking_apr: ValueOrDash(String(addressAndAprDataStackingById[address])),
                 commission: formatCommissionPrecent(providerCommissionsDataMapByProviderId[address]),
-                cu_served_30days: ValueOrDash(String(cuServedDataMapByProviderId[address])),
+                '30_days_cu_served': ValueOrDash(String(cuServedDataMapByProviderId[address])),
                 rewards: addressAndAprDataRewardsById[address] || "-",
             };
             processedAddressAndAprData.push(ret);

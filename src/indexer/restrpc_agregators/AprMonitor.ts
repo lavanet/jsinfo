@@ -149,15 +149,10 @@ class APRMonitorClass {
     let lastLogTime = startTime;
     let lastLogPercent = 0;
 
+
     try {
       const entities = await getEntities();
       const totalEntities = entities.length;
-
-      // logger.info(`APRMonitor::${caller} - Starting calculation`, {
-      //   totalEntities,
-      //   numThreads,
-      //   timestamp: new Date().toISOString()
-      // });
 
       // Progress tracking callback
       const updateProgress = (increment: number) => {

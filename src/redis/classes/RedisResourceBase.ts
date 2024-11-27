@@ -24,6 +24,9 @@ export abstract class RedisResourceBase<T, A extends BaseArgs = BaseArgs> {
     protected async get(args?: A): Promise<T | null> {
         const key = this.getKeyWithArgs(args);
         const cached = await RedisCache.get(key);
+        if (key.includes("providerMonikerSpec")) {
+            return cached ? this.deserialize(cached) : null;
+        }
         logger.info(`RedisResourceBase:: [${this.redisKey}] Cache ${cached ? 'hit' : 'miss'}:`, {
             key,
             args: args ? JSON.stringify(args).slice(0, 100) + '...' : 'none',

@@ -49,7 +49,7 @@ class RedisCacheClass {
 
                         client.on('error', (err) => logger.error('Redis client error', {
                             error: err as Error,
-                            url
+                            url: MaskPassword(url)
                         }));
 
                         await client.connect();
@@ -58,7 +58,7 @@ class RedisCacheClass {
                     } catch (err) {
                         logger.error('Redis connection attempt failed', {
                             error: err as Error,
-                            url,
+                            url: MaskPassword(url),
                             attempt: attempt + 1,
                             maxRetries
                         });

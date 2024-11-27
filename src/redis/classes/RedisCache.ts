@@ -95,7 +95,7 @@ class RedisCacheClass {
 
     private async connectReadClient(url: string): Promise<RedisClientType> {
         const client = createClient({ url }) as RedisClientType;
-        client.on('error', (err) => logger.error('Redis client error', { error: err as Error, url }));
+        client.on('error', (err) => logger.error('Redis client error', { error: err as Error, url: MaskPassword(url) }));
         await client.connect();
         return client;
     }

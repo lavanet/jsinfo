@@ -27,11 +27,23 @@ export function GetRedisUrls(): { read: string[]; write: string[] } {
 
     const writeUrls = [...redisUrls.split(','), ...redisUrls1.split(',')]
         .map(url => url.trim())
-        .filter(url => IsMeaningfulText(url));
+        .filter(url => IsMeaningfulText(url))
+        .sort((a, b) => {
+            const aStartsWithNumber = /^\d+_/.test(a);
+            const bStartsWithNumber = /^\d+_/.test(b);
+            return aStartsWithNumber ? -1 : bStartsWithNumber ? 1 : 0; // Move items starting with numbers to the front
+        })
+        .map(url => url.replace(/^1_/, '')); // Remove prefix '1_'
 
     const readUrlsArray = [...readUrls.split(','), ...readUrls1.split(',')]
         .map(url => url.trim())
-        .filter(url => IsMeaningfulText(url));
+        .filter(url => IsMeaningfulText(url))
+        .sort((a, b) => {
+            const aStartsWithNumber = /^\d+_/.test(a);
+            const bStartsWithNumber = /^\d+_/.test(b);
+            return aStartsWithNumber ? -1 : bStartsWithNumber ? 1 : 0; // Move items starting with numbers to the front
+        })
+        .map(url => url.replace(/^1_/, '')); // Remove prefix '1_'
 
     return {
         read: readUrlsArray,

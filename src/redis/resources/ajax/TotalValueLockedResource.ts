@@ -43,50 +43,54 @@ export class TotalValueLockedResource extends RedisResourceBase<bigint, {}> {
     // Method to fetch and calculate total value locked
     private async fetchTotalValueLocked(): Promise<bigint> {
         try {
-            const indexStakes = await new IndexStakesResource().fetch();
-            if (!indexStakes) {
-                throw new Error('Failed to fetch index stakes');
-            }
-
-            if (!indexStakes.stakeSum) {
-                throw new Error('Index stakes sum is not available');
-            }
-
-            const indexStakesSum = BigInt(indexStakes.stakeSum);
-
-            const rewardsPools = await RpcOnDemandEndpointCache.GetRewardsPools();
-            const totalsByDenom = await sumPoolsGroupedByDenom(rewardsPools);
-            console.log('Total amounts grouped by denomination:', totalsByDenom);
-
-            const subscriptionListResponse = await GetSubscriptionList();
-            const subscriptionList = subscriptionListResponse.subs_info;
-            subscriptionList.forEach((item: { credit: { denom: string; amount: string } }) => {
-                const denom = item.credit.denom;
-                const amount = BigInt(item.credit.amount);
-
-                if (!totalsByDenom[denom]) {
-                    totalsByDenom[denom] = 0n;
-                }
-
-                totalsByDenom[denom] += BigInt(amount);
-
-            });
+            const indexStakesSum = await this.fetchIndexStakesSum();
+            const totalsByDenom = await this.fetchRewardsPoolsTotals();
+            await this.processSubscriptionList(totalsByDenom);
 
             let ulavaAmount = totalsByDenom['ulava'] || 0n;
             let lavaAmount = totalsByDenom['lava'] || 0n;
-            ulavaAmount += ulavaAmount + indexStakesSum
+            ulavaAmount += ulavaAmount + indexStakesSum;
             lavaAmount += BigInt(ulavaAmount / 1000000n);
 
             console.log('Total amounts grouped by denomination:', totalsByDenom);
             console.log('Total in lava:', ulavaAmount);
 
-            const totalValueLocked = ulavaAmount;
-
-            return totalValueLocked;
+            return ulavaAmount;
         } catch (error) {
             console.error('Error fetching total value locked:', error);
             throw new Error('Failed to fetch total value locked');
         }
+    }
+
+    private async fetchIndexStakesSum(): Promise<bigint> {
+        const indexStakes = await new IndexStakesResource().fetch();
+        if (!indexStakes) {
+            throw new Error('Failed to fetch index stakes');
+        }
+        if (!indexStakes.stakeSum) {
+            throw new Error('Index stakes sum is not available');
+        }
+        return BigInt(indexStakes.stakeSum);
+    }
+
+    private async fetchRewardsPoolsTotals(): Promise<Record<string, bigint>> {
+        const rewardsPools = await RpcOnDemandEndpointCache.GetRewardsPools();
+        return await sumPoolsGroupedByDenom(rewardsPools);
+    }
+
+    private async processSubscriptionList(totalsByDenom: Record<string, bigint>): Promise<void> {
+        const subscriptionListResponse = await GetSubscriptionList();
+        const subscriptionList = subscriptionListResponse.subs_info;
+        subscriptionList.forEach((item: { credit: { denom: string; amount: string } }) => {
+            const denom = item.credit.denom;
+            const amount = BigInt(item.credit.amount);
+
+            if (!totalsByDenom[denom]) {
+                totalsByDenom[denom] = 0n;
+            }
+
+            totalsByDenom[denom] += BigInt(amount);
+        });
     }
 
     // Override the fetchFromDb method to get the TVL from the source

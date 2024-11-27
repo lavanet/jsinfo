@@ -268,7 +268,7 @@ class RedisCacheClass {
 
     async setDict(key: string, value: { [key: string]: any }, ttl: number = 30): Promise<void> {
         try {
-            const stringValue = JSON.stringify(value);
+            const stringValue = JSONStringify(value);
             await this.set(key, stringValue, ttl);
         } catch (error) {
             logger.error('Redis operation failed', {

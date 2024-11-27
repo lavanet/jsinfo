@@ -14,7 +14,7 @@ import { CSVEscape } from '@jsinfo/utils/fmt';
 import { ParsePaginationFromString } from '@jsinfo/query/utils/queryPagination';
 import { ActiveProvidersResource } from './ActiveProvidersResource';
 import { queryJsinfo } from '@jsinfo/utils/db';
-
+import { JSONStringify } from '@jsinfo/utils/fmt';
 const rewardSumSubQuery = sql`SELECT SUM(arp_sub.rewardSum) FROM(SELECT arp."provider", SUM(arp."rewardsum") AS rewardSum FROM ${JsinfoProviderAgrSchema.aggAllTimeRelayPayments} arp GROUP BY arp."provider") arp_sub WHERE arp_sub."provider" = ${JsinfoSchema.providerStakes.provider}`;
 
 export interface IndexProvidersActiveResponse {
@@ -268,7 +268,7 @@ export class IndexProvidersActiveResource extends RedisResourceBase<IndexProvide
                 })
                     .from(JsinfoSchema.providerStakes)
                     .where(inArray(JsinfoSchema.providerStakes.provider, activeProviders)),
-                `IndexProvidersActiveResource_fetchRecordCountFromDb_${JSON.stringify(activeProviders)}`
+                `IndexProvidersActiveResource_fetchRecordCountFromDb_${JSONStringify(activeProviders)}`
             );
 
             return res[0].count || 0;

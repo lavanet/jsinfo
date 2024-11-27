@@ -1,4 +1,4 @@
-import { TruncateText } from "./fmt";
+import { TruncateText, JSONStringify } from "./fmt";
 
 const winston = require('winston');
 
@@ -25,7 +25,7 @@ export const logger = winston.createLogger({
                     }
 
                     if (Object.keys(metadata).length > 0) {
-                        const metadataString = TruncateText(JSON.stringify(metadata), 3900);
+                        const metadataString = TruncateText(JSONStringify(metadata), 3900);
                         msg += ' ' + metadataString;
                     }
 

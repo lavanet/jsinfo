@@ -93,6 +93,8 @@ interface ChainListResponse {
     chainInfoList: ChainInfo[];
 }
 
+const CACHE_VALIDITY_PERIOD = 600; // 10 minutes in seconds
+
 class RpcPeriodicEndpointCacheClass {
     private cacheRefreshInterval = 20 * 60; // 20 minutes
     private refreshPromise: Promise<void> | null = null;
@@ -131,9 +133,9 @@ class RpcPeriodicEndpointCacheClass {
         try {
             const cacheKey = 'providers';
             const ttl = await RedisCache.getTTL(cacheKey); // Get TTL for providers
-            if (ttl && ttl > 30) {
+            if (ttl && ttl > CACHE_VALIDITY_PERIOD) {
                 logger.info('Providers cache is still valid. Skipping refresh.');
-                return; // Skip refresh if TTL is more than 30 seconds
+                return; // Skip refresh if TTL is more than 10 minutes
             }
             const response = await this.GetProviderMetadata();
             const providers = response.MetaData.map((meta) => meta.provider);
@@ -148,9 +150,9 @@ class RpcPeriodicEndpointCacheClass {
         try {
             const cacheKey = 'uniqueDelegators';
             const ttl = await RedisCache.getTTL(cacheKey); // Get TTL for uniqueDelegators
-            if (ttl && ttl > 30) {
+            if (ttl && ttl > CACHE_VALIDITY_PERIOD) {
                 logger.info('UniqueDelegators cache is still valid. Skipping refresh.');
-                return; // Skip refresh if TTL is more than 30 seconds
+                return; // Skip refresh if TTL is more than 10 minutes
             }
             const cachedProviders = await RedisCache.getArray('providers') as string[];
             if (!cachedProviders) {
@@ -177,9 +179,9 @@ class RpcPeriodicEndpointCacheClass {
         try {
             const cacheKey = 'empty_provider_delegations';
             const ttl = await RedisCache.getTTL(cacheKey); // Get TTL for empty_provider_delegations
-            if (ttl && ttl > 30) {
+            if (ttl && ttl > CACHE_VALIDITY_PERIOD) {
                 logger.info('Empty provider delegations cache is still valid. Skipping refresh.');
-                return; // Skip refresh if TTL is more than 30 seconds
+                return; // Skip refresh if TTL is more than 10 minutes
             }
             const emptyProviderDelegations = await this.GetProviderDelegators('empty_provider') as ProviderDelegatorsResponse;
             await RedisCache.setDict(cacheKey, emptyProviderDelegations.delegations, this.cacheRefreshInterval);
@@ -335,9 +337,9 @@ class RpcPeriodicEndpointCacheClass {
         try {
             const cacheKey = 'all_validators';
             const ttl = await RedisCache.getTTL(cacheKey); // Get TTL for all_validators
-            if (ttl > 30) {
+            if (ttl && ttl > CACHE_VALIDITY_PERIOD) {
                 logger.info('Validators cache is still valid. Skipping refresh.');
-                return; // Skip refresh if TTL is more than 30 seconds
+                return; // Skip refresh if TTL is more than 10 minutes
             }
             let validatorAddresses: string[] = [];
             let nextKey: string | null = null;
@@ -358,9 +360,9 @@ class RpcPeriodicEndpointCacheClass {
         try {
             const cacheKey = 'chain_list';
             const ttl = await RedisCache.getTTL(cacheKey); // Get TTL for chain_list
-            if (ttl && ttl > 30) {
+            if (ttl && ttl > CACHE_VALIDITY_PERIOD) {
                 logger.info('Chain list cache is still valid. Skipping refresh.');
-                return; // Skip refresh if TTL is more than 30 seconds
+                return; // Skip refresh if TTL is more than 10 minutes
             }
             const response: ChainListResponse = await QueryLavaRPC<ChainListResponse>('/lavanet/lava/spec/show_all_chains');
             await RedisCache.setArray(cacheKey, response.chainInfoList, this.cacheRefreshInterval);

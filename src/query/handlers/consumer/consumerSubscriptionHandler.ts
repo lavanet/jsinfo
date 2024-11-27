@@ -149,7 +149,7 @@ async function getAllDataNoRedis(addr: string): Promise<ConsumerSubscriptionEntr
 
             if (!creditParsed) {
                 try {
-                    const credit = JSON.parse(JSON.stringify(ret.credit))
+                    const credit = JSON.parse(JSONStringify(ret.credit))
                     ret.credit = credit["amount"] + " " + credit["denom"].toUpperCase();
                     creditParsed = true;
                 } catch (e) {
@@ -159,7 +159,7 @@ async function getAllDataNoRedis(addr: string): Promise<ConsumerSubscriptionEntr
             // this is the worst case
             if (!creditParsed) {
                 try {
-                    ret.credit = JSON.stringify(ret.credit); // or some default value
+                    ret.credit = JSONStringify(ret.credit); // or some default value
                 } catch (creditParseError) {
                     console.error(`Error parsing credit for item ${item.id}:`, creditParseError);
                     ret.credit = "Error parsing credit: " + ret.credit;

@@ -6,7 +6,6 @@ import * as lavajs from '@lavanet/lavajs';
 import { logger } from '@jsinfo/utils/logger';
 import { GetEnvVar } from '@jsinfo/utils/env';
 import { LavaClient } from "../lavaTypes";
-import { StringifyWithBigInt } from "@jsinfo/utils/bigint";
 
 export interface RpcConnection {
     client: StargateClient;
@@ -43,7 +42,7 @@ export async function ConnectToRpc(rpc: string): Promise<RpcConnection> {
 
         const lavaClient = await lavajs.lavanet.ClientFactory.createRPCQueryClient({ rpcEndpoint: rpc })
         // const chains = await lavaClient.lavanet.lava.spec.showAllChains();
-        // logger.info(`ConnectToRpc:: fetched chains ${StringifyWithBigInt(chains).substring(0, 1000)}`);
+        // logger.info(`ConnectToRpc:: fetched chains ${JSONStringify(chains).substring(0, 1000)}`);
 
         return { client, clientTm, chainId, height, lavaClient };
     } catch (error) {

@@ -1,8 +1,7 @@
 import { RedisCache } from './RedisCache';
-import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { IsIndexerProcess } from '@jsinfo/utils/env';
 import { logger } from '@jsinfo/utils/logger';
-
+import { JSONStringify } from '@jsinfo/utils/fmt';
 interface BaseArgs {
     [key: string]: any;
 }
@@ -29,7 +28,7 @@ export abstract class RedisResourceBase<T, A extends BaseArgs = BaseArgs> {
         }
         logger.info(`RedisResourceBase:: [${this.redisKey}] Cache ${cached ? 'hit' : 'miss'}:`, {
             key,
-            args: args ? JSON.stringify(args).slice(0, 100) + '...' : 'none',
+            args: args ? JSONStringify(args).slice(0, 100) + '...' : 'none',
             dataPreview: cached ? cached.slice(0, 100) + '...' : null,
             timestamp: new Date().toISOString()
         });
@@ -39,7 +38,7 @@ export abstract class RedisResourceBase<T, A extends BaseArgs = BaseArgs> {
 
     // Default JSON serialization
     protected serialize(data: T): string {
-        return JSON.stringify(data);
+        return JSONStringify(data);
     }
 
     protected deserialize(data: string): T {
@@ -49,7 +48,7 @@ export abstract class RedisResourceBase<T, A extends BaseArgs = BaseArgs> {
     // Helper for key generation with args
     protected getKeyWithArgs(args?: A): string {
         if (!args) return this.redisKey;
-        const stableJson = JSON.stringify(args).toLowerCase();
+        const stableJson = JSONStringify(args).toLowerCase();
         return `${this.redisKey}:${stableJson}`;
     }
 
@@ -153,7 +152,7 @@ export abstract class RedisResourceBase<T, A extends BaseArgs = BaseArgs> {
             logger.info('Fetched and cached data', {
                 redisKey: this.redisKey,
                 key,
-                dataPreview: JSON.stringify(data).slice(0, 100) + '...',
+                dataPreview: JSONStringify(data).slice(0, 100) + '...',
                 timeSinceLastUpdate: this.lastUpdateTime
                     ? `${((now - this.lastUpdateTime) / 1000).toFixed(1)}s ago`
                     : 'first cache',
@@ -173,14 +172,18 @@ export abstract class RedisResourceBase<T, A extends BaseArgs = BaseArgs> {
         return null;
     }
 
-    private handleFetchError(error: unknown, args?: A, db?: PostgresJsDatabase): void {
+    private handleFetchError(error: unknown, args?: A): void {
         logger.error('Error fetching resource', {
-            error: error as Error,
+            error: {
+                message: (error as Error)?.message || 'Unknown error',
+                stack: (error as Error)?.stack || 'No stack trace available',
+                name: (error as Error)?.name || 'Error',
+                code: (error as any)?.code || 'No error code'
+            },
             redisKey: this.redisKey,
             key: this.getKeyWithArgs(args),
             args,
             ttl: this.ttlSeconds,
-            dbConnectionExists: !!db,
             isIndexerProcess: IsIndexerProcess()
         });
     }

@@ -243,6 +243,16 @@ export class AllProviderAPRResource extends RedisResourceBase<AllAprProviderData
             processedAddressAndAprData.push(ret);
         }
 
+        // Sort the processed data by APR in descending order
+        processedAddressAndAprData.sort((a, b) => {
+            const aprA = parseFloat(a.apr + "") || 0; // Convert APR to number, default to 0 if NaN
+            const aprB = parseFloat(b.apr + "") || 0; // Convert APR to number, default to 0 if NaN
+            if (aprA === 0 && aprB === 0) {
+                return String(a).localeCompare(String(b));
+            }
+            return aprB - aprA; // Sort in descending order
+        });
+
         return processedAddressAndAprData;
     }
 }

@@ -1,7 +1,7 @@
 import { logger } from '@jsinfo/utils/logger';
 import { TruncateError } from '@jsinfo/utils/fmt';
 import { RedisCache } from '@jsinfo/redis/classes/RedisCache';
-import { FetchRestData } from '@jsinfo/indexer/utils/restRpc';
+import { FetchRestData } from '@jsinfo/restRpc/restRpc';
 import denomsData from "./CoinGekoDenomMap.json" assert { type: "json" };
 
 export interface CoinGeckoRateResponse {

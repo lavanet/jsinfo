@@ -1,7 +1,7 @@
 import { HashJson, IsMeaningfulText } from "@jsinfo/utils/fmt";
 import { logger } from "@jsinfo/utils/logger";
 import { StringifyJsonForCompare } from "@jsinfo/utils/fmt";
-import { QueryLavaRPC } from "@jsinfo/indexer/utils/restRpc";
+import { QueryLavaRPC } from "@jsinfo/restRpc/restRpc";
 import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { eq, desc } from "drizzle-orm";
 import { queryJsinfo } from '@jsinfo/utils/db';

@@ -96,6 +96,8 @@ import { ConsumerV2CahcedHandler, ConsumerV2CahcedHandlerOpts } from './handlers
 import { ChainWalletApiHandlerOpts, LavaChainRestakersHandler, LavaChainStakersHandler } from './handlers/ajax/chainWalletApiHandlers';
 import { AllProviderAPRRawHandlerOpts } from './handlers/ajax/allProviderAprHandler';
 import { AllProviderAPRRawHandler } from './handlers/ajax/allProviderAprHandler';
+import { TotalValueLockedHandler } from './handlers/ajax/totalLockedValueHandler';
+import { TotalValueLockedHandlerOpts } from './handlers/ajax/totalLockedValueHandler';
 
 // -- Server status ajax --
 GetServerInstance().get('/latest', LatestRawHandlerOpts, LatestRawHandler);
@@ -116,6 +118,7 @@ GetServerInstance().get('/lava_chain_restakers', ChainWalletApiHandlerOpts, Lava
 // -- Server APR ajax --
 GetServerInstance().get('/apr', APRRawHandlerOpts, APRRawHandler);
 GetServerInstance().get('/all_providers_apr', AllProviderAPRRawHandlerOpts, AllProviderAPRRawHandler);
+GetServerInstance().get('/total_value_locked', TotalValueLockedHandlerOpts, TotalValueLockedHandler);
 
 // -- list all providers and monikers endpoint ---
 GetServerInstance().get('/listProviders', ListProvidersRawHandlerOpts, ListProvidersRawHandler);

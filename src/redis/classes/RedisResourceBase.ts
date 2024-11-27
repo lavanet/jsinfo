@@ -59,7 +59,6 @@ export abstract class RedisResourceBase<T, A extends BaseArgs = BaseArgs> {
     async fetch(args?: A): Promise<T | null> {
         const key = this.getKeyWithArgs(args);
 
-
         const existingFetch = RedisResourceBase.activeFetches.get(key);
 
         if (existingFetch) {

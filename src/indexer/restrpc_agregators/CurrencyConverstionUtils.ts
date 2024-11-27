@@ -2,7 +2,7 @@
 
 import { RedisCache } from '@jsinfo/redis/classes/RedisCache';
 import { CoinGekoCache } from '../classes/CoinGeko/CoinGekoCache';
-import { RpcOnDemandEndpointCache } from "../classes/RpcOnDemandEndpointCache";
+import { RpcOnDemandEndpointCache } from "../../restRpc/RpcOnDemandEndpointCache";
 
 const CACHE_DURATION = {
     DENOM_TRACE: 3600 * 24, // 1 day

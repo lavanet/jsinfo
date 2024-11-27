@@ -6,7 +6,7 @@ import { ProviderMonikerService } from '@jsinfo/redis/resources/global/ProviderM
 import * as JsinfoProviderAgrSchema from '@jsinfo/schemas/jsinfoSchema/providerRelayPaymentsAgregation';
 import { EstimatedRewardsResponse } from '@jsinfo/indexer/classes/RpcOnDemandEndpointCache';
 import { IsMeaningfulText } from '@jsinfo/utils/fmt';
-import { ConvertToBaseDenom, GetUSDCValue } from '@jsinfo/indexer/restrpc_agregators/CurrencyConverstionUtils';
+import { ConvertToBaseDenom } from '@jsinfo/indexer/restrpc_agregators/CurrencyConverstionUtils';
 
 interface AllAprProviderData {
     address: string;
@@ -21,19 +21,6 @@ interface AllAprProviderData {
 // Helper function to get commission
 function ValueOrDash(provider: string | undefined): string {
     return IsMeaningfulText("" + provider) ? String(provider) : '-';
-}
-
-// Helper function to parse rewards
-function parseRewards(rewards: any): any {
-    if (typeof rewards === 'string') {
-        const parsed = JSON.parse(rewards);
-        try {
-            return JSON.parse(parsed);
-        } catch (e) {
-        }
-        return parsed;
-    }
-    return rewards;
 }
 
 // Helper function to format the average

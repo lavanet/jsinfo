@@ -169,10 +169,6 @@ This endpoint returns the total value locked in Lava tokens, calculated as the s
 }
 ```
 
-## Usage
-
-Make a GET request to the `/total_value_locked` endpoint to retrieve the total value locked. The returned value can be utilized in front-end applications to display the total value locked in an infographic or graph format, enhancing user trust and engagement.
-
 ### Calculation Method
 
 #### APR Calculation Method

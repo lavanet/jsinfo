@@ -1,8 +1,8 @@
 // src/indexer/restrpc_agregators/CurrencyConverstionUtils.ts
 
 import { RedisCache } from '@jsinfo/redis/classes/RedisCache';
-import { CoinGekoCache } from '../classes/CoinGeko/CoinGekoCache';
-import { RpcOnDemandEndpointCache } from "../../restRpc/RpcOnDemandEndpointCache";
+import { CoinGekoCache } from '@jsinfo/restRpc/ext/CoinGeko/CoinGekoCache';
+import { RpcOnDemandEndpointCache } from '@jsinfo/restRpc/lavaRpcOnDemandEndpointCache';
 
 const CACHE_DURATION = {
     DENOM_TRACE: 3600 * 24, // 1 day

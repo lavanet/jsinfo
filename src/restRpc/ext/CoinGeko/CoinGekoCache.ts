@@ -1,7 +1,7 @@
 import { logger } from '@jsinfo/utils/logger';
 import { TruncateError } from '@jsinfo/utils/fmt';
 import { RedisCache } from '@jsinfo/redis/classes/RedisCache';
-import { FetchRestData } from '@jsinfo/restRpc/restRpc';
+import { FetchRestData } from '@jsinfo/restRpc/fetch';
 import denomsData from "./CoinGekoDenomMap.json" assert { type: "json" };
 
 export interface CoinGeckoRateResponse {
@@ -40,8 +40,6 @@ class CoinGekoCacheClass {
 
         return this.activeFetches[coinGeckodenom];
     }
-
-
 
     private async fetchWithRetry(url: string): Promise<CoinGeckoRateResponse> {
         const MAX_RETRIES = 3; // Maximum number of retries

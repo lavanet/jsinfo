@@ -1,8 +1,11 @@
 import { RedisResourceBase } from '@jsinfo/redis/classes/RedisResourceBase';
 import { IndexStakesResource } from '../index/IndexStakesResource';
-import { RewardsPoolsResponse, RpcOnDemandEndpointCache } from '@jsinfo/restRpc/RpcOnDemandEndpointCache';
+import { RewardsPoolsResponse, RpcOnDemandEndpointCache } from '@jsinfo/restRpc/lavaRpcOnDemandEndpointCache';
 import { ConvertToBaseDenom } from '@jsinfo/indexer/restrpc_agregators/CurrencyConverstionUtils';
 import { GetSubscriptionList } from '@jsinfo/indexer/restrpc_agregators/SubscriptionListProcessor';
+import { OsmosisGetTotalLavaLockedValue } from '@jsinfo/restRpc/ext/osmosisapi';
+import { BaseGetTotalLockedValue } from '@jsinfo/restRpc/ext/base';
+import { AribitrumGetTotalLavaValue } from '@jsinfo/restRpc/ext/arbitrum';
 
 // Function to sum the amounts grouped by denomination and convert to base denom
 async function sumPoolsGroupedByDenom(rewardsPools: RewardsPoolsResponse): Promise<Record<string, bigint>> {
@@ -54,6 +57,20 @@ export class TotalValueLockedResource extends RedisResourceBase<bigint, {}> {
 
             console.log('Total amounts grouped by denomination:', totalsByDenom);
             console.log('Total in lava:', ulavaAmount);
+
+            const osmosisTotalLockedValue = await OsmosisGetTotalLavaLockedValue();
+            if (osmosisTotalLockedValue) {
+                ulavaAmount += osmosisTotalLockedValue;
+            }
+            const baseTotalLockedValue = await BaseGetTotalLockedValue();
+            if (baseTotalLockedValue) {
+                ulavaAmount += baseTotalLockedValue;
+            }
+
+            const arbitrumTotalLockedValue = await AribitrumGetTotalLavaValue();
+            if (arbitrumTotalLockedValue) {
+                ulavaAmount += arbitrumTotalLockedValue;
+            }
 
             return ulavaAmount;
         } catch (error) {

@@ -1,4 +1,3 @@
-import { GetEnvVar } from "@jsinfo/utils/env";
 import { logger } from "@jsinfo/utils/logger";
 import { BackoffRetry } from "@jsinfo/utils/retry";
 
@@ -28,8 +27,6 @@ export async function FetchRestData<T>(
     minTimeout: number = 1000,
     maxTimeout: number = 5000
 ): Promise<T> {
-
-
     // Check if we need to wait due to previous rate limit
     const lastRateLimit = rateDelayCache.get(url);
     if (lastRateLimit) {
@@ -95,13 +92,3 @@ export async function FetchRestData<T>(
     activeFetches[url] = promise;
     return await promise;
 }
-
-export async function QueryLavaRPC<T>(path: string, skipBackoff: boolean = false): Promise<T> {
-    const baseUrl = GetEnvVar("JSINFO_INDEXER_LAVA_REST_RPC_URL");
-    if (baseUrl.endsWith('/') && path.startsWith('/')) {
-        path = path.slice(1);
-    }
-    const url = `${baseUrl}${path}`;
-    return FetchRestData<T>(url, {}, skipBackoff);
-}
-

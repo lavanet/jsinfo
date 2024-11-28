@@ -1,5 +1,5 @@
 import { logger } from '@jsinfo/utils/logger';
-import { RpcOnDemandEndpointCache } from '@jsinfo/restRpc/RpcOnDemandEndpointCache';
+import { RpcOnDemandEndpointCache } from '@jsinfo/restRpc/lavaRpcOnDemandEndpointCache';
 import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { SpecAndConsumerService } from "@jsinfo/redis/resources/global/SpecAndConsumerResource";
 import { sql } from 'drizzle-orm';

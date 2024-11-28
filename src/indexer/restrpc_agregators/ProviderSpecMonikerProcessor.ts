@@ -2,7 +2,7 @@
 
 import { HashJson, IsMeaningfulText } from '@jsinfo/utils/fmt';
 import { logger } from '@jsinfo/utils/logger';
-import { QueryLavaRPC } from '@jsinfo/restRpc/restRpc';
+import { QueryLavaRPC } from '@jsinfo/restRpc/lavaRpc';
 import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { sql } from 'drizzle-orm';
 import { MemoryCache } from "@jsinfo/classes/MemoryCache";

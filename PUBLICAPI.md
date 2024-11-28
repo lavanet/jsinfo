@@ -144,6 +144,35 @@ The response is a JSON array of objects, where each object contains the followin
 ]
 ```
 
+# Total Value Locked (TVL) API
+
+## Overview
+
+The Total Value Locked (TVL) API provides an endpoint to retrieve the total value of Lava tokens locked across various platforms.
+
+#### `/total_value_locked`
+
+#### Description
+
+This endpoint returns the total value locked in Lava tokens, calculated as the sum of:
+
+- Locked in staking
+- Locked in Reward Pools
+- Locked in purchased subscriptions
+- Value locked in Dexes (Osmosis, Arbitrum, Base)
+
+### Example Response
+
+```json
+{
+  "tvl": "203777529975416" // Example total value locked in Lava tokens
+}
+```
+
+## Usage
+
+Make a GET request to the `/total_value_locked` endpoint to retrieve the total value locked. The returned value can be utilized in front-end applications to display the total value locked in an infographic or graph format, enhancing user trust and engagement.
+
 ### Calculation Method
 
 #### APR Calculation Method

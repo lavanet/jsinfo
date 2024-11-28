@@ -80,49 +80,22 @@ async function fetchTokenData() {
 }
 
 
-export async function AribitrumGetTotalLavaValue(): Promise<bigint | null> {
+export async function AribitrumGetTotalLavaValue(): Promise<number | null> {
     const cacheKey = 'Arbitrum::TotalLavaValue';
     const cacheTTL = 20 * 60; // Cache for 20 minutes
     const minCacheTTL = 5 * 60; // Refetch if cache is less than 5 minutes
     const maxRetries = 10; // Maximum number of retries
 
-    const fetchPromise = async (): Promise<bigint | null> => {
+    const fetchPromise = async (): Promise<number | null> => {
         let attempts = 0;
-        let totalLavaValue: bigint | null = null;
 
         while (attempts < maxRetries) {
             try {
-                // Fetch token data
                 const tokenData = (await fetchTokenData()).data.token;
-                // console.log("Token data:", tokenData);
-
-                // Extract total value locked in USD
                 const totalValueLockedValue = tokenData.market.totalValueLocked.value;
-
-                // Check if totalValueLockedValue is a valid number before converting
-                if (totalValueLockedValue && !isNaN(Number(totalValueLockedValue))) {
-                    const totalValueLocked = totalValueLockedValue; // Total value locked in USD
-                    console.log("Arbitrum Total value locked in USD:", totalValueLocked);
-
-                    // Get the current price of LAVA in USD
-                    const currentPriceValue = tokenData.market.price.value;
-
-                    // Check if currentPriceValue is a valid number before converting
-                    if (currentPriceValue && !isNaN(Number(currentPriceValue))) {
-                        const currentPrice = await CoinGekoCache.GetDenomToUSDRate('lava'); // Current price of LAVA in USD
-
-                        // Calculate total LAVA value
-                        totalLavaValue = BigInt(Math.ceil(Number(totalValueLocked) / Number(currentPrice))); // Convert total value locked in USD to LAVA
-                        console.log("TLV-ARBITRUM: Total LAVA Value:", totalLavaValue, "lava", currentPrice);
-                        // Cache the result in Redis
-                        RedisCache.set(cacheKey, totalLavaValue.toString(), cacheTTL);
-                        return totalLavaValue; // Return the total LAVA value
-                    } else {
-                        throw new Error('TLV-ARBITRUM: Invalid current price value');
-                    }
-                } else {
-                    throw new Error('TLV-ARBITRUM: Invalid total value locked');
-                }
+                console.log("TLV-ARBITRUM: Total value locked in USD:", totalValueLockedValue);
+                RedisCache.set(cacheKey, totalValueLockedValue, cacheTTL);
+                return totalValueLockedValue;
             } catch (error) {
                 console.error('Error fetching token data:', error);
                 attempts++;
@@ -141,7 +114,7 @@ export async function AribitrumGetTotalLavaValue(): Promise<bigint | null> {
             fetchPromise();
         }
         console.log("TLV-ARBITRUM: Using cached value:", cachedValue);
-        return BigInt(cachedValue); // Return cached value if available
+        return Number(cachedValue); // Return cached value if available
     }
 
     return await fetchPromise();

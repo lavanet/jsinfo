@@ -92,7 +92,7 @@ const getTotalLockedValue = (pools: Pool[]) => {
     }
 };
 
-export const BaseGetTotalLockedValue = async (): Promise<bigint | null> => {
+export const BaseGetTotalLockedValue = async (): Promise<number | null> => {
     let totalLockedLava: string | null = null;
     await fetchPools("lava").then(pools => {
         if (totalLockedLava !== null) {
@@ -105,10 +105,8 @@ export const BaseGetTotalLockedValue = async (): Promise<bigint | null> => {
     if (totalLockedLava === null) {
         return null;
     }
-    const currentPrice = await CoinGekoCache.GetDenomToUSDRate('lava');
-    const totalLavaValue = BigInt(Math.ceil(Number(totalLockedLava) / Number(currentPrice)));
-    console.log(`TLV-BASE: Total LAVA Value: ${totalLavaValue}`);
-    return totalLavaValue;
+    console.log(`TLV-BASE: Total LAVA Value in USD: ${totalLockedLava}`);
+    return totalLockedLava;
 }
 // Execute the function if this file is run directly
 if (require.main === module) {

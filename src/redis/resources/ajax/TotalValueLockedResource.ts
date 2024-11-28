@@ -6,6 +6,7 @@ import { GetSubscriptionList } from '@jsinfo/indexer/restrpc_agregators/Subscrip
 import { OsmosisGetTotalLavaLockedValue } from '@jsinfo/restRpc/ext/osmosisapi';
 import { BaseGetTotalLockedValue } from '@jsinfo/restRpc/ext/base';
 import { AribitrumGetTotalLavaValue } from '@jsinfo/restRpc/ext/arbitrum';
+import { CoinGekoCache } from '@jsinfo/restRpc/ext/CoinGeko/CoinGekoCache';
 
 // Function to sum the amounts grouped by denomination and convert to base denom
 async function sumPoolsGroupedByDenom(rewardsPools: RewardsPoolsResponse): Promise<Record<string, bigint>> {
@@ -39,17 +40,20 @@ function getRoundedBigInt(value: number): bigint {
     return BigInt(Math.ceil(value));
 }
 
-export class TotalValueLockedResource extends RedisResourceBase<bigint, {}> {
+export class TotalValueLockedResource extends RedisResourceBase<number, {}> {
     protected readonly redisKey = 'totalValueLocked';
     protected readonly ttlSeconds = 300; // Cache for 5 minutes
 
     // Method to fetch and calculate total value locked
-    private async fetchTotalValueLocked(): Promise<bigint> {
+    private async fetchTotalValueLocked(): Promise<number> {
         try {
             const indexStakesSum = await this.fetchIndexStakesSum() / 1000000n;
             const totalsByDenom = await this.fetchRewardsPoolsTotals();
+
             console.log('totalsByDenom:', totalsByDenom);
+
             await this.processSubscriptionList(totalsByDenom);
+
             console.log('totalsByDenom after processSubscriptionList:', totalsByDenom);
 
             let ulavaAmount = totalsByDenom['ulava'] || 0n;
@@ -57,24 +61,27 @@ export class TotalValueLockedResource extends RedisResourceBase<bigint, {}> {
             ulavaAmount += ulavaAmount + indexStakesSum;
             lavaAmount += BigInt(ulavaAmount / 1000000n);
 
+            const currentPrice = await CoinGekoCache.GetDenomToUSDRate('lava');
+            let usdAmount = Number(lavaAmount) * Number(currentPrice);
+
             console.log('Total amounts grouped by denomination:', totalsByDenom);
-            console.log('Total in lava:', ulavaAmount);
+            console.log('Total in lava:', ulavaAmount, 'usdAmount:', usdAmount);
 
             const osmosisTotalLockedValue = await OsmosisGetTotalLavaLockedValue();
             if (osmosisTotalLockedValue) {
-                ulavaAmount += osmosisTotalLockedValue;
+                usdAmount += Number(osmosisTotalLockedValue);
             }
             const baseTotalLockedValue = await BaseGetTotalLockedValue();
             if (baseTotalLockedValue) {
-                ulavaAmount += baseTotalLockedValue;
+                usdAmount += Number(baseTotalLockedValue);
             }
 
             const arbitrumTotalLockedValue = await AribitrumGetTotalLavaValue();
             if (arbitrumTotalLockedValue) {
-                ulavaAmount += arbitrumTotalLockedValue;
+                usdAmount += Number(arbitrumTotalLockedValue);
             }
 
-            return ulavaAmount;
+            return usdAmount;
         } catch (error) {
             console.error('Error fetching total value locked:', error);
             throw new Error('Failed to fetch total value locked');
@@ -113,7 +120,7 @@ export class TotalValueLockedResource extends RedisResourceBase<bigint, {}> {
     }
 
     // Override the fetchFromDb method to get the TVL from the source
-    protected async fetchFromDb(): Promise<bigint> {
+    protected async fetchFromDb(): Promise<number> {
         console.log('TotalValueLockedResource fetchFromDb'); // also print the ret
         const ret = await this.fetchTotalValueLocked();
         console.log('TotalValueLockedResource fetchFromDb ret:', ret);

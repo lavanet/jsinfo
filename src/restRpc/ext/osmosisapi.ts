@@ -1,5 +1,6 @@
 import { RedisFetch } from '../../redis/RedisFetch';
 import { logger } from '@jsinfo/utils/logger';
+import { CoinGekoCache } from './CoinGeko/CoinGekoCache';
 
 // Define TypeScript interfaces for the response structure
 interface ReserveCoin {
@@ -60,7 +61,7 @@ interface Pool {
 }
 
 // Function to get the total locked value in LAVA from the first API
-export async function OsmosisGetTotalLavaLockedValue(): Promise<bigint | null> {
+export async function OsmosisGetTotalLavaLockedValue(): Promise<number | null> {
     const input = {
         json: {
             limit: 10,
@@ -109,7 +110,12 @@ export async function OsmosisGetTotalLavaLockedValue(): Promise<bigint | null> {
 
         logger.info(`TLV-OSM: Total locked value in LAVA from first API: ${totalLockedValue}`); // Log the total locked value
 
-        return BigInt(Math.ceil(totalLockedValue / 1000000));
+        const currentPrice = await CoinGekoCache.GetDenomToUSDRate('lava');
+        let ret = totalLockedValue * Number(currentPrice / 1000000);
+        logger.info(`TLV-OSM: Total locked value in LAVA from first API: ${ret}`);
+        return ret;
+
+
     } catch (error) {
         logger.error('TLV-OSM: Error fetching total locked value from first API:', error);
         return null;

@@ -32,5 +32,5 @@ export async function TotalValueLockedHandler(request: FastifyRequest, reply: Fa
         return reply.status(400).send({ error: 'Failed to fetch Total Value Locked data' });
     }
 
-    return { tvl: totalValueLocked.toString() };
+    return { tvl: totalValueLocked.toFixed(4) };
 }

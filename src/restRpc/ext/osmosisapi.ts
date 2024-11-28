@@ -92,6 +92,8 @@ export async function OsmosisGetTotalLavaLockedValue(): Promise<bigint | null> {
 
     const apiUrl = `https://app.osmosis.zone/api/edge-trpc-pools/pools.getPools?input=${encodeURIComponent(JSON.stringify(input))}`;
 
+    // console.log('fetching osmosis apiUrl:', await (await fetch(apiUrl)).json());
+
     try {
         const response = await RedisFetch(apiUrl);
         const pools: Pool[] = (response as any).result.data.json.items;
@@ -107,7 +109,7 @@ export async function OsmosisGetTotalLavaLockedValue(): Promise<bigint | null> {
 
         logger.info(`TLV-OSM: Total locked value in LAVA from first API: ${totalLockedValue}`); // Log the total locked value
 
-        return BigInt(Math.ceil(totalLockedValue));
+        return BigInt(Math.ceil(totalLockedValue / 1000000));
     } catch (error) {
         logger.error('TLV-OSM: Error fetching total locked value from first API:', error);
         return null;

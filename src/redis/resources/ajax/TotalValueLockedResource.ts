@@ -46,9 +46,11 @@ export class TotalValueLockedResource extends RedisResourceBase<bigint, {}> {
     // Method to fetch and calculate total value locked
     private async fetchTotalValueLocked(): Promise<bigint> {
         try {
-            const indexStakesSum = await this.fetchIndexStakesSum();
+            const indexStakesSum = await this.fetchIndexStakesSum() / 1000000n;
             const totalsByDenom = await this.fetchRewardsPoolsTotals();
+            console.log('totalsByDenom:', totalsByDenom);
             await this.processSubscriptionList(totalsByDenom);
+            console.log('totalsByDenom after processSubscriptionList:', totalsByDenom);
 
             let ulavaAmount = totalsByDenom['ulava'] || 0n;
             let lavaAmount = totalsByDenom['lava'] || 0n;

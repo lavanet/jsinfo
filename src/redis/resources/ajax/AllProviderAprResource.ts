@@ -4,7 +4,7 @@ import { queryJsinfo } from '@jsinfo/utils/db';
 import { gt, sql } from 'drizzle-orm';
 import { ProviderMonikerService } from '@jsinfo/redis/resources/global/ProviderMonikerSpecResource';
 import * as JsinfoProviderAgrSchema from '@jsinfo/schemas/jsinfoSchema/providerRelayPaymentsAgregation';
-import { EstimatedRewardsResponse } from '@jsinfo/indexer/classes/RpcOnDemandEndpointCache';
+import { EstimatedRewardsResponse } from '@jsinfo/restRpc/lavaRpcOnDemandEndpointCache';
 import { IsMeaningfulText } from '@jsinfo/utils/fmt';
 import { ConvertToBaseDenom } from '@jsinfo/indexer/restrpc_agregators/CurrencyConverstionUtils';
 

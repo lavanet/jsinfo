@@ -8,7 +8,7 @@ import { logger } from '@jsinfo/utils/logger';
 import { UpdateStakeInformation } from '@jsinfo/indexer/blockchainEntities/blockchainEntitiesStakeUpdater';
 import { queryJsinfo } from '@jsinfo/utils/db';
 import { GetLatestBlock } from '@jsinfo/query/utils/getLatestBlock';
-// import { StringifyWithBigInt } from '@jsinfo/utils/bigint';
+// import { JSONStringify } from '@jsinfo/utils/bigint';
 
 let lastExecutedHeight: number | null = null; // Track the last executed height
 let runningPromise: Promise<void> | null = null; // Track the running promise
@@ -68,7 +68,7 @@ export async function SyncBlockchainEntities() {
 
                 await Promise.all(uniqueStakesArray.map(async (stake) => {
                     try {
-                        // console.log(`Inserting/updating stake: ${StringifyWithBigInt(stake)}`);
+                        // console.log(`Inserting/updating stake: ${JSONStringify(stake)}`);
                         await tx.insert(JsinfoSchema.providerStakes)
                             .values(stake)
                             .onConflictDoUpdate({

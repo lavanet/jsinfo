@@ -1,7 +1,7 @@
 // src/indexer/classes/RpcEndpointCahce.ts
 
 import { logger } from '@jsinfo/utils/logger';
-import { QueryLavaRPC } from '@jsinfo/indexer/utils/restRpc';
+import { QueryLavaRPC } from '@jsinfo/restRpc/lavaRpc';
 import { RedisCache } from '@jsinfo/redis/classes/RedisCache';
 import { TruncateError } from '@jsinfo/utils/fmt';
 
@@ -48,6 +48,23 @@ export interface SpecTrackedInfoResponse {
             iprpc_cu: string;
         };
     }[];
+}
+
+export interface PoolBalance {
+    denom: string;
+    amount: string;
+}
+
+export interface Pool {
+    name: string;
+    balance: PoolBalance[];
+}
+
+export interface RewardsPoolsResponse {
+    pools: Pool[];
+    time_to_refill: string;
+    estimated_blocks_to_refill: string;
+    allocation_pool_months_left: string;
 }
 
 const CACHE_KEYS = {
@@ -237,6 +254,30 @@ class RpcOnDemandEndpointCacheClass {
             return response;
         } catch (error) {
             logger.error(`Error fetching SpecTrackedInfo for ${chainId}`, { error: TruncateError(error) });
+            throw error;
+        }
+    }
+
+    public async GetRewardsPools(): Promise<RewardsPoolsResponse> {
+        const cacheKey = 'rewards_pools';
+        let rewardsPools = await RedisCache.getDict(cacheKey) as RewardsPoolsResponse;
+
+        if (!rewardsPools) {
+            rewardsPools = await this.fetchAndCacheRewardsPools();
+        }
+
+        return rewardsPools || { pools: [], time_to_refill: '', estimated_blocks_to_refill: '', allocation_pool_months_left: '' };
+    }
+
+    private async fetchAndCacheRewardsPools(): Promise<RewardsPoolsResponse> {
+        const cacheKey = 'rewards_pools';
+        try {
+            const response = await QueryLavaRPC<RewardsPoolsResponse>('/lavanet/lava/rewards/pools');
+            await RedisCache.setDict(cacheKey, response, this.cacheRefreshInterval);
+            logger.info(`Fetched and cached rewards pools successfully.`);
+            return response;
+        } catch (error) {
+            logger.error(`Error fetching rewards pools`, { error: TruncateError(error) });
             throw error;
         }
     }

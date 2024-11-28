@@ -2,8 +2,8 @@
 
 import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { logger } from '@jsinfo/utils/logger';
-import { RpcPeriodicEndpointCache } from '@jsinfo/indexer/classes/RpcPeriodicEndpointCache';
-import { EstimatedRewardsResponse, RpcOnDemandEndpointCache } from '@jsinfo/indexer/classes/RpcOnDemandEndpointCache';
+import { RpcPeriodicEndpointCache } from '@jsinfo/restRpc/lavaRpcPeriodicEndpointCache';
+import { EstimatedRewardsResponse, RpcOnDemandEndpointCache } from '@jsinfo/restRpc/lavaRpcOnDemandEndpointCache';
 import { ConvertToBaseDenom, GetUSDCValue } from './CurrencyConverstionUtils';
 import { queryJsinfo } from '@jsinfo/utils/db';
 import { HashJson } from '@jsinfo/utils/fmt';

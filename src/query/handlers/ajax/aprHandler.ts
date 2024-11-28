@@ -2,6 +2,7 @@
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { AprResource } from '@jsinfo/redis/resources/ajax/AprResource';
+import { JSONStringify } from '@jsinfo/utils/fmt';
 
 export const APRRawHandlerOpts: RouteShorthandOptions = {
     schema: {
@@ -29,5 +30,5 @@ export async function APRRawHandler(request: FastifyRequest, reply: FastifyReply
         reply.send({ error: 'Failed to fetch APR data' });
         return reply;
     }
-    return JSON.stringify(data);
+    return JSONStringify(data);
 }

@@ -1,4 +1,6 @@
 import { RedisCache } from './classes/RedisCache';
+import { JSONStringify } from '@jsinfo/utils/fmt';
+
 interface BaseArgs {
     [key: string]: any;
 }
@@ -19,7 +21,7 @@ export abstract class RedisResourceBase<T, A extends BaseArgs = BaseArgs> {
 
     // Default JSON serialization
     protected serialize(data: T): string {
-        return JSON.stringify(data);
+        return JSONStringify(data);
     }
 
     protected deserialize(data: string): T {
@@ -41,19 +43,27 @@ export abstract class RedisResourceBase<T, A extends BaseArgs = BaseArgs> {
     // Main public method
     async fetch(args?: A): Promise<T | null> {
         try {
-            const cached = await this.get(args);
-            if (cached) return cached;
+            try {
+                const cached = await this.get(args);
+                if (cached) return cached;
+            } catch (error) {
+            }
 
             const data = await this.fetchFromDb(args);
             if (data) {
-                await this.set(data, args);
+                this.set(data, args);
                 return data;
             }
         } catch (error) {
             console.error(
-                `Error fetching resource: ${this.redisKey}`,
+                `Error fetching resource: ${this.redisKey}. Details: ${(error as any)?.message || 'Unknown error'}`,
                 {
-                    error,
+                    error: {
+                        message: (error as Error)?.message || 'Unknown error',
+                        stack: (error as Error)?.stack || 'No stack trace available',
+                        name: (error as Error)?.name || 'Error',
+                        code: (error as any)?.code || 'No error code'
+                    },
                     args,
                     ttl: this.ttlSeconds,
                     key: this.getKeyWithArgs(args)

@@ -1,11 +1,11 @@
 import { logger } from '@jsinfo/utils/logger';
-import { RpcPeriodicEndpointCache } from '@jsinfo/indexer/classes/RpcPeriodicEndpointCache';
-import { RpcOnDemandEndpointCache } from '@jsinfo/indexer/classes/RpcOnDemandEndpointCache';
+import { RpcPeriodicEndpointCache } from '@jsinfo/restRpc/lavaRpcPeriodicEndpointCache';
+import { RpcOnDemandEndpointCache } from '@jsinfo/restRpc/lavaRpcOnDemandEndpointCache';
 import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { ConvertToBaseDenom, GetUSDCValue } from "./CurrencyConverstionUtils";
 import { sql } from 'drizzle-orm';
 import { queryJsinfo } from '@jsinfo/utils/db';
-import { HashJson } from '@jsinfo/utils/fmt';
+import { HashJson, JSONStringify } from '@jsinfo/utils/fmt';
 
 export interface ProcessedRewardAmount {
     amount: number;
@@ -139,9 +139,7 @@ class DelegatorRewardsMonitorClass {
                     errorName: (error as Error)?.name,
                     errorMessage: (error as Error)?.message,
                     errorStack: (error as Error)?.stack,
-                    fullError: error instanceof Error
-                        ? JSON.stringify(error, Object.getOwnPropertyNames(error))
-                        : JSON.stringify(error)
+                    fullError: JSONStringify(error)
                 };
 
                 console.error('Full error details:', errorDetails);  // For immediate console debugging

@@ -2,10 +2,10 @@
 
 import { HashJson, IsMeaningfulText } from '@jsinfo/utils/fmt';
 import { logger } from '@jsinfo/utils/logger';
-import { QueryLavaRPC } from '@jsinfo/indexer/utils/restRpc';
+import { QueryLavaRPC } from '@jsinfo/restRpc/lavaRpc';
 import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { sql } from 'drizzle-orm';
-import { MemoryCache } from "@jsinfo/indexer/classes/MemoryCache";
+import { MemoryCache } from "@jsinfo/classes/MemoryCache";
 import { SpecAndConsumerService } from "@jsinfo/redis/resources/global/SpecAndConsumerResource";
 import { queryJsinfo } from '@jsinfo/utils/db';
 

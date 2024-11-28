@@ -1,8 +1,8 @@
 // src/indexer/classes/RpcEndpointCahce.ts
 
 import { logger } from '@jsinfo/utils/logger';
-import { QueryLavaRPC } from '@jsinfo/indexer/utils/restRpc';
-import { MemoryCache } from '@jsinfo/indexer/classes/MemoryCache';
+import { QueryLavaRPC } from '@jsinfo/restRpc/lavaRpc';
+import { RedisCache } from '@jsinfo/redis/classes/RedisCache';
 import { TruncateError } from '@jsinfo/utils/fmt';
 import { IsMeaningfulText } from '@jsinfo/utils/fmt';
 
@@ -93,6 +93,8 @@ interface ChainListResponse {
     chainInfoList: ChainInfo[];
 }
 
+const CACHE_VALIDITY_PERIOD = 600; // 10 minutes in seconds
+
 class RpcPeriodicEndpointCacheClass {
     private cacheRefreshInterval = 20 * 60; // 20 minutes
     private refreshPromise: Promise<void> | null = null;
@@ -129,10 +131,15 @@ class RpcPeriodicEndpointCacheClass {
 
     private async fetchAndCacheProviders(): Promise<void> {
         try {
+            const cacheKey = 'providers';
+            const ttl = await RedisCache.getTTL(cacheKey); // Get TTL for providers
+            if (ttl && ttl > CACHE_VALIDITY_PERIOD) {
+                logger.info('Providers cache is still valid. Skipping refresh.');
+                return; // Skip refresh if TTL is more than 10 minutes
+            }
             const response = await this.GetProviderMetadata();
             const providers = response.MetaData.map((meta) => meta.provider);
-            await MemoryCache.setArray('providers', providers, this.cacheRefreshInterval);
-
+            await RedisCache.setArray(cacheKey, providers, this.cacheRefreshInterval);
             logger.info('Providers cache refreshed successfully.');
         } catch (error) {
             logger.error('Error fetching providers metadata', { error: TruncateError(error) });
@@ -141,18 +148,18 @@ class RpcPeriodicEndpointCacheClass {
 
     private async fetchAndCacheDelegators(): Promise<void> {
         try {
-            const cachedProviders = await MemoryCache.getArray<string>('providers');
+            const cacheKey = 'uniqueDelegators';
+            const ttl = await RedisCache.getTTL(cacheKey); // Get TTL for uniqueDelegators
+            if (ttl && ttl > CACHE_VALIDITY_PERIOD) {
+                logger.info('UniqueDelegators cache is still valid. Skipping refresh.');
+                return; // Skip refresh if TTL is more than 10 minutes
+            }
+            const cachedProviders = await RedisCache.getArray('providers') as string[];
             if (!cachedProviders) {
                 logger.warn('No providers found in cache. Skipping delegator fetching.');
                 return;
             }
-
-            const cachedDelegators = await MemoryCache.getArray('uniqueDelegators');
-            if (cachedDelegators) {
-                return;
-            }
             const uniqueDelegators = new Set<string>();
-
             for (const provider of cachedProviders) {
                 const delegations = await this.getProviderDelegations(provider);
                 for (const delegation of delegations) {
@@ -161,9 +168,7 @@ class RpcPeriodicEndpointCacheClass {
                     }
                 }
             }
-
-            await MemoryCache.setArray('uniqueDelegators', Array.from(uniqueDelegators), this.cacheRefreshInterval);
-
+            await RedisCache.setArray(cacheKey, Array.from(uniqueDelegators), this.cacheRefreshInterval);
             logger.info('UniqueDelegatorsCache refreshed successfully.');
         } catch (error) {
             logger.error('Error fetching and caching unique delegators', { error: TruncateError(error) });
@@ -172,8 +177,14 @@ class RpcPeriodicEndpointCacheClass {
 
     private async fetchAndCacheEmptyProviderDelegations(): Promise<void> {
         try {
-            const emptyProviderDelegations = await this.GetProviderDelegators('empty_provider');
-            await MemoryCache.set('empty_provider_delegations', emptyProviderDelegations.delegations, this.cacheRefreshInterval);
+            const cacheKey = 'empty_provider_delegations';
+            const ttl = await RedisCache.getTTL(cacheKey); // Get TTL for empty_provider_delegations
+            if (ttl && ttl > CACHE_VALIDITY_PERIOD) {
+                logger.info('Empty provider delegations cache is still valid. Skipping refresh.');
+                return; // Skip refresh if TTL is more than 10 minutes
+            }
+            const emptyProviderDelegations = await this.GetProviderDelegators('empty_provider') as ProviderDelegatorsResponse;
+            await RedisCache.setDict(cacheKey, emptyProviderDelegations.delegations, this.cacheRefreshInterval);
             logger.info('Empty provider delegations cache refreshed successfully.');
         } catch (error) {
             logger.error('Error fetching empty provider delegations', { error: TruncateError(error) });
@@ -218,32 +229,32 @@ class RpcPeriodicEndpointCacheClass {
     }
 
     public async GetUniqueDelegators(): Promise<string[]> {
-        const delegators = await MemoryCache.getArray<string>('uniqueDelegators');
+        const delegators = await RedisCache.getArray('uniqueDelegators') as string[];
         if (!delegators) {
             await this.refreshCache();
-            return await MemoryCache.getArray<string>('uniqueDelegators') || [];
+            return await RedisCache.getArray('uniqueDelegators') as string[] || [];
         }
         return delegators;
     }
 
     public async GetProviders(): Promise<string[]> {
-        const providers = await MemoryCache.getArray<string>('providers');
+        const providers = await RedisCache.getArray('providers') as string[];
         if (!providers) {
             await this.refreshCache();
-            return await MemoryCache.getArray<string>('providers') || [];
+            return await RedisCache.getArray('providers') as string[] || [];
         }
         return providers;
     }
 
     public async GetProviderDelegators(provider: string): Promise<ProviderDelegatorsResponse> {
         const cacheKey = `provider_delegators_${provider}`;
-        let delegators = await MemoryCache.get<ProviderDelegatorsResponse>(cacheKey);
+        let delegators = await RedisCache.getDict(cacheKey) as ProviderDelegatorsResponse;
 
         if (!delegators) {
             delegators = await QueryLavaRPC<ProviderDelegatorsResponse>(
                 `/lavanet/lava/dualstaking/provider_delegators/${provider}`
             );
-            await MemoryCache.set(cacheKey, delegators, this.cacheRefreshInterval);
+            await RedisCache.setDict(cacheKey, delegators, this.cacheRefreshInterval);
         }
 
         return delegators;
@@ -251,11 +262,11 @@ class RpcPeriodicEndpointCacheClass {
 
     public async GetProviderMetadata(): Promise<ProviderMetadataResponse> {
         const cacheKey = `provider_metadata`;
-        let metadata = await MemoryCache.get<ProviderMetadataResponse>(cacheKey);
+        let metadata = await RedisCache.getDict(cacheKey) as ProviderMetadataResponse;
 
         if (!metadata) {
             metadata = await QueryLavaRPC<ProviderMetadataResponse>(`/lavanet/lava/epochstorage/provider_metadata/`);
-            await MemoryCache.set(cacheKey, metadata, this.cacheRefreshInterval);
+            await RedisCache.setDict(cacheKey, metadata, this.cacheRefreshInterval);
         }
 
         return metadata;
@@ -263,12 +274,12 @@ class RpcPeriodicEndpointCacheClass {
 
     public async getProviderDelegations(provider: string): Promise<Delegation[]> {
         const cacheKey = `provider_delegations_${provider}`;
-        let delegations = await MemoryCache.get<Delegation[]>(cacheKey);
+        let delegations = await RedisCache.getArray(cacheKey) as Delegation[];
 
         if (!delegations) {
             const delegatorsResponse = await this.GetProviderDelegators(provider);
             delegations = delegatorsResponse.delegations;
-            await MemoryCache.set(cacheKey, delegations, this.cacheRefreshInterval);
+            await RedisCache.setArray(cacheKey, delegations, this.cacheRefreshInterval);
         }
 
         return delegations;
@@ -314,28 +325,31 @@ class RpcPeriodicEndpointCacheClass {
     }
 
     public async GetAllValidators(): Promise<string[]> {
-        const validators = await MemoryCache.getArray<string>('all_validators');
+        const validators = await RedisCache.getArray('all_validators') as string[];
         if (!validators) {
             await this.refreshCache();
-            return await MemoryCache.getArray<string>('all_validators') || [];
+            return await RedisCache.getArray('all_validators') as string[] || [];
         }
         return validators;
     }
 
     private async fetchAndCacheValidators(): Promise<void> {
         try {
+            const cacheKey = 'all_validators';
+            const ttl = await RedisCache.getTTL(cacheKey); // Get TTL for all_validators
+            if (ttl && ttl > CACHE_VALIDITY_PERIOD) {
+                logger.info('Validators cache is still valid. Skipping refresh.');
+                return; // Skip refresh if TTL is more than 10 minutes
+            }
             let validatorAddresses: string[] = [];
             let nextKey: string | null = null;
-
             do {
                 const queryParams = nextKey ? `?pagination.key=${encodeURIComponent(nextKey)}` : '';
-                const response = await QueryLavaRPC<AllValidatorsResponse>(`/cosmos/staking/v1beta1/validators${queryParams}`);
-
+                const response: AllValidatorsResponse = await QueryLavaRPC<AllValidatorsResponse>(`/cosmos/staking/v1beta1/validators${queryParams}`);
                 validatorAddresses = validatorAddresses.concat(response.validators.map(validator => validator.operator_address));
                 nextKey = response.pagination.next_key;
             } while (nextKey);
-
-            await MemoryCache.setArray('all_validators', validatorAddresses, this.cacheRefreshInterval);
+            await RedisCache.setArray(cacheKey, validatorAddresses, this.cacheRefreshInterval);
             logger.info(`Fetched and cached ${validatorAddresses.length} validators successfully.`);
         } catch (error) {
             logger.error('Error fetching validators', { error: TruncateError(error) });
@@ -344,8 +358,14 @@ class RpcPeriodicEndpointCacheClass {
 
     private async fetchAndCacheChainList(): Promise<void> {
         try {
-            const response = await QueryLavaRPC<ChainListResponse>('/lavanet/lava/spec/show_all_chains');
-            await MemoryCache.set('chain_list', response.chainInfoList, this.cacheRefreshInterval);
+            const cacheKey = 'chain_list';
+            const ttl = await RedisCache.getTTL(cacheKey); // Get TTL for chain_list
+            if (ttl && ttl > CACHE_VALIDITY_PERIOD) {
+                logger.info('Chain list cache is still valid. Skipping refresh.');
+                return; // Skip refresh if TTL is more than 10 minutes
+            }
+            const response: ChainListResponse = await QueryLavaRPC<ChainListResponse>('/lavanet/lava/spec/show_all_chains');
+            await RedisCache.setArray(cacheKey, response.chainInfoList, this.cacheRefreshInterval);
             logger.info('Chain list cache refreshed successfully.');
         } catch (error) {
             logger.error('Error fetching chain list', { error: TruncateError(error) });
@@ -353,10 +373,10 @@ class RpcPeriodicEndpointCacheClass {
     }
 
     public async GetChainList(): Promise<ChainInfo[]> {
-        const chainList = await MemoryCache.get<ChainInfo[]>('chain_list');
+        const chainList = await RedisCache.getArray('chain_list') as ChainInfo[];
         if (!chainList) {
             await this.refreshCache();
-            return await MemoryCache.get<ChainInfo[]>('chain_list') || [];
+            return await RedisCache.getArray('chain_list') as ChainInfo[] || [];
         }
         return chainList;
     }

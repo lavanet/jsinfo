@@ -7,7 +7,7 @@ import * as JsinfoConsumerAgrSchema from '@jsinfo/schemas/jsinfoSchema/consumerR
 import { DoInChunks } from '@jsinfo/utils/processing';
 import { logger } from '@jsinfo/utils/logger';
 import { PgColumn } from 'drizzle-orm/pg-core';
-import { HashJson } from '@jsinfo/utils/fmt';
+import { HashJson, JSONStringifySpaced } from '@jsinfo/utils/fmt';
 
 export async function getConsumerAggHourlyTimeSpan(): Promise<{ startTime: Date | null, endTime: Date | null }> {
     const lastRelayPayment = await queryJsinfo(
@@ -126,7 +126,7 @@ export async function aggConsumerHourlyRelayPayments() {
         if (uniqueCombinations.has(key)) {
             // If the combination is already in the map, add it to duplicates
             const firstDuplicate = uniqueCombinations.get(key);
-            duplicates.push(`Duplicate: ${JSON.stringify(result, null, 2)} | First occurrence: ${JSON.stringify(firstDuplicate)}\n`);
+            duplicates.push(`Duplicate: ${JSONStringifySpaced(result)} | First occurrence: ${JSONStringifySpaced(firstDuplicate)}\n`);
         } else {
             // Otherwise, add the combination to the map
             uniqueCombinations.set(key, result);
@@ -136,8 +136,8 @@ export async function aggConsumerHourlyRelayPayments() {
     // Check if there are any duplicates
     if (duplicates.length > 0) {
         // Log or throw an exception with the details of the duplicates
-        logger.error(`Duplicate entries found for consumer, datehour, specId combinations: ${JSON.stringify(duplicates, null, 2)}`);
-        throw new Error(`Duplicate entries found for consumer, datehour, specId combinations: ${JSON.stringify(duplicates, null, 2)}`);
+        logger.error(`Duplicate entries found for consumer, datehour, specId combinations: ${JSONStringifySpaced(duplicates)}`);
+        throw new Error(`Duplicate entries found for consumer, datehour, specId combinations: ${JSONStringifySpaced(duplicates)}`);
     }
 
     //

@@ -1,5 +1,6 @@
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { AllProviderAPRResource } from '@jsinfo/redis/resources/ajax/AllProviderAprResource';
+import { JSONStringify } from '@jsinfo/utils/fmt';
 
 export const AllProviderAPRRawHandlerOpts: RouteShorthandOptions = {
     schema: {
@@ -27,5 +28,5 @@ export async function AllProviderAPRRawHandler(request: FastifyRequest, reply: F
         return reply.status(400).send({ error: 'Failed to fetch All Provider APR data' });
     }
 
-    return JSON.stringify(data);
+    return JSONStringify(data);
 }

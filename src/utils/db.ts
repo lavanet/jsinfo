@@ -6,7 +6,7 @@ import { Sleep } from './sleep';
 import postgres from 'postgres';
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import { sql } from 'drizzle-orm';
-import { IsMeaningfulText, MaskPassword } from './fmt';
+import { IsMeaningfulText, MaskPassword, JSONStringify } from './fmt';
 
 interface DbConnection {
     db: PostgresJsDatabase;
@@ -502,7 +502,7 @@ export async function CheckDatabaseStatus(): Promise<{ ok: boolean; details: str
 
         return {
             ok: true,
-            details: `Database connections healthy. Pool stats: ${JSON.stringify(poolStats)}`
+            details: `Database connections healthy. Pool stats: ${JSONStringify(poolStats)}`
         };
     } catch (error) {
         return {

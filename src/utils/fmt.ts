@@ -36,8 +36,8 @@ export function JSONStringify(obj: any): string {
 
 export function JSONStringifySpaced(obj: any): string {
     return JSON.stringify(obj, (key, value) =>
-        typeof value === 'bigint' ? value.toString() : value, 2
-    );
+        typeof value === 'bigint' ? value.toString() : value
+        , 2);
 }
 
 export const IsMeaningfulText = (text: string | null | undefined): boolean => {
@@ -85,7 +85,7 @@ export function StringifyJsonForCompare(data: any): string {
         } else {
             data = RemoveKeyFromJson(data, 'block_report');
         }
-        data = JSON.stringify(data);
+        data = JSONStringify(data);
     }
 
     if (typeof data !== "string") {
@@ -138,7 +138,7 @@ export function HashString(str: string): number {
 }
 
 export function HashJson(json: any): number {
-    const jsonString = JSON.stringify(json);
+    const jsonString = JSONStringify(json);
     let hash = 0;
     for (let i = 0; i < jsonString.length; i++) {
         const char = jsonString.charCodeAt(i);

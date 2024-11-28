@@ -1,3 +1,4 @@
+import { JSONStringify } from '@jsinfo/utils/fmt';
 import sizeof from 'object-sizeof';
 
 const MEMORY_THRESHOLD_MB = 1;
@@ -45,7 +46,7 @@ export function logClassMemory({
                 .map(([name, info], index) => {
                     const currentCache = caches[index];
                     const cacheData = currentCache instanceof Map ? Object.fromEntries(currentCache) : currentCache;
-                    const jsonString = JSON.stringify(cacheData);
+                    const jsonString = JSONStringify(cacheData);
                     const stringLengthMB = jsonString.length / 1024 / 1024;
                     return [
                         name,

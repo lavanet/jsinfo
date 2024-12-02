@@ -22,6 +22,7 @@ import { IndexTopChainsResource } from '../resources/index/IndexTopChainsResourc
 import { IndexTotalCuResource } from '../resources/index/IndexTotalCuResource';
 import { ActiveProvidersResource } from '../resources/index/ActiveProvidersResource';
 import { AllProviderAPRResource } from '../resources/ajax/AllProviderAprResource';
+import { TotalValueLockedResource } from '../resources/ajax/TotalValueLockedResource';
 
 export class IndexerRedisResourceCaller {
     private static readonly REFRESH_INTERVAL = 60 * 1000; // 1 minute
@@ -109,6 +110,9 @@ export class IndexerRedisResourceCaller {
         // AllProviderAPRResource
         await new AllProviderAPRResource().fetch()
             .catch(e => logger.error('Failed to refresh all provider APR:', e));
+        // Total Value Locked
+        await new TotalValueLockedResource().fetch()
+            .catch(e => logger.error('Failed to refresh total value locked:', e));
 
         // Supply Resources
         await new SupplyResource().fetch({ type: 'total' })
@@ -129,6 +133,8 @@ export class IndexerRedisResourceCaller {
             .catch(e => logger.error('Failed to refresh autocomplete data:', e));
         await new ListProvidersResource().fetch()
             .catch(e => logger.error('Failed to refresh providers list:', e));
+
+
 
     }
 

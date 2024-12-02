@@ -7,6 +7,8 @@ import { sql, eq, count, and, gte, inArray } from "drizzle-orm";
 import { GetAndValidateSpecIdFromRequest } from '@jsinfo/query/utils/queryRequestArgParser';
 import { RedisCache } from '@jsinfo/redis/classes/RedisCache';
 import { queryJsinfo } from '@jsinfo/utils/db';
+import { SpecProviderHealthResource } from '@jsinfo/redis/resources/spec/SpecProviderHealthResource';
+import { WriteErrorToFastifyReplyNoLog } from '@jsinfo/query/utils/queryServerUtils';
 
 // Spec CU, Relay, and Rewards Handler
 export const SpecCuRelayRewardsHandlerOpts: RouteShorthandOptions = {
@@ -100,56 +102,16 @@ export async function SpecEndpointHealthHandler(request: FastifyRequest, reply: 
         return reply;
     }
 
-    ;
+    const sphr = new SpecProviderHealthResource();
+    const healthRecords = await sphr.fetch({ spec });
 
-    const twoDaysAgo = new Date();
-    twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
-
-    const latestIds = await queryJsinfo<{ provider: string | null; spec: string; interface: string | null; maxId: number }[]>(
-        async (db) => await db.select({
-            provider: JsinfoSchema.providerHealth.provider,
-            spec: JsinfoSchema.providerHealth.spec,
-            interface: JsinfoSchema.providerHealth.interface,
-            maxId: sql<number>`MAX(${JsinfoSchema.providerHealth.id})`.as('max_id'),
-        })
-            .from(JsinfoSchema.providerHealth)
-            .where(
-                and(
-                    eq(JsinfoSchema.providerHealth.spec, spec),
-                    gte(JsinfoSchema.providerHealth.timestamp, twoDaysAgo)
-                )
-            )
-            .groupBy(
-                JsinfoSchema.providerHealth.provider,
-                JsinfoSchema.providerHealth.spec,
-                JsinfoSchema.providerHealth.interface
-            ),
-        'SpecEndpointHealth_getLatestIds'
-    );
-
-    if (latestIds.length === 0) {
-        return {
-            endpointHealth: {
-                healthy: 0,
-                unhealthy: 0
-            }
-        };
+    if (!healthRecords || healthRecords.length === 0) {
+        WriteErrorToFastifyReplyNoLog(reply, 'No recent health records for spec');
+        return null;
     }
 
-    const maxIds = latestIds.map(li => li.maxId);
-
-    const healthStatus = await queryJsinfo<{ id: number; status: string }[]>(
-        async (db) => await db.select({
-            id: JsinfoSchema.providerHealth.id,
-            status: JsinfoSchema.providerHealth.status,
-        })
-            .from(JsinfoSchema.providerHealth)
-            .where(inArray(JsinfoSchema.providerHealth.id, maxIds)),
-        'SpecEndpointHealth_getHealthStatus'
-    );
-
-    const healthyCount = healthStatus.filter(hs => hs.status === 'healthy').length;
-    const unhealthyCount = healthStatus.length - healthyCount;
+    const healthyCount = healthRecords.filter(hs => hs.status === 'healthy').length;
+    const unhealthyCount = healthRecords.length - healthyCount;
 
     return {
         endpointHealth: {

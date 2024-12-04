@@ -63,5 +63,9 @@ export async function ConvertToBaseDenom(amount: string, denom: string): Promise
 
 export async function GetUSDCValue(amount: string, denom: string): Promise<string> {
     const usdcRate = await CoinGekoCache.GetDenomToUSDRate(denom);
-    return (parseFloat(amount) * usdcRate).toString();
+    const result = (parseFloat(amount) * usdcRate);
+    if (result < 1.e-7 || result > 100000) {
+        console.log(`Calculating USDC value: amount = ${amount}, denom = ${denom}, usdcRate = ${usdcRate}, result = ${result}`);
+    }
+    return result.toString();
 }

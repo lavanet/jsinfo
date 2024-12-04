@@ -3,6 +3,7 @@ import { TruncateError } from '@jsinfo/utils/fmt';
 import { RedisCache } from '@jsinfo/redis/classes/RedisCache';
 import { FetchRestData } from '@jsinfo/restRpc/fetch';
 import denomsData from "./CoinGekoDenomMap.json" assert { type: "json" };
+import { IsMainnet } from '@jsinfo/utils/env';
 
 export interface CoinGeckoRateResponse {
     [coinGeckodenom: string]: {
@@ -11,10 +12,14 @@ export interface CoinGeckoRateResponse {
 }
 
 class CoinGekoCacheClass {
-    private cacheRefreshInterval = 5 * 60; // 5 minutes
+    private cacheRefreshInterval = 30 * 60; // 30 minutes, I hit 2 much the retry error locally
     private activeFetches: { [denom: string]: Promise<number> } = {};
 
     public async GetDenomToUSDRate(denom: string): Promise<number> {
+        if (IsMainnet() && denom.includes("E3FCBEDDBAC500B1BAB90395C7D1E4F33D9B9ECFE82A16ED7D7D141A0152323F")) {
+            throw new Error(`Using testnet denom on mainnet - something is wrong - ${denom} (samoleans)`);
+        }
+
         const coinGeckodenom = denomsData[denom as keyof typeof denomsData];
         if (!coinGeckodenom) {
             throw new Error(`CoinGekoCache:: No matching id found in denoms.json for ${denom}`);

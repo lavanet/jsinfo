@@ -4,19 +4,6 @@ import { BackoffRetry } from "@jsinfo/utils/retry";
 const activeFetches: Record<string, Promise<any>> = {};
 const RATE_LIMIT_DELAY = 60000; // 1 minute in milliseconds
 const rateDelayCache = new Map<string, number>();
-const errorCache = new Map<string, number>();
-
-function rateLimitedError(message: string, error: any) {
-    const key = `${message}-${error?.message || 'unknown'}`;
-    const now = Date.now();
-    const lastLogTime = errorCache.get(key) || 0;
-
-    // Only log if more than 60 seconds have passed since last similar error
-    if (now - lastLogTime >= 60000) {
-        logger.error(message, { error });
-        errorCache.set(key, now);
-    }
-}
 
 export async function FetchRestData<T>(
     url: string,
@@ -43,35 +30,48 @@ export async function FetchRestData<T>(
     }
 
     const fetchFunc = async () => {
-        try {
-            const lastRateLimit = rateDelayCache.get(url);
-            if (lastRateLimit) {
-                const timeToWait = lastRateLimit - Date.now();
-                if (timeToWait > 0) {
-                    logger.info(`Rate limit cooling down for URL: ${url}, waiting ${timeToWait}ms`);
-                    await new Promise(resolve => setTimeout(resolve, timeToWait));
+        const maxRetries = 3; // Define the maximum number of retries
+        let attempt = 0; // Initialize the attempt counter
+
+        while (attempt < maxRetries) {
+            try {
+                const lastRateLimit = rateDelayCache.get(url);
+                if (lastRateLimit) {
+                    const timeToWait = lastRateLimit - Date.now();
+                    if (timeToWait > 0) {
+                        logger.info(`Rate limit cooling down for URL: ${url}, waiting ${timeToWait}ms`);
+                        await new Promise(resolve => setTimeout(resolve, timeToWait));
+                    }
+                    rateDelayCache.delete(url);
                 }
-                rateDelayCache.delete(url);
-            }
-            const response = await fetch(url, options);
 
-            // Handle rate limit (429) specifically
-            if (response.status === 429) {
-                logger.warn(`Rate limit hit for ${url}, waiting 60 seconds before retry`);
-                rateDelayCache.set(url, Date.now() + RATE_LIMIT_DELAY);
-                await new Promise(resolve => setTimeout(resolve, RATE_LIMIT_DELAY));
-                throw new Error(`Rate limited - retrying after delay on ${url}`);
-            }
+                const response = await fetch(url, options);
 
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                // Handle rate limit (429) specifically
+                if (response.status === 429) {
+                    logger.warn(`Rate limit hit for ${url}, waiting 60 seconds before retry`);
+                    rateDelayCache.set(url, Date.now() + RATE_LIMIT_DELAY);
+                    await new Promise(resolve => setTimeout(resolve, RATE_LIMIT_DELAY));
+                    attempt++; // Increment the attempt counter
+                    logger.info(`Retrying fetch for ${url} (Attempt ${attempt})...`);
+                    continue; // Retry the fetch
+                }
+
+                // Check for other response errors
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                return await response.json() as T; // Return the JSON response if successful
+            } catch (error) {
+                logger.error(`Error fetching data from ${url}:`, error);
+                if (attempt === maxRetries - 1) {
+                    throw error; // Rethrow the error if max retries reached
+                }
+                attempt++; // Increment the attempt counter
+                logger.info(`Retrying fetch for ${url} (Attempt ${attempt})...`);
+                await new Promise(resolve => setTimeout(resolve, 1000)); // Wait before retrying
             }
-            return await response.json() as T;
-        } catch (error) {
-            rateLimitedError(`Failed to fetch data from ${url}`, error);
-            throw error;
-        } finally {
-            delete activeFetches[url];
         }
     };
 
@@ -90,5 +90,5 @@ export async function FetchRestData<T>(
         fetchFunc() :
         BackoffRetry(`FetchRestData: ${url}`, fetchFunc, retries, factor, minTimeout, maxTimeout);
     activeFetches[url] = promise;
-    return await promise;
+    return await promise as T;
 }

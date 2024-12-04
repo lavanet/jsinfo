@@ -182,4 +182,3 @@ export class IndexerRedisResourceCaller {
             .catch(e => logger.error('Failed to refresh provider moniker spec data:', e));
     }
 }
-

@@ -361,7 +361,7 @@ export type InsertSpecTrackedInfo = typeof specTrackedInfo.$inferInsert;
 export const aprPerProvider = pgTable('apr_per_provider', {
   provider: text('provider').notNull(),
   type: text('type').notNull(),
-  value: real('value').notNull(),
+  value: text('value').notNull(),
   timestamp: timestamp('timestamp', { mode: "date" }).defaultNow().notNull(),
   estimatedRewards: jsonb('estimated_rewards'),
 }, (table) => {

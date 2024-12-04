@@ -4,6 +4,7 @@ import { logger } from '@jsinfo/utils/logger';
 import { QueryLavaRPC } from '@jsinfo/restRpc/lavaRpc';
 import { RedisCache } from '@jsinfo/redis/classes/RedisCache';
 import { TruncateError } from '@jsinfo/utils/fmt';
+import { IsMainnet } from '@jsinfo/utils/env';
 
 export interface DenomTraceResponse {
     denom_trace: {
@@ -78,7 +79,7 @@ const CACHE_KEYS = {
 } as const;
 
 class RpcOnDemandEndpointCacheClass {
-    private cacheRefreshInterval = 20 * 60; // 20 minutes
+    private cacheRefreshInterval = 30 * 60; // 0 minutes
 
     public async GetDenomTrace(denom: string): Promise<DenomTraceResponse> {
         const cacheKey = CACHE_KEYS.DENOM_TRACE(denom);
@@ -96,6 +97,9 @@ class RpcOnDemandEndpointCacheClass {
     }
 
     private async fetchAndCacheDenomTrace(denom: string): Promise<DenomTraceResponse> {
+        if (IsMainnet() && denom.includes("E3FCBEDDBAC500B1BAB90395C7D1E4F33D9B9ECFE82A16ED7D7D141A0152323F")) {
+            throw new Error(`lavaRpcOnDemandEndpointCache:: Using testnet denom on mainnet - something is wrong - ${denom} (samoleans)`);
+        }
         try {
             const response = await QueryLavaRPC<DenomTraceResponse>(`/ibc/apps/transfer/v1/denom_traces/${denom}`);
             await RedisCache.setDict(CACHE_KEYS.DENOM_TRACE(denom), response, this.cacheRefreshInterval);

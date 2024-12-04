@@ -15,6 +15,10 @@ export function IsIndexerProcess(): boolean {
     return GetEnvVar("IS_INDEXER_PROCESS", "false") === "true";
 }
 
+export function IsMainnet(): boolean {
+    return GetEnvVar("JSINFO_NETWORK", "").toLowerCase().includes("mainnet");
+}
+
 export function GetRedisUrls(): { read: string[]; write: string[] } {
     const envKey = IsIndexerProcess()
         ? "JSINFO_INDEXER_REDDIS_CACHE"
@@ -46,8 +50,8 @@ export function GetRedisUrls(): { read: string[]; write: string[] } {
         .map(url => url.replace(/^1_/, '')); // Remove prefix '1_'
 
     return {
-        read: readUrlsArray,
-        write: writeUrls
+        read: Array.from(new Set(readUrlsArray)),
+        write: Array.from(new Set(writeUrls))
     };
 }
 

@@ -124,6 +124,7 @@ class RpcOnDemandEndpointCacheClass {
             }
         }
 
+        console.log(`RpcOnDemandEndpointCache::GetEstimatedValidatorRewards - ${validator} - ${JSON.stringify(rewards)}`);
         return rewards;
     }
 
@@ -172,6 +173,7 @@ class RpcOnDemandEndpointCacheClass {
             }
         }
 
+        console.log(`RpcOnDemandEndpointCache::GetEstimatedProviderRewards - ${provider} - ${JSON.stringify(rewards)}`);
         return rewards;
     }
 
@@ -183,6 +185,8 @@ class RpcOnDemandEndpointCacheClass {
                 response,
                 this.cacheRefreshInterval
             );
+
+            console.log(`Fetched and cached estimated provider rewards for ${provider} successfully. ${JSON.stringify(response)}`);
         } catch (error) {
             logger.error(`Error fetching estimated provider rewards for ${provider}`, { error: TruncateError(error) });
             throw error;

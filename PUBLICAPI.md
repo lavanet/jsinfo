@@ -83,7 +83,7 @@ Returns list of all specs/chains
    - Represent unique users over the trailing 30-day period
    - Updated continuously based on blockchain data
 
-## APR (Annual Percentage Rate) Endpoint
+## APR (Annual Percentage Rewards) Endpoint
 
 #### `/apr`
 
@@ -187,9 +187,7 @@ Both staking and restaking APRs are calculated similarly:
 
 2. For each entity:
    - Calculate monthly rewards in USD (including both LAVA and other tokens)
-   - This includes IBC token rewards which are converted to USD using CoinGecko prices
-   - Convert to annual rate using compound interest formula:
-   - `APR = ((1 + monthly_rate) ^ 12 - 1)`
+   - Convert to annual rate using compound interest formula:`APR = ((1 + monthly_rate) ^ 12 - 1)`
 
 #### Final Calculation
 

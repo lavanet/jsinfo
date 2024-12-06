@@ -3,6 +3,7 @@
 import { RedisCache } from '@jsinfo/redis/classes/RedisCache';
 import { CoinGekoCache } from '@jsinfo/restRpc/ext/CoinGeko/CoinGekoCache';
 import { RpcOnDemandEndpointCache } from '@jsinfo/restRpc/lavaRpcOnDemandEndpointCache';
+import { logger } from '@jsinfo/utils/logger';
 
 const CACHE_DURATION = {
     DENOM_TRACE: 3600 * 24, // 1 day
@@ -31,6 +32,7 @@ const DENOM_CONVERSIONS = {
     "ucmdx": { baseDenom: "cmdx", factor: 1_000_000 },                    // COMDEX (CMDX)
     "ucre": { baseDenom: "cre", factor: 1_000_000 },                    // Crescent (CRE)
     "uxprt": { baseDenom: "xprt", factor: 1_000_000 },                    // Persistence (XPRT)
+    "uusdc": { baseDenom: "usdc", factor: 1_000_000 },                    // USD Coin (USDC)
 };
 
 export async function ConvertToBaseDenom(amount: string, denom: string): Promise<[string, string]> {
@@ -65,7 +67,7 @@ export async function GetUSDCValue(amount: string, denom: string): Promise<strin
     const usdcRate = await CoinGekoCache.GetDenomToUSDRate(denom);
     const result = (parseFloat(amount) * usdcRate);
     if (result < 1.e-7 || result > 100000) {
-        console.log(`Calculating USDC value: amount = ${amount}, denom = ${denom}, usdcRate = ${usdcRate}, result = ${result}`);
+        logger.warn(`GetUSDCValue out of range values: amount = ${amount}, denom = ${denom}, usdcRate = ${usdcRate}, result = ${result}`);
     }
     return result.toString();
 }

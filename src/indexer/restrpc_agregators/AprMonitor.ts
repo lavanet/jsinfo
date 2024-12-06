@@ -107,16 +107,22 @@ class APRMonitorClass {
     }
   }
 
+  // annual precentage rewards 
+  // cant be the same APR::CalculateAPR:TotalReward
   public async CalculateAPR(totalReward: number, caller: string): Promise<number> {
     // this number is 932.82 on 04/12/24
-    const investedAmount = await GetUSDCValue((BENCHMARK_AMOUNT / 1000000).toString(), "lava");
+    const investedAmount = await GetUSDCValue("10000", "lava");
+
+    // make sure totalrewards is in usdc
+    // 96.89
     const rate = totalReward / parseFloat(investedAmount);
+
+    // maybe this called apy since this accounts for compounding
     const APR = ((1 + rate) ** 12 - 1);
 
-    numberStats_addNumber(caller + '::CalculateAPR:APR', APR);
-    numberStats_addNumber(caller + '::CalculateAPR:Rate', rate);
-    numberStats_addNumber(caller + '::CalculateAPR:TotalReward', totalReward);
-
+    // console.log(caller + '::CalculateAPR:APR', APR);
+    // console.log(caller + '::CalculateAPR:Rate', rate);
+    // console.log(caller + '::CalculateAPR:TotalReward', totalReward);
     // console.log(`Total Reward: ${totalReward}, Invested Amount: ${investedAmount}, Rate: ${rate}, APR: ${APR}`);
     return APR;
   }
@@ -130,19 +136,24 @@ class APRMonitorClass {
   }
 
   private async enrichLavaAddresssWithUSDCRewards(
-    lavaAddresses: string[],
+    lavaAddresses1: string[],
     chunkIndex: number,
     getEstimatedRewards: (entity: string) => Promise<EstimatedRewardsResponse>,
     totalEntities: number,
     caller: string,
     progressCallback: (processed: number) => void
   ): Promise<Map<string, number>> {
-    if (lavaAddresses.length > 1) {
-      logger.info(`AprMon: ${caller} - Processing entity chunk ${chunkIndex + 1} of ${Math.ceil(totalEntities / lavaAddresses.length)}`);
-    }
+    // if (lavaAddresses.length > 1) {
+    //   logger.info(`AprMon: ${caller} - Processing entity chunk ${chunkIndex + 1} of ${Math.ceil(totalEntities / lavaAddresses.length)}`);
+    // }
     const lavaAddressesRewards = new Map<string, number>();
 
-    for (const lavaAddress of lavaAddresses) {
+    let lavaAddresses = ['lava@18rtt3ka0jc85qvvcnct0t7ayq6fva7692k9kvh']
+    if (caller.toLowerCase().includes('restaking')) {
+      lavaAddresses = [];
+    }
+
+    for (const lavaAddress of lavaAddresses1) {
       try {
         const estimatedRewards = await getEstimatedRewards(lavaAddress);
 
@@ -151,6 +162,13 @@ class APRMonitorClass {
 
           const [amount, denom] = await ConvertToBaseDenom(total.amount, total.denom);
           const usdcAmount = await GetUSDCValue(amount, denom);
+          if (lavaAddress === "lava@valoper18rtt3ka0jc85qvvcnct0t7ayq6fva7697l737q" || lavaAddress === "lava@123gelhvpv0046g4869dse939xmf86x77ue22hp") {
+            console.log(`AprMon: ${caller} - usdcAmount:`, usdcAmount);
+            console.log(`AprMon: ${caller} - amount:`, amount);
+            console.log(`AprMon: ${caller} - denom:`, denom);
+            console.log(`AprMon: ${caller} - total:`, total);
+            console.log(`AprMon: ${caller} - lavaAddressesRewards.get(lavaAddress):`, lavaAddressesRewards.get(lavaAddress));
+          }
           numberStats_addNumber(caller + '::enrichLavaAddresssWithUSDCRewards:RewardUsdcAmount', parseFloat(usdcAmount));
           lavaAddressesRewards.set(lavaAddress, (lavaAddressesRewards.get(lavaAddress) || 0) + parseFloat(usdcAmount));
         }
@@ -172,8 +190,14 @@ class APRMonitorClass {
     // logger.info('Calculating APRs for rewards:', rewards);
     const aprs = new Map<string, number>();
     for (const [lavaAddress, totalReward] of rewards.entries()) {
+      if (lavaAddress === "lava@valoper18rtt3ka0jc85qvvcnct0t7ayq6fva7697l737q") {
+        console.log(`AprMon: ${caller} - totalReward:`, totalReward);
+      }
       if (totalReward === 0) continue;
       const APR = await this.CalculateAPR(totalReward, caller);
+      if (lavaAddress === "lava@valoper18rtt3ka0jc85qvvcnct0t7ayq6fva7697l737q") {
+        console.log(`AprMon: ${caller} - APR:`, APR);
+      }
       aprs.set(lavaAddress, APR);
     }
     return aprs;
@@ -241,7 +265,7 @@ class APRMonitorClass {
       const totalTime = (Date.now() - startTime) / 1000;
       logger.info(`AprMon: ${caller} - Completed calculation. Total processed: ${processedCount}, Total time: ${totalTime}s, Result: ${result}`);
 
-      numberStats_printStats()
+      // numberStats_printStats()
 
       return result;
     } catch (error) {
@@ -374,62 +398,63 @@ class APRMonitorClass {
         const promises: Promise<void>[] = [];
 
         // 1) Calculate Restaking APR and update the database
-        logger.info('Calculating Restaking APR...');
-        promises.push(
-          retry(() => this.calculateAPROnLavaAddresses(
-            () => RpcPeriodicEndpointCache.GetProviders(),
-            (provider) => RpcOnDemandEndpointCache.GetEstimatedProviderRewards(provider, BENCHMARK_AMOUNT, BENCHMARK_DENOM),
-            'Restaking APR'
-          )).then(aprRestaking => {
-            logger.info('Restaking APR calculated:', aprRestaking);
-            return retry(() => this.saveAprToDb('restaking_apr_percentile', aprRestaking));
-          })
-        );
+        // logger.info('Calculating Restaking APR...');
+        // promises.push(
+        //   retry(() => this.calculateAPROnLavaAddresses(
+        //     () => RpcPeriodicEndpointCache.GetProviders(),
+        //     (provider) => RpcOnDemandEndpointCache.GetEstimatedProviderRewards(provider, BENCHMARK_AMOUNT, BENCHMARK_DENOM),
+        //     'Restaking APR'
+        //   )).then(aprRestaking => {
+        //     logger.info('Restaking APR calculated:', aprRestaking);
+        //     return retry(() => this.saveAprToDb('restaking_apr_percentile', aprRestaking));
+        //   })
+        // );
 
         // // 2) Update APR for each provider concurrently
-        // const updateRestakingAPR = async () => {
-        //   logger.info('Updating APR for each provider...');
-        //   const providers = await RpcPeriodicEndpointCache.GetProviders();
-        //   for (const provider of providers) {
-        //     const estimatedRewards = await RpcOnDemandEndpointCache.GetEstimatedProviderRewards(provider, BENCHMARK_AMOUNT, BENCHMARK_DENOM);
-        //     const apr = await retry(() => this.calculateAPROnLavaAddresses(
-        //       () => Promise.resolve([provider]),
-        //       (provider) => Promise.resolve(estimatedRewards),
-        //       `Restaking APR for ${provider}`
-        //     ));
-        //     promises.push(this.saveAprToDbPerProvider('restaking', apr, estimatedRewards, provider));
-        //   }
-        // };
+        const updateRestakingAPR = async () => {
+          logger.info('Updating APR for each provider...');
+          const providers = ['lava@123gelhvpv0046g4869dse939xmf86x77ue22hp']; // await RpcPeriodicEndpointCache.GetProviders();
+          for (const provider of providers) {
+            const estimatedRewards = await RpcOnDemandEndpointCache.GetEstimatedProviderRewards(provider, BENCHMARK_AMOUNT, BENCHMARK_DENOM);
+            const apr = await retry(() => this.calculateAPROnLavaAddresses(
+              () => Promise.resolve([provider]),
+              (provider) => Promise.resolve(estimatedRewards),
+              `Restaking APR for ${provider}`
+            ));
+            promises.push(this.saveAprToDbPerProvider('restaking', apr, estimatedRewards, provider));
+          }
+        };
 
-        // promises.push(updateRestakingAPR()); // Call the function and push the promise
+        promises.push(updateRestakingAPR()); // Call the function and push the promise
 
         // 3) Calculate Staking APR and update the database
-        promises.push(
-          retry(() => this.calculateAPROnLavaAddresses(
-            () => RpcPeriodicEndpointCache.GetAllValidators(),
-            (validator) => RpcOnDemandEndpointCache.GetEstimatedValidatorRewards(validator, BENCHMARK_AMOUNT, BENCHMARK_DENOM),
-            'Staking APR',
-            6
-          )).then(aprStaking => {
-            return retry(() => this.saveAprToDb('staking_apr_percentile', aprStaking));
-          })
-        );
+        // promises.push(
+        //   retry(() => this.calculateAPROnLavaAddresses(
+        //     () => RpcPeriodicEndpointCache.GetAllValidators(),
+        //     (validator) => RpcOnDemandEndpointCache.GetEstimatedValidatorRewards(validator, BENCHMARK_AMOUNT, BENCHMARK_DENOM),
+        //     'Staking APR',
+        //     6
+        //   )).then(aprStaking => {
+        //     return retry(() => this.saveAprToDb('staking_apr_percentile', aprStaking));
+        //   })
+        // );
 
-        // // 4) Update APR for each validator concurrently
-        // const updateValidatorAPR = async () => {
-        //   const validators = await RpcPeriodicEndpointCache.GetAllValidators();
-        //   for (const validator of validators) {
-        //     const estimatedRewards = await RpcOnDemandEndpointCache.GetEstimatedValidatorRewards(validator, BENCHMARK_AMOUNT, BENCHMARK_DENOM);
-        //     const apr = await retry(() => this.calculateAPROnLavaAddresses(
-        //       () => Promise.resolve([validator]),
-        //       (validator) => Promise.resolve(estimatedRewards),
-        //       `Staking APR for ${validator}`
-        //     ));
-        //     promises.push(this.saveAprToDbPerProvider('staking', apr, estimatedRewards, validator));
-        //   }
-        // };
+        // 4) Update APR for each validator concurrently
+        const updateValidatorAPR = async () => {
+          // const validators = await RpcPeriodicEndpointCache.GetAllValidators();
+          const validators = ['lava@valoper18rtt3ka0jc85qvvcnct0t7ayq6fva7697l737q'];
+          for (const validator of validators) {
+            const estimatedRewards = await RpcOnDemandEndpointCache.GetEstimatedValidatorRewards(validator, BENCHMARK_AMOUNT, BENCHMARK_DENOM);
+            const apr = await retry(() => this.calculateAPROnLavaAddresses(
+              () => Promise.resolve([validator]),
+              (validator) => Promise.resolve(estimatedRewards),
+              `Staking APR for ${validator}`
+            ));
+            promises.push(this.saveAprToDbPerProvider('staking', apr, estimatedRewards, validator));
+          }
+        };
 
-        // promises.push(updateValidatorAPR()); // Call the function and push the promise
+        promises.push(updateValidatorAPR()); // Call the function and push the promise
 
         // Wait for all promises to complete
         await Promise.all(promises);

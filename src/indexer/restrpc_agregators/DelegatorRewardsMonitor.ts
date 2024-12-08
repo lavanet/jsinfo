@@ -118,7 +118,11 @@ class DelegatorRewardsMonitorClass {
                     if (reward.provider === delegator) {
                         for (const rewardAmount of reward.amount) {
                             const [amount, denom] = await ConvertToBaseDenom(rewardAmount.amount, rewardAmount.denom);
+                            if (amount === "0") continue;
+
                             const usdcAmount = await GetUSDCValue(amount, denom);
+                            if (usdcAmount === "0") continue;
+
                             processedRewards.push({
                                 amount: Number(amount),
                                 denom,

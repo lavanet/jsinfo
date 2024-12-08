@@ -15,6 +15,7 @@ import { ParsePaginationFromString } from '@jsinfo/query/utils/queryPagination';
 import { ActiveProvidersResource } from './ActiveProvidersResource';
 import { queryJsinfo } from '@jsinfo/utils/db';
 import { JSONStringify } from '@jsinfo/utils/fmt';
+import { logger } from '@jsinfo/utils/logger';
 const rewardSumSubQuery = sql`SELECT SUM(arp_sub.rewardSum) FROM(SELECT arp."provider", SUM(arp."rewardsum") AS rewardSum FROM ${JsinfoProviderAgrSchema.aggAllTimeRelayPayments} arp GROUP BY arp."provider") arp_sub WHERE arp_sub."provider" = ${JsinfoSchema.providerStakes.provider}`;
 
 export interface IndexProvidersActiveResponse {
@@ -114,7 +115,7 @@ export class IndexProvidersActiveResource extends RedisResourceBase<IndexProvide
             let activeProviders = await this.getActiveProviderAddresses();
 
             if (activeProviders.length === 0) {
-                console.log("No active providers found");
+                logger.warn("No active providers found");
                 return [];
             }
 
@@ -153,7 +154,7 @@ export class IndexProvidersActiveResource extends RedisResourceBase<IndexProvide
             let activeProviders = await this.getActiveProviderAddresses();
 
             if (activeProviders.length === 0) {
-                console.log("No active providers found");
+                logger.warn("No active providers found");
                 return [];
             }
 
@@ -258,7 +259,7 @@ export class IndexProvidersActiveResource extends RedisResourceBase<IndexProvide
             let activeProviders = await this.getActiveProviderAddresses();
 
             if (activeProviders.length === 0) {
-                console.log("No active providers found");
+                logger.warn("No active providers found");
                 return 0;
             }
 

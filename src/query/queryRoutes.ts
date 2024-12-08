@@ -94,10 +94,9 @@ import {
 // -- Internal data endpoints --
 import { ConsumerV2CahcedHandler, ConsumerV2CahcedHandlerOpts } from './handlers/consumer/consumerV2Handler';
 import { ChainWalletApiHandlerOpts, LavaChainRestakersHandler, LavaChainStakersHandler } from './handlers/ajax/chainWalletApiHandlers';
-import { AllProviderAPRRawHandlerOpts } from './handlers/ajax/allProviderAprHandler';
-import { AllProviderAPRRawHandler } from './handlers/ajax/allProviderAprHandler';
-import { TotalValueLockedHandler } from './handlers/ajax/totalLockedValueHandler';
-import { TotalValueLockedHandlerOpts } from './handlers/ajax/totalLockedValueHandler';
+import { AllProviderAPRRawHandlerOpts, AllProviderAPRRawHandler } from './handlers/ajax/allProviderAprHandler';
+import { TotalValueLockedHandler, TotalValueLockedHandlerOpts } from './handlers/ajax/totalLockedValueHandler';
+import { ValidatorsPaginatedHandler, ValidatorsPaginatedHandlerOpts } from './handlers/ajax/validatorsHandler';
 
 // -- Server status ajax --
 GetServerInstance().get('/latest', LatestRawHandlerOpts, LatestRawHandler);
@@ -127,6 +126,7 @@ GetServerInstance().get('/listProviders', ListProvidersRawHandlerOpts, ListProvi
 GetServerInstance().get('/providers', ProvidersPaginatedHandlerOpts, ProvidersPaginatedHandler);
 GetServerInstance().get('/specs', SpecsPaginatedHandlerOpts, SpecsPaginatedHandler);
 GetServerInstance().get('/consumers', ConsumersPaginatedHandlerOpts, ConsumersPaginatedHandler);
+GetServerInstance().get('/validators', ValidatorsPaginatedHandlerOpts, ValidatorsPaginatedHandler);
 
 // -- All pages ajax --
 GetServerInstance().get('/autoCompleteLinksV2Handler', AutoCompleteLinksV2PaginatedHandlerOpts, AutoCompleteLinksV2PaginatedHandler);

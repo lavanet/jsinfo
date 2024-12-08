@@ -93,7 +93,8 @@ export class AllProviderAPRResource extends RedisResourceBase<AllAprProviderData
             apr: JsinfoSchema.aprPerProvider.value,
             rewards: sql`${JsinfoSchema.aprPerProvider.estimatedRewards}`
         }).from(JsinfoSchema.aprPerProvider)
-            .where(gt(JsinfoSchema.aprPerProvider.timestamp, sql<Date>`now() - interval '30 day'`));
+            .where(gt(JsinfoSchema.aprPerProvider.timestamp, sql<Date>`now() - interval '30 day'`))
+            .where(sql`NOT ${JsinfoSchema.aprPerProvider.provider} LIKE '%valoper%'`);
 
         const providerCommissions = db.select({
             provider: JsinfoSchema.providerStakes.provider,
@@ -192,6 +193,8 @@ export class AllProviderAPRResource extends RedisResourceBase<AllAprProviderData
         for (const x of rewards) {
             try {
                 const [amount, denom] = await ConvertToBaseDenom(isTotal ? x.amount + "" : x.amount.amount + "", isTotal ? x.denom + "" : x.amount.denom + "");
+                if (amount === "0") continue;
+
                 if (isTotal) {
                     x.amount = amount;
                     x.denom = denom;

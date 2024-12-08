@@ -10,6 +10,7 @@ if (!IsIndexerProcess()) {
 
 import * as consts from './indexer/indexerConsts';
 import { IndexerThreadCallerStart } from './indexer/indexerThreadCaller';
+import { APRMonitor } from './indexer/restrpc_agregators/AprMonitor';
 
 const indexer = async (): Promise<void> => {
     logger.info(`Starting indexer, rpc: ${consts.JSINFO_INDEXER_LAVA_RPC}, start height: ${consts.JSINFO_INDEXER_START_BLOCK}`);
@@ -19,6 +20,10 @@ const indexer = async (): Promise<void> => {
             logger.info(`${key}: ${consts[key]}`);
         }
     }
+
+    // const aprMonitor = APRMonitor;
+    // console.log("stating apr monitor")
+    // aprMonitor.start();
 
     await IndexerThreadCallerStart();
 }

@@ -30,7 +30,7 @@ class RedisCacheClass {
     }
 
     private async connectAll() {
-        console.log(`Attempting to connect to ${this.redisUrls.write.length} write Redis instances...`);
+        logger.info(`Attempting to connect to ${this.redisUrls.write.length} write Redis instances...`);
 
         const maxRetries = 100;
         const retryDelay = 1000; // 1 second between retries
@@ -39,7 +39,7 @@ class RedisCacheClass {
             this.clients = await Promise.all(this.redisUrls.write.map(async url => {
                 for (let attempt = 0; attempt < maxRetries; attempt++) {
                     try {
-                        console.log(`Connecting to write Redis at ${MaskPassword(url)} on attempt ${attempt + 1}`);
+                        logger.info(`Connecting to write Redis at ${MaskPassword(url)} on attempt ${attempt + 1}`);
                         const client = createClient({
                             url,
                             socket: {
@@ -53,7 +53,7 @@ class RedisCacheClass {
                         }));
 
                         await client.connect();
-                        console.log(`Connected to write Redis at ${MaskPassword(url)} on attempt ${attempt + 1}`);
+                        logger.info(`Connected to write Redis at ${MaskPassword(url)} on attempt ${attempt + 1}`);
                         return client;
                     } catch (err) {
                         logger.error('Redis connection attempt failed', {
@@ -74,9 +74,9 @@ class RedisCacheClass {
 
             this.clients = this.clients.filter(client => client !== null) as RedisClientType[];
 
-            console.log(`Connected to ${this.clients.length} write Redis instances.`);
+            logger.info(`Connected to ${this.clients.length} write Redis instances.`);
 
-            console.log(`Attempting to connect to ${this.redisUrls.read.length} read Redis instances...`);
+            logger.info(`Attempting to connect to ${this.redisUrls.read.length} read Redis instances...`);
         } catch (error) {
             logger.error('Fatal: Redis connection failed', {
                 error: error as Error
@@ -283,11 +283,23 @@ class RedisCacheClass {
         const fullKey = this.keyPrefix + key;
 
         if (!this.clients.length) {
-            logger.error('Redis TTL check failed', {
-                reason: 'No clients available',
-                key: fullKey
-            });
-            return -2;
+            await new Promise(resolve => setTimeout(resolve, 10000));
+
+            if (!this.clients.length) {
+                try {
+                    await this.reconnect();
+                } catch (connectError) {
+                    logger.error('Redis reconnection attempt failed', { error: connectError });
+                }
+
+                if (!this.clients.length) {
+                    logger.error('Redis TTL check failed', {
+                        reason: 'No clients available after wait and reconnection attempt',
+                        key: fullKey
+                    });
+                    return -2;
+                }
+            }
         }
 
         try {

@@ -1,6 +1,6 @@
 import axios from 'axios';
-import { CoinGekoCache } from './CoinGeko/CoinGekoCache';
 import { RedisCache } from '@jsinfo/redis/classes/RedisCache';
+import { logger } from '@jsinfo/utils/logger';
 
 // https://app.uniswap.org/explore/tokens/arbitrum/0x11e969e9b3f89cb16d686a03cd8508c9fc0361af
 
@@ -72,10 +72,9 @@ async function fetchTokenData() {
             }
         });
 
-        // console.log('Response data:', response.data);
         return response.data;
     } catch (error) {
-        console.error('Error fetching token data:', error);
+        logger.error('Error fetching token data:', error);
     }
 }
 
@@ -93,11 +92,11 @@ export async function AribitrumGetTotalLavaValue(): Promise<number | null> {
             try {
                 const tokenData = (await fetchTokenData()).data.token;
                 const totalValueLockedValue = tokenData.market.totalValueLocked.value;
-                console.log("TLV-ARBITRUM: Total value locked in USD:", totalValueLockedValue);
+                logger.info("TLV-ARBITRUM: Total value locked in USD:", totalValueLockedValue);
                 RedisCache.set(cacheKey, totalValueLockedValue, cacheTTL);
                 return totalValueLockedValue;
             } catch (error) {
-                console.error('Error fetching token data:', error);
+                logger.error('Error fetching token data:', error);
                 attempts++;
                 if (attempts >= maxRetries) {
                     throw new Error('TLV-ARBITRUM: Max retries reached. Unable to fetch total LAVA value.');
@@ -113,7 +112,7 @@ export async function AribitrumGetTotalLavaValue(): Promise<number | null> {
         if (remainingTTL && remainingTTL < minCacheTTL) {
             fetchPromise();
         }
-        console.log("TLV-ARBITRUM: Using cached value:", cachedValue);
+        logger.info("TLV-ARBITRUM: Using cached value:", cachedValue);
         return Number(cachedValue); // Return cached value if available
     }
 

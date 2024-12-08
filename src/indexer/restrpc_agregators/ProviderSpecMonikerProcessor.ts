@@ -93,7 +93,6 @@ async function batchInsert(): Promise<void> {
 
     for (const entry of batchData) {
         if (!IsMeaningfulText(entry.moniker) || !IsMeaningfulText(entry.spec)) {
-            // cconsole.log(`batchInsert: Skipping invalid entry for provider ${entry.provider}`);
             continue;
         }
         const key = `${entry.provider.toLowerCase()}-${entry.spec.toLowerCase()}`;

@@ -98,6 +98,8 @@ import { AllProviderAPRRawHandlerOpts } from './handlers/ajax/allProviderAprHand
 import { AllProviderAPRRawHandler } from './handlers/ajax/allProviderAprHandler';
 import { TotalValueLockedHandler } from './handlers/ajax/totalLockedValueHandler';
 import { TotalValueLockedHandlerOpts } from './handlers/ajax/totalLockedValueHandler';
+import { ValidatorsPaginatedHandler } from './handlers/ajax/validatorsHandler';
+import { ValidatorsPaginatedHandlerOpts } from './handlers/ajax/validatorsHandler';
 
 // -- Server status ajax --
 GetServerInstance().get('/latest', LatestRawHandlerOpts, LatestRawHandler);
@@ -127,6 +129,7 @@ GetServerInstance().get('/listProviders', ListProvidersRawHandlerOpts, ListProvi
 GetServerInstance().get('/providers', ProvidersPaginatedHandlerOpts, ProvidersPaginatedHandler);
 GetServerInstance().get('/specs', SpecsPaginatedHandlerOpts, SpecsPaginatedHandler);
 GetServerInstance().get('/consumers', ConsumersPaginatedHandlerOpts, ConsumersPaginatedHandler);
+GetServerInstance().get('/validators', ValidatorsPaginatedHandlerOpts, ValidatorsPaginatedHandler);
 
 // -- All pages ajax --
 GetServerInstance().get('/autoCompleteLinksV2Handler', AutoCompleteLinksV2PaginatedHandlerOpts, AutoCompleteLinksV2PaginatedHandler);

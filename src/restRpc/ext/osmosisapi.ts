@@ -93,8 +93,6 @@ export async function OsmosisGetTotalLavaLockedValue(): Promise<number | null> {
 
     const apiUrl = `https://app.osmosis.zone/api/edge-trpc-pools/pools.getPools?input=${encodeURIComponent(JSON.stringify(input))}`;
 
-    // console.log('fetching osmosis apiUrl:', await (await fetch(apiUrl)).json());
-
     try {
         const response = await RedisFetch(apiUrl);
         const pools: Pool[] = (response as any).result.data.json.items;
@@ -111,6 +109,14 @@ export async function OsmosisGetTotalLavaLockedValue(): Promise<number | null> {
         logger.info(`TLV-OSM: Total locked value in LAVA from first API: ${totalLockedValue}`); // Log the total locked value
 
         const currentPrice = await CoinGekoCache.GetDenomToUSDRate('lava');
+        if (currentPrice === 0 || isNaN(currentPrice)) {
+            throw new Error('OsmosisGetTotalLavaLockedValue: CoinGekoCache.GetDenomToUSDRate returned 0 for lava');
+        }
+
+        if (currentPrice > 100000 || currentPrice < 1.e-7) {
+            throw new Error(`OsmosisGetTotalLavaLockedValue: CoinGekoCache.GetDenomToUSDRate returned out of range value for lava: ${currentPrice}`);
+        }
+
         let ret = totalLockedValue * Number(currentPrice / 1000000);
         logger.info(`TLV-OSM: Total locked value in LAVA from first API: ${ret}`);
         return ret;

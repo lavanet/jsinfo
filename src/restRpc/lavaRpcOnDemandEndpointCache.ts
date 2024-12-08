@@ -102,8 +102,7 @@ class RpcOnDemandEndpointCacheClass {
         }
         try {
             const response = await QueryLavaRPC<DenomTraceResponse>(`/ibc/apps/transfer/v1/denom_traces/${denom}`);
-            await RedisCache.setDict(CACHE_KEYS.DENOM_TRACE(denom), response, this.cacheRefreshInterval);
-            logger.info(`Fetched and cached denom trace for ${denom} successfully.`);
+            RedisCache.setDict(CACHE_KEYS.DENOM_TRACE(denom), response, this.cacheRefreshInterval);
             return response;
         } catch (error) {
             logger.error(`Error fetching denom trace for ${denom}`, { error: TruncateError(error) });
@@ -116,30 +115,24 @@ class RpcOnDemandEndpointCacheClass {
         let rewards = await RedisCache.getDict(cacheKey) as EstimatedRewardsResponse;
 
         if (!rewards) {
-            await this.fetchAndCacheEstimatedValidatorRewards(validator, amount, denom);
-            rewards = await RedisCache.getDict(cacheKey) as EstimatedRewardsResponse;
-            if (!rewards) {
-                //logger.warn(`No estimated validator rewards found in cache for ${validator}`);
-                return { info: [], total: [] };
-            }
+            return await this.fetchAndCacheEstimatedValidatorRewards(validator, amount, denom);
         }
 
-        console.log(`RpcOnDemandEndpointCache::GetEstimatedValidatorRewards - ${validator} - ${JSON.stringify(rewards)}`);
         return rewards;
     }
 
-    private async fetchAndCacheEstimatedValidatorRewards(validator: string, amount: number, denom: string, retries: number = 10, delay: number = 1000): Promise<void> {
+    private async fetchAndCacheEstimatedValidatorRewards(validator: string, amount: number, denom: string, retries: number = 10, delay: number = 1000): Promise<EstimatedRewardsResponse> {
         let attempt = 0;
 
         while (attempt < retries) {
             try {
                 const response = await QueryLavaRPC<EstimatedRewardsResponse>(`/lavanet/lava/subscription/estimated_validator_rewards/${validator}/${amount}${denom}`);
-                await RedisCache.setDict(
+                RedisCache.setDict(
                     CACHE_KEYS.VALIDATOR_REWARDS(validator, amount, denom),
                     response,
                     this.cacheRefreshInterval
                 );
-                return; // Exit the function if successful
+                return response; // Exit the function if successful
             } catch (error) {
                 attempt++;
                 logger.error(`Error fetching estimated validator rewards for ${validator} on attempt ${attempt}`, { error: TruncateError(error) });
@@ -149,10 +142,10 @@ class RpcOnDemandEndpointCacheClass {
                     throw error; // Rethrow the error after exhausting retries
                 }
 
-                // Sleep before retrying
                 await new Promise(resolve => setTimeout(resolve, delay)); // Wait for the specified delay (in milliseconds)
             }
         }
+        throw new Error(`Failed to fetch estimated validator rewards for ${validator} after ${retries} attempts.`);
     }
 
     public async GetEstimatedProviderRewards(provider: string, amount: number, denom: string): Promise<EstimatedRewardsResponse> {
@@ -161,8 +154,7 @@ class RpcOnDemandEndpointCacheClass {
 
         if (!rewards) {
             try {
-                await this.fetchEstimatedProviderRewards(provider, amount, denom);
-                rewards = await RedisCache.getDict(cacheKey) as EstimatedRewardsResponse;
+                rewards = await this.fetchEstimatedProviderRewards(provider, amount, denom);
             } catch (error) {
                 logger.error(`Error fetching estimated provider rewards for ${provider}`, { error: TruncateError(error) });
                 return { info: [], total: [] };
@@ -173,20 +165,18 @@ class RpcOnDemandEndpointCacheClass {
             }
         }
 
-        console.log(`RpcOnDemandEndpointCache::GetEstimatedProviderRewards - ${provider} - ${JSON.stringify(rewards)}`);
         return rewards;
     }
 
-    private async fetchEstimatedProviderRewards(provider: string, amount: number, denom: string): Promise<void> {
+    private async fetchEstimatedProviderRewards(provider: string, amount: number, denom: string): Promise<EstimatedRewardsResponse> {
         try {
             const response = await QueryLavaRPC<EstimatedRewardsResponse>(`/lavanet/lava/subscription/estimated_provider_rewards/${provider}/${amount}${denom}`);
-            await RedisCache.setDict(
+            RedisCache.setDict(
                 CACHE_KEYS.PROVIDER_REWARDS(provider, amount, denom),
                 response,
                 this.cacheRefreshInterval
             );
-
-            console.log(`Fetched and cached estimated provider rewards for ${provider} successfully. ${JSON.stringify(response)}`);
+            return response;
         } catch (error) {
             logger.error(`Error fetching estimated provider rewards for ${provider}`, { error: TruncateError(error) });
             throw error;
@@ -205,6 +195,7 @@ class RpcOnDemandEndpointCacheClass {
     }
 
     private async fetchAndCacheDelegatorRewards(delegator: string): Promise<DelegatorRewardsResponse> {
+        const cacheKey = CACHE_KEYS.DELEGATOR_REWARDS(delegator);
         try {
             const response = await QueryLavaRPC<DelegatorRewardsResponse>(
                 `/lavanet/lava/dualstaking/delegator_rewards/${delegator}`
@@ -230,10 +221,16 @@ class RpcOnDemandEndpointCacheClass {
                     };
                 }));
 
-                return { rewards: mappedRewards };
+                const finalResponse = { rewards: mappedRewards };
+
+                RedisCache.setDict(cacheKey, finalResponse, this.cacheRefreshInterval);
+                return finalResponse;
             }
 
+            // Cache empty response as well
+            RedisCache.setDict(cacheKey, response, this.cacheRefreshInterval);
             return response;
+
         } catch (error) {
             logger.error(`Error fetching delegator rewards for ${delegator}`, { error: TruncateError(error) });
             throw error;
@@ -258,7 +255,7 @@ class RpcOnDemandEndpointCacheClass {
     private async fetchAndCacheSpecTrackedInfo(chainId: string): Promise<SpecTrackedInfoResponse> {
         try {
             const response = await QueryLavaRPC<SpecTrackedInfoResponse>(`/lavanet/lava/rewards/SpecTrackedInfo/${chainId}/`);
-            await RedisCache.setDict(CACHE_KEYS.SPEC_TRACKED_INFO(chainId), response, this.cacheRefreshInterval);
+            RedisCache.setDict(CACHE_KEYS.SPEC_TRACKED_INFO(chainId), response, this.cacheRefreshInterval);
             return response;
         } catch (error) {
             logger.error(`Error fetching SpecTrackedInfo for ${chainId}`, { error: TruncateError(error) });
@@ -281,8 +278,7 @@ class RpcOnDemandEndpointCacheClass {
         const cacheKey = 'rewards_pools';
         try {
             const response = await QueryLavaRPC<RewardsPoolsResponse>('/lavanet/lava/rewards/pools');
-            await RedisCache.setDict(cacheKey, response, this.cacheRefreshInterval);
-            logger.info(`Fetched and cached rewards pools successfully.`);
+            RedisCache.setDict(cacheKey, response, this.cacheRefreshInterval);
             return response;
         } catch (error) {
             logger.error(`Error fetching rewards pools`, { error: TruncateError(error) });

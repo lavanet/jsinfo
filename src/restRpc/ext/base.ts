@@ -1,7 +1,5 @@
+import { logger } from '@jsinfo/utils/logger';
 import { RedisFetch } from '../../redis/RedisFetch';
-import { CoinGekoCache } from './CoinGeko/CoinGekoCache';
-
-// Define interfaces for the API response structure
 interface PriceChangePercentage {
     m5: string;
     h1: string;
@@ -84,10 +82,10 @@ const getTotalLockedValue = (pools: Pool[]) => {
     const basePool = pools.find(pool => pool.id.startsWith('base_'));
     if (basePool) {
         const totalLockedValue = basePool.attributes.reserve_in_usd;
-        console.log(`TLV-BASE: Total Locked Value for ${basePool.attributes.name}: $${totalLockedValue}`);
+        logger.info(`TLV-BASE: Total Locked Value for ${basePool.attributes.name}: $${totalLockedValue}`);
         return totalLockedValue;
     } else {
-        console.log('TLV-BASE: No base pool found.');
+        logger.info('TLV-BASE: No base pool found.');
         return null;
     }
 };
@@ -105,12 +103,12 @@ export const BaseGetTotalLockedValue = async (): Promise<number | null> => {
     if (totalLockedLava === null) {
         return null;
     }
-    console.log(`TLV-BASE: Total LAVA Value in USD: ${totalLockedLava}`);
+    logger.info(`TLV-BASE: Total LAVA Value in USD: ${totalLockedLava}`);
     return totalLockedLava;
 }
 // Execute the function if this file is run directly
 if (require.main === module) {
     BaseGetTotalLockedValue().then(totalLockedLava => {
-        console.log(`TLV-BASE: Total Locked Value In Lava: $${totalLockedLava}`);
+        logger.info(`TLV-BASE: Total Locked Value In Lava: $${totalLockedLava}`);
     });
 }

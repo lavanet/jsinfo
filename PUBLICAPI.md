@@ -41,6 +41,35 @@ Returns list of all consumers
 
 Returns list of all specs/chains
 
+#### `/validators`
+
+Returns list of all validators
+
+### Example Response
+
+```json
+{
+  "height": 2200221,
+  "datetime": 1710371763,
+  "validators": [
+    {
+      "address": "lava@valoper1qtjgjmc7w9tfem4dn8epzehfp4axk927gphyze",
+      "moniker": "P-ops Team",
+      "jailed": false,
+      "tokens": "9850500000",
+      "commission": {
+        "commission_rates": {
+          "rate": "0.1",
+          "max_rate": "0.2",
+          "max_change_rate": "0.1"
+        },
+        "update_time": "2024-04-03T07:11:45.279828464Z"
+      }
+    }
+  ]
+}
+```
+
 ## Supply Endpoints
 
 #### `/supply/circulating`

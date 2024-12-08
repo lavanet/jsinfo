@@ -8,6 +8,7 @@ import { ConvertToBaseDenom, GetUSDCValue } from './CurrencyConverstionUtils';
 import { queryJsinfo } from '@jsinfo/utils/db';
 import { HashJson } from '@jsinfo/utils/fmt';
 import { sql } from 'drizzle-orm';
+import { IsTestnet } from '@jsinfo/utils/env';
 
 // Constants
 const BENCHMARK_AMOUNT_LAVA_RPC = 10000 * 1000000;
@@ -17,7 +18,8 @@ const BENCHMARK_DENOM_COINGEKO_API = "lava";
 
 const APR_MAX_ERROR = 10000;
 // we had values as 0.0020040648396455474
-const APR_MIN_WARM = 0.0001
+// was ok for 0.0001 on mainnet
+const APR_MIN_WARM = IsTestnet() ? 1e-10 : 0.0001;
 
 const PERCENTILE = 0.8;
 

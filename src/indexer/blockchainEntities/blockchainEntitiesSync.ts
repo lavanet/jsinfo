@@ -8,7 +8,6 @@ import { logger } from '@jsinfo/utils/logger';
 import { UpdateStakeInformation } from '@jsinfo/indexer/blockchainEntities/blockchainEntitiesStakeUpdater';
 import { queryJsinfo } from '@jsinfo/utils/db';
 import { GetLatestBlock } from '@jsinfo/query/utils/getLatestBlock';
-// import { JSONStringify } from '@jsinfo/utils/bigint';
 
 let lastExecutedHeight: number | null = null; // Track the last executed height
 let runningPromise: Promise<void> | null = null; // Track the running promise
@@ -27,11 +26,9 @@ export async function SyncBlockchainEntities() {
 
     runningPromise = (async () => {
         const startTime = Date.now();
-        console.log(`SyncBlockchainEntities: Latest block height is ${latestHeight}`);
 
         let dbStakes = new Map<string, JsinfoSchema.InsertProviderStake[]>();
         await UpdateStakeInformation(latestHeight, dbStakes);
-        // console.log(`SyncBlockchainEntities: Retrieved ${dbStakes.size} stake entries from UpdateStakeInformation`);
 
         await queryJsinfo(async (db: PostgresJsDatabase) => {
             return await db.transaction(async (tx: PostgresJsDatabase) => {

@@ -146,9 +146,6 @@ query_endpoints_full_tests_all:
 query_endpoints_full_tests_local:
 	cd tests/query_endpoints && make query_endpoints_full_tests_local
 
-query_endpoints_full_tests_staging:
-	cd tests/query_endpoints && make query_endpoints_full_tests_staging
-
 query_endpoints_full_tests_testnet:
 	cd tests/query_endpoints && make query_endpoints_full_tests_testnet
 

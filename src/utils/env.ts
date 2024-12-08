@@ -19,6 +19,10 @@ export function IsMainnet(): boolean {
     return GetEnvVar("JSINFO_NETWORK", "").toLowerCase().includes("mainnet");
 }
 
+export function IsTestnet(): boolean {
+    return GetEnvVar("JSINFO_NETWORK", "").toLowerCase().includes("testnet");
+}
+
 export function GetRedisUrls(): { read: string[]; write: string[] } {
     const envKey = IsIndexerProcess()
         ? "JSINFO_INDEXER_REDDIS_CACHE"

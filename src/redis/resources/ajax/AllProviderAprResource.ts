@@ -94,7 +94,9 @@ export class AllProviderAPRResource extends RedisResourceBase<AllAprProviderData
             rewards: sql`${JsinfoSchema.aprPerProvider.estimatedRewards}`
         }).from(JsinfoSchema.aprPerProvider)
             .where(gt(JsinfoSchema.aprPerProvider.timestamp, sql<Date>`now() - interval '30 day'`))
-            .where(sql`NOT ${JsinfoSchema.aprPerProvider.provider} LIKE '%valoper%'`);
+            .then(results => results.filter(row =>
+                !row.address.includes('valoper') && IsMeaningfulText(row.value)
+            ));
 
         const providerCommissions = db.select({
             provider: JsinfoSchema.providerStakes.provider,

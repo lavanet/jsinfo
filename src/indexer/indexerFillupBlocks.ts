@@ -143,11 +143,13 @@ const doBatch = async (
     latestHeight: number,
 ) => {
     logger.info(`doBatch: Starting doBatch with dbHeight: ${dbHeight}, latestHeight: ${latestHeight}`);
-    onActivity(); // Reset activity timeout
+    onActivity();
 
     const blockList = [...globakWorkList];
-    logger.info(`doBatch: Initial blockList length: ${blockList.length}`);
-    globakWorkList.length = 0;
+    if (blockList.length > 0) {
+        logger.info(`doBatch: Initial blockList length: ${blockList.length}`);
+        globakWorkList.length = 0; // most performant way to clear the array
+    }
 
     for (let i = dbHeight + 1; i <= latestHeight; i++) {
         if (blockList.length >= 1000) {
@@ -157,7 +159,9 @@ const doBatch = async (
     }
 
     const org_len = blockList.length;
-    logger.info(`doBatch: Updated blockList length: ${org_len}`);
+    if (org_len > 0) {
+        logger.info(`doBatch: Updated blockList length: ${org_len}`);
+    }
     while (blockList.length > 0) {
         let start = performance.now();
 

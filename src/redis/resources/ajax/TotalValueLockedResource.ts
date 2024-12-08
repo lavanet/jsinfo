@@ -90,7 +90,12 @@ export class TotalValueLockedResource extends RedisResourceBase<number, {}> {
 
             return usdAmount;
         } catch (error) {
-            logger.error('TotalValueLockedResource: Error fetching total value locked:', error);
+            logger.error('TotalValueLockedResource: Error fetching total value locked:', {
+                error: error instanceof Error ? error.message : error,
+                stack: error instanceof Error ? error.stack : undefined,
+                details: JSON.stringify(error, Object.getOwnPropertyNames(error)),
+                timestamp: new Date().toISOString()
+            });
             throw new Error('TotalValueLockedResource: Failed to fetch total value locked');
         }
     }

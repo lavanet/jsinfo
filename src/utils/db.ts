@@ -205,9 +205,9 @@ class DbConnectionPoolClass {
                 const url = await this.getNextValidUrl(urls);
                 const db = await this.createDbConnection(url);
                 await db.select({ now: sql`NOW()` }).from(sql`(SELECT 1) AS foo`).limit(1);
-                logger.info('Database connection established', {
-                    url: MaskPassword(url)
-                });
+                // logger.info('Database connection established', {
+                //     url: MaskPassword(url)
+                // });
                 return {
                     db,
                     lastUsed: Date.now(),
@@ -263,11 +263,11 @@ class DbConnectionPoolClass {
         const conn = await this.createConnection();
         this.connections.push(conn);
 
-        logger.info('Created new connection for query', {
-            connectionId: conn.id,
-            totalConnections: this.connections.length,
-            queryKey: queryKey
-        });
+        // logger.info('Created new connection for query', {
+        //     connectionId: conn.id,
+        //     totalConnections: this.connections.length,
+        //     queryKey: queryKey
+        // });
 
         conn.inUse = true;
         return conn;

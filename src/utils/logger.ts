@@ -42,20 +42,19 @@ export const logger = winston.createLogger({
 const stringifyArgs = (arg: any): string => {
     // Check for basic types
     if (typeof arg === 'string' || typeof arg === 'number' || typeof arg === 'boolean') {
-        return String(arg); // Return basic types as strings
+        return String(arg);
     }
 
     // Handle non-basic types
     if (arg instanceof Map) {
-        return JSON.stringify(Object.fromEntries(arg)); // Convert Map to object
+        return JSONStringify(Object.fromEntries(arg));
     }
 
     if (arg instanceof Set) {
-        return JSON.stringify(Array.from(arg)); // Convert Set to array
+        return JSONStringify(Array.from(arg));
     }
 
-    // For other non-basic types, use JSON.stringify
-    return JSON.stringify(arg);
+    return JSONStringify(arg);
 };
 
 const formatArgs = (args: any[]) => {

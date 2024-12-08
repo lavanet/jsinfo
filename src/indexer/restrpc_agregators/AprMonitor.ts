@@ -217,7 +217,7 @@ class APRMonitorClass {
     const aprs = new Map<string, number>();
     for (const [lavaAddress, totalReward] of rewards.entries()) {
       if (totalReward === 0) continue;
-      const APR = await this.CalculateAPR(totalReward, caller);
+      const APR = await this.CalculateAPR(totalReward, caller + ":" + lavaAddress);
       if (APR === 0) continue;
       aprs.set(lavaAddress, APR);
     }

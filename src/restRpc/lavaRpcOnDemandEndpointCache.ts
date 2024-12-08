@@ -3,7 +3,7 @@
 import { logger } from '@jsinfo/utils/logger';
 import { QueryLavaRPC } from '@jsinfo/restRpc/lavaRpc';
 import { RedisCache } from '@jsinfo/redis/classes/RedisCache';
-import { TruncateError } from '@jsinfo/utils/fmt';
+import { IsMeaningfulText, TruncateError } from '@jsinfo/utils/fmt';
 import { IsMainnet } from '@jsinfo/utils/env';
 
 export interface DenomTraceResponse {
@@ -124,6 +124,10 @@ class RpcOnDemandEndpointCacheClass {
     private async fetchAndCacheEstimatedValidatorRewards(validator: string, amount: number, denom: string, retries: number = 10, delay: number = 1000): Promise<EstimatedRewardsResponse> {
         let attempt = 0;
 
+        if (!IsMeaningfulText(validator) || !IsMeaningfulText(denom)) {
+            throw new Error(`lavaRpcOnDemandEndpointCache::GetEstimatedValidatorRewards: Invalid validator or denom: ${validator} ${denom}`);
+        }
+
         while (attempt < retries) {
             try {
                 const response = await QueryLavaRPC<EstimatedRewardsResponse>(`/lavanet/lava/subscription/estimated_validator_rewards/${validator}/${amount}${denom}`);
@@ -149,6 +153,10 @@ class RpcOnDemandEndpointCacheClass {
     }
 
     public async GetEstimatedProviderRewards(provider: string, amount: number, denom: string): Promise<EstimatedRewardsResponse> {
+        if (!IsMeaningfulText(provider) || !IsMeaningfulText(denom)) {
+            throw new Error(`lavaRpcOnDemandEndpointCache::GetEstimatedProviderRewards: Invalid validator or denom: ${provider} ${denom}`);
+        }
+
         const cacheKey = CACHE_KEYS.PROVIDER_REWARDS(provider, amount, denom);
         let rewards = await RedisCache.getDict(cacheKey) as EstimatedRewardsResponse;
 

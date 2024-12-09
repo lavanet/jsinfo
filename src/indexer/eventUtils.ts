@@ -53,6 +53,8 @@ try {
 }
 
 export function EventParseProviderAddress(address: string): string {
+    if (address.toLocaleLowerCase().trim() == "empty_provider") return "empty_provider";
+
     const pattern = /^lava@[a-z0-9]{39}$/;
 
     if (!pattern.test(address)) {

@@ -1,0 +1,1 @@
+ALTER TABLE "apr_per_provider" ALTER COLUMN "value" SET DATA TYPE text;

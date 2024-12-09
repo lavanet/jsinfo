@@ -1,9 +1,11 @@
-import { GetJsinfoDbForQuery } from "../../utils/dbUtils";
-import { logger } from '../../utils/utils';
-import { RpcPeriodicEndpointCache } from '../classes/RpcPeriodicEndpointCache';
-import { RpcOnDemandEndpointCache } from '../classes/RpcOnDemandEndpointCache';
-import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
+import { logger } from '@jsinfo/utils/logger';
+import { RpcPeriodicEndpointCache } from '@jsinfo/restRpc/lavaRpcPeriodicEndpointCache';
+import { RpcOnDemandEndpointCache } from '@jsinfo/restRpc/lavaRpcOnDemandEndpointCache';
+import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { ConvertToBaseDenom, GetUSDCValue } from "./CurrencyConverstionUtils";
+import { sql } from 'drizzle-orm';
+import { queryJsinfo } from '@jsinfo/utils/db';
+import { HashJson, JSONStringify } from '@jsinfo/utils/fmt';
 
 export interface ProcessedRewardAmount {
     amount: number;
@@ -15,6 +17,10 @@ export interface ProcessedRewardAmount {
 class DelegatorRewardsMonitorClass {
     private intervalId: NodeJS.Timer | null = null;
     private readonly UPDATE_INTERVAL = 5 * 60 * 1000; // 5 minutes
+    private rewardsBatch: { delegator: string; rewards: ProcessedRewardAmount[]; timestamp: Date; }[] = [];
+    private lastBatchUpdate = Date.now();
+    private readonly BATCH_SIZE = 100;
+    private readonly BATCH_TIMEOUT = 5 * 60 * 1000; // 5 minutes
 
     public start(): void {
         if (this.intervalId) return;
@@ -36,35 +42,55 @@ class DelegatorRewardsMonitorClass {
 
     private async updateRewardsInDb(delegator: string, rewards: ProcessedRewardAmount[]): Promise<void> {
         try {
-            const db = await GetJsinfoDbForQuery();
-            const now = new Date();
-
-            const data = {
-                rewards: rewards,
-                fmtversion: 'v20240407'
-            };
-
-            await db.insert(JsinfoSchema.delegatorRewards)
-                .values({
-                    delegator,
-                    data,
-                    timestamp: now
-                })
-                .onConflictDoUpdate({
-                    target: [JsinfoSchema.delegatorRewards.delegator],
-                    set: {
-                        data,
-                        timestamp: now
-                    }
-                });
-
-            logger.info(`DelegatorRewardsMonitor::DB Update - Updated rewards for delegator ${delegator}`, {
-                timestamp: now.toISOString()
-            });
-        } catch (error) {
-            logger.error(`DelegatorRewardsMonitor::DB Update - Failed to update rewards`, {
-                error,
+            this.rewardsBatch.push({
                 delegator,
+                rewards,
+                timestamp: new Date()
+            });
+
+            const shouldUpdate =
+                this.rewardsBatch.length >= this.BATCH_SIZE ||
+                Date.now() - this.lastBatchUpdate >= this.BATCH_TIMEOUT;
+
+            if (!shouldUpdate) return;
+
+            // Prepare batch values using individual timestamps
+            const values = this.rewardsBatch.map(item => ({
+                delegator: item.delegator,
+                data: {
+                    rewards: item.rewards,
+                    fmtversion: 'v20240407'
+                },
+                timestamp: item.timestamp
+            }));
+
+            await queryJsinfo(
+                async (db) => db.insert(JsinfoSchema.delegatorRewards)
+                    .values(values)
+                    .onConflictDoUpdate({
+                        target: [JsinfoSchema.delegatorRewards.delegator],
+                        set: {
+                            data: sql`excluded.data`,
+                            timestamp: sql`excluded.timestamp`
+                        }
+                    }),
+                `DelegatorRewardsMonitor::batchInsert:${HashJson(values)}`
+            );
+
+            logger.info(`DelegatorRewardsMonitor::DB Update - Batch updated rewards`, {
+                batchSize: this.rewardsBatch.length,
+                delegators: this.rewardsBatch.map(item => item.delegator),
+                timestamp: new Date().toISOString()
+            });
+
+            // Reset batch
+            this.rewardsBatch = [];
+            this.lastBatchUpdate = Date.now();
+
+        } catch (error) {
+            logger.error(`DelegatorRewardsMonitor::DB Update - Failed to update rewards batch`, {
+                error,
+                batchSize: this.rewardsBatch.length,
                 timestamp: new Date().toISOString()
             });
             throw error;
@@ -92,7 +118,11 @@ class DelegatorRewardsMonitorClass {
                     if (reward.provider === delegator) {
                         for (const rewardAmount of reward.amount) {
                             const [amount, denom] = await ConvertToBaseDenom(rewardAmount.amount, rewardAmount.denom);
+                            if (amount === "0") continue;
+
                             const usdcAmount = await GetUSDCValue(amount, denom);
+                            if (usdcAmount === "0") continue;
+
                             processedRewards.push({
                                 amount: Number(amount),
                                 denom,
@@ -113,9 +143,7 @@ class DelegatorRewardsMonitorClass {
                     errorName: (error as Error)?.name,
                     errorMessage: (error as Error)?.message,
                     errorStack: (error as Error)?.stack,
-                    fullError: error instanceof Error
-                        ? JSON.stringify(error, Object.getOwnPropertyNames(error))
-                        : JSON.stringify(error)
+                    fullError: JSONStringify(error)
                 };
 
                 console.error('Full error details:', errorDetails);  // For immediate console debugging

@@ -3,9 +3,9 @@
 
 // curl http://localhost:8081/provider/lava@14shwrej05nrraem8mwsnlw50vrtefkajar75ge
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { GetLatestBlock, QueryCheckJsinfoDbInstance } from '../../queryDb';
-import { GetAndValidateProviderAddressFromRequest } from '../../utils/queryRequestArgParser';
-import { MonikerCache } from '../../classes/QueryProviderMonikerCache';
+import { GetLatestBlock } from '../../utils/getLatestBlock';
+import { GetAndValidateProviderAddressFromRequest } from '@jsinfo/query/utils/queryRequestArgParser';
+import { ProviderMonikerService } from '@jsinfo/redis/resources/global/ProviderMonikerSpecResource';
 
 export const ProviderPaginatedHandlerOpts: RouteShorthandOptions = {
     schema: {
@@ -40,7 +40,7 @@ export async function ProviderPaginatedHandler(request: FastifyRequest, reply: F
         return null;
     }
 
-    await QueryCheckJsinfoDbInstance();
+    ;
 
     const { latestHeight, latestDatetime } = await GetLatestBlock();
 
@@ -48,7 +48,7 @@ export async function ProviderPaginatedHandler(request: FastifyRequest, reply: F
         height: latestHeight,
         datetime: latestDatetime,
         provider: addr,
-        moniker: MonikerCache.GetMonikerForProvider(addr),
-        monikerfull: MonikerCache.GetMonikerFullDescription(addr),
+        moniker: ProviderMonikerService.GetMonikerForProvider(addr),
+        monikerfull: ProviderMonikerService.GetMonikerFullDescription(addr),
     }
 }

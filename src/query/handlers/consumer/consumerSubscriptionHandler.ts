@@ -22,16 +22,16 @@
 */
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryCheckJsinfoDbInstance, QueryGetJsinfoDbForQueryInstance } from '../../queryDb';
-import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
+import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { desc, eq, gte, and } from "drizzle-orm";
-import { RedisCache } from '../../classes/RedisCache';
-import { JSONStringify, logger } from '../../../utils/utils';
-import { GetAndValidateConsumerAddressFromRequest } from '../../utils/queryRequestArgParser';
-import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '../../queryConsts';
-import { RequestHandlerBase } from '../../classes/RequestHandlerBase';
-import { Pagination } from '../../utils/queryPagination';
-import { CSVEscape } from '../../utils/queryUtils';
+import { RedisCache } from '@jsinfo/redis/classes/RedisCache';
+import { logger } from '@jsinfo/utils/logger';
+import { GetAndValidateConsumerAddressFromRequest } from '@jsinfo/query/utils/queryRequestArgParser';
+import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '@jsinfo/query/queryConsts';
+import { RequestHandlerBase } from '@jsinfo/query/classes/RequestHandlerBase';
+import { Pagination } from '@jsinfo/query/utils/queryPagination';
+import { CSVEscape, JSONStringify } from '@jsinfo/utils/fmt';
+import { queryJsinfo } from '@jsinfo/utils/db';
 
 type ConsumerSubscriptionRawEntry = {
     id: number;
@@ -93,21 +93,23 @@ export const ConsumerSubscriptionRawHandlerOpts: RouteShorthandOptions = {
 };
 
 async function fetchAllData(addr: string): Promise<ConsumerSubscriptionRawEntry[]> {
-    await QueryCheckJsinfoDbInstance();
-
     let nintyDaysAgo = new Date();
     nintyDaysAgo.setDate(nintyDaysAgo.getDate() - 90);
 
-    let reportsRes = await QueryGetJsinfoDbForQueryInstance().select().from(JsinfoSchema.consumerSubscriptionList)
-        .where(
-            and(
-                eq(JsinfoSchema.consumerSubscriptionList.consumer, addr),
-                gte(JsinfoSchema.consumerSubscriptionList.createdAt, nintyDaysAgo)
+    let reportsRes = await queryJsinfo<ConsumerSubscriptionRawEntry[]>(
+        async (db) => await db.select()
+            .from(JsinfoSchema.consumerSubscriptionList)
+            .where(
+                and(
+                    eq(JsinfoSchema.consumerSubscriptionList.consumer, addr),
+                    gte(JsinfoSchema.consumerSubscriptionList.createdAt, nintyDaysAgo)
+                )
             )
-        )
-        .orderBy(desc(JsinfoSchema.consumerSubscriptionList.id))
-        .offset(0)
-        .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
+            .orderBy(desc(JsinfoSchema.consumerSubscriptionList.id))
+            .offset(0)
+            .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION),
+        'ConsumerSubscription_fetchAllData'
+    );
 
     const uniqueEntries = new Map<string, ConsumerSubscriptionRawEntry>();
 
@@ -147,7 +149,7 @@ async function getAllDataNoRedis(addr: string): Promise<ConsumerSubscriptionEntr
 
             if (!creditParsed) {
                 try {
-                    const credit = JSON.parse(JSON.stringify(ret.credit))
+                    const credit = JSON.parse(JSONStringify(ret.credit))
                     ret.credit = credit["amount"] + " " + credit["denom"].toUpperCase();
                     creditParsed = true;
                 } catch (e) {
@@ -157,7 +159,7 @@ async function getAllDataNoRedis(addr: string): Promise<ConsumerSubscriptionEntr
             // this is the worst case
             if (!creditParsed) {
                 try {
-                    ret.credit = JSON.stringify(ret.credit); // or some default value
+                    ret.credit = JSONStringify(ret.credit); // or some default value
                 } catch (creditParseError) {
                     console.error(`Error parsing credit for item ${item.id}:`, creditParseError);
                     ret.credit = "Error parsing credit: " + ret.credit;
@@ -266,7 +268,7 @@ class ConsumerSubscriptionData extends RequestHandlerBase<ConsumerSubscriptionEn
         return paginatedList;
     }
 
-    protected async convertRecordsToCsv(data: ConsumerSubscriptionEntry[]): Promise<string> {
+    public async ConvertRecordsToCsv(data: ConsumerSubscriptionEntry[]): Promise<string> {
         const columns = [
             { key: "plan", name: "Plan" },
             { key: "duration_bought", name: "Duration Bought" },

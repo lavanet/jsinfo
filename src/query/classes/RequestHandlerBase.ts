@@ -2,15 +2,15 @@
 
 import { Pagination, ParsePaginationFromRequest, SerializePagination } from "../utils/queryPagination";
 import { FastifyReply, FastifyRequest } from "fastify";
-import { GetDataLength, GetDataLengthForPrints } from "../utils/queryUtils";
-import { subMonths, isAfter, isBefore, startOfDay, differenceInCalendarDays } from 'date-fns';
-import { WriteErrorToFastifyReply } from '../utils/queryServerUtils';
-import { JSINFO_REQUEST_HANDLER_BASE_DEBUG } from '../queryConsts';
-import { RedisCache } from './RedisCache';
-import { ParseDateToUtc } from "../utils/queryDateUtils";
-import { GetUtcNow, JSONStringify, logger } from "../../utils/utils";
-
-import { JSINFO_QUERY_CLASS_MEMORY_DEBUG_MODE } from '../queryConsts';
+import { GetDataLength, GetDataLengthForPrints } from "@jsinfo/utils/fmt";
+import { subMonths } from 'date-fns';
+import { WriteErrorToFastifyReply } from '@jsinfo/query/utils/queryServerUtils';
+import { JSINFO_REQUEST_HANDLER_BASE_DEBUG } from '@jsinfo/query/queryConsts';
+import { RedisCache } from '@jsinfo/redis/classes/RedisCache';
+import { ParseDateToUtc, GetUtcNow, NormalizeChartFetchDates } from "@jsinfo/utils/date";
+import { logger } from "@jsinfo/utils/logger";
+import { JSONStringify } from '@jsinfo/utils/fmt';
+import { JSINFO_QUERY_CLASS_MEMORY_DEBUG_MODE } from '@jsinfo/query/queryConsts';
 import { logClassMemory } from './MemoryLogger';
 
 export class RequestHandlerBase<T> {
@@ -120,26 +120,22 @@ export class RequestHandlerBase<T> {
         throw new Error("Method 'fetchDateRangeRecords' must be implemented.");
     }
 
-    protected async convertRecordsToCsv(data: T[]): Promise<string> {
-        throw new Error("Method 'convertRecordsToCsv' must be implemented.");
+    public async ConvertRecordsToCsv(data: T[]): Promise<string> {
+        throw new Error("Method 'ConvertRecordsToCsv' must be implemented.");
     }
 
     public async PaginatedRecordsRequestHandler(request: FastifyRequest, reply: FastifyReply): Promise<{ data: T[] } | null> {
-        const startTime = Date.now();
-
         try {
             const pagination = ParsePaginationFromRequest(request);
-
             const key = `${this.dataKey}|${pagination ? SerializePagination(pagination) : "-"}`;
 
             const redisVal = await RedisCache.getArray(key);
             if (redisVal) {
-                this.logExecutionTime("PaginatedRecordsRequestHandler", startTime, `Cache hit: key: ${key}`);
                 return { data: redisVal as T[] };
             }
 
             const paginatedData = await this.fetchPaginatedRecords(pagination);
-            this.logExecutionTime("PaginatedRecordsRequestHandler", startTime, `PaginatedRecordsRequestHandler Cache miss: key: ${key}. paginated items length: ${GetDataLengthForPrints(paginatedData)}`);
+            this.log(`PaginatedRecordsRequestHandler Cache miss: key: ${key}. paginated items length: ${GetDataLengthForPrints(paginatedData)}`);
             await RedisCache.setArray(key, paginatedData, this.getTTL(key));
 
             return { data: paginatedData };
@@ -149,11 +145,6 @@ export class RequestHandlerBase<T> {
         }
     }
 
-    private logExecutionTime(source: string, startTime: number, message: string) {
-        const endTime = Date.now();
-        this.log(`${source}:: Execution time: ${endTime - startTime}ms ${message}`);
-    }
-
     private handleError(source: string, reply: FastifyReply, error: unknown) {
         const err = error as Error;
         WriteErrorToFastifyReply(reply, err.message);
@@ -161,7 +152,6 @@ export class RequestHandlerBase<T> {
     }
 
     public async DateRangeRequestHandler(request: FastifyRequest, reply: FastifyReply): Promise<{ data: T[] } | null> {
-        const startTime = Date.now();
         try {
             const query = request.query as { [key: string]: string };
             let from: Date;
@@ -171,39 +161,20 @@ export class RequestHandlerBase<T> {
                 from = ParseDateToUtc(query.f);
                 to = ParseDateToUtc(query.t);
             } else {
-                // Default to 3 months until now if either 'f' or 't' is not specified
                 to = GetUtcNow();
                 from = subMonths(to, 3);
             }
 
-            if (isAfter(from, to)) {
-                [from, to] = [to, from];
-            }
+            const { from: normalizedFrom, to: normalizedTo } = NormalizeChartFetchDates(from, to);
 
-            from = startOfDay(from);
-            to = startOfDay(to);
-
-            if (isBefore(from, startOfDay(subMonths(GetUtcNow(), 6)))) {
-                throw new Error("From date cannot be more than 6 months in the past.");
-            }
-
-            if (isAfter(to, startOfDay(GetUtcNow()))) {
-                if (differenceInCalendarDays(to, GetUtcNow()) > 1) {
-                    throw new Error("To date cannot be in the future.");
-                } else {
-                    to = GetUtcNow();
-                }
-            }
-
-            const key = `${this.dataKey}|${from.toISOString()}|${to.toISOString()}`;
+            const key = `${this.dataKey}|${normalizedFrom.toISOString()}|${normalizedTo.toISOString()}`;
             const redisVal = await RedisCache.getArray(key);
             if (redisVal) {
-                this.logExecutionTime("DateRangeRequestHandler", startTime, `(cache hit): ${key}`);
                 return { data: redisVal as T[] };
             }
 
-            const filteredData = await this.fetchDateRangeRecords(from, to);
-            this.logExecutionTime("DateRangeRequestHandler", startTime, `DateRangeRequestHandler (cache miss): ${key}`);
+            const filteredData = await this.fetchDateRangeRecords(normalizedFrom, normalizedTo);
+            this.log(`DateRangeRequestHandler (cache miss): ${key}`);
             RedisCache.setArray(key, filteredData, this.getTTL(key));
             return { data: filteredData };
         } catch (error) {
@@ -213,17 +184,14 @@ export class RequestHandlerBase<T> {
     }
 
     public async getTotalItemCountPaginatedHandler(request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> {
-        const startTime = Date.now();
-        const key = `${this.dataKey}|itemCount`;
         try {
+            const key = `${this.dataKey}|itemCount`;
             const itemCountRedis = await RedisCache.get(key);
             if (itemCountRedis) {
-                this.logExecutionTime("getTotalItemCountPaginatedHandler", startTime, "Fetched item count from cache");
                 reply.send({ itemCount: parseInt(itemCountRedis) });
             } else {
                 const itemCount = await this.fetchRecordCountFromDb();
                 RedisCache.set(key, itemCount.toString(), this.getTTL(key));
-                this.logExecutionTime("getTotalItemCountPaginatedHandler", startTime, "Fetched item count from DB and cached");
                 reply.send({ itemCount: itemCount });
             }
             return reply;
@@ -234,12 +202,10 @@ export class RequestHandlerBase<T> {
     }
 
     public async CSVRequestHandler(request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> {
-        const startTime = Date.now();
-        const cacheKey = `${this.dataKey}|csvData`;
         try {
+            const cacheKey = `${this.dataKey}|csvData`;
             const csvRedis = await RedisCache.get(cacheKey);
             if (csvRedis) {
-                this.logExecutionTime("CSVRequestHandler", startTime, "CSV data fetched from cache");
                 reply.header('Content-Type', 'text/csv');
                 reply.header('Content-Disposition', `attachment; filename="${this.getCSVFileNameCached()}"`);
                 reply.send(csvRedis);
@@ -250,14 +216,13 @@ export class RequestHandlerBase<T> {
                     return reply;
                 }
 
-                const csv = await this.convertRecordsToCsv(data);
+                const csv = await this.ConvertRecordsToCsv(data);
                 if (csv == null) {
                     reply.send("Data is not available in CSV format");
                     return reply;
                 }
 
                 RedisCache.set(cacheKey, csv);
-                this.logExecutionTime("CSVRequestHandler", startTime, "CSV data prepared and cached");
                 reply.header('Content-Type', 'text/csv');
                 reply.header('Content-Disposition', `attachment; filename="${this.getCSVFileNameCached()}"`);
                 reply.send(csv);

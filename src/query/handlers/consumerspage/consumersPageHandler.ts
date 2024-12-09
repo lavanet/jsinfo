@@ -3,9 +3,10 @@
 // curl http://localhost:8081/consumerspage | jq
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryCheckJsinfoDbInstance, GetLatestBlock, QueryGetJsinfoDbForQueryInstance } from '../../queryDb';
-import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
+import { GetLatestBlock } from '../../utils/getLatestBlock';
+import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { sql } from "drizzle-orm";
+import { queryJsinfo } from '@jsinfo/utils/db';
 
 export const ConsumersPageHandlerOpts: RouteShorthandOptions = {
     schema: {
@@ -29,15 +30,17 @@ export const ConsumersPageHandlerOpts: RouteShorthandOptions = {
 }
 
 export async function ConsumersPageHandler(request: FastifyRequest, reply: FastifyReply) {
-    await QueryCheckJsinfoDbInstance()
+
 
     const { latestHeight, latestDatetime } = await GetLatestBlock()
 
-    const uniqueConsumerCount = await QueryGetJsinfoDbForQueryInstance()
-        .select({
+    const uniqueConsumerCount = await queryJsinfo<{ count: number }[]>(
+        async (db) => await db.select({
             count: sql<number>`COUNT(DISTINCT consumer)`
         })
-        .from(JsinfoSchema.consumerSubscriptionList);
+            .from(JsinfoSchema.consumerSubscriptionList),
+        `ConsumersPage_getUniqueConsumerCount_${latestHeight}`
+    );
 
     const consumerCountRes = uniqueConsumerCount[0].count || 0;
 

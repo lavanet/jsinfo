@@ -69,3 +69,4 @@ env.sh
 heap.json
 heap-snapshot-*.json
 snapshot_parsed.txt
+dump.custom

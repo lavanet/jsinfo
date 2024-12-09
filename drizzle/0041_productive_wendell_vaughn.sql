@@ -1,0 +1,1 @@
+ALTER TABLE "apr_per_provider" ADD COLUMN "estimated_rewards" jsonb;

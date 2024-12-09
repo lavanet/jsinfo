@@ -1,15 +1,14 @@
-
 // src/query/handlers/consumerEventsHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryCheckJsinfoDbInstance, QueryGetJsinfoDbForQueryInstance } from '../../queryDb';
-import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
+import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { asc, desc, eq, sql, gte, and } from "drizzle-orm";
 import { Pagination, ParsePaginationFromString } from '../../utils/queryPagination';
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '../../queryConsts';
-import { CSVEscape } from '../../utils/queryUtils';
+import { CSVEscape } from '@jsinfo/utils/fmt';
 import { GetAndValidateConsumerAddressFromRequest } from '../../utils/queryRequestArgParser';
 import { RequestHandlerBase } from '../../classes/RequestHandlerBase';
+import { queryJsinfo } from '@jsinfo/utils/db';
 
 export type ConsumerEventsResponse = {
     events: {
@@ -112,12 +111,10 @@ class ConsumerEventsData extends RequestHandlerBase<ConsumerEventsResponse> {
     }
 
     protected async fetchAllRecords(): Promise<ConsumerEventsResponse[]> {
-        await QueryCheckJsinfoDbInstance();
-
         const thirtyDaysAgo = this.getThirtyDaysAgo();
 
-        const eventsRes: ConsumerEventsResponse[] = await QueryGetJsinfoDbForQueryInstance()
-            .select({
+        const eventsRes = await queryJsinfo<ConsumerEventsResponse[]>(
+            async (db) => await db.select({
                 events: {
                     id: JsinfoSchema.events.id,
                     eventType: JsinfoSchema.events.eventType,
@@ -143,16 +140,18 @@ class ConsumerEventsData extends RequestHandlerBase<ConsumerEventsResponse> {
                     datetime: JsinfoSchema.events.timestamp,
                 }
             })
-            .from(JsinfoSchema.events)
-            .where(
-                and(
-                    eq(JsinfoSchema.events.consumer, this.addr),
-                    gte(JsinfoSchema.events.timestamp, thirtyDaysAgo)
+                .from(JsinfoSchema.events)
+                .where(
+                    and(
+                        eq(JsinfoSchema.events.consumer, this.addr),
+                        gte(JsinfoSchema.events.timestamp, thirtyDaysAgo)
+                    )
                 )
-            )
-            .orderBy(desc(JsinfoSchema.events.id))
-            .offset(0)
-            .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
+                .orderBy(desc(JsinfoSchema.events.id))
+                .offset(0)
+                .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION),
+            'ConsumerEventsData_fetchAllRecords'
+        );
 
         eventsRes.forEach((event) => {
             event.events.b1 = event.events.b1?.toString() || null;
@@ -164,21 +163,21 @@ class ConsumerEventsData extends RequestHandlerBase<ConsumerEventsResponse> {
     }
 
     protected async fetchRecordCountFromDb(): Promise<number> {
-        await QueryCheckJsinfoDbInstance();
-
         const thirtyDaysAgo = this.getThirtyDaysAgo();
 
-        const countResult = await QueryGetJsinfoDbForQueryInstance()
-            .select({
-                count: sql<number>`COUNT(*)`
+        const countResult = await queryJsinfo<{ count: number }[]>(
+            async (db) => await db.select({
+                count: sql<number>`COUNT(*)::int`
             })
-            .from(JsinfoSchema.events)
-            .where(
-                and(
-                    eq(JsinfoSchema.events.consumer, this.addr),
-                    gte(JsinfoSchema.events.timestamp, thirtyDaysAgo)
-                )
-            );
+                .from(JsinfoSchema.events)
+                .where(
+                    and(
+                        eq(JsinfoSchema.events.consumer, this.addr),
+                        gte(JsinfoSchema.events.timestamp, thirtyDaysAgo)
+                    )
+                ),
+            `ConsumerEventsData_fetchRecordCountFromDb_${thirtyDaysAgo}`
+        );
 
         return Math.min(countResult[0].count || 0, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION - 1);
     }
@@ -220,15 +219,13 @@ class ConsumerEventsData extends RequestHandlerBase<ConsumerEventsResponse> {
             throw new Error(`Invalid sort key: ${trimmedSortKey}`);
         }
 
-        await QueryCheckJsinfoDbInstance();
+        const thirtyDaysAgo = this.getThirtyDaysAgo();
 
         const sortColumn = keyToColumnMap[finalPagination.sortKey];
         const orderFunction = finalPagination.direction === 'ascending' ? asc : desc;
 
-        const thirtyDaysAgo = this.getThirtyDaysAgo();
-
-        const eventsRes: ConsumerEventsResponse[] = await QueryGetJsinfoDbForQueryInstance()
-            .select({
+        const eventsRes = await queryJsinfo<ConsumerEventsResponse[]>(
+            async (db) => await db.select({
                 events: {
                     id: JsinfoSchema.events.id,
                     eventType: JsinfoSchema.events.eventType,
@@ -254,16 +251,18 @@ class ConsumerEventsData extends RequestHandlerBase<ConsumerEventsResponse> {
                     datetime: JsinfoSchema.events.timestamp,
                 }
             })
-            .from(JsinfoSchema.events)
-            .where(
-                and(
-                    eq(JsinfoSchema.events.consumer, this.addr),
-                    gte(JsinfoSchema.events.timestamp, thirtyDaysAgo)
+                .from(JsinfoSchema.events)
+                .where(
+                    and(
+                        eq(JsinfoSchema.events.consumer, this.addr),
+                        gte(JsinfoSchema.events.timestamp, thirtyDaysAgo)
+                    )
                 )
-            )
-            .orderBy(orderFunction(sortColumn))
-            .offset((finalPagination.page - 1) * finalPagination.count)
-            .limit(finalPagination.count);
+                .orderBy(orderFunction(sortColumn))
+                .offset((finalPagination.page - 1) * finalPagination.count)
+                .limit(finalPagination.count),
+            `ConsumerEventsData_fetchPaginatedRecords_${finalPagination.sortKey}_${finalPagination.direction}_${finalPagination.page}_${finalPagination.count}`
+        );
 
         eventsRes.forEach((event) => {
             event.events.b1 = event.events.b1?.toString() || null;
@@ -274,7 +273,7 @@ class ConsumerEventsData extends RequestHandlerBase<ConsumerEventsResponse> {
         return eventsRes;
     }
 
-    protected async convertRecordsToCsv(data: ConsumerEventsResponse[]): Promise<string> {
+    public async ConvertRecordsToCsv(data: ConsumerEventsResponse[]): Promise<string> {
         const columns = [
             { key: "events.eventType", name: "Event Type" },
             { key: "blocks.height", name: "Block Height" },

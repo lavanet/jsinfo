@@ -1,9 +1,7 @@
 // src/query/handlers/indexTopChainsHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryCheckJsinfoDbInstance, QueryGetJsinfoDbForQueryInstance } from '../../queryDb';
-import * as JsinfoProviderAgrSchema from '../../../schemas/jsinfoSchema/providerRelayPaymentsAgregation';
-import { sql, gt } from "drizzle-orm";
+import { IndexTopChainsResource, IndexTopChainsData } from '../../../redis/resources/index/IndexTopChainsResource';
 
 export const IndexTopChainsHandlerOpts: RouteShorthandOptions = {
     schema: {
@@ -13,27 +11,38 @@ export const IndexTopChainsHandlerOpts: RouteShorthandOptions = {
                 properties: {
                     allSpecs: {
                         type: 'array',
-                    },
+                        items: {
+                            type: 'object',
+                            properties: {
+                                chainId: { type: 'string' },
+                                relaySum: { type: 'number' },
+                                cuSum: { type: 'number' },
+                                relaySum30Days: { type: 'number' },
+                                cuSum30Days: { type: 'number' }
+                            }
+                        }
+                    }
+                }
+            },
+            400: {
+                type: 'object',
+                properties: {
+                    error: {
+                        type: 'string'
+                    }
                 }
             }
         }
     }
 }
 
-export async function IndexTopChainsHandler(request: FastifyRequest, reply: FastifyReply) {
-    await QueryCheckJsinfoDbInstance()
-
-    // Get top chains
-    let topSpecs = await QueryGetJsinfoDbForQueryInstance().select({
-        chainId: JsinfoProviderAgrSchema.aggDailyRelayPayments.specId,
-        relaySum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum}) as relaySum`,
-        cuSum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggDailyRelayPayments.cuSum}) as cuSum`,
-    }).from(JsinfoProviderAgrSchema.aggDailyRelayPayments).
-        groupBy(sql`${JsinfoProviderAgrSchema.aggDailyRelayPayments.specId}`).
-        where(gt(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday, sql<Date>`now() - interval '30 day'`)).
-        orderBy(sql`relaySum DESC`)
-
-    return {
-        allSpecs: topSpecs,
+export async function IndexTopChainsHandler(request: FastifyRequest, reply: FastifyReply): Promise<IndexTopChainsData> {
+    const resource = new IndexTopChainsResource();
+    const result = await resource.fetch();
+    if (!result) {
+        reply.status(400);
+        reply.send({ error: 'Failed to fetch top chains data' });
+        return reply;
     }
+    return result;
 }

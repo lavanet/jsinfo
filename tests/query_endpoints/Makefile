@@ -11,10 +11,6 @@ query_endpoints_tests_local:
 	@echo "Running query endpoints tests on local environment..."
 	./tests.sh local
 
-query_endpoints_tests_staging:
-	@echo "Running query endpoints tests on staging environment..."
-	./tests.sh staging
-
 query_endpoints_tests_testnet:
 	@echo "Running query endpoints tests on testnet environment..."
 	./tests.sh testnet

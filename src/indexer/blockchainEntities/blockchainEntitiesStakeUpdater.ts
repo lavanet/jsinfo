@@ -1,10 +1,13 @@
 // src/indexer/blockchainEntities/blockchainEntitiesStakeUpdater.ts
 
-import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
+import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { StakeEntry } from '@lavanet/lavajs/dist/codegen/lavanet/lava/epochstorage/stake_entry';
 import { AppendUniqueItems, ToSignedBigIntOrMinusOne, ToSignedIntOrMinusOne } from '../utils/indexerUtils';
-import { LavaClient } from '../types';
-import { logger } from '../../utils/utils';
+import { logger } from '@jsinfo/utils/logger';
+import { ConnectToRpc, queryRpc } from '../utils/lavajsRpc';
+import { SpecAndConsumerService } from '@jsinfo/redis/resources/global/SpecAndConsumerResource';
+import { LavaClient } from '../lavaTypes';
+import { GetEnvVar } from '@jsinfo/utils/env';
 
 /*
 providers with stake {
@@ -131,10 +134,13 @@ function processStakeEntry(
     providerStake: StakeEntry,
     isUnstaking: boolean,
 ) {
+    // Log the start of processing for the provider stake
+    // logger.info(`processStakeEntry:: Processing stake entry for provider: ${providerStake.address}, height: ${height}, isUnstaking: ${isUnstaking}`);
 
     // init if needed
     if (dbStakes.get(providerStake.address) == undefined) {
-        dbStakes.set(providerStake.address, [])
+        dbStakes.set(providerStake.address, []);
+        // logger.info(`processStakeEntry::Initialized new stake entry for provider: ${providerStake.address}`);
     }
 
     // addons
@@ -144,6 +150,9 @@ function processStakeEntry(
         addons = AppendUniqueItems(addons, endPoint.addons);
         extensions = AppendUniqueItems(extensions, endPoint.extensions);
     });
+
+    // Log the collected addons and extensions
+    // logger.info(`Collected addons: ${addons.join(', ')}, extensions: ${extensions.join(', ')} for provider: ${providerStake.address}`);
 
     let addonsStr = addons.join(',');
     let extensionsStr = extensions.join(',');
@@ -179,7 +188,6 @@ function processStakeEntry(
 }
 
 export async function UpdateStakeInformation(
-    client: LavaClient,
     height: number,
     dbStakes: Map<string, JsinfoSchema.InsertProviderStake[]>,
 ) {
@@ -187,16 +195,15 @@ export async function UpdateStakeInformation(
     try {
         logger.info(`UpdateStakeInformation: started`);
 
-        const lavaClient = client.lavanet.lava;
         dbStakes.clear();
 
-        await processRegularStakes(lavaClient, height, dbStakes);
+        await processRegularStakes(height, dbStakes);
         const processRegularTime = Date.now();
         logger.info(`UpdateStakeInformation: processRegularStakes completed, elapsed time: ${processRegularTime - startTime}ms`);
 
-        await processUnstakingStakes(lavaClient, height, dbStakes);
-        const processUnstakingTime = Date.now();
-        logger.info(`UpdateStakeInformation: processUnstakingStakes completed, elapsed time: ${processUnstakingTime - processRegularTime}ms`);
+        // await processUnstakingStakes(height, dbStakes);
+        // const processUnstakingTime = Date.now();
+        // logger.info(`UpdateStakeInformation: processUnstakingStakes completed, elapsed time: ${processUnstakingTime - processRegularTime}ms`);
     } catch (error) {
         const errorTime = Date.now();
         logger.error(`UpdateStakeInformation: An error occurred, elapsed time: ${errorTime - startTime}ms, error: ${error}`);
@@ -208,47 +215,51 @@ export async function UpdateStakeInformation(
 }
 
 async function processRegularStakes(
-    lavaClient: any,
     height: number,
     dbStakes: Map<string, JsinfoSchema.InsertProviderStake[]>,
 ) {
-    let specs = await lavaClient.spec.showAllChains();
-    await Promise.all(specs.chainInfoList.map(async (spec) => {
-        let providers = await lavaClient.pairing.providers({ chainID: spec.chainID, showFrozen: true });
-        providers.stakeEntry.forEach((stake) => {
+    const allSpecs = await SpecAndConsumerService.GetAllSpecs();
+    for (const spec of allSpecs) {
+        const providers = await queryRpc(
+            async (_, __, lavaClient: LavaClient) => lavaClient.lavanet.lava.pairing.providers({ chainID: spec, showFrozen: true }),
+            'getProviders'
+        );
+        providers.stakeEntry.forEach(stake => {
             processStakeEntry(height, dbStakes, stake, false);
         });
-    }));
+    }
 }
 
 async function processUnstakingStakes(
-    lavaClient: any,
     height: number,
-
     dbStakes: Map<string, JsinfoSchema.InsertProviderStake[]>,
 ) {
-    let unstaking;
-    try {
-        unstaking = await lavaClient.epochstorage.stakeStorage({
-            index: 'Unstake'
-        });
-    } catch (error) {
-        if ((error + "").includes('rpc error: code = InvalidArgument desc = not found: invalid request')) {
-            logger.info('The unstake list is empty.');
-            return;
-        } else {
-            throw error;
-        }
-    }
+    // let unstaking;
+    // try {
+    //     unstaking = await queryRpc(
+    //         async (client, clientTm, lavaClient: LavaClient) => {
+    //             return await lavaClient.lavanet.lava.epochstorage.stakeStorage({ index: 'Unstake' });
+    //         },
+    //         'getUnstaking'
+    //     );
+    // } catch (error) {
+    //     if ((error + "").includes('rpc error: code = InvalidArgument desc = not found: invalid request')) {
+    //         logger.info('The unstake list is empty or the index is invalid.');
+    //         return;
+    //     } else {
+    //         console.error(`Error fetching unstaking data with index 'Unstake': ${error}`);
+    //         throw error;
+    //     }
+    // }
 
-    unstaking.stakeStorage.stakeEntries.forEach((stake) => {
-        if (dbStakes.get(stake.address) != undefined) {
-            dbStakes.get(stake.address)!.forEach((dbStake) => {
-                if (dbStake.specId == stake.chain) {
-                    return;
-                }
-            });
-        }
-        processStakeEntry(height, dbStakes, stake, true);
-    });
+    // unstaking.stakeStorage.stakeEntries.forEach((stake) => {
+    //     if (dbStakes.get(stake.address) != undefined) {
+    //         dbStakes.get(stake.address)!.forEach((dbStake) => {
+    //             if (dbStake.specId == stake.chain) {
+    //                 return;
+    //             }
+    //         });
+    //     }
+    //     processStakeEntry(height, dbStakes, stake, true);
+    // });
 }

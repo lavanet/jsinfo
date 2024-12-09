@@ -1,10 +1,10 @@
-import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-import { RpcPeriodicEndpointCache } from "../classes/RpcPeriodicEndpointCache";
-import { keyValueStore } from "../../schemas/jsinfoSchema/jsinfoSchema";
-import { logger } from "../../utils/utils";
+import { RpcPeriodicEndpointCache } from "../../restRpc/lavaRpcPeriodicEndpointCache";
+import { keyValueStore } from "@jsinfo/schemas/jsinfoSchema/jsinfoSchema";
+import { logger } from "@jsinfo/utils/logger";
 import { eq } from "drizzle-orm";
+import { queryJsinfo } from "@jsinfo/utils/db";
 
-export async function ProcessChainSpecs(db: PostgresJsDatabase): Promise<void> {
+export async function ProcessChainSpecs(): Promise<void> {
     try {
         const start = Date.now();
         const chainList = await RpcPeriodicEndpointCache.GetChainList();
@@ -14,7 +14,7 @@ export async function ProcessChainSpecs(db: PostgresJsDatabase): Promise<void> {
             .sort()
             .join(',');
 
-        await db
+        await queryJsinfo(db => db
             .insert(keyValueStore)
             .values({
                 key: 'specs',
@@ -28,7 +28,9 @@ export async function ProcessChainSpecs(db: PostgresJsDatabase): Promise<void> {
                     updatedAt: new Date(),
                 },
                 where: eq(keyValueStore.key, 'specs')
-            });
+            }),
+            `ChainSpecProcessor::processChainSpecs:${specs}`
+        );
 
         const executionTime = Date.now() - start;
         logger.info(`Chain specs processed and stored. Count: ${chainList.length}, Execution time: ${executionTime}ms`);

@@ -1,16 +1,16 @@
 
 // src/query/handlers/providerErrors.ts
 
-import * as RelaysSchema from '../../../schemas/relaysSchema';
+import * as RelaysSchema from '@jsinfo/schemas/relaysSchema';
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryCheckRelaysReadDbInstance, QueryGetRelaysReadDbForQueryInstance } from '../../queryDb';
 import { eq, desc, sql, asc } from "drizzle-orm";
-import { Pagination } from '../../utils/queryPagination';
-import { CSVEscape } from '../../utils/queryUtils';
-import { GetAndValidateProviderAddressFromRequest } from '../../utils/queryRequestArgParser';
-import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '../../queryConsts';
-import { ParseLavapProviderError } from '../../utils/lavapProvidersErrorParser';
-import { RequestHandlerBase } from '../../classes/RequestHandlerBase';
+import { Pagination } from '@jsinfo/query/utils/queryPagination';
+import { CSVEscape } from '@jsinfo/utils/fmt';
+import { GetAndValidateProviderAddressFromRequest } from '@jsinfo/query/utils/queryRequestArgParser';
+import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '@jsinfo/query/queryConsts';
+import { ParseLavapProviderError } from '@jsinfo/query/utils/lavapProvidersErrorParser';
+import { RequestHandlerBase } from '@jsinfo/query/classes/RequestHandlerBase';
+import { queryRelays } from '@jsinfo/utils/db';
 export interface ErrorsReport {
     id: number;
     created_at: Date | null;
@@ -67,13 +67,16 @@ class ProviderErrorsData extends RequestHandlerBase<ErrorsReportResponse> {
     }
 
     protected async fetchAllRecords(): Promise<ErrorsReportResponse[]> {
-        await QueryCheckRelaysReadDbInstance();
 
-        const result = await QueryGetRelaysReadDbForQueryInstance().select().from(RelaysSchema.lavaReportError)
-            .where(eq(RelaysSchema.lavaReportError.provider, this.addr))
-            .orderBy(desc(RelaysSchema.lavaReportError.id)).
-            offset(0).
-            limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION)
+
+        const result = await queryRelays(
+            async (db) => await db.select().from(RelaysSchema.lavaReportError)
+                .where(eq(RelaysSchema.lavaReportError.provider, this.addr))
+                .orderBy(desc(RelaysSchema.lavaReportError.id))
+                .offset(0)
+                .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION),
+            "ProviderErrorsData"
+        );
 
         return result.map((row: ErrorsReport) => ({
             id: row.id,
@@ -84,20 +87,22 @@ class ProviderErrorsData extends RequestHandlerBase<ErrorsReportResponse> {
     }
 
     protected async fetchRecordCountFromDb(): Promise<number> {
-        await QueryCheckRelaysReadDbInstance();
 
-        const countResult = await QueryGetRelaysReadDbForQueryInstance()
-            .select({
+
+        const countResult = await queryRelays(
+            async (db) => await db.select({
                 count: sql<number>`COUNT(*)`
             })
-            .from(RelaysSchema.lavaReportError)
-            .where(eq(RelaysSchema.lavaReportError.provider, this.addr));
+                .from(RelaysSchema.lavaReportError)
+                .where(eq(RelaysSchema.lavaReportError.provider, this.addr)),
+            "ProviderErrorsData"
+        );
 
         return Math.min(countResult[0].count || 0, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION - 1);
     }
 
     public async fetchPaginatedRecords(pagination: Pagination | null): Promise<ErrorsReportResponse[]> {
-        await QueryCheckRelaysReadDbInstance();
+
 
         const defaultSortKey = "id";
 
@@ -120,18 +125,20 @@ class ProviderErrorsData extends RequestHandlerBase<ErrorsReportResponse> {
         const sortColumn = keyToColumnMap[pagination.sortKey || defaultSortKey] || keyToColumnMap[defaultSortKey];
         const orderFunction = pagination.direction === 'ascending' ? asc : desc;
 
-        const result = await QueryGetRelaysReadDbForQueryInstance()
-            .select({
+        const result = await queryRelays(
+            async (db) => await db.select({
                 id: RelaysSchema.lavaReportError.id,
                 created_at: RelaysSchema.lavaReportError.created_at,
                 spec_id: RelaysSchema.lavaReportError.spec_id,
                 errors: RelaysSchema.lavaReportError.errors
             })
-            .from(RelaysSchema.lavaReportError)
-            .where(eq(RelaysSchema.lavaReportError.provider, this.addr))
-            .orderBy(orderFunction(sortColumn))
-            .offset((pagination.page - 1) * pagination.count)
-            .limit(pagination.count);
+                .from(RelaysSchema.lavaReportError)
+                .where(eq(RelaysSchema.lavaReportError.provider, this.addr))
+                .orderBy(orderFunction(sortColumn))
+                .offset((pagination.page - 1) * pagination.count)
+                .limit(pagination.count),
+            "ProviderErrorsData"
+        );
 
         return result.map(row => ({
             id: row.id,
@@ -142,7 +149,7 @@ class ProviderErrorsData extends RequestHandlerBase<ErrorsReportResponse> {
     }
 
 
-    protected async convertRecordsToCsv(data: ErrorsReportResponse[]): Promise<string> {
+    public async ConvertRecordsToCsv(data: ErrorsReportResponse[]): Promise<string> {
         let csv = 'date,chain,error\n';
         data.forEach((item: ErrorsReportResponse) => {
             csv += `${item.date},${CSVEscape(item.spec)},${CSVEscape(item.error)}\n`;

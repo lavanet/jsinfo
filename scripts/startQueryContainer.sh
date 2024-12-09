@@ -25,7 +25,7 @@ run_script() {
 }
 
 # Start the scripts in the background
-run_script "env JSINFO_QUERY_CACHE_POPULTAE_MODE=false bun run src/query.js" &
+run_script "bun run dist/src/query.js" &
 
 # Wait for all child processes to finish
 wait

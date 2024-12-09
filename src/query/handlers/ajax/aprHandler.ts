@@ -1,30 +1,35 @@
-// src/query/handlers/aprHandler.ts
+// src/query/handlers/ajax/aprHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryCheckJsinfoDbInstance, QueryGetJsinfoDbForQueryInstance } from '../../queryDb';
-import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
+import { AprResource } from '@jsinfo/redis/resources/ajax/AprResource';
+import { JSONStringify } from '@jsinfo/utils/fmt';
 
 export const APRRawHandlerOpts: RouteShorthandOptions = {
     schema: {
         response: {
             200: {
                 type: 'string'
+            },
+            400: {
+                type: 'object',
+                properties: {
+                    error: {
+                        type: 'string'
+                    }
+                }
             }
         }
     }
 }
 
 export async function APRRawHandler(request: FastifyRequest, reply: FastifyReply) {
-    await QueryCheckJsinfoDbInstance()
-
-    const result = await QueryGetJsinfoDbForQueryInstance()
-        .select({ key: JsinfoSchema.apr.key, value: JsinfoSchema.apr.value })
-        .from(JsinfoSchema.apr)
-
-    const aprData: { [key: string]: number } = {}
-    result.forEach(row => {
-        aprData[row.key] = row.value
-    })
-
-    return JSON.stringify(aprData)
+    const resource = new AprResource();
+    const data = await resource.fetch();
+    if (!data) {
+        reply.status(400);
+        reply.send({ error: 'Failed to fetch APR data' });
+        return reply;
+    }
+    reply.header('Content-Type', 'application/json');
+    return JSONStringify(data);
 }

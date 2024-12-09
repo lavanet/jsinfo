@@ -1,12 +1,22 @@
+<<<<<<< HEAD
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { RpcPeriodicEndpointCache } from '../classes/RpcPeriodicEndpointCache';
 import { keyValueStore } from '../../schemas/jsinfoSchema/jsinfoSchema';
 import { logger } from '../../utils/utils';
+=======
+import { keyValueStore } from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
+import { RpcPeriodicEndpointCache } from '@jsinfo/restRpc/lavaRpcPeriodicEndpointCache';
+import { logger } from '@jsinfo/utils/logger';
+import { queryJsinfo } from '@jsinfo/utils/db';
+>>>>>>> testnet
 
-async function saveToKeyValueStore(db: PostgresJsDatabase, key: string, value: string): Promise<void> {
+async function saveToKeyValueStore(key: string, value: string): Promise<void> {
     try {
-        await db.insert(keyValueStore).values({ key, value })
-            .onConflictDoUpdate({ target: keyValueStore.key, set: { value, updatedAt: new Date() } });
+        await queryJsinfo(
+            async (db) => db.insert(keyValueStore).values({ key, value })
+                .onConflictDoUpdate({ target: keyValueStore.key, set: { value, updatedAt: new Date() } }),
+            `saveToKeyValueStore:${key}:${value}`
+        );
         logger.info(`Saved to key_value_store: ${key} = ${value}`);
     } catch (error) {
         logger.error(`Error saving to key_value_store: ${key}`, { error });
@@ -14,63 +24,62 @@ async function saveToKeyValueStore(db: PostgresJsDatabase, key: string, value: s
     }
 }
 
-async function saveStakersTotalCurrentUlavaAmount(db: PostgresJsDatabase): Promise<void> {
+async function saveStakersTotalCurrentUlavaAmount(): Promise<void> {
     const total = await RpcPeriodicEndpointCache.GetTotalDelegatedAmount(undefined, true);
-    await saveToKeyValueStore(db, 'stakers_total_current_ulava_amount', total.toString());
+    await saveToKeyValueStore('stakers_total_current_ulava_amount', total.toString());
 }
 
-async function saveStakersTotalMonthlyUlavaAmount(db: PostgresJsDatabase): Promise<void> {
+async function saveStakersTotalMonthlyUlavaAmount(): Promise<void> {
     const thirtyDaysAgo = Math.floor(Date.now() / 1000) - 30 * 24 * 60 * 60;
     const total = await RpcPeriodicEndpointCache.GetTotalDelegatedAmount(thirtyDaysAgo, true);
-    await saveToKeyValueStore(db, 'stakers_total_monthly_ulava_amount', total.toString());
+    await saveToKeyValueStore('stakers_total_monthly_ulava_amount', total.toString());
 }
 
-async function saveRestakersTotalCurrentUlavaAmount(db: PostgresJsDatabase): Promise<void> {
+async function saveRestakersTotalCurrentUlavaAmount(): Promise<void> {
     const total = await RpcPeriodicEndpointCache.GetTotalDelegatedAmount();
-    await saveToKeyValueStore(db, 'restakers_total_current_ulava_amount', total.toString());
+    await saveToKeyValueStore('restakers_total_current_ulava_amount', total.toString());
 }
 
-async function saveRestakersTotalMonthlyUlavaAmount(db: PostgresJsDatabase): Promise<void> {
+async function saveRestakersTotalMonthlyUlavaAmount(): Promise<void> {
     const thirtyDaysAgo = Math.floor(Date.now() / 1000) - 30 * 24 * 60 * 60;
     const total = await RpcPeriodicEndpointCache.GetTotalDelegatedAmount(thirtyDaysAgo);
-    await saveToKeyValueStore(db, 'restakers_total_monthly_ulava_amount', total.toString());
+    await saveToKeyValueStore('restakers_total_monthly_ulava_amount', total.toString());
 }
 
 // New functions using GetUniqueDelegatorCount
-async function saveStakersCurrentUniqueDelegators(db: PostgresJsDatabase): Promise<void> {
+async function saveStakersCurrentUniqueDelegators(): Promise<void> {
     const count = await RpcPeriodicEndpointCache.GetUniqueDelegatorCount(undefined, true);
-    await saveToKeyValueStore(db, 'stakers_current_unique_delegators', count.toString());
+    await saveToKeyValueStore('stakers_current_unique_delegators', count.toString());
 }
 
-async function saveStakersMonthlyUniqueDelegators(db: PostgresJsDatabase): Promise<void> {
+async function saveStakersMonthlyUniqueDelegators(): Promise<void> {
     const thirtyDaysAgo = Math.floor(Date.now() / 1000) - 30 * 24 * 60 * 60;
     const count = await RpcPeriodicEndpointCache.GetUniqueDelegatorCount(thirtyDaysAgo, true);
-    await saveToKeyValueStore(db, 'stakers_monthly_unique_delegators', count.toString());
+    await saveToKeyValueStore('stakers_monthly_unique_delegators', count.toString());
 }
 
-async function saveRestakersCurrentUniqueDelegators(db: PostgresJsDatabase): Promise<void> {
+async function saveRestakersCurrentUniqueDelegators(): Promise<void> {
     const count = await RpcPeriodicEndpointCache.GetUniqueDelegatorCount();
-    await saveToKeyValueStore(db, 'restakers_current_unique_delegators', count.toString());
+    await saveToKeyValueStore('restakers_current_unique_delegators', count.toString());
 }
 
-async function saveRestakersMonthlyUniqueDelegators(db: PostgresJsDatabase): Promise<void> {
+async function saveRestakersMonthlyUniqueDelegators(): Promise<void> {
     const thirtyDaysAgo = Math.floor(Date.now() / 1000) - 30 * 24 * 60 * 60;
     const count = await RpcPeriodicEndpointCache.GetUniqueDelegatorCount(thirtyDaysAgo);
-    await saveToKeyValueStore(db, 'restakers_monthly_unique_delegators', count.toString());
+    await saveToKeyValueStore('restakers_monthly_unique_delegators', count.toString());
 }
 
-export async function ProcessChainWalletApi(db: PostgresJsDatabase): Promise<void> {
+export async function ProcessChainWalletApi(): Promise<void> {
     try {
-        await saveStakersTotalCurrentUlavaAmount(db);
-        await saveStakersTotalMonthlyUlavaAmount(db);
-        await saveRestakersTotalCurrentUlavaAmount(db);
-        await saveRestakersTotalMonthlyUlavaAmount(db);
+        await saveStakersTotalCurrentUlavaAmount();
+        await saveStakersTotalMonthlyUlavaAmount();
+        await saveRestakersTotalCurrentUlavaAmount();
+        await saveRestakersTotalMonthlyUlavaAmount();
 
-        // New function calls
-        await saveStakersCurrentUniqueDelegators(db);
-        await saveStakersMonthlyUniqueDelegators(db);
-        await saveRestakersCurrentUniqueDelegators(db);
-        await saveRestakersMonthlyUniqueDelegators(db);
+        await saveStakersCurrentUniqueDelegators();
+        await saveStakersMonthlyUniqueDelegators();
+        await saveRestakersCurrentUniqueDelegators();
+        await saveRestakersMonthlyUniqueDelegators();
 
     } catch (error) {
         logger.error('Error in ProcessChainWalletApi', { error });

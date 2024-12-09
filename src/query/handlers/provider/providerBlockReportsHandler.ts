@@ -1,11 +1,10 @@
-
-// src/query/handlers/providerBlockReportsHandler.ts
+// src/query/handlers/provider/providerBlockReportsHandler.ts
 
 // curl http://localhost:8081/providerBlockReports/lava@1tlkpa7t48fjl7qan4ete6xh0lsy679flnqdw57
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryCheckJsinfoDbInstance, QueryGetJsinfoDbForQueryInstance } from '../../queryDb';
-import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
+import { queryJsinfo } from '@jsinfo/utils/db';
+import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { asc, desc, eq, sql } from "drizzle-orm";
 import { Pagination, ParsePaginationFromString } from '../../utils/queryPagination';
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '../../queryConsts';
@@ -77,13 +76,15 @@ class ProviderBlockReportsData extends RequestHandlerBase<BlockReportsResponse> 
     }
 
     protected async fetchAllRecords(): Promise<BlockReportsResponse[]> {
-        await QueryCheckJsinfoDbInstance();
-
-        let result = await QueryGetJsinfoDbForQueryInstance().select().from(JsinfoSchema.providerLatestBlockReports).
-            where(eq(JsinfoSchema.providerLatestBlockReports.provider, this.addr)).
-            orderBy(desc(JsinfoSchema.providerLatestBlockReports.id)).
-            offset(0).
-            limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
+        const result = await queryJsinfo(
+            async (db) => await db.select()
+                .from(JsinfoSchema.providerLatestBlockReports)
+                .where(eq(JsinfoSchema.providerLatestBlockReports.provider, this.addr))
+                .orderBy(desc(JsinfoSchema.providerLatestBlockReports.id))
+                .offset(0)
+                .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION),
+            'ProviderBlockReportsData_fetchAllRecords'
+        );
 
         return result.map((row: JsinfoSchema.ProviderLatestBlockReports) => ({
             id: row.id,
@@ -96,14 +97,14 @@ class ProviderBlockReportsData extends RequestHandlerBase<BlockReportsResponse> 
     }
 
     protected async fetchRecordCountFromDb(): Promise<number> {
-        await QueryCheckJsinfoDbInstance();
-
-        const countResult = await QueryGetJsinfoDbForQueryInstance()
-            .select({
-                count: sql<number>`COUNT(*)`
+        const countResult = await queryJsinfo<{ count: number }[]>(
+            async (db) => await db.select({
+                count: sql<number>`COUNT(*)::int`
             })
-            .from(JsinfoSchema.providerLatestBlockReports)
-            .where(eq(JsinfoSchema.providerLatestBlockReports.provider, this.addr));
+                .from(JsinfoSchema.providerLatestBlockReports)
+                .where(eq(JsinfoSchema.providerLatestBlockReports.provider, this.addr)),
+            'ProviderBlockReportsData_fetchRecordCountFromDb'
+        );
 
         return Math.min(countResult[0].count || 0, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION - 1);
     }
@@ -138,32 +139,26 @@ class ProviderBlockReportsData extends RequestHandlerBase<BlockReportsResponse> 
             throw new Error(`Invalid sort key: ${trimmedSortKey}`);
         }
 
-        await QueryCheckJsinfoDbInstance();
-
-        const sortColumn = keyToColumnMap[finalPagination.sortKey];
-        const orderFunction = finalPagination.direction === 'ascending' ? asc : desc;
-
-        // Execute the database query
-        const reportsRes = await QueryGetJsinfoDbForQueryInstance()
-            .select()
-            .from(JsinfoSchema.providerLatestBlockReports)
-            .where(eq(JsinfoSchema.providerLatestBlockReports.provider, this.addr))
-            .orderBy(orderFunction(sortColumn))
-            .offset((finalPagination.page - 1) * finalPagination.count)
-            .limit(finalPagination.count);
-
-        return reportsRes.map(row => ({
+        return await queryJsinfo(
+            async (db) => await db.select()
+                .from(JsinfoSchema.providerLatestBlockReports)
+                .where(eq(JsinfoSchema.providerLatestBlockReports.provider, this.addr))
+                .orderBy(finalPagination.direction === 'ascending' ? asc(keyToColumnMap[finalPagination.sortKey || defaultSortKey]) : desc(keyToColumnMap[finalPagination.sortKey || defaultSortKey]))
+                .offset((finalPagination.page - 1) * finalPagination.count)
+                .limit(finalPagination.count),
+            `ProviderBlockReportsData_fetchPaginatedRecords_${finalPagination.sortKey}_${finalPagination.direction}_${finalPagination.page}_${finalPagination.count}`
+        ).then(reportsRes => reportsRes.map(row => ({
             id: row.id,
             blockId: row.blockId ?? 0,
             tx: row.tx ?? '',
             timestamp: row.timestamp ? row.timestamp.toISOString() : '',
             chainId: row.chainId,
             chainBlockHeight: row.chainBlockHeight ?? 0,
-        }));
+        })));
     }
 
 
-    protected async convertRecordsToCsv(data: BlockReportsResponse[]): Promise<string> {
+    public async ConvertRecordsToCsv(data: BlockReportsResponse[]): Promise<string> {
         let csv = 'time,blockId,tx,chainId,chainBlockHeight\n';
         data.forEach((item: BlockReportsResponse) => {
             csv += `${item.timestamp},${item.blockId},${item.chainId},${item.chainBlockHeight}\n`;

@@ -1,11 +1,9 @@
 // src/query/handlers/specProviderHealthHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryGetJsinfoDbForQueryInstance } from '../../queryDb';
-import { eq, and, gte, desc } from "drizzle-orm";
-import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
 import { GetAndValidateProviderAddressFromRequest, GetAndValidateSpecIdFromRequest } from '../../utils/queryRequestArgParser';
 import { WriteErrorToFastifyReplyNoLog } from '../../utils/queryServerUtils';
+import { SpecProviderHealthResource } from '@jsinfo/redis/resources/spec/SpecProviderHealthResource';
 
 type HealthRecord = {
     id: number;
@@ -38,14 +36,6 @@ export const SpecProviderHealthHandlerOpts: RouteShorthandOptions = {
     }
 };
 
-// SELECT DISTINCT ON(provider, spec, interface) *
-//     FROM provider_health
-// WHERE provider = 'lava@1lamrmq78w6dnw5ahpyflus5ps7pvlwrtn9rf83'
-// AND spec = 'NEAR'
-// AND timestamp >= '2024-08-24'
-// ORDER BY provider, spec, interface, timestamp DESC
-// LIMIT 1000
-
 export async function SpecProviderHealthHandler(request: FastifyRequest, reply: FastifyReply): Promise<{ data: { healthy: number; unhealthy: number } } | null> {
 
     let provider = await GetAndValidateProviderAddressFromRequest("specProviderHealth", request, reply);
@@ -58,32 +48,30 @@ export async function SpecProviderHealthHandler(request: FastifyRequest, reply: 
         return reply;
     }
 
-    const twoDaysAgo = new Date();
-    twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
+    const sphr = new SpecProviderHealthResource();
+    const healthRecords = await sphr.fetch({ spec });
 
-    const healthRecords: HealthRecord[] = await QueryGetJsinfoDbForQueryInstance()
-        .selectDistinctOn([JsinfoSchema.providerHealth.provider, JsinfoSchema.providerHealth.spec, JsinfoSchema.providerHealth.interface])
-        .from(JsinfoSchema.providerHealth)
-        .orderBy(JsinfoSchema.providerHealth.provider, JsinfoSchema.providerHealth.spec, JsinfoSchema.providerHealth.interface, JsinfoSchema.providerHealth.provider, JsinfoSchema.providerHealth.spec, desc(JsinfoSchema.providerHealth.timestamp))
-        .where(
-            and(
-                and(
-                    eq(JsinfoSchema.providerHealth.provider, provider),
-                    eq(JsinfoSchema.providerHealth.spec, spec)
-                ),
-                gte(JsinfoSchema.providerHealth.timestamp, twoDaysAgo)
-            )
-        )
-        .limit(1000);
+    if (!healthRecords || healthRecords.length === 0) {
+        WriteErrorToFastifyReplyNoLog(reply, 'No recent health records for spec');
+        return null;
+    }
 
-    if (healthRecords.length === 0) {
+    const filteredHealthRecords: HealthRecord[] = [];
+
+    for (const record of healthRecords) {
+        if (record.provider === provider) {
+            filteredHealthRecords.push(record);
+        }
+    }
+
+    if (filteredHealthRecords.length === 0) {
         WriteErrorToFastifyReplyNoLog(reply, 'No recent health records for provider');
         return null;
     }
 
     const healthStatusCounts = { healthy: 0, unhealthy: 0 };
 
-    healthRecords.forEach(({ status }) => {
+    filteredHealthRecords.forEach(({ status }) => {
         if (status === 'healthy') {
             healthStatusCounts.healthy += 1;
         } else {

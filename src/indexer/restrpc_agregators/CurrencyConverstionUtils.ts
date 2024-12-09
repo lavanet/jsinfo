@@ -1,8 +1,13 @@
 // src/indexer/restrpc_agregators/CurrencyConverstionUtils.ts
 
-import { MemoryCache } from "../classes/MemoryCache";
-import { CoinGekoCache } from '../classes/CoinGeko/CoinGekoCache';
-import { RpcOnDemandEndpointCache } from "../classes/RpcOnDemandEndpointCache";
+import { RedisCache } from '@jsinfo/redis/classes/RedisCache';
+import { CoinGekoCache } from '@jsinfo/restRpc/ext/CoinGeko/CoinGekoCache';
+import { RpcOnDemandEndpointCache } from '@jsinfo/restRpc/lavaRpcOnDemandEndpointCache';
+import { logger } from '@jsinfo/utils/logger';
+import { IsTestnet } from '@jsinfo/utils/env';
+
+const DEMON_LOWEST_LIMIT_WARNING = 1.e-20;
+const DEMON_HIGHEST_LIMIT_ERROR = IsTestnet() ? 10_000_000_000_000 : 100_000_000; // 100_000 was ok for mainnet as well
 
 const CACHE_DURATION = {
     DENOM_TRACE: 3600 * 24, // 1 day
@@ -31,6 +36,7 @@ const DENOM_CONVERSIONS = {
     "ucmdx": { baseDenom: "cmdx", factor: 1_000_000 },                    // COMDEX (CMDX)
     "ucre": { baseDenom: "cre", factor: 1_000_000 },                    // Crescent (CRE)
     "uxprt": { baseDenom: "xprt", factor: 1_000_000 },                    // Persistence (XPRT)
+    "uusdc": { baseDenom: "usdc", factor: 1_000_000 },                    // USD Coin (USDC)
 };
 
 export async function ConvertToBaseDenom(amount: string, denom: string): Promise<[string, string]> {
@@ -39,7 +45,7 @@ export async function ConvertToBaseDenom(amount: string, denom: string): Promise
 
     if (baseDenom.startsWith("ibc/")) {
 
-        const cachedValue = await MemoryCache.getDict(`denom-${denom}`);
+        const cachedValue = await RedisCache.getDict(`denom-${denom}`);
         if (cachedValue) {
             baseDenom = cachedValue.baseDenom;
         }
@@ -48,9 +54,11 @@ export async function ConvertToBaseDenom(amount: string, denom: string): Promise
             const denomWithoutPrefix = denom.slice(4);
             const denomTrace = await RpcOnDemandEndpointCache.GetDenomTrace(denomWithoutPrefix);
             baseDenom = denomTrace.denom_trace.base_denom;
-            await MemoryCache.setDict(`denom-${denom}`, { baseDenom }, CACHE_DURATION.DENOM_TRACE); // cache for 1 day
+            await RedisCache.setDict(`denom-${denom}`, { baseDenom }, CACHE_DURATION.DENOM_TRACE); // cache for 1 day
         }
     }
+
+    const originalBaseDenom = baseDenom;
 
     if (baseDenom in DENOM_CONVERSIONS) {
         const { baseDenom: newBaseDenom, factor } = DENOM_CONVERSIONS[baseDenom];
@@ -58,10 +66,37 @@ export async function ConvertToBaseDenom(amount: string, denom: string): Promise
         baseAmount = baseAmount / factor;
     }
 
+    if (baseAmount < DEMON_LOWEST_LIMIT_WARNING) {
+        logger.warn(`ConvertToBaseDenom out of range (2small) values: amount = ${amount}, denom = ${denom}, baseAmount = ${baseAmount}, baseDenom = ${baseDenom}, originalBaseDenom = ${originalBaseDenom}`);
+        return [baseAmount.toString(), baseDenom];
+    }
+
+    if (baseAmount > DEMON_HIGHEST_LIMIT_ERROR) {
+        logger.error(`ConvertToBaseDenom out of range (2big) values: amount = ${amount}, denom = ${denom}, baseAmount = ${baseAmount}, baseDenom = ${baseDenom}, originalBaseDenom = ${originalBaseDenom}`);
+        return ["0".toString(), baseDenom];
+    }
+
     return [baseAmount.toString(), baseDenom];
 }
 
 export async function GetUSDCValue(amount: string, denom: string): Promise<string> {
     const usdcRate = await CoinGekoCache.GetDenomToUSDRate(denom);
-    return (parseFloat(amount) * usdcRate).toString();
+    if (usdcRate === 0) {
+        logger.warn(`GetUSDCValue CoinGekoCache.GetDenomToUSDRate returned 0 for denom = ${denom}`);
+        return "0";
+    }
+
+    const result = (parseFloat(amount) * usdcRate);
+
+    if (result < DEMON_LOWEST_LIMIT_WARNING) {
+        logger.warn(`GetUSDCValue out of range (2small) values: amount = ${amount}, denom = ${denom}, usdcRate = ${usdcRate}, result = ${result}`);
+        return result.toString();
+    }
+
+    if (result > DEMON_HIGHEST_LIMIT_ERROR) {
+        logger.error(`GetUSDCValue out of range (2big) values: amount = ${amount}, denom = ${denom}, usdcRate = ${usdcRate}, result = ${result}`);
+        return "0".toString();
+    }
+
+    return result.toString();
 }

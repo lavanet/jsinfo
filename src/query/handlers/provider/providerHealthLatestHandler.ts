@@ -4,13 +4,13 @@
 // curl http://localhost:8081/providerLatestHealth/lava@1uhwudw7vzqtnffu2hf5yhv4n8trj79ezl66z99
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryGetJsinfoDbForQueryInstance } from '../../queryDb';
 import { eq, and, gte, desc } from "drizzle-orm";
-import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
-import { GetAndValidateProviderAddressFromRequest } from '../../utils/queryRequestArgParser';
-import { WriteErrorToFastifyReplyNoLog } from '../../utils/queryServerUtils';
-import { ParseDateToUtc } from '../../utils/queryDateUtils';
-import { logger } from '../../../utils/utils';
+import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
+import { GetAndValidateProviderAddressFromRequest } from '@jsinfo/query/utils/queryRequestArgParser';
+import { WriteErrorToFastifyReplyNoLog } from '@jsinfo/query/utils/queryServerUtils';
+import { ParseDateToUtc } from '@jsinfo/utils/date';
+import { logger } from '@jsinfo/utils/logger';
+import { queryJsinfo } from '@jsinfo/utils/db';
 
 type HealthRecord = {
     id: number;
@@ -144,7 +144,7 @@ export async function ProviderHealthLatestPaginatedHandler(request: FastifyReque
     let allHealthRecords: HealthRecord[] = [];
 
     for (const geolocation of geolocations) {
-        const healthRecords: HealthRecord[] = await QueryGetJsinfoDbForQueryInstance()
+        const healthRecords: HealthRecord[] = await queryJsinfo(db => db
             .select()
             .from(JsinfoSchema.providerHealth)
             .where(
@@ -155,7 +155,9 @@ export async function ProviderHealthLatestPaginatedHandler(request: FastifyReque
                 )
             )
             .orderBy(desc(JsinfoSchema.providerHealth.id))
-            .limit(500);
+            .limit(500),
+            `ProviderHealthLatestData::fetchHealthRecords_${provider}_${geolocation}`
+        );
 
         allHealthRecords.push(...healthRecords);
     }
@@ -230,6 +232,12 @@ export async function ProviderHealthLatestPaginatedHandler(request: FastifyReque
             specsData[spec].overallStatus = 'frozen';
         } else if (statuses.every(status => status === 'jailed')) {
             specsData[spec].overallStatus = 'jailed';
+        } else if (statuses.every(status =>
+            status === 'frozen' ||
+            status === 'unhealthy' ||
+            status === 'jailed'
+        )) {
+            specsData[spec].overallStatus = 'unhealthy';
         } else {
             specsData[spec].overallStatus = 'degraded';
         }

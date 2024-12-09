@@ -2,14 +2,15 @@
 // src/query/handlers/provider/providerRewardsHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryCheckJsinfoDbInstance, QueryGetJsinfoDbForQueryInstance } from '../../queryDb';
-import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
+
+import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { asc, desc, eq, gte, sql, and } from "drizzle-orm";
 import { Pagination, ParsePaginationFromString } from '../../utils/queryPagination';
-import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '../../queryConsts';
-import { CSVEscape } from '../../utils/queryUtils';
-import { GetAndValidateProviderAddressFromRequest } from '../../utils/queryRequestArgParser';
-import { RequestHandlerBase } from '../../classes/RequestHandlerBase';
+import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '@jsinfo/query/queryConsts';
+import { CSVEscape } from '@jsinfo/utils/fmt';
+import { GetAndValidateProviderAddressFromRequest } from '@jsinfo/query/utils/queryRequestArgParser';
+import { RequestHandlerBase } from '@jsinfo/query/classes/RequestHandlerBase';
+import { queryJsinfo } from '@jsinfo/utils/db';
 
 export type ProviderRewardsResponse = {
     relay_payments: {
@@ -143,28 +144,30 @@ class ProviderRewardsData extends RequestHandlerBase<ProviderRewardsResponse> {
     }
 
     protected async fetchAllRecords(): Promise<ProviderRewardsResponse[]> {
-        await QueryCheckJsinfoDbInstance();
+        ;
 
         const thirtyDaysAgo = this.getThirtyDaysAgo();
 
-        const paymentsRes: ProviderRewardsResponse[] = await QueryGetJsinfoDbForQueryInstance()
-            .select({
+        const paymentsRes: ProviderRewardsResponse[] = await queryJsinfo<ProviderRewardsResponse[]>(
+            async (db) => await db.select({
                 relay_payments: JsinfoSchema.relayPayments,
                 blocks: {
                     height: JsinfoSchema.relayPayments.blockId,
                     datetime: JsinfoSchema.relayPayments.datetime
                 }
             })
-            .from(JsinfoSchema.relayPayments)
-            .where(
-                and(
-                    eq(JsinfoSchema.relayPayments.provider, this.addr),
-                    gte(JsinfoSchema.relayPayments.datetime, thirtyDaysAgo)
+                .from(JsinfoSchema.relayPayments)
+                .where(
+                    and(
+                        eq(JsinfoSchema.relayPayments.provider, this.addr),
+                        gte(JsinfoSchema.relayPayments.datetime, thirtyDaysAgo)
+                    )
                 )
-            )
-            .orderBy(desc(JsinfoSchema.relayPayments.id))
-            .offset(0)
-            .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
+                .orderBy(desc(JsinfoSchema.relayPayments.id))
+                .offset(0)
+                .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION),
+            `ProviderRewards_fetchAllRecords_${this.addr}`
+        );
 
         paymentsRes.forEach((payment) => {
             payment.relay_payments.pay = payment.relay_payments.pay ? BigInt(payment.relay_payments.pay).toString() : null;
@@ -174,21 +177,23 @@ class ProviderRewardsData extends RequestHandlerBase<ProviderRewardsResponse> {
     }
 
     protected async fetchRecordCountFromDb(): Promise<number> {
-        await QueryCheckJsinfoDbInstance();
+        ;
 
         const thirtyDaysAgo = this.getThirtyDaysAgo();
 
-        const countResult = await QueryGetJsinfoDbForQueryInstance()
-            .select({
+        const countResult = await queryJsinfo<{ count: number }[]>(
+            async (db) => await db.select({
                 count: sql<number>`COUNT(*)`
             })
-            .from(JsinfoSchema.relayPayments)
-            .where(
-                and(
-                    eq(JsinfoSchema.relayPayments.provider, this.addr),
-                    gte(JsinfoSchema.relayPayments.datetime, thirtyDaysAgo)
-                )
-            );
+                .from(JsinfoSchema.relayPayments)
+                .where(
+                    and(
+                        eq(JsinfoSchema.relayPayments.provider, this.addr),
+                        gte(JsinfoSchema.relayPayments.datetime, thirtyDaysAgo)
+                    )
+                ),
+            `ProviderRewards_fetchRecordCount_${this.addr}`
+        );
 
         return Math.min(countResult[0].count || 0, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION - 1);
     }
@@ -226,31 +231,33 @@ class ProviderRewardsData extends RequestHandlerBase<ProviderRewardsResponse> {
             throw new Error(`Invalid sort key: ${trimmedSortKey}`);
         }
 
-        await QueryCheckJsinfoDbInstance();
+        ;
 
         const sortColumn = keyToColumnMap[finalPagination.sortKey];
         const orderFunction = finalPagination.direction === 'ascending' ? asc : desc;
 
         const thirtyDaysAgo = this.getThirtyDaysAgo();
 
-        const paymentsRes: ProviderRewardsResponse[] = await QueryGetJsinfoDbForQueryInstance()
-            .select({
+        const paymentsRes: ProviderRewardsResponse[] = await queryJsinfo<ProviderRewardsResponse[]>(
+            async (db) => await db.select({
                 relay_payments: JsinfoSchema.relayPayments,
                 blocks: {
                     height: JsinfoSchema.relayPayments.blockId,
                     datetime: JsinfoSchema.relayPayments.datetime
                 }
             })
-            .from(JsinfoSchema.relayPayments)
-            .where(
-                and(
-                    eq(JsinfoSchema.relayPayments.provider, this.addr),
-                    gte(JsinfoSchema.relayPayments.datetime, thirtyDaysAgo)
+                .from(JsinfoSchema.relayPayments)
+                .where(
+                    and(
+                        eq(JsinfoSchema.relayPayments.provider, this.addr),
+                        gte(JsinfoSchema.relayPayments.datetime, thirtyDaysAgo)
+                    )
                 )
-            )
-            .orderBy(orderFunction(sortColumn))
-            .offset((finalPagination.page - 1) * finalPagination.count)
-            .limit(finalPagination.count);
+                .orderBy(orderFunction(sortColumn))
+                .offset((finalPagination.page - 1) * finalPagination.count)
+                .limit(finalPagination.count),
+            `ProviderRewards_fetchPaginatedRecords_${finalPagination.sortKey}_${finalPagination.direction}_${finalPagination.page}_${finalPagination.count}_${thirtyDaysAgo}_${this.addr}`
+        );
 
         paymentsRes.forEach((payment) => {
             payment.relay_payments.pay = payment.relay_payments.pay ? BigInt(payment.relay_payments.pay).toString() : null;
@@ -259,7 +266,7 @@ class ProviderRewardsData extends RequestHandlerBase<ProviderRewardsResponse> {
         return paymentsRes;
     }
 
-    protected async convertRecordsToCsv(data: ProviderRewardsResponse[]): Promise<string> {
+    public async ConvertRecordsToCsv(data: ProviderRewardsResponse[]): Promise<string> {
         const columns = [
             { key: "relay_payments.specId", name: "Spec" },
             { key: "relay_payments.blockId", name: "Block" },

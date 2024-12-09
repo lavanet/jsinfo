@@ -36,16 +36,41 @@ docker_sh:
 	docker run --privileged -it bun-docker /bin/sh
 
 docker_compose:
-	docker-compose -f docker-compose.yml up
+	docker compose -f docker-compose.yml up --build
 
-docker_compose_query_populate:
-	docker-compose up query_populate
+docker_compose_recreate:
+	docker compose down -v
+	docker compose --verbose up --build --force-recreate --remove-orphans
 
-docker_compose_query:
-	docker-compose up query
+docker_compose_clean:
+	docker compose down -v
+	docker volume rm $$(docker volume ls -q | grep jsinfo) || true
+	docker rm -f $$(docker ps -a -q --filter "name=jsinfo-*") || true
 
-docker_compose_indexer:
-	docker-compose up indexer
+# Useful additional commands
+docker_compose_logs:
+	docker compose logs -f
+
+docker_compose_ps:
+	docker compose ps
+
+docker_compose_restart:
+	docker compose restart
+
+docker_compose_postgres_logs:
+	docker compose logs -f jsinfo-postgres
+ 
+docker_compose_psql:
+	docker compose exec jsinfo-postgres psql -U postgres -d jsinfo -p 6452
+# Restart specific services
+docker_compose_restart_query:
+	docker compose restart jsinfo-query
+
+docker_compose_query_shell:
+	docker compose exec -it jsinfo-query /bin/sh
+
+docker_compose_restart_indexer:
+	docker compose restart jsinfo-indexer
 
 indexer:
 	IS_INDEXER_PROCESS=true NODE_TLS_REJECT_UNAUTHORIZED=0 bun run src/indexer.ts
@@ -82,6 +107,7 @@ redis_connect:
 	docker exec -it redis-stack redis-cli -a mypassword
 
 macos_psql_start:
+	# brew services restart postgresql@14
 	@echo "Checking if PostgreSQL@14 is installed..."
 	@if ! brew list postgresql@14 &>/dev/null; then \
 		echo "Installing PostgreSQL@14..."; \
@@ -107,14 +133,18 @@ macos_kill_query_port:
 		echo "No process found listening on port 8081."; \
 	fi
 
+macos_psql_config_file:
+	code /opt/homebrew/var/postgresql@14/postgresql.conf
+
+macos_restart_docker:
+	ps aux | grep -i docker | awk '{print $2}' | while read pid; do sudo kill -9 $pid 2>/dev/null; done
+	open -a Docker
+
 query_endpoints_full_tests_all:
 	cd tests/query_endpoints && make query_endpoints_full_tests_all
 
 query_endpoints_full_tests_local:
 	cd tests/query_endpoints && make query_endpoints_full_tests_local
-
-query_endpoints_full_tests_staging:
-	cd tests/query_endpoints && make query_endpoints_full_tests_staging
 
 query_endpoints_full_tests_testnet:
 	cd tests/query_endpoints && make query_endpoints_full_tests_testnet

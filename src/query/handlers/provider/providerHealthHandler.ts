@@ -1,17 +1,17 @@
-
 // src/query/handlers/providerHealth.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryCheckJsinfoDbInstance, QueryGetJsinfoDbForQueryInstance } from '../../queryDb';
-import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
-import { eq, desc, asc, sql } from "drizzle-orm";
-import { Pagination, ParsePaginationFromString } from '../../utils/queryPagination';
-import { CSVEscape } from '../../utils/queryUtils';
-import { GetAndValidateProviderAddressFromRequest } from '../../utils/queryRequestArgParser';
-import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '../../queryConsts';
-import { RequestHandlerBase } from '../../classes/RequestHandlerBase';
-import { ParseDateToUtc } from '../../utils/queryDateUtils';
-import { logger } from '../../../utils/utils';
+
+import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
+import { eq, desc, asc, sql, gte, and } from "drizzle-orm";
+import { Pagination, ParsePaginationFromString } from '@jsinfo/query/utils/queryPagination';
+import { CSVEscape } from '@jsinfo/utils/fmt';
+import { GetAndValidateProviderAddressFromRequest } from '@jsinfo/query/utils/queryRequestArgParser';
+import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '@jsinfo/query/queryConsts';
+import { RequestHandlerBase } from '@jsinfo/query/classes/RequestHandlerBase';
+import { ParseDateToUtc } from '@jsinfo/utils/date';
+import { logger } from '@jsinfo/utils/logger';
+import { queryJsinfo } from '@jsinfo/utils/db';
 
 export interface HealthReportEntry {
     message: string | null;
@@ -82,13 +82,21 @@ class ProviderHealthData extends RequestHandlerBase<HealthReportEntry> {
     }
 
     protected async fetchAllRecords(): Promise<HealthReportEntry[]> {
-        await QueryCheckJsinfoDbInstance();
+        const oneMonthAgo = new Date();
+        oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1); // Calculate the date one month ago
 
-        const data = await QueryGetJsinfoDbForQueryInstance().select()
+        const data = await queryJsinfo(db => db.select()
             .from(JsinfoSchema.providerHealth)
-            .where(eq(JsinfoSchema.providerHealth.provider, this.addr))
+            .where(
+                and(
+                    eq(JsinfoSchema.providerHealth.provider, this.addr),
+                    gte(JsinfoSchema.providerHealth.timestamp, oneMonthAgo)
+                )
+            )
             .orderBy(desc(JsinfoSchema.providerHealth.id))
-            .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
+            .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION),
+            'ProviderHealthData::fetchAllRecords'
+        );
 
         const healthReportEntries: HealthReportEntry[] = data.map(item => ({
             id: item.id,
@@ -108,18 +116,29 @@ class ProviderHealthData extends RequestHandlerBase<HealthReportEntry> {
     }
 
     protected async fetchRecordCountFromDb(): Promise<number> {
-        await QueryCheckJsinfoDbInstance();
+        const oneMonthAgo = new Date();
+        oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1); // Calculate the date one month ago
 
-        const countResult = await QueryGetJsinfoDbForQueryInstance()
-            .select({
-                count: sql<number>`COUNT(*)`
-            })
-            .from(JsinfoSchema.providerHealth);
+        const countResult = await queryJsinfo(db => db.select({
+            count: sql<number>`COUNT(*)`
+        })
+            .from(JsinfoSchema.providerHealth)
+            .where(
+                and(
+                    eq(JsinfoSchema.providerHealth.provider, this.addr),
+                    gte(JsinfoSchema.providerHealth.timestamp, oneMonthAgo)
+                )
+            ),
+            'ProviderHealthData::fetchRecordCountFromDb'
+        );
 
         return Math.min(countResult[0].count || 0, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION - 1);
     }
 
     public async fetchPaginatedRecords(pagination: Pagination | null): Promise<HealthReportEntry[]> {
+        const oneMonthAgo = new Date();
+        oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1); // Calculate the date one month ago
+
         const defaultSortKey = "id";
         let finalPagination: Pagination;
 
@@ -151,20 +170,27 @@ class ProviderHealthData extends RequestHandlerBase<HealthReportEntry> {
             throw new Error(`Invalid sort key: ${trimmedSortKey}`);
         }
 
-        await QueryCheckJsinfoDbInstance();
+        ;
 
         const sortColumn = keyToColumnMap[finalPagination.sortKey];
         const orderFunction = finalPagination.direction === 'ascending' ? asc : desc;
 
         const offset = (finalPagination.page - 1) * finalPagination.count;
 
-        const additionalData = await QueryGetJsinfoDbForQueryInstance()
+        const additionalData = await queryJsinfo(db => db
             .select()
             .from(JsinfoSchema.providerHealth)
-            .where(eq(JsinfoSchema.providerHealth.provider, this.addr))
+            .where(
+                and(
+                    eq(JsinfoSchema.providerHealth.provider, this.addr),
+                    gte(JsinfoSchema.providerHealth.timestamp, oneMonthAgo)
+                )
+            )
             .orderBy(orderFunction(sortColumn))
             .offset(offset)
-            .limit(finalPagination.count);
+            .limit(finalPagination.count),
+            `ProviderHealthData::fetchPaginatedRecords_${finalPagination.sortKey}_${finalPagination.direction}_${finalPagination.page}_${finalPagination.count}`
+        );
 
         const healthReportEntries: HealthReportEntry[] = additionalData.map(item => ({
             id: item.id,
@@ -183,7 +209,7 @@ class ProviderHealthData extends RequestHandlerBase<HealthReportEntry> {
         return healthReportEntries;
     }
 
-    protected async convertRecordsToCsv(data: HealthReportEntry[]): Promise<string> {
+    public async ConvertRecordsToCsv(data: HealthReportEntry[]): Promise<string> {
         let csv = 'time,chain,interface,status,region,message\n';
         data.forEach((item: HealthReportEntry) => {
             csv += `${item.timestamp},${CSVEscape(item.spec)},${CSVEscape(item.interface || "")},${CSVEscape(item.status)},${CSVEscape(item.message || "")}\n`;

@@ -1,14 +1,15 @@
 // src/query/handlers/providerEventsHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryCheckJsinfoDbInstance, QueryGetJsinfoDbForQueryInstance } from '../../queryDb';
-import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
+
+import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { asc, desc, eq, sql, and, gte } from "drizzle-orm";
-import { Pagination, ParsePaginationFromString } from '../../utils/queryPagination';
-import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '../../queryConsts';
-import { CSVEscape } from '../../utils/queryUtils';
-import { GetAndValidateProviderAddressFromRequest } from '../../utils/queryRequestArgParser';
-import { RequestHandlerBase } from '../../classes/RequestHandlerBase';
+import { Pagination, ParsePaginationFromString } from '@jsinfo/query/utils/queryPagination';
+import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '@jsinfo/query/queryConsts';
+import { CSVEscape } from '@jsinfo/utils/fmt';
+import { GetAndValidateProviderAddressFromRequest } from '@jsinfo/query/utils/queryRequestArgParser';
+import { RequestHandlerBase } from '@jsinfo/query/classes/RequestHandlerBase';
+import { queryJsinfo } from '@jsinfo/utils/db';
 
 export type ProviderEventsResponse = {
     events: {
@@ -110,11 +111,9 @@ class ProviderEventsData extends RequestHandlerBase<ProviderEventsResponse> {
     }
 
     protected async fetchAllRecords(): Promise<ProviderEventsResponse[]> {
-        await QueryCheckJsinfoDbInstance();
-
         const thirtyDaysAgo = getDateThirtyDaysAgo();
 
-        const eventsRes: ProviderEventsResponse[] = await QueryGetJsinfoDbForQueryInstance()
+        const eventsRes: ProviderEventsResponse[] = await queryJsinfo(db => db
             .select({
                 events: {
                     id: JsinfoSchema.events.id,
@@ -148,7 +147,9 @@ class ProviderEventsData extends RequestHandlerBase<ProviderEventsResponse> {
             ))
             .orderBy(desc(JsinfoSchema.events.id))
             .offset(0)
-            .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION)
+            .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION),
+            `ProviderEventsData::fetchAllRecords_${this.addr}`
+        );
 
         eventsRes.forEach((event) => {
             event.events.b1 = event.events.b1?.toString() || null;
@@ -160,11 +161,9 @@ class ProviderEventsData extends RequestHandlerBase<ProviderEventsResponse> {
     }
 
     protected async fetchRecordCountFromDb(): Promise<number> {
-        await QueryCheckJsinfoDbInstance();
-
         const thirtyDaysAgo = getDateThirtyDaysAgo();
 
-        const countResult = await QueryGetJsinfoDbForQueryInstance()
+        const countResult = await queryJsinfo(db => db
             .select({
                 count: sql<number>`COUNT(*)`
             })
@@ -172,7 +171,9 @@ class ProviderEventsData extends RequestHandlerBase<ProviderEventsResponse> {
             .where(and(
                 eq(JsinfoSchema.events.provider, this.addr),
                 gte(JsinfoSchema.events.timestamp, thirtyDaysAgo)
-            ));
+            )),
+            `ProviderEventsData::fetchRecordCountFromDb_${this.addr}`
+        );
 
         return Math.min(countResult[0].count || 0, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION - 1);
     }
@@ -215,14 +216,12 @@ class ProviderEventsData extends RequestHandlerBase<ProviderEventsResponse> {
             throw new Error(`Invalid sort key: ${trimmedSortKey}`);
         }
 
-        await QueryCheckJsinfoDbInstance();
-
         const sortColumn = keyToColumnMap[finalPagination.sortKey];
         const orderFunction = finalPagination.direction === 'ascending' ? asc : desc;
 
         const thirtyDaysAgo = getDateThirtyDaysAgo();
 
-        const eventsRes: ProviderEventsResponse[] = await QueryGetJsinfoDbForQueryInstance()
+        const eventsRes: ProviderEventsResponse[] = await queryJsinfo(db => db
             .select({
                 events: {
                     id: JsinfoSchema.events.id,
@@ -256,7 +255,9 @@ class ProviderEventsData extends RequestHandlerBase<ProviderEventsResponse> {
             ))
             .orderBy(orderFunction(sortColumn))
             .offset((finalPagination.page - 1) * finalPagination.count)
-            .limit(finalPagination.count);
+            .limit(finalPagination.count),
+            `ProviderEventsData::fetchPaginatedRecords_${finalPagination.sortKey}_${finalPagination.direction}_${finalPagination.page}_${finalPagination.count}_${thirtyDaysAgo}`
+        );
 
         eventsRes.forEach((event) => {
             event.events.b1 = event.events.b1?.toString() || null;
@@ -267,7 +268,7 @@ class ProviderEventsData extends RequestHandlerBase<ProviderEventsResponse> {
         return eventsRes;
     }
 
-    protected async convertRecordsToCsv(data: ProviderEventsResponse[]): Promise<string> {
+    public async ConvertRecordsToCsv(data: ProviderEventsResponse[]): Promise<string> {
         const columns = [
             { key: "events.eventType", name: "Event Type" },
             { key: "blocks.height", name: "Block Height" },

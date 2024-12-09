@@ -267,6 +267,48 @@
       "when": 1731244325464,
       "tag": "0037_gorgeous_kylun",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "5",
+      "when": 1732098480772,
+      "tag": "0038_amazing_machine_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "5",
+      "when": 1732285456869,
+      "tag": "0039_stale_meggan",
+      "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "5",
+      "when": 1732623552395,
+      "tag": "0040_cultured_scourge",
+      "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "5",
+      "when": 1732656666543,
+      "tag": "0041_productive_wendell_vaughn",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "5",
+      "when": 1733237347269,
+      "tag": "0042_mysterious_johnny_storm",
+      "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "5",
+      "when": 1733706648007,
+      "tag": "0043_cynical_phil_sheldon",
+      "breakpoints": true
     }
   ]
 }

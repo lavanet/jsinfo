@@ -1,9 +1,7 @@
-// src/query/handlers/index30DayCuHandler.ts
+// src/query/handlers/index/index30DayCuHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryCheckJsinfoDbInstance, GetLatestBlock, QueryGetJsinfoDbForQueryInstance } from '../../queryDb';
-import * as JsinfoProviderAgrSchema from '../../../schemas/jsinfoSchema/providerRelayPaymentsAgregation';
-import { sql, gt } from "drizzle-orm";
+import { Index30DayCuResource, Index30DayCuData } from '../../../redis/resources/index/Index30DayCuResource';
 
 export const Index30DayCuHandlerOpts: RouteShorthandOptions = {
     schema: {
@@ -18,29 +16,26 @@ export const Index30DayCuHandlerOpts: RouteShorthandOptions = {
                         type: 'number'
                     },
                 }
+            },
+            400: {
+                type: 'object',
+                properties: {
+                    error: {
+                        type: 'string'
+                    }
+                }
             }
         }
     }
 }
 
-export async function Index30DayCuHandler(request: FastifyRequest, reply: FastifyReply) {
-    await QueryCheckJsinfoDbInstance()
-
-    let cuSum30Days = 0
-    let relaySum30Days = 0
-    let res30Days = await QueryGetJsinfoDbForQueryInstance().select({
-        cuSum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggDailyRelayPayments.cuSum})`,
-        relaySum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum})`,
-    }).from(JsinfoProviderAgrSchema.aggDailyRelayPayments).
-        where(gt(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday, sql<Date>`now() - interval '30 day'`))
-
-    if (res30Days.length != 0) {
-        cuSum30Days = res30Days[0].cuSum
-        relaySum30Days = res30Days[0].relaySum
+export async function Index30DayCuHandler(request: FastifyRequest, reply: FastifyReply): Promise<Index30DayCuData> {
+    const resource = new Index30DayCuResource();
+    const result = await resource.fetch();
+    if (!result) {
+        reply.status(400);
+        reply.send({ error: 'Failed to fetch 30 day CU data' });
+        return reply;
     }
-
-    return {
-        cuSum30Days: cuSum30Days,
-        relaySum30Days: relaySum30Days,
-    }
+    return result;
 }

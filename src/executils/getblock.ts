@@ -1,16 +1,15 @@
 // src/executils/getblock.ts
 
 import { GetRpcBlock, GetRpcTxs } from "../indexer/lavaBlock";
-import { logger } from "../utils/utils";
-import { ConnectToRpc, RpcConnection } from "../indexer/utils/lavajsRpc";
+import { logger } from "../utils/logger";
 import * as indexerconsts from '../indexer/indexerConsts';
 
-const printBlockAndTxs = async (height: number, rpcConnection: RpcConnection): Promise<void> => {
+const printBlockAndTxs = async (height: number): Promise<void> => {
     try {
-        const block = await GetRpcBlock(height, rpcConnection.client);
+        const block = await GetRpcBlock(height);
         console.log(`Block at height ${height}:`, block);
 
-        const txs = await GetRpcTxs(height, rpcConnection.client, block);
+        const txs = await GetRpcTxs(height, block);
         console.log(`Transactions at height ${height}:`, txs);
     } catch (error) {
         console.error(`Error at height ${height}:`, error);
@@ -39,10 +38,7 @@ const main = async (): Promise<void> => {
         }
     }
 
-    const rpcConnection = await ConnectToRpc(indexerconsts.JSINFO_INDEXER_LAVA_RPC);
-
-    // Use the provided block number instead of starting from a predefined start height
-    await printBlockAndTxs(blockNum, rpcConnection);
+    await printBlockAndTxs(blockNum);
 };
 
 main().catch(error => {

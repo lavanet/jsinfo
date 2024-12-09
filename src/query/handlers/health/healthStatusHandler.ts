@@ -1,11 +1,13 @@
 // src/query/handlers/healthStatusHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { GetLatestBlock, QueryCheckIsJsinfoDbInstanceOk, QueryCheckJsinfoDbInstance, QueryGetJsinfoDbForQueryInstance } from '../../queryDb';
-import { RedisCache } from '../../classes/RedisCache';
-import * as JsinfoSchema from "../../../schemas/jsinfoSchema/jsinfoSchema";
+import { GetLatestBlock } from '@jsinfo/query/utils/getLatestBlock';
+import { RedisCache } from '@jsinfo/redis/classes/RedisCache';
+import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { gt, desc } from "drizzle-orm";
-import { GetUtcNow } from '../../../utils/utils';
+import { GetUtcNow } from '@jsinfo/utils/date';
+import { queryJsinfo } from '@jsinfo/utils/db';
+import { CheckDatabaseStatus } from '@jsinfo/utils/db';
 
 export const HealthStatusRawHandlerOpts: RouteShorthandOptions = {
     schema: {
@@ -58,12 +60,9 @@ type HealthCheckResults = {
 
 async function IsLatest(): Promise<HealthCheckResponse> {
     try {
-        await QueryCheckJsinfoDbInstance();
-
         const { latestHeight, latestDatetime } = await GetLatestBlock();
         const currentUtcTime = new Date().getTime();
 
-        // Check if the latestDatetime is more than 15 minutes away from the current UTC time
         if (Math.abs(currentUtcTime - latestDatetime) > 900000) { // 900000 milliseconds = 15 minutes
             console.error("The latest block's datetime is more than 15 minutes away from the current time.");
             return {
@@ -87,22 +86,22 @@ async function IsLatest(): Promise<HealthCheckResponse> {
 
 async function IsDbOK(): Promise<HealthCheckResponse> {
     try {
-        const isDbOk = await QueryCheckIsJsinfoDbInstanceOk();
-        if (!isDbOk) {
+        const dbStatus = await CheckDatabaseStatus();
+        if (!dbStatus.ok) {
             return {
                 status: "error",
-                message: "Database instance is not OK."
+                message: dbStatus.details
             };
         }
 
         return {
             status: "ok",
-            message: `Db connection is ok`
+            message: dbStatus.details
         };
     } catch (error) {
         return {
             status: "error",
-            message: "Db connection error"
+            message: `Database connection error: ${(error as Error).message}`
         };
     }
 }
@@ -133,12 +132,15 @@ async function IsHealthProbeOK(): Promise<HealthCheckResponse> {
     try {
         const twentyMinutesAgo = new Date(GetUtcNow().getTime() - 20 * 60 * 1000);
 
-        const recentHealthRecords = await QueryGetJsinfoDbForQueryInstance()
-            .select()
-            .from(JsinfoSchema.providerHealth)
-            .where(gt(JsinfoSchema.providerHealth.timestamp, twentyMinutesAgo))
-            .orderBy(desc(JsinfoSchema.providerHealth.id))
-            .limit(1);
+        const recentHealthRecords = await queryJsinfo(
+            async (db) => await db
+                .select()
+                .from(JsinfoSchema.providerHealth)
+                .where(gt(JsinfoSchema.providerHealth.timestamp, twentyMinutesAgo))
+                .orderBy(desc(JsinfoSchema.providerHealth.id))
+                .limit(1),
+            'HealthStatus_IsHealthProbeOK'
+        );
 
         if (recentHealthRecords.length == 0) {
             return {

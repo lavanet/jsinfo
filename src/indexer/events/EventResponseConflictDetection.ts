@@ -1,6 +1,6 @@
-import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
+import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { Event } from "@cosmjs/stargate"
-import { LavaBlock } from "../types";
+import { LavaBlock } from "../lavaTypes";
 
 import { EventProcessAttributes, EventParseProviderAddress, EventParseInt } from "../eventUtils";
 
@@ -81,10 +81,7 @@ export const ParseEventResponseConflictDetection = (
   evt: Event,
   height: number,
   txHash: string | null,
-  lavaBlock: LavaBlock,
-
-
-  blockchainEntitiesStakes: Map<string, JsinfoSchema.InsertProviderStake[]>,
+  lavaBlock: LavaBlock
 ) => {
   const dbEvent: JsinfoSchema.InsertConflictResponse = {
     tx: txHash,

@@ -1,16 +1,16 @@
-// src/indexer/agregators/aggConsumerRelayPayments.ts
+// src/indexer/agregators/AggConsumerRelayPayments.ts
 
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { logger } from "../../../utils/utils";
+import { logger } from "../../../utils/logger";
 import { aggConsumerHourlyRelayPayments } from "./aggConsumerHourlyRelayPayments";
 import { aggConsumerDailyRelayPayments } from "./aggConsumerDailyRelayPayments";
 import { aggConsumerAllTimeRelayPayments } from "./aggConsumerAllTimeRelayPayments";
 
 let isRunning = false;
 
-export const aggConsumerRelayPayments = async (db: PostgresJsDatabase) => {
+export const AggConsumerRelayPayments = async () => {
     if (isRunning) {
-        logger.info('aggConsumerRelayPayments is already running. Exiting this call.');
+        logger.info('AggConsumerRelayPayments is already running. Exiting this call.');
         return;
     }
 
@@ -19,7 +19,7 @@ export const aggConsumerRelayPayments = async (db: PostgresJsDatabase) => {
     logger.info(`aggConsumerHourlyRelayPayments started at: ${new Date().toISOString()}`);
     try {
         const start = Date.now();
-        await aggConsumerHourlyRelayPayments(db);
+        await aggConsumerHourlyRelayPayments();
         const executionTime = Date.now() - start;
         logger.info(`Successfully executed aggConsumerHourlyRelayPayments. Execution time: ${executionTime} ms`);
     } catch (e) {
@@ -31,7 +31,7 @@ export const aggConsumerRelayPayments = async (db: PostgresJsDatabase) => {
     logger.info(`aggConsumerDailyRelayPayments started at: ${new Date().toISOString()}`);
     try {
         const start = Date.now();
-        await aggConsumerDailyRelayPayments(db);
+        await aggConsumerDailyRelayPayments();
         const executionTime = Date.now() - start;
         logger.info(`Successfully executed aggConsumerDailyRelayPayments. Execution time: ${executionTime} ms`);
     } catch (e) {
@@ -43,7 +43,7 @@ export const aggConsumerRelayPayments = async (db: PostgresJsDatabase) => {
     logger.info(`aggConsumerAllTimeRelayPayments started at: ${new Date().toISOString()}`);
     try {
         const start = Date.now();
-        await aggConsumerAllTimeRelayPayments(db);
+        await aggConsumerAllTimeRelayPayments();
         const executionTime = Date.now() - start;
         logger.info(`Successfully executed aggConsumerAllTimeRelayPayments. Execution time: ${executionTime} ms`);
     } catch (e) {

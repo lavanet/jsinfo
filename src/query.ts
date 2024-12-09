@@ -1,18 +1,16 @@
 // jsinfo/src/query.ts
 
 import * as consts from './query/queryConsts'
-import { logger } from './utils/utils'
+import { logger } from './utils/logger'
 
 import { GetServerInstance } from './query/queryServer'
-import { QueryInitJsinfoDbInstance, QueryInitRelaysReadDbInstance, GetLatestBlock } from './query/queryDb'
+import { GetLatestBlock } from './query/utils/getLatestBlock'
 
 import './query/queryRoutes'
+import { JSONStringify } from './utils/fmt'
 
 export const queryServerMain = async (): Promise<void> => {
     logger.info('Starting query server on port ' + consts.JSINFO_QUERY_PORT + ' host ' + consts.JSINFO_QUERY_HOST)
-
-    await QueryInitJsinfoDbInstance()
-    await QueryInitRelaysReadDbInstance()
 
     try {
         try {
@@ -92,7 +90,7 @@ async function setupMemoryDebug() {
 
         const snapshot = generateHeapSnapshot();
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-        writeFileSync(`heap-snapshot-${timestamp}.json`, JSON.stringify(snapshot));
+        writeFileSync(`heap-snapshot-${timestamp}.json`, JSONStringify(snapshot));
         console.log(`\nHeap snapshot saved to heap-snapshot-${timestamp}.json`);
     }
 

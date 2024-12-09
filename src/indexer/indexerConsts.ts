@@ -1,7 +1,7 @@
 // src/indexer/indexerConsts.ts
 
-import { GetEnvVar } from '../utils/utils';
-import { ParseSizeToBytes } from './utils/indexerUtils';
+import { GetEnvVar } from '@jsinfo/utils/env';
+import { ParseSizeToBytes } from '@jsinfo/indexer/utils/indexerUtils';
 import { existsSync, mkdirSync } from 'fs';
 import { homedir } from 'os';
 import { join } from 'path';
@@ -12,7 +12,10 @@ export const JSINFO_INDEXER_LAVA_REST_RPC_URL: string = GetEnvVar("JSINFO_INDEXE
 export const JSINFO_INDEXER_N_WORKERS: number = parseInt(GetEnvVar('JSINFO_INDEXER_N_WORKERS', "2"));
 export const JSINFO_INDEXER_BATCH_SIZE: number = parseInt(GetEnvVar('JSINFO_INDEXER_BATCH_SIZE', "100"));
 export const JSINFO_INDEXER_POLL_MS: number = parseInt(GetEnvVar('JSINFO_INDEXER_POLL_MS', "5000"));
-export const JSINFO_INDEXER_START_BLOCK: number = parseInt(GetEnvVar('JSINFO_INDEXER_START_BLOCK', "340778")); // 340778 has a weird date (9 months ago)
+export const JSINFO_INDEXER_START_BLOCK: number | "latest" =
+    GetEnvVar('JSINFO_INDEXER_START_BLOCK', "latest") === "latest"
+        ? "latest"
+        : parseInt(GetEnvVar('JSINFO_INDEXER_START_BLOCK', "340778"));
 export const JSINFO_INDEXER_GRACEFULL_EXIT_AFTER_X_HOURS: number = parseInt(GetEnvVar('JSINFO_INDEXER_GRACEFULL_EXIT_AFTER_X_HOURS', "2"))
 
 export const JSINFO_INDEXER_CACHE_USE_SAVE: number = parseInt(GetEnvVar('JSINFO_INDEXER_SAVE_CACHE', "0"));

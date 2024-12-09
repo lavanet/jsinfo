@@ -1,18 +1,15 @@
-import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
+import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { Event } from "@cosmjs/stargate"
-import { LavaBlock } from "../types";
+import { LavaBlock } from "../lavaTypes";
 import { EventProcessAttributes } from "../eventUtils";
 
-import { JSONStringify } from '../../utils/utils';
+import { JSONStringify } from '@jsinfo/utils/fmt';
 
 export const ParseEventUnidentified = (
     evt: Event,
     height: number,
     txHash: string | null,
-    lavaBlock: LavaBlock,
-
-
-    blockchainEntitiesStakes: Map<string, JsinfoSchema.InsertProviderStake[]>,
+    lavaBlock: LavaBlock
 ) => {
     const dbEvent: JsinfoSchema.InsertEvent = {
         tx: txHash,

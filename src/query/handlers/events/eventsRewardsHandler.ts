@@ -1,14 +1,14 @@
 // src/query/handlers/eventsRewardsHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { QueryGetJsinfoDbForQueryInstance, QueryCheckJsinfoDbInstance } from '../../queryDb';
-import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
+import { queryJsinfo } from '@jsinfo/utils/db';
+import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { asc, desc, eq, sql } from "drizzle-orm";
-import { Pagination, ParsePaginationFromString } from '../../utils/queryPagination';
-import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '../../queryConsts';
-import { CSVEscape } from '../../utils/queryUtils';
-import { RequestHandlerBase } from '../../classes/RequestHandlerBase';
-import { MonikerCache } from '../../classes/QueryProviderMonikerCache';
+import { Pagination, ParsePaginationFromString } from '@jsinfo/query/utils/queryPagination';
+import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION } from '@jsinfo/query/queryConsts';
+import { CSVEscape } from '@jsinfo/utils/fmt';
+import { RequestHandlerBase } from '@jsinfo/query/classes/RequestHandlerBase';
+import { ProviderMonikerService } from '@jsinfo/redis/resources/global/ProviderMonikerSpecResource';
 
 export interface EventsRewardsResponse {
     id: number | null;
@@ -85,33 +85,33 @@ class EventsRewardsData extends RequestHandlerBase<EventsRewardsResponse> {
     }
 
     protected async fetchAllRecords(): Promise<EventsRewardsResponse[]> {
-        await QueryCheckJsinfoDbInstance();
+        const paymentsRes = await queryJsinfo(
+            async (db) => await db.select()
+                .from(JsinfoSchema.relayPayments)
+                .orderBy(desc(JsinfoSchema.relayPayments.id))
+                .offset(0)
+                .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION),
+            'EventsRewardsData_fetchAllRecords'
+        );
 
-        const paymentsRes = await QueryGetJsinfoDbForQueryInstance()
-            .select()
-            .from(JsinfoSchema.relayPayments)
-            .orderBy(desc(JsinfoSchema.relayPayments.id))
-            .offset(0)
-            .limit(JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION);
-
-        const flattenedRes = paymentsRes.map(data => ({
+        const flattenedRes = await Promise.all(paymentsRes.map(async data => ({
             ...data,
             pay: data.pay?.toString() || null,
-            moniker: MonikerCache.GetMonikerForProvider(data.provider),
-            monikerfull: MonikerCache.GetMonikerFullDescription(data.provider),
-        }));
+            moniker: await ProviderMonikerService.GetMonikerForProvider(data.provider),
+            monikerfull: await ProviderMonikerService.GetMonikerFullDescription(data.provider),
+        })));
 
         return flattenedRes;
     }
 
     protected async fetchRecordCountFromDb(): Promise<number> {
-        await QueryCheckJsinfoDbInstance();
-
-        const countResult = await QueryGetJsinfoDbForQueryInstance()
-            .select({
-                count: sql<number>`COUNT(*)`
+        const countResult = await queryJsinfo<{ count: number }[]>(
+            async (db) => await db.select({
+                count: sql<number>`COUNT(*)::int`
             })
-            .from(JsinfoSchema.relayPayments)
+                .from(JsinfoSchema.relayPayments),
+            'EventsRewardsData_fetchRecordCountFromDb'
+        );
 
         return Math.min(countResult[0].count || 0, JSINFO_QUERY_TOTAL_ITEM_LIMIT_FOR_PAGINATION - 1);
     }
@@ -158,16 +158,11 @@ class EventsRewardsData extends RequestHandlerBase<EventsRewardsResponse> {
             throw new Error(`Invalid sort key: ${trimmedSortKey}`);
         }
 
-        await QueryCheckJsinfoDbInstance()
-
         const sortColumn = keyToColumnMap[finalPagination.sortKey];
-        const orderFunction = finalPagination.direction === 'ascending' ? asc : desc;
 
-        const offset = (finalPagination.page - 1) * finalPagination.count;
-
-        if (sortColumn == keyToColumnMap.moniker) {
-            const paymentsRes = await QueryGetJsinfoDbForQueryInstance()
-                .select({
+        const paymentsRes = await queryJsinfo(
+            async (db) => {
+                return await db.select({
                     id: JsinfoSchema.relayPayments.id,
                     provider: JsinfoSchema.relayPayments.provider,
                     relays: JsinfoSchema.relayPayments.relays,
@@ -184,46 +179,32 @@ class EventsRewardsData extends RequestHandlerBase<EventsRewardsResponse> {
                     blockId: JsinfoSchema.relayPayments.blockId,
                     consumer: JsinfoSchema.relayPayments.consumer,
                     tx: JsinfoSchema.relayPayments.tx,
-                    moniker: sql`MAX(${JsinfoSchema.providerSpecMoniker.moniker})`
+                    moniker: sql<string>`MAX(${JsinfoSchema.providerSpecMoniker.moniker})`
                 })
-                .from(JsinfoSchema.relayPayments)
-                .leftJoin(
-                    JsinfoSchema.providerSpecMoniker,
-                    eq(JsinfoSchema.relayPayments.provider, JsinfoSchema.providerSpecMoniker.provider)
-                )
-                .groupBy(JsinfoSchema.relayPayments.id)
-                .orderBy(orderFunction(sortColumn))
-                .offset(offset)
-                .limit(finalPagination.count);
+                    .from(JsinfoSchema.relayPayments)
+                    .leftJoin(
+                        JsinfoSchema.providerSpecMoniker,
+                        eq(JsinfoSchema.relayPayments.provider, JsinfoSchema.providerSpecMoniker.provider)
+                    )
+                    .groupBy(JsinfoSchema.relayPayments.id)
+                    .orderBy(finalPagination.direction === 'ascending' ? asc(sortColumn) : desc(sortColumn))
+                    .offset((finalPagination.page - 1) * finalPagination.count)
+                    .limit(finalPagination.count);
+            },
+            `EventsRewardsData_fetchPaginatedRecords_withMoniker_${finalPagination.sortKey}_${finalPagination.direction}_${finalPagination.page}_${finalPagination.count}`
+        );
 
-            const flattenedRewards = paymentsRes.map(data => ({
-                ...data,
-                pay: data.pay?.toString() || null,
-                moniker: MonikerCache.GetMonikerForProvider(data.provider),
-                monikerfull: MonikerCache.GetMonikerFullDescription(data.provider),
-            }));
-
-            return flattenedRewards;
-        }
-
-        const paymentsRes = await QueryGetJsinfoDbForQueryInstance()
-            .select()
-            .from(JsinfoSchema.relayPayments)
-            .orderBy(orderFunction(sortColumn))
-            .offset(offset)
-            .limit(finalPagination.count);
-
-        const flattenedRewards = paymentsRes.map(data => ({
+        const flattenedRewards = await Promise.all(paymentsRes.map(async data => ({
             ...data,
             pay: data.pay?.toString() || null,
-            moniker: MonikerCache.GetMonikerForProvider(data.provider),
-            monikerfull: MonikerCache.GetMonikerFullDescription(data.provider),
-        }));
+            moniker: await ProviderMonikerService.GetMonikerForProvider(data.provider),
+            monikerfull: await ProviderMonikerService.GetMonikerFullDescription(data.provider),
+        })));
 
         return flattenedRewards;
     }
 
-    protected async convertRecordsToCsv(data: EventsRewardsResponse[]): Promise<string> {
+    public async ConvertRecordsToCsv(data: EventsRewardsResponse[]): Promise<string> {
         const columns = [
             { key: "relays", name: "Relays" },
             { key: "cu", name: "CU" },

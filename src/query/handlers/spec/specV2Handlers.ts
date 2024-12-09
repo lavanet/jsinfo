@@ -1,12 +1,14 @@
 // src/query/handlers/spec/specV2Handlers.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { GetLatestBlock, QueryGetJsinfoDbForQueryInstance, QueryCheckJsinfoDbInstance } from '../../queryDb';
-import * as JsinfoSchema from '../../../schemas/jsinfoSchema/jsinfoSchema';
-import * as JsinfoProviderAgrSchema from '../../../schemas/jsinfoSchema/providerRelayPaymentsAgregation';
+import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
+import * as JsinfoProviderAgrSchema from '@jsinfo/schemas/jsinfoSchema/providerRelayPaymentsAgregation';
 import { sql, eq, count, and, gte, inArray } from "drizzle-orm";
-import { GetAndValidateSpecIdFromRequest } from '../../utils/queryRequestArgParser';
-import { RedisCache } from '../../classes/RedisCache';
+import { GetAndValidateSpecIdFromRequest } from '@jsinfo/query/utils/queryRequestArgParser';
+import { RedisCache } from '@jsinfo/redis/classes/RedisCache';
+import { queryJsinfo } from '@jsinfo/utils/db';
+import { SpecProviderHealthResource } from '@jsinfo/redis/resources/spec/SpecProviderHealthResource';
+import { WriteErrorToFastifyReplyNoLog } from '@jsinfo/query/utils/queryServerUtils';
 
 // Spec CU, Relay, and Rewards Handler
 export const SpecCuRelayRewardsHandlerOpts: RouteShorthandOptions = {
@@ -30,14 +32,16 @@ export async function SpecCuRelayRewardsHandler(request: FastifyRequest, reply: 
         return reply;
     }
 
-    const cuRelayAndRewardsTotalRes = await QueryGetJsinfoDbForQueryInstance()
-        .select({
+    const cuRelayAndRewardsTotalRes = await queryJsinfo<{ cuSum: number; relaySum: number; rewardSum: number }[]>(
+        async (db) => await db.select({
             cuSum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggAllTimeRelayPayments.cuSum})`,
             relaySum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggAllTimeRelayPayments.relaySum})`,
             rewardSum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggAllTimeRelayPayments.rewardSum})`,
         })
-        .from(JsinfoProviderAgrSchema.aggAllTimeRelayPayments)
-        .where(eq(JsinfoProviderAgrSchema.aggAllTimeRelayPayments.specId, spec));
+            .from(JsinfoProviderAgrSchema.aggAllTimeRelayPayments)
+            .where(eq(JsinfoProviderAgrSchema.aggAllTimeRelayPayments.specId, spec)),
+        'SpecCuRelayRewards_getTotals'
+    );
 
     return cuRelayAndRewardsTotalRes[0] || { cuSum: 0, relaySum: 0, rewardSum: 0 };
 }
@@ -62,10 +66,12 @@ export async function SpecProviderCountHandler(request: FastifyRequest, reply: F
         return reply;
     }
 
-    const providerCount = await QueryGetJsinfoDbForQueryInstance()
-        .select({ count: count() })
-        .from(JsinfoSchema.providerStakes)
-        .where(eq(JsinfoSchema.providerStakes.specId, spec));
+    const providerCount = await queryJsinfo<{ count: number }[]>(
+        async (db) => await db.select({ count: count() })
+            .from(JsinfoSchema.providerStakes)
+            .where(eq(JsinfoSchema.providerStakes.specId, spec)),
+        'SpecProviderCount_getCount'
+    );
 
     return { providerCount: providerCount[0].count };
 }
@@ -96,52 +102,16 @@ export async function SpecEndpointHealthHandler(request: FastifyRequest, reply: 
         return reply;
     }
 
-    await QueryCheckJsinfoDbInstance();
+    const sphr = new SpecProviderHealthResource();
+    const healthRecords = await sphr.fetch({ spec });
 
-    const twoDaysAgo = new Date();
-    twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
-
-    const latestIds = await QueryGetJsinfoDbForQueryInstance()
-        .select({
-            provider: JsinfoSchema.providerHealth.provider,
-            spec: JsinfoSchema.providerHealth.spec,
-            interface: JsinfoSchema.providerHealth.interface,
-            maxId: sql<number>`MAX(${JsinfoSchema.providerHealth.id})`.as('max_id'),
-        })
-        .from(JsinfoSchema.providerHealth)
-        .where(
-            and(
-                eq(JsinfoSchema.providerHealth.spec, spec),
-                gte(JsinfoSchema.providerHealth.timestamp, twoDaysAgo)
-            )
-        )
-        .groupBy(
-            JsinfoSchema.providerHealth.provider,
-            JsinfoSchema.providerHealth.spec,
-            JsinfoSchema.providerHealth.interface
-        );
-
-    if (latestIds.length === 0) {
-        return {
-            endpointHealth: {
-                healthy: 0,
-                unhealthy: 0
-            }
-        };
+    if (!healthRecords || healthRecords.length === 0) {
+        WriteErrorToFastifyReplyNoLog(reply, 'No recent health records for spec');
+        return null;
     }
 
-    const maxIds = latestIds.map(li => li.maxId);
-
-    const healthStatus = await QueryGetJsinfoDbForQueryInstance()
-        .select({
-            id: JsinfoSchema.providerHealth.id,
-            status: JsinfoSchema.providerHealth.status,
-        })
-        .from(JsinfoSchema.providerHealth)
-        .where(inArray(JsinfoSchema.providerHealth.id, maxIds));
-
-    const healthyCount = healthStatus.filter(hs => hs.status === 'healthy').length;
-    const unhealthyCount = healthStatus.length - healthyCount;
+    const healthyCount = healthRecords.filter(hs => hs.status === 'healthy').length;
+    const unhealthyCount = healthRecords.length - healthyCount;
 
     return {
         endpointHealth: {
@@ -151,7 +121,6 @@ export async function SpecEndpointHealthHandler(request: FastifyRequest, reply: 
     };
 }
 
-// Spec Cache Hit Rate Handler
 export const SpecCacheHitRateHandlerOpts: RouteShorthandOptions = {
     schema: {
         response: {
@@ -198,12 +167,14 @@ export async function SpecTrackedInfoHandler(request: FastifyRequest, reply: Fas
         return reply;
     }
 
-    const result = await QueryGetJsinfoDbForQueryInstance()
-        .select({
+    const result = await queryJsinfo<{ cuSum: string }[]>(
+        async (db) => await db.select({
             cuSum: sql<string>`SUM(${JsinfoSchema.specTrackedInfo.iprpc_cu}::numeric)`
         })
-        .from(JsinfoSchema.specTrackedInfo)
-        .where(eq(JsinfoSchema.specTrackedInfo.chain_id, spec));
+            .from(JsinfoSchema.specTrackedInfo)
+            .where(eq(JsinfoSchema.specTrackedInfo.chain_id, spec)),
+        'SpecTrackedInfo_getCuSum'
+    );
 
     return { cuSum: result[0]?.cuSum || '0' };
 }

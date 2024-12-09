@@ -1,10 +1,12 @@
-import { IsMeaningfulText, logger } from "../../utils/utils";
-import { ReplaceForCompare } from "./DataProcessingUtils";
-import { QueryLavaRPC } from "../utils/restRpc";
-import * as JsinfoSchema from '../../schemas/jsinfoSchema/jsinfoSchema';
+import { HashJson, IsMeaningfulText, JSONStringify } from "@jsinfo/utils/fmt";
+import { logger } from "@jsinfo/utils/logger";
+import { StringifyJsonForCompare } from "@jsinfo/utils/fmt";
+import { QueryLavaRPC } from "@jsinfo/restRpc/lavaRpc";
+import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { eq, desc } from "drizzle-orm";
-import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-import { MemoryCache } from "../classes/MemoryCache";
+import { queryJsinfo } from '@jsinfo/utils/db';
+import { RedisCache } from '@jsinfo/redis/classes/RedisCache';
+
 interface Credit {
     denom: string;
     amount: string;
@@ -33,12 +35,12 @@ export async function GetSubscriptionList(): Promise<SubscriptionListResponse> {
     return QueryLavaRPC<SubscriptionListResponse>("/lavanet/lava/subscription/list");
 }
 
-export async function ProcessSubscriptionList(db: PostgresJsDatabase): Promise<void> {
+export async function ProcessSubscriptionList(): Promise<void> {
     try {
         const subscriptionList = await GetSubscriptionList();
 
         for (const sub of subscriptionList.subs_info) {
-            await ProcessSubscription(db, sub);
+            await ProcessSubscription(sub);
         }
     } catch (error) {
         logger.error('Error processing subscription list', { error });
@@ -46,7 +48,7 @@ export async function ProcessSubscriptionList(db: PostgresJsDatabase): Promise<v
     }
 }
 
-async function ProcessSubscription(db: PostgresJsDatabase, sub: SubInfo): Promise<void> {
+async function ProcessSubscription(sub: SubInfo): Promise<void> {
     const { consumer, plan } = sub;
 
     if (!IsMeaningfulText(consumer) || !IsMeaningfulText(plan)) {
@@ -54,37 +56,39 @@ async function ProcessSubscription(db: PostgresJsDatabase, sub: SubInfo): Promis
     }
 
     const cacheKey = `subscription-${consumer}-${plan}`;
-    const cachedValue = await MemoryCache.getDict(cacheKey);
+    const cachedValue = await RedisCache.getDict(cacheKey);
     if (cachedValue && cachedValue.processed) {
-        // Skip processing duplicate subscription
         return;
     }
 
-    const dataString = JSON.stringify(sub);
-    // logger.info(`Processing subscription: ${dataString.slice(0, 1000)}`);
+    const dataString = JSONStringify(sub);
 
-    // Query for existing subscription data
-    const existingData = await db.select({ fulltext: JsinfoSchema.consumerSubscriptionList.fulltext })
-        .from(JsinfoSchema.consumerSubscriptionList)
-        .where(eq(JsinfoSchema.consumerSubscriptionList.consumer, consumer))
-        .orderBy(desc(JsinfoSchema.consumerSubscriptionList.createdAt))
-        .limit(1);
+    const existingData = await queryJsinfo(
+        async (db) => db.select({ fulltext: JsinfoSchema.consumerSubscriptionList.fulltext })
+            .from(JsinfoSchema.consumerSubscriptionList)
+            .where(eq(JsinfoSchema.consumerSubscriptionList.consumer, consumer))
+            .orderBy(desc(JsinfoSchema.consumerSubscriptionList.createdAt))
+            .limit(1),
+        'ProcessSubscription_select'
+    );
 
     const existingFulltext = existingData[0]?.fulltext || '';
 
-    if (existingFulltext === '' || ReplaceForCompare(existingFulltext) !== ReplaceForCompare(dataString)) {
+    if (existingFulltext === '' || StringifyJsonForCompare(existingFulltext) !== StringifyJsonForCompare(dataString)) {
         const newSubscription: JsinfoSchema.InsertConsumerSubscriptionList = {
             consumer,
             plan,
             fulltext: dataString,
         };
 
-        await db.insert(JsinfoSchema.consumerSubscriptionList).values(newSubscription);
+        await queryJsinfo(
+            async (db) => db.insert(JsinfoSchema.consumerSubscriptionList).values(newSubscription),
+            `ProcessSubscription_insert:${HashJson(newSubscription)}`
+        );
         logger.info('New subscription record inserted');
     }
 
-    // Update the cache after processing
-    await MemoryCache.setDict(cacheKey, { processed: true }, 3600);
+    await RedisCache.setDict(cacheKey, { processed: true }, 3600);
 }
 
 

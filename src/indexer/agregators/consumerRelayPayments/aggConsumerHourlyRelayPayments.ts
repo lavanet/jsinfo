@@ -1,43 +1,50 @@
 // src/indexer/agregators/aggConsumerHourlyRelayPayments.ts
 
-import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import { queryJsinfo } from '@jsinfo/utils/db';
 import { isNotNull, sql, and, ne } from "drizzle-orm";
-import * as JsinfoSchema from "../../../schemas/jsinfoSchema/jsinfoSchema";
-import * as JsinfoConsumerAgrSchema from '../../../schemas/jsinfoSchema/consumerRelayPaymentsAgregation';
-import { DoInChunks, logger } from "../../../utils/utils";
+import * as JsinfoSchema from "@jsinfo/schemas/jsinfoSchema/jsinfoSchema";
+import * as JsinfoConsumerAgrSchema from '@jsinfo/schemas/jsinfoSchema/consumerRelayPaymentsAgregation';
+import { DoInChunks } from '@jsinfo/utils/processing';
+import { logger } from '@jsinfo/utils/logger';
 import { PgColumn } from 'drizzle-orm/pg-core';
+import { HashJson, JSONStringifySpaced } from '@jsinfo/utils/fmt';
 
-export async function getConsumerAggHourlyTimeSpan(db: PostgresJsDatabase): Promise<{ startTime: Date | null, endTime: Date | null }> {
-    // Last relay payment time
-    const lastRelayPayment = await db.select({
-        datehour: sql<string>`DATE_TRUNC('hour', MAX(${JsinfoSchema.relayPayments.datetime}))`,
-    }).from(JsinfoSchema.relayPayments)
-        .then(rows => rows[0]?.datehour);
+export async function getConsumerAggHourlyTimeSpan(): Promise<{ startTime: Date | null, endTime: Date | null }> {
+    const lastRelayPayment = await queryJsinfo(
+        async (db) => {
+            const result = await db.select({
+                datehour: sql<string>`DATE_TRUNC('hour', MAX(${JsinfoSchema.relayPayments.datetime}))`,
+            }).from(JsinfoSchema.relayPayments);
+            return result[0];
+        },
+        'getConsumerAggHourlyTimeSpan_lastPayment'
+    );
 
     if (!lastRelayPayment) {
         logger.error("getConsumerAggHourlyTimeSpan: No relay payments found");
         return { startTime: null, endTime: null };
     }
-    const endTime = new Date(lastRelayPayment);
+    const endTime = new Date(lastRelayPayment.datehour);
 
-    // Last aggregated hour
-    const lastAggHour = await db.select({
-        datehour: sql<string>`MAX(${JsinfoConsumerAgrSchema.aggConsumerHourlyRelayPayments.datehour})`,
-    }).from(JsinfoConsumerAgrSchema.aggConsumerHourlyRelayPayments)
-        .then(rows => rows[0]?.datehour);
-    let startTime: Date;
-    if (lastAggHour) {
-        startTime = new Date(lastAggHour);
-    } else {
-        startTime = new Date("2000-01-01T00:00:00Z");
-    }
+    const lastAggHour = await queryJsinfo(
+        async (db) => {
+            const result = await db.select({
+                datehour: sql<string>`MAX(${JsinfoConsumerAgrSchema.aggConsumerHourlyRelayPayments.datehour})`,
+            }).from(JsinfoConsumerAgrSchema.aggConsumerHourlyRelayPayments);
+            return result[0];
+        },
+        'getConsumerAggHourlyTimeSpan_lastAgg'
+    );
 
-    logger.info(`getConsumerAggHourlyTimeSpan: startTime ${startTime}, endTime ${endTime}`);
+    let startTime: Date = lastAggHour
+        ? new Date(lastAggHour.datehour)
+        : new Date("2000-01-01T00:00:00Z");
+
     return { startTime, endTime };
 }
 
-export async function aggConsumerHourlyRelayPayments(db: PostgresJsDatabase) {
-    let { startTime, endTime } = await getConsumerAggHourlyTimeSpan(db);
+export async function aggConsumerHourlyRelayPayments() {
+    let { startTime, endTime } = await getConsumerAggHourlyTimeSpan();
     logger.info(`aggConsumerHourlyRelayPayments: startTime ${startTime}, endTime ${endTime}`);
     if (startTime === null || endTime === null) {
         logger.error(`aggConsumerHourlyRelayPayments: startTime === null or endTime === null. Received startTime: ${startTime}, endTime: ${endTime}`);
@@ -50,35 +57,42 @@ export async function aggConsumerHourlyRelayPayments(db: PostgresJsDatabase) {
 
     const qosMetricWeightedAvg = (metric: PgColumn) => sql<number>`SUM(${metric} * ${JsinfoSchema.relayPayments.relays}) / SUM(CASE WHEN ${metric} IS NOT NULL THEN ${JsinfoSchema.relayPayments.relays} ELSE 0 END)`;
 
-    const aggResults = await db.select({
-        consumer: sql<string>`${JsinfoSchema.relayPayments.consumer}`,
-        datehour: sql<string>`DATE_TRUNC('day', ${JsinfoSchema.relayPayments.datetime}) as datehour`,
-        specId: sql<string>`${JsinfoSchema.relayPayments.specId}`,
-        cuSum: sql<number>`SUM(${JsinfoSchema.relayPayments.cu})`,
-        relaySum: sql<number>`SUM(${JsinfoSchema.relayPayments.relays})`,
-        rewardSum: sql<number>`SUM(${JsinfoSchema.relayPayments.pay})`,
-        qosSyncAvg: qosMetricWeightedAvg(JsinfoSchema.relayPayments.qosSync),
-        qosAvailabilityAvg: qosMetricWeightedAvg(JsinfoSchema.relayPayments.qosAvailability),
-        qosLatencyAvg: qosMetricWeightedAvg(JsinfoSchema.relayPayments.qosLatency),
-        qosSyncExcAvg: qosMetricWeightedAvg(JsinfoSchema.relayPayments.qosSyncExc),
-        qosAvailabilityExcAvg: qosMetricWeightedAvg(JsinfoSchema.relayPayments.qosAvailabilityExc),
-        qosLatencyExcAvg: qosMetricWeightedAvg(JsinfoSchema.relayPayments.qosLatencyExc),
-    }).from(JsinfoSchema.relayPayments)
-        .where(
-            and(
-                sql`${JsinfoSchema.relayPayments.datetime} >= ${startTime}`,
-                isNotNull(JsinfoSchema.relayPayments.consumer),
-                ne(JsinfoSchema.relayPayments.relays, 0)
-            )
-        )
-        .groupBy(
-            sql`datehour`,
-            JsinfoSchema.relayPayments.consumer,
-            JsinfoSchema.relayPayments.specId
-        )
-        .orderBy(
-            sql`datehour`,
-        )
+    const aggResults = await queryJsinfo(
+        async (db) => {
+            const result = await db.select({
+                consumer: sql<string>`${JsinfoSchema.relayPayments.consumer}`,
+                datehour: sql<string>`DATE_TRUNC('day', ${JsinfoSchema.relayPayments.datetime}) as datehour`,
+                specId: sql<string>`${JsinfoSchema.relayPayments.specId}`,
+                cuSum: sql<number>`SUM(${JsinfoSchema.relayPayments.cu})`,
+                relaySum: sql<number>`SUM(${JsinfoSchema.relayPayments.relays})`,
+                rewardSum: sql<number>`SUM(${JsinfoSchema.relayPayments.pay})`,
+                qosSyncAvg: qosMetricWeightedAvg(JsinfoSchema.relayPayments.qosSync),
+                qosAvailabilityAvg: qosMetricWeightedAvg(JsinfoSchema.relayPayments.qosAvailability),
+                qosLatencyAvg: qosMetricWeightedAvg(JsinfoSchema.relayPayments.qosLatency),
+                qosSyncExcAvg: qosMetricWeightedAvg(JsinfoSchema.relayPayments.qosSyncExc),
+                qosAvailabilityExcAvg: qosMetricWeightedAvg(JsinfoSchema.relayPayments.qosAvailabilityExc),
+                qosLatencyExcAvg: qosMetricWeightedAvg(JsinfoSchema.relayPayments.qosLatencyExc),
+            }).from(JsinfoSchema.relayPayments)
+                .where(
+                    and(
+                        sql`${JsinfoSchema.relayPayments.datetime} >= ${startTime}`,
+                        isNotNull(JsinfoSchema.relayPayments.consumer),
+                        ne(JsinfoSchema.relayPayments.relays, 0)
+                    )
+                )
+                .groupBy(
+                    sql`datehour`,
+                    JsinfoSchema.relayPayments.consumer,
+                    JsinfoSchema.relayPayments.specId
+                )
+                .orderBy(
+                    sql`datehour`,
+                )
+            return result;
+        },
+        `aggConsumerHourlyRelayPayments_${startTime}_${endTime}`
+    );
+
     if (aggResults.length === 0) {
         logger.error("aggConsumerHourlyRelayPayments: no agg results found")
         return;
@@ -112,7 +126,7 @@ export async function aggConsumerHourlyRelayPayments(db: PostgresJsDatabase) {
         if (uniqueCombinations.has(key)) {
             // If the combination is already in the map, add it to duplicates
             const firstDuplicate = uniqueCombinations.get(key);
-            duplicates.push(`Duplicate: ${JSON.stringify(result, null, 2)} | First occurrence: ${JSON.stringify(firstDuplicate)}\n`);
+            duplicates.push(`Duplicate: ${JSONStringifySpaced(result)} | First occurrence: ${JSONStringifySpaced(firstDuplicate)}\n`);
         } else {
             // Otherwise, add the combination to the map
             uniqueCombinations.set(key, result);
@@ -122,8 +136,8 @@ export async function aggConsumerHourlyRelayPayments(db: PostgresJsDatabase) {
     // Check if there are any duplicates
     if (duplicates.length > 0) {
         // Log or throw an exception with the details of the duplicates
-        logger.error(`Duplicate entries found for consumer, datehour, specId combinations: ${JSON.stringify(duplicates, null, 2)}`);
-        throw new Error(`Duplicate entries found for consumer, datehour, specId combinations: ${JSON.stringify(duplicates, null, 2)}`);
+        logger.error(`Duplicate entries found for consumer, datehour, specId combinations: ${JSONStringifySpaced(duplicates)}`);
+        throw new Error(`Duplicate entries found for consumer, datehour, specId combinations: ${JSONStringifySpaced(duplicates)}`);
     }
 
     //
@@ -135,40 +149,43 @@ export async function aggConsumerHourlyRelayPayments(db: PostgresJsDatabase) {
     const remainingData = aggResults.filter(r =>
         (new Date(r.datehour)).getTime() > startTime!.getTime()
     );
-    await db.transaction(async (tx) => {
-        for (const row of latestHourData) {
-            await tx.insert(JsinfoConsumerAgrSchema.aggConsumerHourlyRelayPayments)
-                .values(row as any)
-                .onConflictDoUpdate(
-                    {
-                        target: [
-                            JsinfoConsumerAgrSchema.aggConsumerHourlyRelayPayments.datehour,
-                            JsinfoConsumerAgrSchema.aggConsumerHourlyRelayPayments.consumer,
-                            JsinfoConsumerAgrSchema.aggConsumerHourlyRelayPayments.specId,
-                        ],
-                        set: {
-                            cuSum: row.cuSum,
-                            relaySum: row.relaySum,
-                            rewardSum: row.rewardSum,
-                            qosSyncAvg: row.qosSyncAvg,
-                            qosAvailabilityAvg: row.qosAvailabilityAvg,
-                            qosLatencyAvg: row.qosLatencyAvg,
-                            qosSyncExcAvg: row.qosSyncExcAvg,
-                            qosAvailabilityExcAvg: row.qosAvailabilityExcAvg,
-                            qosLatencyExcAvg: row.qosLatencyExcAvg
-                        } as any
-                    }
-                )
-        }
+    await queryJsinfo(
+        async (db) => db.transaction(async (tx) => {
+            for (const row of latestHourData) {
+                await tx.insert(JsinfoConsumerAgrSchema.aggConsumerHourlyRelayPayments)
+                    .values(row as any)
+                    .onConflictDoUpdate(
+                        {
+                            target: [
+                                JsinfoConsumerAgrSchema.aggConsumerHourlyRelayPayments.datehour,
+                                JsinfoConsumerAgrSchema.aggConsumerHourlyRelayPayments.consumer,
+                                JsinfoConsumerAgrSchema.aggConsumerHourlyRelayPayments.specId,
+                            ],
+                            set: {
+                                cuSum: row.cuSum,
+                                relaySum: row.relaySum,
+                                rewardSum: row.rewardSum,
+                                qosSyncAvg: row.qosSyncAvg,
+                                qosAvailabilityAvg: row.qosAvailabilityAvg,
+                                qosLatencyAvg: row.qosLatencyAvg,
+                                qosSyncExcAvg: row.qosSyncExcAvg,
+                                qosAvailabilityExcAvg: row.qosAvailabilityExcAvg,
+                                qosLatencyExcAvg: row.qosLatencyExcAvg
+                            } as any
+                        }
+                    )
+            }
 
-        //
-        // Insert new rows
-        if (remainingData.length === 0) {
-            return;
-        }
-        await DoInChunks(250, remainingData, async (arr: any) => {
-            await tx.insert(JsinfoConsumerAgrSchema.aggConsumerHourlyRelayPayments)
-                .values(arr)
-        })
-    })
+            if (remainingData.length === 0) {
+                return { success: true };
+            }
+
+            await DoInChunks(250, remainingData, async (arr: any) => {
+                await tx.insert(JsinfoConsumerAgrSchema.aggConsumerHourlyRelayPayments)
+                    .values(arr)
+            })
+            return { success: true };
+        }),
+        `aggConsumerHourlyRelayPayments_update:${HashJson(aggResults)}`
+    );
 }

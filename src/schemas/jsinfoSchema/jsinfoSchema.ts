@@ -372,3 +372,17 @@ export const aprPerProvider = pgTable('apr_per_provider', {
 
 export type AprPerProvider = typeof aprPerProvider.$inferSelect;
 export type InsertAprPerProvider = typeof aprPerProvider.$inferInsert;
+
+export const aprFullInfo = pgTable('apr_full_info', {
+  address: text('address').notNull(),
+  value: text('value').notNull(),
+  timestamp: timestamp('timestamp').notNull(),
+  type: text('type').notNull(),
+}, (table) => {
+  return {
+    appidx: primaryKey({ columns: [table.address, table.type] }),
+  };
+});
+
+export type AprFullInfo = typeof aprFullInfo.$inferSelect;
+export type InsertAprFullInfo = typeof aprFullInfo.$inferInsert;

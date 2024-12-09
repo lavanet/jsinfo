@@ -277,6 +277,11 @@ class APRMonitorClass {
       const totalAPRs = await this.calcAPRsFromTotalRewards(totalRewards, caller);
       if (totalAPRs.size === 0) return 0;
 
+      // the for provider flow for the all_providers_apr
+      if (!caller.includes('for')) {
+        this.SaveFullAprValues(totalAPRs, caller);
+      }
+
       const result = CalculatePercentile(Array.from(totalAPRs.values()), PERCENTILE, caller);
 
       const totalTime = (Date.now() - startTime) / 1000;
@@ -288,6 +293,44 @@ class APRMonitorClass {
       return result;
     } catch (error) {
       logger.error(`AprMon: ${caller} - Error in processing APR for entities:`, error);
+      throw error;
+    }
+  }
+
+  private async SaveFullAprValues(aprValues: Map<string, number>, caller: string) {
+    if (!aprValues.size) {
+      logger.info(`SaveRawAprValues: No raw APR values to save from ${caller}`);
+      return;
+    }
+
+    try {
+      const batchData = Array.from(aprValues.entries()).map(([provider, value]) => ({
+        address: provider,
+        value: value.toString(),
+        timestamp: new Date(),
+        type: caller
+      }));
+
+      await queryJsinfo(async (db) => {
+        const result = await db.insert(JsinfoSchema.aprFullInfo)
+          .values(batchData)
+          .onConflictDoUpdate({
+            target: [JsinfoSchema.aprFullInfo.address, JsinfoSchema.aprFullInfo.type],
+            set: {
+              value: sql`EXCLUDED.value`,
+              timestamp: sql`EXCLUDED.timestamp`
+            }
+          });
+        return result;
+      }, `APRMonitor::SaveRawAprValues:${caller}`);
+
+    } catch (error) {
+      logger.error('SaveRawAprValues: Error saving raw APR values:', {
+        error: error instanceof Error ? error.message : error,
+        caller,
+        valuesCount: aprValues.size,
+        timestamp: new Date().toISOString()
+      });
       throw error;
     }
   }

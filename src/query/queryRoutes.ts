@@ -12,8 +12,10 @@ import { HealthStatusRawHandler, HealthStatusRawHandlerOpts } from './handlers/h
 // -- Server supply ajax --
 import { SupplyRawHandlerOpts, TotalSupplyRawHandler, CirculatingSupplyRawHandler } from './handlers/ajax/supplyHandler';
 
-// -- Server supply ajax --
+// -- Server apr ajax --
 import { APRRawHandlerOpts, APRRawHandler } from './handlers/ajax/aprHandler';
+import { APRFullHandler, APRFullHandlerOpts } from './handlers/ajax/aprFullHandler';
+import { AllProviderAPRRawHandlerOpts, AllProviderAPRRawHandler } from './handlers/ajax/allProviderAprHandler';
 
 // -- list all providers and monikers endpoint ---
 import { ListProvidersRawHandlerOpts, ListProvidersRawHandler } from './handlers/ajax/listProvidersHandler';
@@ -94,7 +96,6 @@ import {
 // -- Internal data endpoints --
 import { ConsumerV2CahcedHandler, ConsumerV2CahcedHandlerOpts } from './handlers/consumer/consumerV2Handler';
 import { ChainWalletApiHandlerOpts, LavaChainRestakersHandler, LavaChainStakersHandler } from './handlers/ajax/chainWalletApiHandlers';
-import { AllProviderAPRRawHandlerOpts, AllProviderAPRRawHandler } from './handlers/ajax/allProviderAprHandler';
 import { TotalValueLockedHandler, TotalValueLockedHandlerOpts } from './handlers/ajax/totalLockedValueHandler';
 import { ValidatorsPaginatedHandler, ValidatorsPaginatedHandlerOpts } from './handlers/ajax/validatorsHandler';
 
@@ -116,6 +117,7 @@ GetServerInstance().get('/lava_chain_restakers', ChainWalletApiHandlerOpts, Lava
 
 // -- Server APR ajax --
 GetServerInstance().get('/apr', APRRawHandlerOpts, APRRawHandler);
+GetServerInstance().get('/apr_full', APRFullHandlerOpts, APRFullHandler);
 GetServerInstance().get('/all_providers_apr', AllProviderAPRRawHandlerOpts, AllProviderAPRRawHandler);
 GetServerInstance().get('/total_value_locked', TotalValueLockedHandlerOpts, TotalValueLockedHandler);
 

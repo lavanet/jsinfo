@@ -173,6 +173,25 @@ The response is a JSON array of objects, where each object contains the followin
 ]
 ```
 
+#### `/apr_full`
+
+Returns detailed APR data for all validators and providers, organized by type.
+
+### Response Format
+
+```json
+{
+  "Staking APR": {
+    "lava@valoper123...": "0.011864706092812094",
+    "lava@valoper456...": "0.011004189515468221"
+  },
+  "Restaking APR": {
+    "lava@123...": "0.027668187650690124",
+    "lava@456...": "0.22038662837640222"
+  }
+}
+```
+
 # Total Value Locked (TVL) API
 
 ## Overview

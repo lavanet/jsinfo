@@ -23,10 +23,9 @@ export const AllProviderAPRRawHandlerOpts: RouteShorthandOptions = {
 export async function AllProviderAPRRawHandler(request: FastifyRequest, reply: FastifyReply) {
     const resource = new AllProviderAPRResource();
     const data = await resource.fetch();
-
     if (!data) {
         return reply.status(400).send({ error: 'Failed to fetch All Provider APR data' });
     }
-
+    reply.header('Content-Type', 'application/json');
     return JSONStringify(data);
 }

@@ -30,5 +30,6 @@ export async function APRRawHandler(request: FastifyRequest, reply: FastifyReply
         reply.send({ error: 'Failed to fetch APR data' });
         return reply;
     }
+    reply.header('Content-Type', 'application/json');
     return JSONStringify(data);
 }

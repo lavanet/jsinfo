@@ -1,4 +1,6 @@
 import { IsMeaningfulText, JSONStringify, MaskPassword } from "./fmt";
+import { logger } from "./logger";
+import { Sleep } from "./sleep";
 
 export function GetEnvVar(key: string, alt?: string): string {
     const value = process.env[key];
@@ -9,6 +11,62 @@ export function GetEnvVar(key: string, alt?: string): string {
         throw new Error(`${key} environment variable is not set or is an empty string`);
     }
     return value;
+}
+
+
+export function ParsePrioritizedEnvVars(
+    envVars: string[],
+    errorMessage: string,
+    logPrefix: string,
+    maskValues: boolean = true,
+    throwError: boolean = true
+): string[] {
+    const values = new Map<number, string>();  // priority -> value
+
+    for (const envVar of envVars) {
+        try {
+            const value = process.env[envVar];
+            if (!value || value.trim() === '' || !IsMeaningfulText(value)) continue;
+
+            // Check if value starts with number_
+            const match = value.match(/^(\d+)_(.+)/);
+            if (match) {
+                const priority = parseInt(match[1]);
+                if (!Array.from(values.values()).includes(match[2])) {
+                    values.set(priority, match[2]);
+                }
+            } else {
+                // Non-numbered values get high priority numbers
+                if (!Array.from(values.values()).includes(value)) {
+                    values.set(1000 + values.size, value);
+                }
+            }
+        } catch (error) {
+            continue;
+        }
+    }
+
+    if (values.size === 0) {
+        if (throwError) {
+            logger.error(errorMessage);
+            throw new Error(errorMessage);
+        } else {
+            return [];
+        }
+    }
+
+    // Sort by priority and get only the values
+    const sortedValues = Array.from(values.entries())
+        .sort((a, b) => a[0] - b[0])
+        .map(([_, value]) => value);
+
+    // Log the results
+    const displayValues = maskValues
+        ? sortedValues.map(value => MaskPassword(value))
+        : sortedValues;
+    logger.info(`${logPrefix} values loaded:`, displayValues.join(', '));
+
+    return sortedValues;
 }
 
 export function IsIndexerProcess(): boolean {
@@ -28,39 +86,43 @@ export function GetRedisUrls(): { read: string[]; write: string[] } {
         ? "JSINFO_INDEXER_REDDIS_CACHE"
         : "JSINFO_QUERY_REDDIS_CACHE";
 
-    const redisUrls = GetEnvVar(envKey, "-");
-    const readUrls = GetEnvVar(envKey + '_READ', "-");
-    const redisUrls1 = GetEnvVar(envKey + '_1', "-");
-    const readUrls1 = GetEnvVar(envKey + '_READ_1', "-");
+    const writeUrls = ParsePrioritizedEnvVars(
+        [
+            `${envKey}_1`,
+            envKey,
+        ],
+        "Missing Redis write URLs",
+        "redis write",
+        true,
+        true
+    );
 
-    const writeUrls = [...redisUrls.split(','), ...redisUrls1.split(',')]
-        .map(url => url.trim())
-        .filter(url => IsMeaningfulText(url))
-        .sort((a, b) => {
-            const aStartsWithNumber = /^\d+_/.test(a);
-            const bStartsWithNumber = /^\d+_/.test(b);
-            return aStartsWithNumber ? -1 : bStartsWithNumber ? 1 : 0; // Move items starting with numbers to the front
-        })
-        .map(url => url.replace(/^1_/, '')); // Remove prefix '1_'
+    if (writeUrls.length === 0) {
+        logger.error("Missing Redis write, sleeping for 60 seconds and exiting");
+        Sleep(60000);
+        process.exit(1);
+    }
 
-    const readUrlsArray = [...readUrls.split(','), ...readUrls1.split(',')]
-        .map(url => url.trim())
-        .filter(url => IsMeaningfulText(url))
-        .sort((a, b) => {
-            const aStartsWithNumber = /^\d+_/.test(a);
-            const bStartsWithNumber = /^\d+_/.test(b);
-            return aStartsWithNumber ? -1 : bStartsWithNumber ? 1 : 0; // Move items starting with numbers to the front
-        })
-        .map(url => url.replace(/^1_/, '')); // Remove prefix '1_'
+    // Get read URLs
+    const readUrls = ParsePrioritizedEnvVars(
+        [
+            `${envKey}_READ_1`,
+            `${envKey}_READ`,
+        ],
+        "Missing Redis read URLs",
+        "redis read",
+        true,
+        false
+    );
 
     return {
-        read: Array.from(new Set(readUrlsArray)),
-        write: Array.from(new Set(writeUrls))
+        read: readUrls,
+        write: writeUrls
     };
 }
-
 // run MaskPassword on each redisurl item
 const redisUrls = await GetRedisUrls();
 const maskedUrlsWrite = redisUrls.write.map(url => MaskPassword(url));
 const maskedUrlsRead = redisUrls.read.map(url => MaskPassword(url));
 console.log("Masked RedisUrls::", JSONStringify({ write: maskedUrlsWrite, read: maskedUrlsRead }));
+

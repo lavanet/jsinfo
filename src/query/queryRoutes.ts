@@ -120,6 +120,9 @@ GetServerInstance().get('/apr', APRRawHandlerOpts, APRRawHandler);
 GetServerInstance().get('/apr_full', APRFullHandlerOpts, APRFullHandler);
 GetServerInstance().get('/all_providers_apr', AllProviderAPRRawHandlerOpts, AllProviderAPRRawHandler);
 GetServerInstance().get('/total_value_locked', TotalValueLockedHandlerOpts, TotalValueLockedHandler);
+GetServerInstance().get('/total_locked_value', TotalValueLockedHandlerOpts, TotalValueLockedHandler);
+GetServerInstance().get('/tvl', TotalValueLockedHandlerOpts, TotalValueLockedHandler);
+GetServerInstance().get('/tlv', TotalValueLockedHandlerOpts, TotalValueLockedHandler);
 
 // -- list all providers and monikers endpoint ---
 GetServerInstance().get('/listProviders', ListProvidersRawHandlerOpts, ListProvidersRawHandler);

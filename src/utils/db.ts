@@ -1,12 +1,12 @@
 import { drizzle, PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { GetEnvVar, IsIndexerProcess } from './env';
+import { GetEnvVar, IsIndexerProcess, ParsePrioritizedEnvVars } from './env';
 import { logger } from './logger';
 import PQueue from 'p-queue';
 import { Sleep } from './sleep';
 import postgres from 'postgres';
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import { sql } from 'drizzle-orm';
-import { IsMeaningfulText, MaskPassword, JSONStringify } from './fmt';
+import { MaskPassword, JSONStringify } from './fmt';
 
 interface DbConnection {
     db: PostgresJsDatabase;
@@ -48,8 +48,8 @@ class DbConnectionPoolClass {
     private readonly MAX_CONNECTIONS: number = 90;
     private readonly CONNECTION_TTL = 1000 * 60 * 10;  // 10 minutes
     private readonly CLEANUP_INTERVAL = 1000 * 60;     // 1 minute
-    private cachedPostgresUrl: string | null = null;
-    private cachedRelaysReadPostgresUrl: string | null = null;
+    private cachedPostgresUrl: string[] | null = null;
+    private cachedRelaysReadPostgresUrl: string[] | null = null;
     private urlFailures: Map<string, { failures: number; lastFailure: number }> = new Map();
     private readonly FAILURE_THRESHOLD = 3;
     private readonly FAILURE_RESET_TIME = 1000 * 60 * 5; // 5 minutes
@@ -107,62 +107,53 @@ class DbConnectionPoolClass {
         });
     }
 
+    private async parsePostgresUrls(
+        envVars: string[],
+        errorMessage: string,
+        dbType: "jsinfodb" | "relaydb"
+    ): Promise<string[]> {
+        try {
+            return ParsePrioritizedEnvVars(
+                envVars,
+                errorMessage,
+                `${dbType} sql`,
+                true,  // mask the URLs
+                true  // don't throw error
+            );
+        } catch (error) {
+            await Sleep(60000);
+            process.exit(1);
+        }
+    }
+
     private async GetJsinfoPostgresUrls(): Promise<string[]> {
         if (this.cachedPostgresUrl !== null) {
-            return [this.cachedPostgresUrl];
+            return this.cachedPostgresUrl;
         }
 
-        const urls = new Set<string>();
-        for (const envVar of [
+        const urls = await this.parsePostgresUrls([
             "JSINFO_POSTGRESQL_URL_1",
             "JSINFO_POSTGRESQL_URL",
             "POSTGRESQL_URL_1",
             "POSTGRESQL_URL"
-        ]) {
-            try {
-                const url = GetEnvVar(envVar, "-");
-                if (IsMeaningfulText(url)) urls.add(url);
-            } catch (error) {
-                continue;
-            }
-        }
+        ], "Missing env var for any PostgreSQL URL", "jsinfodb");
 
-        if (urls.size === 0) {
-            logger.error("Missing env var for any PostgreSQL URL");
-            await Sleep(60000);
-            process.exit(1);
-        }
-
-        this.cachedPostgresUrl = Array.from(urls)[0];
-        return Array.from(urls);
+        this.cachedPostgresUrl = urls;
+        return urls;
     }
 
     private async GetRelaysPostgresUrls(): Promise<string[]> {
         if (this.cachedRelaysReadPostgresUrl !== null) {
-            return [this.cachedRelaysReadPostgresUrl];
+            return this.cachedRelaysReadPostgresUrl;
         }
 
-        const urls = new Set<string>();
-        for (const envVar of [
+        const urls = await this.parsePostgresUrls([
             "RELAYS_READ_POSTGRESQL_URL_1",
             "RELAYS_READ_POSTGRESQL_URL"
-        ]) {
-            try {
-                const url = GetEnvVar(envVar);
-                if (url) urls.add(url);
-            } catch (error) {
-                continue;
-            }
-        }
+        ], "Missing env var for RELAYS_READ_POSTGRESQL_URL", "relaydb");
 
-        if (urls.size === 0) {
-            logger.error("Missing env var for RELAYS_READ_POSTGRESQL_URL");
-            await Sleep(60000);
-            process.exit(1);
-        }
-
-        this.cachedRelaysReadPostgresUrl = Array.from(urls)[0];
-        return Array.from(urls);
+        this.cachedRelaysReadPostgresUrl = urls;
+        return urls;
     }
 
     private async getNextValidUrl(urls: string[]): Promise<string> {

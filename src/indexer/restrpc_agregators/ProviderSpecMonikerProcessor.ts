@@ -84,7 +84,6 @@ async function batchAppend(psmEntry: ProviderMonikerSpec): Promise<void> {
 
 async function batchInsert(): Promise<void> {
     if (batchData.length === 0) {
-        logger.warn('providerSpecMoniker:: batchInsert: No data to insert');
         return;
     }
 

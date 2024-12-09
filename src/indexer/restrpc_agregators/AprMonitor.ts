@@ -19,7 +19,7 @@ const COINGEKO_API_BENCHMARK_DENOM = "lava";
 const APR_MAX_ERROR = 10000;
 // we had values as 0.0020040648396455474
 // was ok for 0.0001 on mainnet
-const APR_MIN_WARM = IsTestnet() ? 1e-10 : 0.0001;
+const APR_MIN_WARM = IsTestnet() ? 1e-10 : 0.0000001;
 
 const PERCENTILE = 0.8;
 
@@ -146,24 +146,24 @@ class APRMonitorClass {
 
     const rate = totalReward / parseFloat(investedAmount);
 
-    const APR = ((1 + rate) ** 12 - 1);
+    const apr = ((1 + rate) ** 12 - 1);
 
-    if (APR === Infinity || APR === -Infinity) {
-      logger.error(`AprMon: ${caller} - APR is Infinity or -Infinity. Returning 0. Total Reward: ${totalReward}, Invested Amount: ${investedAmount}, Rate: ${rate}, APR: ${APR}`);
+    if (apr === Infinity || apr === -Infinity) {
+      logger.error(`AprMon: ${caller} - APR is Infinity or -Infinity. Returning 0. Total Reward: ${totalReward}, Invested Amount: ${investedAmount}, Rate: ${rate}, APR: ${apr}`);
       return 0;
     }
 
-    if (APR < APR_MIN_WARM) {
-      logger.warn(`AprMon: ${caller} - APR is too low. Returning 0. Total Reward: ${totalReward}, Invested Amount: ${investedAmount}, Rate: ${rate}, APR: ${APR}`);
+    if (apr < APR_MIN_WARM) {
+      logger.warn(`AprMon: ${caller} - APR is too low. Total Reward: ${totalReward}, Invested Amount: ${investedAmount}, Rate: ${rate}, APR: ${apr}`);
+      return apr;
+    }
+
+    if (apr > APR_MAX_ERROR) {
+      logger.warn(`AprMon: ${caller} - APR is too high. Returning 0. Total Reward: ${totalReward}, Invested Amount: ${investedAmount}, Rate: ${rate}, APR: ${apr}`);
       return 0;
     }
 
-    if (APR > APR_MAX_ERROR) {
-      logger.warn(`AprMon: ${caller} - APR is too high. Returning 0. Total Reward: ${totalReward}, Invested Amount: ${investedAmount}, Rate: ${rate}, APR: ${APR}`);
-      return 0;
-    }
-
-    return APR;
+    return apr;
   }
 
   private splitIntoChunks(entities: string[], numChunks: number = 3): string[][] {

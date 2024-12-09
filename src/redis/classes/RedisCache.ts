@@ -175,7 +175,7 @@ class RedisCacheClass {
                 }));
             } catch (error) {
                 logger.error('Redis SET operation failed', {
-                    error: error as Error,
+                    error: JSONStringify(error),
                     key: fullKey,
                     operation: 'SET',
                     ttlSeconds,

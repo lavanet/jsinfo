@@ -11,10 +11,10 @@ import { sql } from 'drizzle-orm';
 import { IsTestnet } from '@jsinfo/utils/env';
 
 // Constants
-const BENCHMARK_AMOUNT_LAVA_RPC = 10000 * 1000000;
-const BENCHMARK_DENOM_LAVA_RPC = "ulava";
-const BENCHMARK_AMOUNT_COINGEKO_API = 10000;
-const BENCHMARK_DENOM_COINGEKO_API = "lava";
+const LAVA_RPC_BENCHMARK_AMOUNT = 10000 * 1000000;
+const LAVA_RPC_BENCHMARK_DENOM = "ulava";
+const COINGEKO_API_BENCHMARK_AMOUNT = 10000;
+const COINGEKO_API_BENCHMARK_DENOM = "lava";
 
 const APR_MAX_ERROR = 10000;
 // we had values as 0.0020040648396455474
@@ -136,11 +136,11 @@ class APRMonitorClass {
   // annual precentage rewards 
   public async CalculateAPR(totalReward: number, caller: string): Promise<number> {
     // this number is 932.82 on 04/12/24
-    const investedAmount = await GetUSDCValue(BENCHMARK_AMOUNT_COINGEKO_API.toString(), BENCHMARK_DENOM_COINGEKO_API);
+    const investedAmount = await GetUSDCValue(COINGEKO_API_BENCHMARK_AMOUNT.toString(), COINGEKO_API_BENCHMARK_DENOM);
 
     const now = Date.now();
     if (now - this.lastLogTime >= this.LOG_INTERVAL) {
-      logger.info(`[APR Monitor] CalculateAPR: usdc value for ${BENCHMARK_AMOUNT_LAVA_RPC} ${BENCHMARK_DENOM_LAVA_RPC} is ${investedAmount}`);
+      logger.info(`[APR Monitor] CalculateAPR: usdc value for ${LAVA_RPC_BENCHMARK_AMOUNT} ${LAVA_RPC_BENCHMARK_DENOM} is ${investedAmount}`);
       this.lastLogTime = now;
     }
 
@@ -419,7 +419,7 @@ class APRMonitorClass {
         promises.push(
           retry(() => this.calculateAPROnLavaAddresses(
             () => RpcPeriodicEndpointCache.GetProviders(),
-            (provider) => RpcOnDemandEndpointCache.GetEstimatedProviderRewards(provider, BENCHMARK_AMOUNT_LAVA_RPC, BENCHMARK_DENOM_LAVA_RPC),
+            (provider) => RpcOnDemandEndpointCache.GetEstimatedProviderRewards(provider, LAVA_RPC_BENCHMARK_AMOUNT, LAVA_RPC_BENCHMARK_DENOM),
             'Restaking APR'
           )).then(aprRestaking => {
             logger.info('Restaking APR calculated:', aprRestaking);
@@ -432,7 +432,7 @@ class APRMonitorClass {
           logger.info('Updating APR for each provider...');
           const providers = await RpcPeriodicEndpointCache.GetProviders();
           for (const provider of providers) {
-            const estimatedRewards = await RpcOnDemandEndpointCache.GetEstimatedProviderRewards(provider, BENCHMARK_AMOUNT_LAVA_RPC, BENCHMARK_DENOM_LAVA_RPC);
+            const estimatedRewards = await RpcOnDemandEndpointCache.GetEstimatedProviderRewards(provider, LAVA_RPC_BENCHMARK_AMOUNT, LAVA_RPC_BENCHMARK_DENOM);
             const apr = await retry(() => this.calculateAPROnLavaAddresses(
               () => Promise.resolve([provider]),
               (provider) => Promise.resolve(estimatedRewards),
@@ -448,7 +448,7 @@ class APRMonitorClass {
         promises.push(
           retry(() => this.calculateAPROnLavaAddresses(
             () => RpcPeriodicEndpointCache.GetAllValidatorsAddresses(),
-            (validator) => RpcOnDemandEndpointCache.GetEstimatedValidatorRewards(validator, BENCHMARK_AMOUNT_LAVA_RPC, BENCHMARK_DENOM_LAVA_RPC),
+            (validator) => RpcOnDemandEndpointCache.GetEstimatedValidatorRewards(validator, LAVA_RPC_BENCHMARK_AMOUNT, LAVA_RPC_BENCHMARK_DENOM),
             'Staking APR',
             6
           )).then(aprStaking => {

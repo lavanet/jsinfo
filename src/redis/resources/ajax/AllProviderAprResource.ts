@@ -95,7 +95,7 @@ export class AllProviderAPRResource extends RedisResourceBase<AllAprProviderData
         }).from(JsinfoSchema.aprPerProvider)
             .where(gt(JsinfoSchema.aprPerProvider.timestamp, sql<Date>`now() - interval '30 day'`))
             .then(results => results.filter(row =>
-                !row.address.includes('valoper') && IsMeaningfulText(row.value)
+                !row.address.includes('valoper') && IsMeaningfulText(row.apr + "")
             ));
 
         const providerCommissions = db.select({

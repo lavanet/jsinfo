@@ -141,9 +141,5 @@ export function GetRedisUrls(): { read: string[]; write: string[] } {
         write: writeUrls
     };
 }
-// run MaskPassword on each redisurl item
-const redisUrls = await GetRedisUrls();
-const maskedUrlsWrite = redisUrls.write.map(url => MaskPassword(url));
-const maskedUrlsRead = redisUrls.read.map(url => MaskPassword(url));
-console.log("Masked RedisUrls::", JSONStringify({ write: maskedUrlsWrite, read: maskedUrlsRead }));
+
 

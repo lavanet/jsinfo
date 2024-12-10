@@ -32,7 +32,7 @@ export function ParsePrioritizedEnvVars(
         return cachedResult;
     }
 
-    const values = new Map<number, string>();  // priority -> value
+    const valuesByPriority = new Map<number, string[]>();  // priority -> values[]
 
     for (const envVar of envVars) {
         try {
@@ -48,14 +48,18 @@ export function ParsePrioritizedEnvVars(
                 const match = singleValue.match(/^(\d+)_(.+)/);
                 if (match) {
                     const priority = parseInt(match[1]);
-                    if (!Array.from(values.values()).includes(match[2])) {
-                        values.set(priority, match[2]);
+                    const currentValues = valuesByPriority.get(priority) || [];
+                    if (!IsMeaningfulText(match[2])) {
+                        throw new Error(`Invalid value for ${envVar}: ${singleValue}`);
                     }
+                    currentValues.push(match[2]);
+                    valuesByPriority.set(priority, currentValues);
                 } else {
                     // Non-numbered values get high priority numbers
-                    if (!Array.from(values.values()).includes(value)) {
-                        values.set(1000 + values.size, value);
-                    }
+                    const priority = 1000;
+                    const currentValues = valuesByPriority.get(priority) || [];
+                    currentValues.push(singleValue);
+                    valuesByPriority.set(priority, currentValues);
                 }
             }
         } catch (error) {
@@ -63,7 +67,7 @@ export function ParsePrioritizedEnvVars(
         }
     }
 
-    if (values.size === 0) {
+    if (valuesByPriority.size === 0) {
         if (throwError) {
             logger.error(errorMessage);
             throw new Error(errorMessage);
@@ -72,10 +76,12 @@ export function ParsePrioritizedEnvVars(
         }
     }
 
-    // Sort by priority and get only the values
-    const sortedValues = Array.from(values.entries())
-        .sort((a, b) => a[0] - b[0])
-        .map(([_, value]) => value);
+    // Sort by priority and flatten all values
+    const sortedValues = Array.from(new Set(
+        Array.from(valuesByPriority.entries())
+            .sort((a, b) => a[0] - b[0])
+            .flatMap(([_, values]) => values)
+    ));
 
     // Cache the result
     ParsePrioritizedEnvVars_Cache.set(cacheKey, sortedValues);

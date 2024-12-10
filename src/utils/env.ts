@@ -28,17 +28,23 @@ export function ParsePrioritizedEnvVars(
             const value = process.env[envVar];
             if (!value || value.trim() === '' || !IsMeaningfulText(value)) continue;
 
-            // Check if value starts with number_
-            const match = value.match(/^(\d+)_(.+)/);
-            if (match) {
-                const priority = parseInt(match[1]);
-                if (!Array.from(values.values()).includes(match[2])) {
-                    values.set(priority, match[2]);
-                }
-            } else {
-                // Non-numbered values get high priority numbers
-                if (!Array.from(values.values()).includes(value)) {
-                    values.set(1000 + values.size, value);
+            const multipleValues = value.split(',').map(v => v.trim());
+
+            for (const singleValue of multipleValues) {
+                if (!IsMeaningfulText(singleValue)) continue;
+
+                // Check if value starts with number_
+                const match = singleValue.match(/^(\d+)_(.+)/);
+                if (match) {
+                    const priority = parseInt(match[1]);
+                    if (!Array.from(values.values()).includes(match[2])) {
+                        values.set(priority, match[2]);
+                    }
+                } else {
+                    // Non-numbered values get high priority numbers
+                    if (!Array.from(values.values()).includes(value)) {
+                        values.set(1000 + values.size, value);
+                    }
                 }
             }
         } catch (error) {

@@ -29,11 +29,6 @@ export function ParsePrioritizedEnvVars(
     // Check cache first
     const cachedResult = ParsePrioritizedEnvVars_envVarCache.get(cacheKey);
     if (cachedResult) {
-        // Still log the results even when returning cached values
-        const displayValues = maskValues
-            ? cachedResult.map(value => MaskPassword(value))
-            : cachedResult;
-        logger.info(`${logPrefix} values loaded (cached):`, displayValues.join(', '));
         return cachedResult;
     }
 

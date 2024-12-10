@@ -14,7 +14,7 @@ export function GetEnvVar(key: string, alt?: string): string {
 }
 
 // Cache for parsed environment variables
-const ParsePrioritizedEnvVars_envVarCache = new Map<string, string[]>();
+const ParsePrioritizedEnvVars_Cache = new Map<string, string[]>();
 
 export function ParsePrioritizedEnvVars(
     envVars: string[],
@@ -27,7 +27,7 @@ export function ParsePrioritizedEnvVars(
     const cacheKey = `${envVars.join('|')}|${errorMessage}|${logPrefix}|${maskValues}|${throwError}`;
 
     // Check cache first
-    const cachedResult = ParsePrioritizedEnvVars_envVarCache.get(cacheKey);
+    const cachedResult = ParsePrioritizedEnvVars_Cache.get(cacheKey);
     if (cachedResult) {
         return cachedResult;
     }
@@ -78,7 +78,7 @@ export function ParsePrioritizedEnvVars(
         .map(([_, value]) => value);
 
     // Cache the result
-    envVarCache.set(cacheKey, sortedValues);
+    ParsePrioritizedEnvVars_Cache.set(cacheKey, sortedValues);
 
     // Log the results
     const displayValues = maskValues

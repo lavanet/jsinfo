@@ -60,8 +60,13 @@ interface Pool {
     };
 }
 
-// Function to get the total locked value in LAVA from the first API
-export async function OsmosisGetTotalLavaLockedValue(): Promise<number | null> {
+interface OsmosisTVLResult {
+    ulavaValue: number;
+    usdValue: number;
+}
+
+// Updated return type and function logic
+export async function OsmosisGetTotalLavaLockedValue(): Promise<OsmosisTVLResult | null> {
     const input = {
         json: {
             limit: 10,
@@ -106,9 +111,9 @@ export async function OsmosisGetTotalLavaLockedValue(): Promise<number | null> {
             });
         });
 
-        logger.info(`TLV-OSM: Total locked value in LAVA from first API: ${totalLockedValue}`); // Log the total locked value
+        logger.info(`TLV-OSM: Total locked value in LAVA from first API: ${totalLockedValue}`);
 
-        const currentPrice = await CoinGekoCache.GetDenomToUSDRate('lava');
+        const currentPrice = await CoinGekoCache.GetLavaUSDRate();
         if (currentPrice === 0 || isNaN(currentPrice)) {
             throw new Error('OsmosisGetTotalLavaLockedValue: CoinGekoCache.GetDenomToUSDRate returned 0 for lava');
         }
@@ -117,16 +122,18 @@ export async function OsmosisGetTotalLavaLockedValue(): Promise<number | null> {
             throw new Error(`OsmosisGetTotalLavaLockedValue: CoinGekoCache.GetDenomToUSDRate returned out of range value for lava: ${currentPrice}`);
         }
 
-        let ret = totalLockedValue * Number(currentPrice / 1000000);
-        logger.info(`TLV-OSM: Total locked value in LAVA from first API: ${ret}`);
-        return ret;
+        const usdValue = totalLockedValue * Number(currentPrice / 1000000);
+        logger.info(`TLV-OSM: Total locked USDC value from API: ${usdValue}`);
 
+        return {
+            ulavaValue: totalLockedValue,
+            usdValue: usdValue
+        };
 
     } catch (error) {
         logger.error('TLV-OSM: Error fetching total locked value from first API:', error);
         return null;
     }
-    return null;
 }
 
 // Check if the script is being run as the main module

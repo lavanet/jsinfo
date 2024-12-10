@@ -151,7 +151,7 @@ class RedisCacheClass {
         }
     }
 
-    async set(key: string, value: string, ttlSeconds?: number): Promise<void> {
+    async set(key: string, value: string, cacheExpirySeconds?: number): Promise<void> {
         const fullKey = this.keyPrefix + key;
 
         const existingSet = RedisCacheClass.activeSets.get(fullKey);
@@ -167,18 +167,19 @@ class RedisCacheClass {
             try {
                 await Promise.all(this.clients.map(async client => {
                     if (!client) return;
-                    if (ttlSeconds) {
-                        await client.setEx(fullKey, ttlSeconds, value);
+                    if (cacheExpirySeconds) {
+                        await client.setEx(fullKey, cacheExpirySeconds, value + "");
                     } else {
-                        await client.set(fullKey, value);
+                        await client.set(fullKey, value + "");
                     }
                 }));
             } catch (error) {
                 logger.error('Redis SET operation failed', {
                     error: JSONStringify(error),
+                    value: value + "",
                     key: fullKey,
                     operation: 'SET',
-                    ttlSeconds,
+                    cacheExpirySeconds,
                     timestamp: new Date().toISOString()
                 });
                 await this.reconnect();

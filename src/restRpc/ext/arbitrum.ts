@@ -78,6 +78,7 @@ async function fetchTokenData() {
     }
 }
 
+let currentFetchPromise: Promise<number | null> | null = null;
 
 export async function AribitrumGetTotalLavaValue(): Promise<number | null> {
     const cacheKey = 'Arbitrum::TotalLavaValue';
@@ -86,37 +87,47 @@ export async function AribitrumGetTotalLavaValue(): Promise<number | null> {
     const maxRetries = 10; // Maximum number of retries
 
     const fetchPromise = async (): Promise<number | null> => {
-        let attempts = 0;
+        try {
+            let attempts = 0;
 
-        while (attempts < maxRetries) {
-            try {
-                const tokenData = (await fetchTokenData()).data.token;
-                const totalValueLockedValue = tokenData.market.totalValueLocked.value;
-                logger.info("TLV-ARBITRUM: Total value locked in USD:", totalValueLockedValue);
-                RedisCache.set(cacheKey, totalValueLockedValue, cacheTTL);
-                return totalValueLockedValue;
-            } catch (error) {
-                logger.error('Error fetching token data:', error);
-                attempts++;
-                if (attempts >= maxRetries) {
-                    throw new Error('TLV-ARBITRUM: Max retries reached. Unable to fetch total LAVA value.');
+            while (attempts < maxRetries) {
+                try {
+                    const tokenData = (await fetchTokenData()).data.token;
+                    const totalValueLockedValue = tokenData.market.totalValueLocked.value;
+                    logger.info("TLV-ARBITRUM: Total value locked in USD:", totalValueLockedValue);
+                    await RedisCache.set(cacheKey, totalValueLockedValue, cacheTTL);
+                    return totalValueLockedValue;
+                } catch (error) {
+                    logger.error('Error fetching token data:', error);
+                    attempts++;
+                    if (attempts >= maxRetries) {
+                        throw new Error('TLV-ARBITRUM: Max retries reached. Unable to fetch total LAVA value.');
+                    }
                 }
             }
+            throw new Error('TLV-ARBITRUM: Failed to fetch total LAVA value after retries.');
+        } finally {
+            currentFetchPromise = null;
         }
-        throw new Error('TLV-ARBITRUM: Failed to fetch total LAVA value after retries.');
     }
 
     const cachedValue = await RedisCache.get(cacheKey);
     if (cachedValue !== null) {
         const remainingTTL = await RedisCache.getTTL(cacheKey);
         if (remainingTTL && remainingTTL < minCacheTTL) {
-            fetchPromise();
+            if (!currentFetchPromise) {
+                currentFetchPromise = fetchPromise();
+            }
         }
         logger.info("TLV-ARBITRUM: Using cached value:", cachedValue);
-        return Number(cachedValue); // Return cached value if available
+        return Number(cachedValue);
     }
 
-    return await fetchPromise();
+    if (!currentFetchPromise) {
+        currentFetchPromise = fetchPromise();
+    }
+
+    return currentFetchPromise;
 }
 
 // Call the function to execute the request

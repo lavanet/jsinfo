@@ -1,6 +1,6 @@
 import { and, desc, eq, gte } from 'drizzle-orm';
 import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
-import { RedisResourceBase } from '../../RedisResourceBase';
+import { RedisResourceBase } from '@jsinfo/redis/classes/RedisResourceBase';
 import { queryJsinfo } from '@jsinfo/utils/db';
 
 export interface SPHArgs {
@@ -21,9 +21,9 @@ export interface SPHRes {
 
 export class SpecProviderHealthResource extends RedisResourceBase<SPHRes[], SPHArgs> {
     protected readonly redisKey = 'spec:provider-health';
-    protected readonly ttlSeconds = 2 * 60 * 1000; // 2 minutes cache
+    protected readonly cacheExpirySeconds = 2 * 60 * 1000; // 2 minutes cache
 
-    protected async fetchFromDb(args: SPHArgs): Promise<SPHRes[]> {
+    protected async fetchFromSource(args: SPHArgs): Promise<SPHRes[]> {
         const { spec } = args;
         const twoDaysAgo = new Date();
         twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
@@ -39,7 +39,7 @@ export class SpecProviderHealthResource extends RedisResourceBase<SPHRes[], SPHA
                 )
                 .orderBy(desc(JsinfoSchema.providerHealth.timestamp))
                 .limit(100);
-        }, `SpecProviderHealthResource::fetchFromDb_${spec}`);
+        }, `SpecProviderHealthResource::fetchFromSource_${spec}`);
 
 
         const uniqueRecordsMap = new Map<string, SPHRes>();

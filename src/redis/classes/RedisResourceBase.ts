@@ -1,27 +1,41 @@
 import { RedisCache } from './RedisCache';
 import { IsIndexerProcess } from '@jsinfo/utils/env';
 import { logger } from '@jsinfo/utils/logger';
-import { JSONStringify } from '@jsinfo/utils/fmt';
+import { IsMeaningfulText, JSONStringify } from '@jsinfo/utils/fmt';
 interface BaseArgs {
     [key: string]: any;
 }
 
 export abstract class RedisResourceBase<T, A extends BaseArgs = BaseArgs> {
     protected abstract readonly redisKey: string;
-    protected readonly ttlSeconds: number = 3600; // Default 1 hour TTL
+    protected readonly cacheExpirySeconds: number = 3600; // Default 1 hour TTL
+    protected readonly updateBeforeExpirySeconds: number = 60; // Default 1 minute
     private lastUpdateTime: number = 0;
 
     // Track ongoing fetches per key
     private static activeFetches = new Map<string, Promise<any>>();
-    private static activeDbFetches = new Map<string, Promise<any>>();
+    private static activeFetchesFromSource = new Map<string, Promise<any>>();
 
     // Core cache operations with args support
     protected async set(data: T, args?: A): Promise<void> {
-        await RedisCache.set(this.getKeyWithArgs(args), this.serialize(data), this.ttlSeconds);
+        await RedisCache.set(this.formatRedisKeyWithArgs(args), this.serialize(data), this.cacheExpirySeconds);
+    }
+
+    protected async shouldUpdate(args?: A): Promise<boolean> {
+        if (!IsMeaningfulText(this.updateBeforeExpirySeconds + "") ||
+            this.updateBeforeExpirySeconds >= this.cacheExpirySeconds) {
+            return true;
+        }
+        const key = this.formatRedisKeyWithArgs(args);
+        const ttl = await RedisCache.getTTL(key);
+        if (ttl === undefined || !IsMeaningfulText(ttl + "")) {
+            return true;
+        }
+        return ttl < this.updateBeforeExpirySeconds;
     }
 
     protected async get(args?: A): Promise<T | null> {
-        const key = this.getKeyWithArgs(args);
+        const key = this.formatRedisKeyWithArgs(args);
         const cached = await RedisCache.get(key);
         if (key.includes("providerMonikerSpec")) {
             return cached ? this.deserialize(cached) : null;
@@ -46,17 +60,17 @@ export abstract class RedisResourceBase<T, A extends BaseArgs = BaseArgs> {
     }
 
     // Helper for key generation with args
-    protected getKeyWithArgs(args?: A): string {
+    protected formatRedisKeyWithArgs(args?: A): string {
         if (!args) return this.redisKey;
         const stableJson = JSONStringify(args).toLowerCase();
         return `${this.redisKey}:${stableJson}`;
     }
 
-    protected abstract fetchFromDb(args?: A): Promise<T>;
+    protected abstract fetchFromSource(args?: A): Promise<T>;
 
     // Main public method
     async fetch(args?: A): Promise<T | null> {
-        const key = this.getKeyWithArgs(args);
+        const key = this.formatRedisKeyWithArgs(args);
 
         const existingFetch = RedisResourceBase.activeFetches.get(key);
 
@@ -65,19 +79,19 @@ export abstract class RedisResourceBase<T, A extends BaseArgs = BaseArgs> {
             return await result;
         }
 
-        const fetchPromise = this.executeFetch(args, key);
+        const fetchPromise = this.orchestrateFetch(args, key);
         RedisResourceBase.activeFetches.set(key, fetchPromise);
 
         return await fetchPromise;
 
     }
 
-    private async executeFetch(args?: A, key?: string): Promise<T | null> {
+    private async orchestrateFetch(args: A | undefined, key: string): Promise<T | null> {
         try {
             const cached = await this.get(args);
 
             if (cached) {
-                await this.handleCachedData(cached, args, key);
+                this.recacheDataIfCloseToExpiry(args, key);
                 return cached;
             }
 
@@ -91,61 +105,65 @@ export abstract class RedisResourceBase<T, A extends BaseArgs = BaseArgs> {
         }
     }
 
-    private async fetchFromDbWithMutex(args?: A, key?: string): Promise<T | null> {
-        const existingFetch = RedisResourceBase.activeDbFetches.get(key!);
+    private async fetchFromSourceWithMutex(args?: A, key?: string): Promise<T | null> {
+        const existingFetch = RedisResourceBase.activeFetchesFromSource.get(key!);
         if (existingFetch) {
             return existingFetch as Promise<T | null>;
         }
 
         const fetchPromise = (async () => {
             try {
-                return await this.fetchFromDb(args);
+                return await this.fetchFromSource(args);
+            } catch (error) {
+                const classInfo = {
+                    className: this.constructor.name,
+                    redisKey: this.redisKey,
+                    ttl: this.cacheExpirySeconds,
+                    updateBefore: this.updateBeforeExpirySeconds,
+                    lastUpdate: this.lastUpdateTime ? new Date(this.lastUpdateTime).toISOString() : 'never',
+                    activeFetches: RedisResourceBase.activeFetches.size,
+                    activeSourceFetches: RedisResourceBase.activeFetchesFromSource.size,
+                    error: error instanceof Error ? error.message : 'Unknown error',
+                    stack: error instanceof Error ? error.stack : 'No stack trace',
+                    args: args ? JSON.stringify(args) : 'none'
+                };
+
+                logger.error('RedisResourceBase: Error in fetchFromSource:', classInfo);
+                throw error;
             } finally {
-                RedisResourceBase.activeDbFetches.delete(key!);
+                RedisResourceBase.activeFetchesFromSource.delete(key!);
             }
         })();
 
-        RedisResourceBase.activeDbFetches.set(key!, fetchPromise);
+        RedisResourceBase.activeFetchesFromSource.set(key!, fetchPromise);
         return fetchPromise;
     }
 
-    private async handleCachedData(cached: T, args?: A, key?: string): Promise<void> {
-        const ttl = await RedisCache.getTTL(key!);
-        if (ttl === undefined) {
-            logger.error('Cache TTL check failed', {
-                key,
-                redisKey: this.redisKey
-            });
+    private async recacheDataIfCloseToExpiry(args?: A, key?: string): Promise<void> {
+        if (!await this.shouldUpdate(args)) {
             return;
         }
-        if (ttl >= 0 && ttl < 30) {
-            logger.info('Cache entry near expiration, triggering refresh', {
-                key,
-                ttl,
-                redisKey: this.redisKey
-            });
-
-            // Background refresh using mutex
-            this.fetchFromDbWithMutex(args, key).then(async data => {
-                if (data) {
-                    await this.set(data, args);
-                    logger.info('Background cache refresh completed', {
-                        key,
-                        redisKey: this.redisKey
-                    });
-                }
-            }).catch(error => {
-                logger.error('Background cache refresh failed', {
-                    error: error as Error,
+        // Background refresh using mutex
+        this.fetchFromSourceWithMutex(args, key).then(async data => {
+            if (data) {
+                await this.set(data, args);
+                logger.info('Background cache refresh completed', {
                     key,
                     redisKey: this.redisKey
                 });
+            }
+        }).catch(error => {
+            logger.error('Background cache refresh failed', {
+                error: error as Error,
+                key,
+                redisKey: this.redisKey
             });
-        }
+        });
+
     }
 
     private async fetchAndCacheData(args?: A, key?: string): Promise<T | null> {
-        const data = await this.fetchFromDbWithMutex(args, key);
+        const data = await this.fetchFromSourceWithMutex(args, key);
         if (data) {
             await this.set(data, args);
             const now = Date.now();
@@ -156,7 +174,7 @@ export abstract class RedisResourceBase<T, A extends BaseArgs = BaseArgs> {
                 timeSinceLastUpdate: this.lastUpdateTime
                     ? `${((now - this.lastUpdateTime) / 1000).toFixed(1)}s ago`
                     : 'first cache',
-                ttlSeconds: this.ttlSeconds
+                cacheExpirySeconds: this.cacheExpirySeconds
             });
             this.lastUpdateTime = now;
             return data;
@@ -166,7 +184,7 @@ export abstract class RedisResourceBase<T, A extends BaseArgs = BaseArgs> {
             redisKey: this.redisKey,
             key,
             args,
-            ttl: this.ttlSeconds,
+            ttl: this.cacheExpirySeconds,
             isIndexerProcess: IsIndexerProcess()
         });
         return null;
@@ -181,14 +199,10 @@ export abstract class RedisResourceBase<T, A extends BaseArgs = BaseArgs> {
                 code: (error as any)?.code || 'No error code'
             },
             redisKey: this.redisKey,
-            key: this.getKeyWithArgs(args),
+            key: this.formatRedisKeyWithArgs(args),
             args,
-            ttl: this.ttlSeconds,
+            ttl: this.cacheExpirySeconds,
             isIndexerProcess: IsIndexerProcess()
         });
-    }
-
-    protected generateKey(prefix: string, id: string | number): string {
-        return `${prefix}:${id}`;
     }
 }

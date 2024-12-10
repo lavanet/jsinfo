@@ -23,6 +23,7 @@ import { IndexTotalCuResource } from '../resources/index/IndexTotalCuResource';
 import { ActiveProvidersResource } from '../resources/index/ActiveProvidersResource';
 import { AllProviderAPRResource } from '../resources/ajax/AllProviderAprResource';
 import { TotalValueLockedResource } from '../resources/ajax/TotalValueLockedResource';
+import { LockedVestingTokensService } from '../resources/global/LockedVestingTokensResource';
 
 export class IndexerRedisResourceCaller {
     private static readonly REFRESH_INTERVAL = 60 * 1000; // 1 minute
@@ -180,5 +181,8 @@ export class IndexerRedisResourceCaller {
             .catch(e => logger.error('Failed to refresh spec and consumer data:', e));
         await ProviderMonikerService.fetch()
             .catch(e => logger.error('Failed to refresh provider moniker spec data:', e));
+        await LockedVestingTokensService.fetch()
+            .catch(e => logger.error('Failed to refresh locked vesting tokens:', e));
     }
 }
+

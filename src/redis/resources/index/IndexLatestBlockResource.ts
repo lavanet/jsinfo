@@ -10,15 +10,15 @@ export interface IndexLatestBlockData {
 
 export class IndexLatestBlockResource extends RedisResourceBase<IndexLatestBlockData, {}> {
     protected readonly redisKey = 'index:latest:block';
-    protected readonly ttlSeconds = 60; // 1 minute cache
+    protected readonly cacheExpirySeconds = 60; // 1 minute cache
 
-    protected async fetchFromDb(): Promise<IndexLatestBlockData> {
+    protected async fetchFromSource(): Promise<IndexLatestBlockData> {
         const latestDbBlocks = await queryJsinfo(db => db
             .select()
             .from(JsinfoSchema.blocks)
             .orderBy(desc(JsinfoSchema.blocks.height))
             .limit(1),
-            'IndexLatestBlockResource::fetchFromDb'
+            'IndexLatestBlockResource::fetchFromSource'
         );
 
         let height = 0;

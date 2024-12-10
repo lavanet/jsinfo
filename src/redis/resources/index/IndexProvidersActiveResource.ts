@@ -42,7 +42,7 @@ export interface IndexProvidersActiveQueryParams {
 
 export class IndexProvidersActiveResource extends RedisResourceBase<IndexProvidersActiveResourceResponse, IndexProvidersActiveQueryParams> {
     protected readonly redisKey = 'index:providers:active';
-    protected readonly ttlSeconds = 600; // 10 minutes cache
+    protected readonly cacheExpirySeconds = 600; // 10 minutes cache
 
     protected async getActiveProviderAddresses(): Promise<string[]> {
         console.time('redis/resources/index/IndexProvidersActiveResource.getActiveProviderAddresses');
@@ -78,8 +78,8 @@ export class IndexProvidersActiveResource extends RedisResourceBase<IndexProvide
         }
     }
 
-    protected async fetchFromDb(params?: IndexProvidersActiveQueryParams): Promise<IndexProvidersActiveResourceResponse> {
-        console.time('redis/resources/index/IndexProvidersActiveResource.fetchFromDb');
+    protected async fetchFromSource(params?: IndexProvidersActiveQueryParams): Promise<IndexProvidersActiveResourceResponse> {
+        console.time('redis/resources/index/IndexProvidersActiveResource.fetchFromSource');
         try {
             const queryParams = params || this.getDefaultParams();
             const queryType = queryParams.type || 'paginated';
@@ -104,7 +104,7 @@ export class IndexProvidersActiveResource extends RedisResourceBase<IndexProvide
                     throw new Error(`Unsupported query type: ${queryType}`);
             }
         } finally {
-            console.timeEnd('redis/resources/index/IndexProvidersActiveResource.fetchFromDb');
+            console.timeEnd('redis/resources/index/IndexProvidersActiveResource.fetchFromSource');
         }
     }
 

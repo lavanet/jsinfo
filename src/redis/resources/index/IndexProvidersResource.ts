@@ -40,7 +40,7 @@ export interface IndexProvidersQueryParams {
 
 export class IndexProvidersResource extends RedisResourceBase<IndexProvidersResourceResponse, IndexProvidersQueryParams> {
     protected readonly redisKey = 'index:providers';
-    protected readonly ttlSeconds = 600; // 10 minutes cache
+    protected readonly cacheExpirySeconds = 600; // 10 minutes cache
 
     protected getRedisKey(params: IndexProvidersQueryParams = this.getDefaultParams()): string {
         const queryType = params.type || 'paginated';
@@ -56,7 +56,7 @@ export class IndexProvidersResource extends RedisResourceBase<IndexProvidersReso
         }
     }
 
-    protected async fetchFromDb(params?: IndexProvidersQueryParams): Promise<IndexProvidersResourceResponse> {
+    protected async fetchFromSource(params?: IndexProvidersQueryParams): Promise<IndexProvidersResourceResponse> {
         const queryParams = params || this.getDefaultParams();
         const queryType = queryParams.type || 'paginated';
 

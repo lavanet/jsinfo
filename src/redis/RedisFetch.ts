@@ -18,7 +18,7 @@ export async function RedisFetch<T>(url: string): Promise<T> {
             throw new Error(`Failed to fetch data: ${response}`);
         }
 
-        RedisCache.set("url:" + url, JSON.stringify(response), 1200);
+        RedisCache.set("url:" + url, JSON.stringify(response), 1200); // 20 minutes
         return response as T;
     } catch (error) {
         logger.error(`Error fetching data from ${url}:`, error); // Use logger for error

@@ -41,13 +41,13 @@ interface QueryParams {
 
 export class IndexChartsResource extends RedisResourceBase<IndexChartResponse[], QueryParams> {
     protected readonly redisKey = 'index:charts';
-    protected readonly ttlSeconds = 300; // 5 minutes cache
+    protected readonly cacheExpirySeconds = 300; // 5 minutes cache
 
     protected getRedisKey(params: QueryParams = this.getDefaultParams()): string {
         return `${this.redisKey}:${params.from.getTime()}:${params.to.getTime()}`;
     }
 
-    protected async fetchFromDb(params?: QueryParams): Promise<IndexChartResponse[]> {
+    protected async fetchFromSource(params?: QueryParams): Promise<IndexChartResponse[]> {
         // Use default params if none provided
         const queryParams = params || this.getDefaultParams();
         const { from, to } = NormalizeChartFetchDates(queryParams.from, queryParams.to);

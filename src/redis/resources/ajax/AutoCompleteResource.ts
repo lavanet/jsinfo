@@ -1,5 +1,4 @@
 import { RedisResourceBase } from '../../classes/RedisResourceBase';
-import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { ProviderMonikerService } from '../global/ProviderMonikerSpecResource';
 import { SpecAndConsumerService } from '../global/SpecAndConsumerResource';
 
@@ -17,9 +16,9 @@ export interface AutoCompleteData {
 
 export class AutoCompleteResource extends RedisResourceBase<AutoCompleteData, {}> {
     protected redisKey = 'autocomplete';
-    protected ttlSeconds = 600; // 10 minutes cache
+    protected cacheExpirySeconds = 600; // 10 minutes cache
 
-    protected async fetchFromDb(): Promise<AutoCompleteData> {
+    protected async fetchFromSource(): Promise<AutoCompleteData> {
         const baseUrls = {
             providers: ['/provider'],
             consumers: ['/consumer'],

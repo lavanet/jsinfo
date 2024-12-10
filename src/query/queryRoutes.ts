@@ -98,6 +98,7 @@ import { ConsumerV2CahcedHandler, ConsumerV2CahcedHandlerOpts } from './handlers
 import { ChainWalletApiHandlerOpts, LavaChainRestakersHandler, LavaChainStakersHandler } from './handlers/ajax/chainWalletApiHandlers';
 import { TotalValueLockedHandler, TotalValueLockedHandlerOpts } from './handlers/ajax/totalLockedValueHandler';
 import { ValidatorsPaginatedHandler, ValidatorsPaginatedHandlerOpts } from './handlers/ajax/validatorsHandler';
+import { TotalValueLockedComponentsHandler, TotalValueLockedComponentsHandlerOpts } from './handlers/ajax/totalLockedValueComponentsHandler';
 
 // -- Server status ajax --
 GetServerInstance().get('/latest', LatestRawHandlerOpts, LatestRawHandler);
@@ -119,10 +120,6 @@ GetServerInstance().get('/lava_chain_restakers', ChainWalletApiHandlerOpts, Lava
 GetServerInstance().get('/apr', APRRawHandlerOpts, APRRawHandler);
 GetServerInstance().get('/apr_full', APRFullHandlerOpts, APRFullHandler);
 GetServerInstance().get('/all_providers_apr', AllProviderAPRRawHandlerOpts, AllProviderAPRRawHandler);
-GetServerInstance().get('/total_value_locked', TotalValueLockedHandlerOpts, TotalValueLockedHandler);
-GetServerInstance().get('/total_locked_value', TotalValueLockedHandlerOpts, TotalValueLockedHandler);
-GetServerInstance().get('/tvl', TotalValueLockedHandlerOpts, TotalValueLockedHandler);
-GetServerInstance().get('/tlv', TotalValueLockedHandlerOpts, TotalValueLockedHandler);
 
 // -- list all providers and monikers endpoint ---
 GetServerInstance().get('/listProviders', ListProvidersRawHandlerOpts, ListProvidersRawHandler);
@@ -209,3 +206,25 @@ RegisterRedisBackedHandler('/specEndpointHealth/:specId', SpecEndpointHealthHand
 RegisterRedisBackedHandler('/specCacheHitRate/:specId', SpecCacheHitRateHandlerOpts, SpecCacheHitRateHandler);
 RegisterRedisBackedHandler('/specProviderHealth/:specId/:addr', SpecProviderHealthHandlerOpts, SpecProviderHealthHandler, { cache_ttl: 10 });
 RegisterRedisBackedHandler('/specTrackedInfo/:specId', SpecTrackedInfoHandlerOpts, SpecTrackedInfoHandler, { cache_ttl: 10 });
+
+const tvlRoutes = [
+    '/total_value_locked',
+    '/total_locked_value',
+    '/tvl',
+    '/tlv'
+];
+
+const tvlComponentsRoutes = [
+    '/total_value_locked_components',
+    '/total_locked_value_components',
+    '/tvl_components',
+    '/tlv_components'
+];
+
+tvlRoutes.forEach(route => {
+    GetServerInstance().get(route, TotalValueLockedHandlerOpts, TotalValueLockedHandler);
+});
+
+tvlComponentsRoutes.forEach(route => {
+    GetServerInstance().get(route, TotalValueLockedComponentsHandlerOpts, TotalValueLockedComponentsHandler);
+});

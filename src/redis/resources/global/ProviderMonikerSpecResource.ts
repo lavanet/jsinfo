@@ -15,7 +15,7 @@ interface ProviderMonikerSpecData {
 
 export class ProviderMonikerSpecResource extends RedisResourceBase<ProviderMonikerSpecData, {}> {
     protected redisKey = 'providerMonikerSpec';
-    protected ttlSeconds = 600; // 10 minutes cache
+    protected cacheExpirySeconds = 600; // 10 minutes cache
 
     private sanitizeAndTrimMoniker(moniker: string): string {
         if (moniker === null || moniker.trim() === "") {
@@ -35,7 +35,7 @@ export class ProviderMonikerSpecResource extends RedisResourceBase<ProviderMonik
         return lavaid;
     }
 
-    protected async fetchFromDb(): Promise<ProviderMonikerSpecData> {
+    protected async fetchFromSource(): Promise<ProviderMonikerSpecData> {
         const results = await queryJsinfo(db => db.select({
             provider: JsinfoSchema.providerSpecMoniker.provider,
             specId: JsinfoSchema.providerSpecMoniker.spec,
@@ -48,7 +48,7 @@ export class ProviderMonikerSpecResource extends RedisResourceBase<ProviderMonik
                 JsinfoSchema.providerSpecMoniker.moniker
             )
             .orderBy(desc(sql`MAX(${JsinfoSchema.providerSpecMoniker.moniker})`)),
-            'ProviderMonikerSpecResource::fetchFromDb'
+            'ProviderMonikerSpecResource::fetchFromSource'
         );
 
         const uniqueMap = new Map<string, ProviderSpecMoniker>();

@@ -1,103 +1,178 @@
 import { RedisResourceBase } from '@jsinfo/redis/classes/RedisResourceBase';
 import { IndexStakesResource } from '../index/IndexStakesResource';
-import { RewardsPoolsResponse, RpcOnDemandEndpointCache } from '@jsinfo/restRpc/lavaRpcOnDemandEndpointCache';
-import { ConvertToBaseDenom } from '@jsinfo/indexer/restrpc_agregators/CurrencyConverstionUtils';
+import { Pool, RpcOnDemandEndpointCache } from '@jsinfo/restRpc/lavaRpcOnDemandEndpointCache';
 import { GetSubscriptionList } from '@jsinfo/indexer/restrpc_agregators/SubscriptionListProcessor';
 import { OsmosisGetTotalLavaLockedValue } from '@jsinfo/restRpc/ext/osmosisapi';
 import { BaseGetTotalLockedValue } from '@jsinfo/restRpc/ext/base';
 import { AribitrumGetTotalLavaValue } from '@jsinfo/restRpc/ext/arbitrum';
 import { CoinGekoCache } from '@jsinfo/restRpc/ext/CoinGeko/CoinGekoCache';
 import { logger } from '@jsinfo/utils/logger';
+import { LockedVestingTokensService } from '../global/LockedVestingTokensResource';
+import { IsMeaningfulText } from '@jsinfo/utils/fmt';
 
-// Function to sum the amounts grouped by denomination and convert to base denom
-async function sumPoolsGroupedByDenom(rewardsPools: RewardsPoolsResponse): Promise<Record<string, bigint>> {
-    const totals: Record<string, number> = {};
-
-    // Iterate through each pool
-    for (const pool of rewardsPools.pools) {
-        // Iterate through each balance in the pool
-        for (const balance of pool.balance) {
-            const denom = balance.denom;
-            const amount = BigInt(balance.amount);
-            if (amount === 0n) continue;
-
-            // Convert the amount to base denomination
-            const [convertedAmount, convertedDenom] = await ConvertToBaseDenom(amount.toString(), denom);
-            if (convertedAmount === "0") continue;
-
-            // Initialize the denomination in the totals object if it doesn't exist
-            if (!totals[convertedDenom]) {
-                totals[convertedDenom] = 0.0;
-            }
-            // Sum the amounts for the denomination
-            totals[convertedDenom] += parseFloat(convertedAmount);
-        }
-    }
-
-    return Object.fromEntries(
-        Object.entries(totals).map(([denom, amount]) => [denom, getRoundedBigInt(amount)])
-    );
+// Renamed interface
+interface TotalValueLockedItem {
+    key: string;
+    ulavaValue: number;
+    USDValue: number;
 }
 
-function getRoundedBigInt(value: number): bigint {
-    return BigInt(Math.ceil(value));
-}
-
-export class TotalValueLockedResource extends RedisResourceBase<number, {}> {
+export class TotalValueLockedResource extends RedisResourceBase<TotalValueLockedItem[], {}> {
     protected readonly redisKey = 'totalValueLocked';
-    protected readonly ttlSeconds = 300; // Cache for 5 minutes
+    protected readonly cacheExpirySeconds = 300;
 
-    // Method to fetch and calculate total value locked
-    private async fetchTotalValueLocked(): Promise<number> {
+    private async fetchTotalValueLocked(): Promise<TotalValueLockedItem[]> {
+        let currentStep = 'initialization';
         try {
-            const indexStakesSum = await this.fetchIndexStakesSum() / 1000000n;
-            const totalsByDenom = await this.fetchRewardsPoolsTotals();
+            const result: TotalValueLockedItem[] = [];
 
-            await this.processSubscriptionList(totalsByDenom);
+            currentStep = 'GetLavaUSDRate';
+            const currentLavaUSDPrice = await CoinGekoCache.GetLavaUSDRate();
 
-            let ulavaAmount = totalsByDenom['ulava'] || 0n;
-            let lavaAmount = totalsByDenom['lava'] || 0n;
-            ulavaAmount += ulavaAmount + indexStakesSum;
-            lavaAmount += BigInt(ulavaAmount / 1000000n);
+            currentStep = 'addIndexStakesToResult';
+            await this.addIndexStakesToResult(result, currentLavaUSDPrice);
 
-            const currentPrice = await CoinGekoCache.GetDenomToUSDRate('lava');
-            if (currentPrice === 0 || isNaN(currentPrice)) {
-                throw new Error('TotalValueLockedResource: CoinGekoCache.GetDenomToUSDRate returned 0 for lava');
-            }
+            currentStep = 'addRewardsPoolsToResult';
+            await this.addRewardsPoolsToResult(result, currentLavaUSDPrice);
 
-            if (currentPrice > 100000 || currentPrice < 1.e-7) {
-                throw new Error(`TotalValueLockedResource: CoinGekoCache.GetDenomToUSDRate returned out of range value for lava: ${currentPrice}`);
-            }
+            currentStep = 'addSubscriptionsToResult';
+            await this.addSubscriptionsToResult(result, currentLavaUSDPrice);
 
-            let usdAmount = Number(lavaAmount) * Number(currentPrice);
+            currentStep = 'addDexesToResult';
+            await this.addDexesToResult(result, currentLavaUSDPrice);
 
-            logger.info('[TVL] Total amounts grouped by denomination:', totalsByDenom);
-            logger.info('[TVL] Total in lava:', ulavaAmount, 'usdAmount:', usdAmount);
+            currentStep = 'addLockedVestingTokensToResult';
+            await this.addLockedVestingTokensToResult(result, currentLavaUSDPrice);
 
-            const osmosisTotalLockedValue = await OsmosisGetTotalLavaLockedValue();
-            if (osmosisTotalLockedValue) {
-                usdAmount += Number(osmosisTotalLockedValue);
-            }
-            const baseTotalLockedValue = await BaseGetTotalLockedValue();
-            if (baseTotalLockedValue) {
-                usdAmount += Number(baseTotalLockedValue);
-            }
-
-            const arbitrumTotalLockedValue = await AribitrumGetTotalLavaValue();
-            if (arbitrumTotalLockedValue) {
-                usdAmount += Number(arbitrumTotalLockedValue);
-            }
-
-            return usdAmount;
+            return result;
         } catch (error) {
             logger.error('TotalValueLockedResource: Error fetching total value locked:', {
+                failedStep: currentStep,
                 error: error instanceof Error ? error.message : error,
                 stack: error instanceof Error ? error.stack : undefined,
                 details: JSON.stringify(error, Object.getOwnPropertyNames(error)),
                 timestamp: new Date().toISOString()
             });
-            throw new Error('TotalValueLockedResource: Failed to fetch total value locked');
+            throw new Error(`TotalValueLockedResource: Failed to fetch total value locked during ${currentStep}`);
         }
+    }
+
+    private async addLockedVestingTokensToResult(result: TotalValueLockedItem[], currentLavaUSDPrice: number): Promise<void> {
+        const lockedTokensStats = await LockedVestingTokensService.fetch();
+        if (!lockedTokensStats) {
+            throw new Error('Error getting locked tokens');
+        }
+
+        const continuousVesting = lockedTokensStats.ContinuousVesting;
+        result.push({
+            key: 'Cosmos_LavaLockedVestingTokens_Continuous',
+            ulavaValue: Number(continuousVesting.total),
+            USDValue: Number(BigInt(continuousVesting.total) / 1000000n) * currentLavaUSDPrice
+        });
+
+        const periodicVesting = lockedTokensStats.PeriodicVesting;
+        result.push({
+            key: 'Cosmos_LavaLockedVestingTokens_Periodic',
+            ulavaValue: Number(periodicVesting.total),
+            USDValue: Number(BigInt(periodicVesting.total) / 1000000n) * currentLavaUSDPrice
+        });
+    }
+
+    private async addDexesToResult(result: TotalValueLockedItem[], currentLavaUSDPrice: number): Promise<void> {
+        // Add Osmosis TVL
+        const osmosisValues = await OsmosisGetTotalLavaLockedValue();
+        if (osmosisValues && IsMeaningfulText(osmosisValues.ulavaValue + "")) {
+            result.push({
+                key: 'Dex_Osmosis',
+                ulavaValue: osmosisValues.ulavaValue,
+                USDValue: osmosisValues.usdValue
+            });
+        }
+
+        // Add Base TVL
+        const baseTotalLockedValueInUsd = await BaseGetTotalLockedValue();
+        if (baseTotalLockedValueInUsd && IsMeaningfulText(baseTotalLockedValueInUsd + "")) {
+            result.push({
+                key: 'Dex_Base',
+                ulavaValue: Math.round((Number(baseTotalLockedValueInUsd) / currentLavaUSDPrice) * 1000000),
+                USDValue: Number(baseTotalLockedValueInUsd)
+            });
+        }
+
+        // Add Arbitrum TVL
+        const arbitrumTotalLockedValueInUsd = await AribitrumGetTotalLavaValue();
+        if (arbitrumTotalLockedValueInUsd && IsMeaningfulText(arbitrumTotalLockedValueInUsd + "")) {
+            result.push({
+                key: 'Dex_Arbitrum',
+                ulavaValue: Math.round((Number(arbitrumTotalLockedValueInUsd) / currentLavaUSDPrice) * 1000000),
+                USDValue: Number(arbitrumTotalLockedValueInUsd)
+            });
+        }
+    }
+
+    private async addIndexStakesToResult(result: TotalValueLockedItem[], currentLavaUSDPrice: number): Promise<void> {
+        const indexStakesSum = await this.fetchIndexStakesSum();
+        result.push({
+            key: 'LavaTotalProviderStakes',
+            ulavaValue: Number(indexStakesSum),
+            USDValue: Number(BigInt(indexStakesSum) / 1000000n) * currentLavaUSDPrice
+        });
+    }
+
+    private async addRewardsPoolsToResult(result: TotalValueLockedItem[], currentLavaUSDPrice: number): Promise<void> {
+        const rewardsPools = await RpcOnDemandEndpointCache.GetRewardsPools();
+
+        for (const pool of rewardsPools.pools) {
+            const { poolUlavaValue, poolUSDValue } = await this.calculatePoolValues(pool, currentLavaUSDPrice);
+
+            result.push({
+                key: `LavaRewardsPool_${pool.name}`,
+                ulavaValue: Number(poolUlavaValue),
+                USDValue: poolUSDValue + (Number(BigInt(poolUlavaValue) / 1000000n) * currentLavaUSDPrice)
+            });
+        }
+    }
+
+    private async calculatePoolValues(pool: Pool, currentLavaUSDPrice: number): Promise<{ poolUlavaValue: bigint, poolUSDValue: number }> {
+        let poolUlavaValue = 0n;
+        let poolUSDValue = 0;
+
+        for (const balance of pool.balance) {
+            const amount = BigInt(balance.amount);
+            if (amount === 0n) continue;
+
+            if (balance.denom !== 'ulava') {
+                continue;
+            }
+
+            poolUlavaValue += amount;
+            poolUSDValue += Number(BigInt(amount) / 1000000n) * currentLavaUSDPrice;
+        }
+
+        return { poolUlavaValue, poolUSDValue };
+    }
+
+    private async addSubscriptionsToResult(result: TotalValueLockedItem[], currentLavaUSDPrice: number): Promise<void> {
+        const subscriptionListResponse = await GetSubscriptionList();
+        let subsUlavaValue = 0n;
+        let subsUSDValue = 0;
+
+        for (const sub of subscriptionListResponse.subs_info) {
+            const amount = BigInt(sub.credit.amount);
+            if (amount === 0n) continue;
+
+            if (sub.credit.denom !== 'ulava') {
+                continue;
+            }
+            subsUlavaValue += amount;
+            subsUSDValue += Number(BigInt(amount) / 1000000n) * currentLavaUSDPrice;
+        }
+
+        result.push({
+            key: 'LavaSubscriptions',
+            ulavaValue: Number(subsUlavaValue),
+            USDValue: subsUSDValue + (Number(BigInt(subsUlavaValue) / 1000000n) * currentLavaUSDPrice)
+        });
     }
 
     private async fetchIndexStakesSum(): Promise<bigint> {
@@ -111,27 +186,7 @@ export class TotalValueLockedResource extends RedisResourceBase<number, {}> {
         return BigInt(indexStakes.stakeSum);
     }
 
-    private async fetchRewardsPoolsTotals(): Promise<Record<string, bigint>> {
-        const rewardsPools = await RpcOnDemandEndpointCache.GetRewardsPools();
-        return await sumPoolsGroupedByDenom(rewardsPools);
-    }
-
-    private async processSubscriptionList(totalsByDenom: Record<string, bigint>): Promise<void> {
-        const subscriptionListResponse = await GetSubscriptionList();
-        const subscriptionList = subscriptionListResponse.subs_info;
-        subscriptionList.forEach((item: { credit: { denom: string; amount: string } }) => {
-            const denom = item.credit.denom;
-            const amount = BigInt(item.credit.amount);
-
-            if (!totalsByDenom[denom]) {
-                totalsByDenom[denom] = 0n;
-            }
-
-            totalsByDenom[denom] += BigInt(amount);
-        });
-    }
-
-    protected async fetchFromDb(): Promise<number> {
+    protected async fetchFromSource(): Promise<TotalValueLockedItem[]> {
         return await this.fetchTotalValueLocked();
     }
 }

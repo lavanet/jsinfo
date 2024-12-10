@@ -14,23 +14,23 @@ interface ChainWalletArgs {
 
 export class ChainWalletResource extends RedisResourceBase<ChainWalletData, ChainWalletArgs> {
     protected readonly redisKey = 'chain_wallet';
-    protected readonly ttlSeconds = 300; // 5 minutes cache
+    protected readonly cacheExpirySeconds = 300; // 5 minutes cache
 
-    protected async fetchFromDb(args: ChainWalletArgs): Promise<ChainWalletData> {
+    protected async fetchFromSource(args: ChainWalletArgs): Promise<ChainWalletData> {
         const prefix = args.type === 'stakers' ? 'stakers' : 'restakers';
 
         const totalResult = await queryJsinfo(db => db
             .select({ value: JsinfoSchema.keyValueStore.value })
             .from(JsinfoSchema.keyValueStore)
             .where(eq(JsinfoSchema.keyValueStore.key, `${prefix}_current_unique_delegators`)),
-            `ChainWalletResource::fetchFromDb_${args.type}`
+            `ChainWalletResource::fetchFromSource_${args.type}`
         );
 
         const monthlyResult = await queryJsinfo(db => db
             .select({ value: JsinfoSchema.keyValueStore.value })
             .from(JsinfoSchema.keyValueStore)
             .where(eq(JsinfoSchema.keyValueStore.key, `${prefix}_monthly_unique_delegators`)),
-            `ChainWalletResource::fetchFromDb_${args.type}`
+            `ChainWalletResource::fetchFromSource_${args.type}`
         );
 
         return {

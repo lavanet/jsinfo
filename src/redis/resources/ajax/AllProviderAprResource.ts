@@ -65,9 +65,9 @@ interface CuServed {
 
 export class AllProviderAPRResource extends RedisResourceBase<AllAprProviderData[], {}> {
     protected readonly redisKey = 'allProviderAPR';
-    protected readonly ttlSeconds = 300; // 5 minutes cache
+    protected readonly cacheExpirySeconds = 300; // 5 minutes cache
 
-    protected async fetchFromDb(): Promise<AllAprProviderData[]> {
+    protected async fetchFromSource(): Promise<AllAprProviderData[]> {
         const result = await queryJsinfo(async (db) => {
             const [addressAndAprData, providerCommissionsData, cuServedData] = await this.fetchData(db);
             const providerCommissionsDataMapByProviderId = this.mapProviderCommissions(providerCommissionsData);
@@ -81,7 +81,7 @@ export class AllProviderAPRResource extends RedisResourceBase<AllAprProviderData
 
             return this.constructProcessedData(addressAndAprDataRestakingById, addressAndAprDataStackingById,
                 providerCommissionsDataMapByProviderId, cuServedDataMapByProviderId, addressAndAprDataRewardsById);
-        }, `ProviderAPRResource::fetchFromDb`);
+        }, `ProviderAPRResource::fetchFromSource`);
 
         return result;
     }

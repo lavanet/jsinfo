@@ -16,9 +16,9 @@ export interface IndexTopChainsData {
 
 export class IndexTopChainsResource extends RedisResourceBase<IndexTopChainsData, {}> {
     protected readonly redisKey = 'index:top:chains';
-    protected readonly ttlSeconds = 600; // 10 minutes cache
+    protected readonly cacheExpirySeconds = 600; // 10 minutes cache
 
-    protected async fetchFromDb(): Promise<IndexTopChainsData> {
+    protected async fetchFromSource(): Promise<IndexTopChainsData> {
         // Get 30 days stats
         const thirtyDaysStats = await queryJsinfo(
             async (db: PostgresJsDatabase) => db.select({
@@ -29,7 +29,7 @@ export class IndexTopChainsResource extends RedisResourceBase<IndexTopChainsData
                 .from(JsinfoProviderAgrSchema.aggDailyRelayPayments)
                 .where(gt(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday, sql<Date>`now() - interval '30 day'`))
                 .groupBy(JsinfoProviderAgrSchema.aggDailyRelayPayments.specId),
-            'IndexTopChainsResource_fetchFromDb_30days'
+            'IndexTopChainsResource_fetchFromSource_30days'
         );
 
         // Get all time stats
@@ -41,7 +41,7 @@ export class IndexTopChainsResource extends RedisResourceBase<IndexTopChainsData
             })
                 .from(JsinfoProviderAgrSchema.aggDailyRelayPayments)
                 .groupBy(JsinfoProviderAgrSchema.aggDailyRelayPayments.specId),
-            'IndexTopChainsResource_fetchFromDb_alltime'
+            'IndexTopChainsResource_fetchFromSource_alltime'
         );
 
         // Combine results

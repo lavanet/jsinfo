@@ -9,9 +9,9 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 
 class SpecAndConsumerResource extends RedisResourceBase<{ specs: string[], consumers: string[] }, {}> {
     protected readonly redisKey = 'spec-and-consumer-cache';
-    protected ttlSeconds = 600; // 10 minutes cache
+    protected cacheExpirySeconds = 600; // 10 minutes cache
 
-    protected async fetchFromDb(): Promise<{ specs: string[], consumers: string[] }> {
+    protected async fetchFromSource(): Promise<{ specs: string[], consumers: string[] }> {
         const [specs, consumers] = await Promise.all([
             this.fetchSpecTable(),
             this.fetchConsumerTable()

@@ -1,15 +1,14 @@
 import { and, eq, gt, isNull, not, sql } from 'drizzle-orm';
 import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import * as JsinfoProviderAgrSchema from '@jsinfo/schemas/jsinfoSchema/providerRelayPaymentsAgregation';
-import { RedisResourceBase } from '../../RedisResourceBase';
+import { RedisResourceBase } from '@jsinfo/redis/classes/RedisResourceBase';
 import { queryJsinfo } from '@jsinfo/utils/db';
-import { logger } from '@jsinfo/utils/logger';
 
 export class ActiveProvidersResource extends RedisResourceBase<string[], {}> {
     protected readonly redisKey = 'index:active_providers';
-    protected readonly ttlSeconds = 600; // 10 minutes cache
+    protected readonly cacheExpirySeconds = 600; // 10 minutes cache
 
-    protected async fetchFromDb(): Promise<string[]> {
+    protected async fetchFromSource(): Promise<string[]> {
         const data = await queryJsinfo(db => db.select({
             provider: JsinfoSchema.providerStakes.provider,
         })
@@ -35,7 +34,7 @@ export class ActiveProvidersResource extends RedisResourceBase<string[], {}> {
                     gt(sql<number>`COALESCE(SUM(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum}), 0)`, 1)
                 )
             ),
-            'ActiveProvidersResource::fetchFromDb'
+            'ActiveProvidersResource::fetchFromSource'
         );
 
         return data

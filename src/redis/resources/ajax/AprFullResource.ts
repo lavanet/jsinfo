@@ -11,14 +11,14 @@ export interface AprFullData {
 
 export class AprFullResource extends RedisResourceBase<AprFullData, {}> {
     protected redisKey = 'apr_full';
-    protected ttlSeconds = 600; // 10 minutes cache
+    protected cacheExpirySeconds = 600; // 10 minutes cache
 
-    protected async fetchFromDb(): Promise<AprFullData> {
+    protected async fetchFromSource(): Promise<AprFullData> {
         const result = await queryJsinfo(async (db: PostgresJsDatabase) => {
             return await db
                 .select()
                 .from(JsinfoSchema.aprFullInfo);
-        }, `AprFullResource::fetchFromDb`);
+        }, `AprFullResource::fetchFromSource`);
 
         const aprFullData: AprFullData = {};
         result.forEach(row => {

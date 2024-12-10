@@ -6,8 +6,8 @@ import { JSONStringify } from '@jsinfo/utils/fmt';
 class MemoryCacheClass {
     private cache: NodeCache;
 
-    constructor(ttlSeconds: number = 30) {
-        this.cache = new NodeCache({ stdTTL: ttlSeconds, checkperiod: ttlSeconds * 0.2 });
+    constructor(cacheExpirySeconds: number = 30) {
+        this.cache = new NodeCache({ stdTTL: cacheExpirySeconds, checkperiod: cacheExpirySeconds * 0.2 });
     }
 
     async get<T = string>(key: string): Promise<T | null> {

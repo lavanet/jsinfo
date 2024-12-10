@@ -1,8 +1,6 @@
 import { RedisResourceBase } from '@jsinfo/redis/classes/RedisResourceBase';
-import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { ProviderMonikerService } from '@jsinfo/redis/resources/global/ProviderMonikerSpecResource';
-import { GetLatestBlock } from '@jsinfo/query/utils/getLatestBlock';
 import { desc } from 'drizzle-orm';
 import { queryJsinfo } from '@jsinfo/utils/db';
 
@@ -136,9 +134,9 @@ const LavaProviderStakeStatusDict: { [key: number]: string } = {
 
 export class ListProvidersResource extends RedisResourceBase<ProvidersData, {}> {
     protected redisKey = 'listProviders';
-    protected ttlSeconds = 300; // 5 minutes cache
+    protected cacheExpirySeconds = 300; // 5 minutes cache
 
-    protected async fetchFromDb(): Promise<ProvidersData> {
+    protected async fetchFromSource(): Promise<ProvidersData> {
         const stakesRes = await queryJsinfo(
             async (db) => db.select({
                 provider: JsinfoSchema.providerStakes.provider,
@@ -151,7 +149,7 @@ export class ListProvidersResource extends RedisResourceBase<ProvidersData, {}> 
                 delegateLimit: JsinfoSchema.providerStakes.delegateLimit,
                 delegateTotal: JsinfoSchema.providerStakes.delegateTotal,
             }).from(JsinfoSchema.providerStakes),
-            'ListProvidersResource_fetchFromDb'
+            'ListProvidersResource_fetchFromSource'
         );
 
         // First get all monikers

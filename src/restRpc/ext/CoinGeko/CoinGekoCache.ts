@@ -19,6 +19,10 @@ class CoinGekoCacheClass {
     private cacheRefreshInterval = 30 * 60; // 30 minutes, I hit 2 much the retry error locally
     private activeFetches: { [denom: string]: Promise<number> } = {};
 
+    public async GetLavaUSDRate(): Promise<number> {
+        return await this.GetDenomToUSDRate("lava");
+    }
+
     public async GetDenomToUSDRate(denom: string): Promise<number> {
         if (IsMainnet() && denom.includes("E3FCBEDDBAC500B1BAB90395C7D1E4F33D9B9ECFE82A16ED7D7D141A0152323F")) {
             throw new Error(`Using testnet denom on mainnet - something is wrong - ${denom} (samoleans)`);

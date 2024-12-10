@@ -10,9 +10,9 @@ export interface IndexStakesData {
 
 export class IndexStakesResource extends RedisResourceBase<IndexStakesData, {}> {
     protected readonly redisKey = 'index:stakes';
-    protected readonly ttlSeconds = 600; // 10 minutes cache
+    protected readonly cacheExpirySeconds = 600; // 10 minutes cache
 
-    protected async fetchFromDb(): Promise<IndexStakesData> {
+    protected async fetchFromSource(): Promise<IndexStakesData> {
         const stakesRes = await queryJsinfo(db => db.select({
             stake: JsinfoSchema.providerStakes.stake,
             delegateTotal: JsinfoSchema.providerStakes.delegateTotal,
@@ -20,7 +20,7 @@ export class IndexStakesResource extends RedisResourceBase<IndexStakesData, {}> 
         })
             .from(JsinfoSchema.providerStakes)
             .orderBy(desc(JsinfoSchema.providerStakes.stake)),
-            'IndexStakesResource::fetchFromDb'
+            'IndexStakesResource::fetchFromSource'
         );
 
         let stakeSum = 0n;

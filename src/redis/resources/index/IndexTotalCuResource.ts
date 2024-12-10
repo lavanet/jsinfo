@@ -1,7 +1,7 @@
 import { sql } from 'drizzle-orm';
 import * as JsinfoProviderAgrSchema from '@jsinfo/schemas/jsinfoSchema/providerRelayPaymentsAgregation';
-import { RedisResourceBase } from '../../RedisResourceBase';
-import { queryJsinfo } from '../../../utils/db';
+import { RedisResourceBase } from '@jsinfo/redis/classes/RedisResourceBase';
+import { queryJsinfo } from '@jsinfo/utils/db';
 
 export interface IndexTotalCuData {
     cuSum: number;
@@ -10,15 +10,15 @@ export interface IndexTotalCuData {
 
 export class IndexTotalCuResource extends RedisResourceBase<IndexTotalCuData, {}> {
     protected readonly redisKey = 'index:total:cu';
-    protected readonly ttlSeconds = 3600; // 1 hour cache
+    protected readonly cacheExpirySeconds = 3600; // 1 hour cache
 
-    protected async fetchFromDb(): Promise<IndexTotalCuData> {
+    protected async fetchFromSource(): Promise<IndexTotalCuData> {
         const res = await queryJsinfo<{ cuSum: number; relaySum: number }[]>(
             async (db) => await db.select({
                 cuSum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggAllTimeRelayPayments.cuSum})`,
                 relaySum: sql<number>`SUM(${JsinfoProviderAgrSchema.aggAllTimeRelayPayments.relaySum})`,
             }).from(JsinfoProviderAgrSchema.aggAllTimeRelayPayments),
-            'IndexTotalCuResource_fetchFromDb'
+            'IndexTotalCuResource_fetchFromSource'
         );
 
         return {

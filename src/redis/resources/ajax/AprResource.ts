@@ -8,14 +8,14 @@ export interface AprData {
 
 export class AprResource extends RedisResourceBase<AprData, {}> {
     protected redisKey = 'apr';
-    protected ttlSeconds = 600; // 10 minutes cache
+    protected cacheExpirySeconds = 600; // 10 minutes cache
 
-    protected async fetchFromDb(): Promise<AprData> {
+    protected async fetchFromSource(): Promise<AprData> {
         const result = await queryJsinfo(async (db: PostgresJsDatabase) => {
             return await db
                 .select({ key: JsinfoSchema.apr.key, value: JsinfoSchema.apr.value })
                 .from(JsinfoSchema.apr);
-        }, `AprResource::fetchFromDb`);
+        }, `AprResource::fetchFromSource`);
 
         const aprData: AprData = {};
         result.forEach(row => {

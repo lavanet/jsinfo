@@ -13,6 +13,8 @@ export function GetEnvVar(key: string, alt?: string): string {
     return value;
 }
 
+// Cache for parsed environment variables
+const ParsePrioritizedEnvVars_envVarCache = new Map<string, string[]>();
 
 export function ParsePrioritizedEnvVars(
     envVars: string[],
@@ -21,6 +23,20 @@ export function ParsePrioritizedEnvVars(
     maskValues: boolean = true,
     throwError: boolean = true
 ): string[] {
+    // Create a cache key from the input parameters
+    const cacheKey = `${envVars.join('|')}|${errorMessage}|${logPrefix}|${maskValues}|${throwError}`;
+
+    // Check cache first
+    const cachedResult = ParsePrioritizedEnvVars_envVarCache.get(cacheKey);
+    if (cachedResult) {
+        // Still log the results even when returning cached values
+        const displayValues = maskValues
+            ? cachedResult.map(value => MaskPassword(value))
+            : cachedResult;
+        logger.info(`${logPrefix} values loaded (cached):`, displayValues.join(', '));
+        return cachedResult;
+    }
+
     const values = new Map<number, string>();  // priority -> value
 
     for (const envVar of envVars) {
@@ -66,10 +82,14 @@ export function ParsePrioritizedEnvVars(
         .sort((a, b) => a[0] - b[0])
         .map(([_, value]) => value);
 
+    // Cache the result
+    envVarCache.set(cacheKey, sortedValues);
+
     // Log the results
     const displayValues = maskValues
         ? sortedValues.map(value => MaskPassword(value))
         : sortedValues;
+
     logger.info(`${logPrefix} values loaded:`, displayValues.join(', '));
 
     return sortedValues;

@@ -121,7 +121,7 @@ class ProviderStakesData extends RequestHandlerBase<ProviderStakesResponse> {
                 provider: JsinfoSchema.providerStakes.provider,
                 specId: JsinfoSchema.providerStakes.specId,
                 blockId: JsinfoSchema.providerStakes.blockId,
-                totalStake: sql<bigint>`(${JsinfoSchema.providerStakes.stake} + LEAST(${JsinfoSchema.providerStakes.delegateTotal}, ${JsinfoSchema.providerStakes.delegateLimit})) as totalStake`,
+                totalStake: sql<bigint>`(${JsinfoSchema.providerStakes.stake} + ${JsinfoSchema.providerStakes.delegateTotal}) as totalStake`,
             })
                 .from(JsinfoSchema.providerStakes)
                 .where(eq(JsinfoSchema.providerStakes.provider, this.addr))
@@ -211,7 +211,7 @@ class ProviderStakesData extends RequestHandlerBase<ProviderStakesResponse> {
                 provider: JsinfoSchema.providerStakes.provider,
                 specId: JsinfoSchema.providerStakes.specId,
                 blockId: JsinfoSchema.providerStakes.blockId,
-                totalStake: sql<bigint>`(COALESCE(${JsinfoSchema.providerStakes.stake}, 0) + LEAST(COALESCE(${JsinfoSchema.providerStakes.delegateTotal}, 0), COALESCE(${JsinfoSchema.providerStakes.delegateLimit}, 0))) as totalStake`,
+                totalStake: sql<bigint>`( COALESCE(${JsinfoSchema.providerStakes.stake}, 0) + COALESCE(${JsinfoSchema.providerStakes.delegateTotal}, 0) ) as totalStake`,
             })
                 .from(JsinfoSchema.providerStakes)
                 .where(eq(JsinfoSchema.providerStakes.provider, this.addr))

@@ -1,12 +1,8 @@
 // src/query/handlers/provider/providerCardsStakesHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-
-import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
-import { desc, eq } from "drizzle-orm";
 import { GetAndValidateProviderAddressFromRequest } from '../../utils/queryRequestArgParser';
-import { MinBigInt } from '@jsinfo/utils/bigint';
-import { queryJsinfo } from '@jsinfo/utils/db';
+import { ProviderStakesAndDelegationResource } from '@jsinfo/redis/resources/global/ProviderStakesAndDelegationResource';
 
 export const ProviderCardsStakesHandlerOpts: RouteShorthandOptions = {
     schema: {
@@ -20,22 +16,6 @@ export const ProviderCardsStakesHandlerOpts: RouteShorthandOptions = {
         }
     }
 }
-async function getStakes(addr: string): Promise<bigint> {
-    const stakesRes = await queryJsinfo<typeof JsinfoSchema.providerStakes.$inferSelect[]>(
-        async (db) => await db.select()
-            .from(JsinfoSchema.providerStakes)
-            .where(eq(JsinfoSchema.providerStakes.provider, addr))
-            .orderBy(desc(JsinfoSchema.providerStakes.stake)),
-        `ProviderCardsStakes_getStakes_${addr}`
-    );
-
-    let stakeSum = 0n;
-    stakesRes.forEach((stake) => {
-        stakeSum += stake.stake! + MinBigInt(stake.delegateTotal, stake.delegateLimit);
-    });
-
-    return stakeSum;
-}
 
 export async function ProviderCardsStakesHandler(request: FastifyRequest, reply: FastifyReply) {
     const addr = await GetAndValidateProviderAddressFromRequest("providerCardsStakes", request, reply);
@@ -43,11 +23,22 @@ export async function ProviderCardsStakesHandler(request: FastifyRequest, reply:
         return null;
     }
 
-    ;
+    const resource = new ProviderStakesAndDelegationResource();
+    const result = await resource.fetch();
+    if (!result) {
+        reply.status(400);
+        reply.send({ error: 'Failed to fetch stakes data' });
+        return reply;
+    }
 
-    const stakeSum = await getStakes(addr);
+    const providerStake = result.providerStakes[addr];
+    if (!providerStake) {
+        reply.status(404);
+        reply.send({ error: 'Provider stake not found' });
+        return reply;
+    }
 
     return {
-        stakeSum: stakeSum.toString()
+        stakeSum: (BigInt(providerStake.stake) + BigInt(providerStake.delegateTotal)).toString()
     };
 }

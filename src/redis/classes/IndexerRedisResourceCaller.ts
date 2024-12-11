@@ -17,7 +17,7 @@ import { IndexChartsResource } from '../resources/index/IndexChartsResource';
 import { IndexLatestBlockResource } from '../resources/index/IndexLatestBlockResource';
 import { IndexProvidersActiveResource } from '../resources/index/IndexProvidersActiveResource';
 import { IndexProvidersResource } from '../resources/index/IndexProvidersResource';
-import { IndexStakesResource } from '../resources/index/IndexStakesResource';
+import { ProviderStakesAndDelegationResource } from '../resources/global/ProviderStakesAndDelegationResource';
 import { IndexTopChainsResource } from '../resources/index/IndexTopChainsResource';
 import { IndexTotalCuResource } from '../resources/index/IndexTotalCuResource';
 import { ActiveProvidersResource } from '../resources/index/ActiveProvidersResource';
@@ -141,7 +141,7 @@ export class IndexerRedisResourceCaller {
 
     private static async refreshIndexResources(): Promise<void> {
         // Basic Index Resources
-        await new IndexStakesResource().fetch()
+        await new ProviderStakesAndDelegationResource().fetch()
             .catch(e => logger.error('Failed to refresh index stakes:', e));
         await new IndexLatestBlockResource().fetch()
             .catch(e => logger.error('Failed to refresh latest block:', e));

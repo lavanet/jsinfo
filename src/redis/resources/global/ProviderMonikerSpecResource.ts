@@ -28,9 +28,12 @@ export class ProviderMonikerSpecResource extends RedisResourceBase<ProviderMonik
     }
 
     private verifyLavaId(lavaid: string): string {
-        lavaid = lavaid.toLowerCase();
+        lavaid = lavaid.toLowerCase().trim();
+        if (lavaid == 'empty_provider') {
+            return 'empty_provider';
+        }
         if (!lavaid.startsWith('lava@')) {
-            throw new Error('Input must start with "lava@".');
+            throw new Error('Input must start with "lava@" . orginal input: ' + (lavaid + "").substring(0, 100));
         }
         return lavaid;
     }

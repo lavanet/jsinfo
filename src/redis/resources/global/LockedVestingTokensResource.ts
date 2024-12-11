@@ -2,6 +2,7 @@ import { ContinuousVestingAccount, PeriodicVestingAccount } from "cosmjs-types/c
 import { LavaClient } from "../../../indexer/lavaTypes";
 import { RedisResourceBase } from "@jsinfo/redis/classes/RedisResourceBase";
 import { queryRpc } from "@jsinfo/indexer/utils/lavajsRpc";
+import { logger } from "@jsinfo/utils/logger";
 
 export interface LockedTokensVestingTypeInfo {
     accounts: number;
@@ -59,6 +60,11 @@ export async function ComosGetLockedVestingTokens(now: number, client: LavaClien
         nextKey = response.pagination?.nextKey ?? null;
 
         response.accounts.forEach((account) => {
+            const account_lower = account.typeUrl.toLowerCase();
+            if (account_lower.includes("delayed") || account_lower.includes("permanent")) {
+                logger.warn(`ComosGetLockedVestingTokens: Unaccounted cosmos vesting account types . Skipping account type: ${account.typeUrl}`);
+                return;
+            }
             if (account.typeUrl == "/cosmos.vesting.v1beta1.ContinuousVestingAccount") {
                 const vestingAccount = ContinuousVestingAccount.decode(account.value);
                 stats.ContinuousVesting.accounts++;

@@ -93,7 +93,7 @@ export class IndexProvidersResource extends RedisResourceBase<IndexProvidersReso
             async (db) => db.select({
                 provider: JsinfoSchema.providerStakes.provider,
                 totalServices: sql<string>`CONCAT(SUM(CASE WHEN ${JsinfoSchema.providerStakes.status} = ${JsinfoSchema.LavaProviderStakeStatus.Active} THEN 1 ELSE 0 END), ' / ', COUNT(${JsinfoSchema.providerStakes.specId})) as totalServices`,
-                totalStake: sql<bigint>`COALESCE(SUM(CAST(${JsinfoSchema.providerStakes.stake} AS BIGINT) + LEAST(CAST(${JsinfoSchema.providerStakes.delegateTotal} AS BIGINT), CAST(${JsinfoSchema.providerStakes.delegateLimit} AS BIGINT))), 0) AS totalStake`,
+                totalStake: sql<bigint>`COALESCE(SUM( CAST(${JsinfoSchema.providerStakes.stake} AS BIGINT) + CAST(${JsinfoSchema.providerStakes.delegateTotal} AS BIGINT) ), 0) AS totalStake`,
                 rewardSum: sql<number>`COALESCE((${rewardSumSubQuery}), 0) as rewardSum`,
             })
                 .from(JsinfoSchema.providerStakes)
@@ -188,7 +188,7 @@ export class IndexProvidersResource extends RedisResourceBase<IndexProvidersReso
                     provider: JsinfoSchema.providerStakes.provider,
                     moniker: sql`MAX(${JsinfoSchema.providerSpecMoniker.moniker}) as moniker`,
                     totalServices: sql<string>`CONCAT(SUM(CASE WHEN ${JsinfoSchema.providerStakes.status} = ${JsinfoSchema.LavaProviderStakeStatus.Active} THEN 1 ELSE 0 END), ' / ', COUNT(${JsinfoSchema.providerStakes.specId})) as totalServices`,
-                    totalStake: sql<bigint>`COALESCE(SUM(CAST(${JsinfoSchema.providerStakes.stake} AS BIGINT) + LEAST(CAST(${JsinfoSchema.providerStakes.delegateTotal} AS BIGINT), CAST(${JsinfoSchema.providerStakes.delegateLimit} AS BIGINT))), 0) AS totalStake`,
+                    totalStake: sql<bigint>`COALESCE(SUM(CAST(${JsinfoSchema.providerStakes.stake} AS BIGINT) + CAST(${JsinfoSchema.providerStakes.delegateTotal} AS BIGINT) ), 0) AS totalStake`,
                     rewardSum: sql<number>`COALESCE((${rewardSumSubQuery}), 0) as rewardSum`,
                 })
                     .from(JsinfoSchema.providerStakes)
@@ -223,7 +223,7 @@ export class IndexProvidersResource extends RedisResourceBase<IndexProvidersReso
             async (db: PostgresJsDatabase) => db.select({
                 provider: JsinfoSchema.providerStakes.provider,
                 totalServices: sql<string>`CONCAT(SUM(CASE WHEN ${JsinfoSchema.providerStakes.status} = ${JsinfoSchema.LavaProviderStakeStatus.Active} THEN 1 ELSE 0 END), ' / ', COUNT(${JsinfoSchema.providerStakes.specId})) as totalServices`,
-                totalStake: sql<bigint>`COALESCE(SUM(CAST(${JsinfoSchema.providerStakes.stake} AS BIGINT) + LEAST(CAST(${JsinfoSchema.providerStakes.delegateTotal} AS BIGINT), CAST(${JsinfoSchema.providerStakes.delegateLimit} AS BIGINT))), 0) AS totalStake`,
+                totalStake: sql<bigint>`COALESCE(SUM(CAST(${JsinfoSchema.providerStakes.stake} AS BIGINT) + CAST(${JsinfoSchema.providerStakes.delegateTotal} AS BIGINT) ), 0) AS totalStake`,
                 rewardSum: sql<number>`COALESCE((${rewardSumSubQuery}), 0) as rewardSum`,
             })
                 .from(JsinfoSchema.providerStakes)

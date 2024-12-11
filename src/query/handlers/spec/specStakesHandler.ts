@@ -120,7 +120,7 @@ export async function SpecStakesPaginatedHandler(request: FastifyRequest, reply:
             delegateLimit: JsinfoSchema.providerStakes.delegateLimit,
             delegateTotal: JsinfoSchema.providerStakes.delegateTotal,
             delegateCommission: JsinfoSchema.providerStakes.delegateCommission,
-            totalStake: sql<bigint>`(${JsinfoSchema.providerStakes.stake} + LEAST(${JsinfoSchema.providerStakes.delegateTotal}, ${JsinfoSchema.providerStakes.delegateLimit})) as totalStake`,
+            totalStake: sql<bigint>`( ${JsinfoSchema.providerStakes.stake} + ${JsinfoSchema.providerStakes.delegateTotal} ) as totalStake`,
             appliedHeight: JsinfoSchema.providerStakes.appliedHeight,
             geolocation: JsinfoSchema.providerStakes.geolocation,
             addons: sql<string>`COALESCE(${JsinfoSchema.providerStakes.addons}, '')`,

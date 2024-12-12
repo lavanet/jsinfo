@@ -244,7 +244,7 @@ class ProviderStakesData extends RequestHandlerBase<ProviderStakesResponse> {
             { key: "extensions", name: "Extensions" },
             { key: "stake", name: "Self Stake" },
             { key: "totalStake", name: "Total Stake" },
-            { key: "delegateLimit", name: "Delegate Limit" },
+            // { key: "delegateLimit", name: "Delegate Limit" },
             { key: "delegateTotal", name: "Delegate Total" },
             { key: "delegateCommission", name: "Delegate Commission" },
         ];

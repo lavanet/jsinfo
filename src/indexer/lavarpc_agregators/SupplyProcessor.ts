@@ -13,11 +13,12 @@ async function getPoolsAmount(client: LavaClient): Promise<bigint> {
 
     let totalAmount = 0n;
 
+    // check why iprpc pools are missin
     pools.pools.forEach((pool: any) => {
         if (["validators_rewards_distribution_pool", "validators_rewards_allocation_pool", "providers_rewards_distribution_pool", "providers_rewards_allocation_pool"].includes(pool.name)) {
             totalAmount += BigInt(pool.balance[0].amount);
         }
-    });
+    })
 
     return totalAmount;
 }

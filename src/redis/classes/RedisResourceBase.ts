@@ -83,7 +83,6 @@ export abstract class RedisResourceBase<T, A extends BaseArgs = BaseArgs> {
         RedisResourceBase.activeFetches.set(key, fetchPromise);
 
         return await fetchPromise;
-
     }
 
     private async orchestrateFetch(args: A | undefined, key: string): Promise<T | null> {

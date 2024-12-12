@@ -71,7 +71,7 @@ export class TotalValueLockedResource extends RedisResourceBase<TotalValueLocked
             return sum;
         }, 0n);
         result.push({
-            key: 'LavaEmptyProviderDelegation',
+            key: 'LavaEmptyProviderDelegatorsThatDidNotUseLavaApi',
             ulavaValue: Number(emptyProviderDelegationsSum),
             USDValue: Number(emptyProviderDelegationsSum / 1000000n) * currentLavaUSDPrice
         });
@@ -138,7 +138,7 @@ export class TotalValueLockedResource extends RedisResourceBase<TotalValueLocked
             USDValue: Number(BigInt(stakesSum) / 1000000n) * currentLavaUSDPrice
         });
         result.push({
-            key: 'LavaTotalProviderDelegation',
+            key: 'LavaTotalDelegationsToProvider',
             ulavaValue: Number(delegationSum),
             USDValue: Number(BigInt(delegationSum) / 1000000n) * currentLavaUSDPrice
         });

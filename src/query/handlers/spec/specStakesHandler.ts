@@ -14,7 +14,7 @@ import { queryJsinfo } from '@jsinfo/utils/db';
 
 export type SpecSpecsResponse = {
     stake: string;
-    delegateLimit: string;
+    // delegateLimit: string;
     delegateTotal: string;
     delegateCommission: string;
     totalStake: string;
@@ -47,9 +47,9 @@ export const SpecStakesPaginatedHandlerOpts: RouteShorthandOptions = {
                                 stake: {
                                     type: ['string', 'null']
                                 },
-                                delegateLimit: {
-                                    type: ['string', 'null']
-                                },
+                                // delegateLimit: {
+                                //     type: ['string', 'null']
+                                // },
                                 delegateTotal: {
                                     type: ['string', 'null']
                                 },
@@ -117,7 +117,7 @@ export async function SpecStakesPaginatedHandler(request: FastifyRequest, reply:
     const [stakesRes, aggRes90Days, aggRes30Days] = await Promise.all([
         queryJsinfo(db => db.select({
             stake: JsinfoSchema.providerStakes.stake,
-            delegateLimit: JsinfoSchema.providerStakes.delegateLimit,
+            // delegateLimit: JsinfoSchema.providerStakes.delegateLimit,
             delegateTotal: JsinfoSchema.providerStakes.delegateTotal,
             delegateCommission: JsinfoSchema.providerStakes.delegateCommission,
             totalStake: sql<bigint>`( ${JsinfoSchema.providerStakes.stake} + ${JsinfoSchema.providerStakes.delegateTotal} ) as totalStake`,
@@ -185,7 +185,7 @@ export async function SpecStakesPaginatedHandler(request: FastifyRequest, reply:
         return {
             ...itemStakesRes,
             stake: BigIntIsZero(itemStakesRes.stake) ? "0" : itemStakesRes.stake?.toString() ?? "0",
-            delegateLimit: BigIntIsZero(itemStakesRes.delegateLimit) ? "0" : itemStakesRes.delegateLimit?.toString() ?? "0",
+            // delegateLimit: BigIntIsZero(itemStakesRes.delegateLimit) ? "0" : itemStakesRes.delegateLimit?.toString() ?? "0",
             delegateTotal: BigIntIsZero(itemStakesRes.delegateTotal) ? "0" : itemStakesRes.delegateTotal?.toString() ?? "0",
             delegateCommission: BigIntIsZero(itemStakesRes.delegateCommission) ? "0" : itemStakesRes.delegateCommission?.toString() ?? "0",
             totalStake: BigIntIsZero(itemStakesRes.totalStake) ? "0" : itemStakesRes.totalStake?.toString() ?? "0",

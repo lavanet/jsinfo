@@ -14,7 +14,7 @@ interface ProviderEntry {
         addons: string | null;
         extensions: string | null;
         delegateCommission: string | null;
-        delegateLimit: string | null;
+        // delegateLimit: string | null;
         delegateTotal: string | null;
         moniker: string;
     }[];
@@ -146,7 +146,7 @@ export class ListProvidersResource extends RedisResourceBase<ProvidersData, {}> 
                 addons: JsinfoSchema.providerStakes.addons,
                 extensions: JsinfoSchema.providerStakes.extensions,
                 delegateCommission: JsinfoSchema.providerStakes.delegateCommission,
-                delegateLimit: JsinfoSchema.providerStakes.delegateLimit,
+                // delegateLimit: JsinfoSchema.providerStakes.delegateLimit,
                 delegateTotal: JsinfoSchema.providerStakes.delegateTotal,
             }).from(JsinfoSchema.providerStakes),
             'ListProvidersResource_fetchFromSource'
@@ -169,7 +169,7 @@ export class ListProvidersResource extends RedisResourceBase<ProvidersData, {}> 
                 addons: stake.addons || '',
                 extensions: stake.extensions || '',
                 delegateCommission: stake.delegateCommission?.toString() ?? '',
-                delegateLimit: stake.delegateLimit?.toString() ?? '',
+                // delegateLimit: stake.delegateLimit?.toString() ?? '',
                 delegateTotal: stake.delegateTotal?.toString() ?? '',
                 moniker: monikers[index],
             };

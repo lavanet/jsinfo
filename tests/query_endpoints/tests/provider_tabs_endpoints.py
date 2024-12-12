@@ -71,7 +71,7 @@ class TestProviderEndpoints(unittest.TestCase):
                 continue
             data = response.json()['data'][0]
             assert 'stake' in data
-            assert 'delegateLimit' in data
+            # assert 'delegateLimit' in data
             assert 'delegateTotal' in data
             assert 'delegateCommission' in data
             assert 'totalStake' in data

@@ -175,14 +175,14 @@ export class AllProviderAPRResource extends RedisResourceBase<AllAprProviderData
 
                 if (curr.type.toLowerCase().trim() === 'restaking') {
                     if (!addressAndAprDataRestakingById[address]) {
-                        addressAndAprDataRestakingById[address] = []; // Initialize as an empty array if not present
+                        addressAndAprDataRestakingById[address] = [];
                     }
-                    addressAndAprDataRestakingById[address].push(curr.apr); // Store the APR in the array
+                    addressAndAprDataRestakingById[address].push(curr.apr);
                 } else if (curr.type.toLowerCase().trim() in ['stacking', 'staking']) {
                     if (!addressAndAprDataStackingById[address]) {
-                        addressAndAprDataStackingById[address] = []; // Initialize as an empty array if not present
+                        addressAndAprDataStackingById[address] = [];
                     }
-                    addressAndAprDataStackingById[address].push(curr.apr); // Store the APR in the array
+                    addressAndAprDataStackingById[address].push(curr.apr);
                 }
             }
         }

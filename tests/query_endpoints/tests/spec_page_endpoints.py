@@ -43,7 +43,7 @@ class TestAPIDataContent(unittest.TestCase):
         self.assertIsInstance(data['data'], list)
         for item in data['data']:
             self.assertIn('stake', item)
-            self.assertIn('delegateLimit', item)
+            # self.assertIn('delegateLimit', item)
             self.assertIn('delegateTotal', item)
             self.assertIn('delegateCommission', item)
             self.assertIn('totalStake', item)

@@ -36,7 +36,7 @@ export const ListProvidersRawHandlerOpts: RouteShorthandOptions = {
                                                     addons: { type: 'string' },
                                                     extensions: { type: 'string' },
                                                     delegateCommission: { type: 'string' },
-                                                    delegateLimit: { type: 'string' },
+                                                    // delegateLimit: { type: 'string' },
                                                     delegateTotal: { type: 'string' },
                                                 },
                                                 required: ['spec', 'moniker']

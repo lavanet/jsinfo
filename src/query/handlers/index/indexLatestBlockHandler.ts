@@ -1,7 +1,7 @@
 // src/query/handlers/index/indexLatestBlockHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { IndexLatestBlockResource, IndexLatestBlockData } from '../../../redis/resources/index/IndexLatestBlockResource';
+import { IndexLatestBlockResource } from '../../../redis/resources/index/IndexLatestBlockResource';
 
 export const IndexLatestBlockHandlerOpts: RouteShorthandOptions = {
     schema: {
@@ -10,7 +10,8 @@ export const IndexLatestBlockHandlerOpts: RouteShorthandOptions = {
                 type: 'object',
                 properties: {
                     height: { type: 'number' },
-                    datetime: { type: 'number' }
+                    datetime: { type: 'number' },
+                    serverTime: { type: 'number' }
                 }
             },
             400: {
@@ -23,7 +24,13 @@ export const IndexLatestBlockHandlerOpts: RouteShorthandOptions = {
     }
 }
 
-export async function IndexLatestBlockHandler(request: FastifyRequest, reply: FastifyReply): Promise<IndexLatestBlockData> {
+export interface IndexLatestBlockResponseData {
+    height: number;
+    datetime: number;
+    serverTime: number;
+}
+
+export async function IndexLatestBlockHandler(request: FastifyRequest, reply: FastifyReply): Promise<IndexLatestBlockResponseData> {
     const resource = new IndexLatestBlockResource();
     const result = await resource.fetch();
     if (!result || result == null) {
@@ -31,5 +38,8 @@ export async function IndexLatestBlockHandler(request: FastifyRequest, reply: Fa
         reply.send({ error: 'Failed to fetch latest block data' });
         return reply;
     }
-    return result;
+    return {
+        ...result,
+        serverTime: Date.now()
+    };
 }

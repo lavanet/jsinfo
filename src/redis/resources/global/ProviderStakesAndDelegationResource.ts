@@ -2,6 +2,7 @@ import { desc } from 'drizzle-orm';
 import { RedisResourceBase } from '@jsinfo/redis/classes/RedisResourceBase';
 import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { queryJsinfo } from '@jsinfo/utils/db';
+import { IsMeaningfulText } from '@jsinfo/utils/fmt';
 
 export interface ProviderStakeInfo {
     stake: string;
@@ -35,14 +36,14 @@ export class ProviderStakesAndDelegationResource extends RedisResourceBase<Provi
         const providerStakes: Record<string, ProviderStakeInfo> = {};
 
         stakesRes.forEach((stake) => {
-            if (!stake.provider || !stake.stake || !stake.delegateTotal) return;
+            if (stake.provider !== null && !IsMeaningfulText(stake.provider)) return;
 
-            stakeSum += stake.stake;
-            delegationSum += stake.delegateTotal;
+            stakeSum += stake.stake || 0n;
+            delegationSum += stake.delegateTotal || 0n;
 
-            providerStakes[stake.provider] = {
-                stake: stake.stake.toString(),
-                delegateTotal: stake.delegateTotal.toString()
+            providerStakes[stake.provider!] = {
+                stake: (stake.stake || 0n).toString(),
+                delegateTotal: (stake.delegateTotal || 0n).toString()
             };
         });
 

@@ -9,6 +9,7 @@ import { CoinGekoCache } from '@jsinfo/restRpc/ext/CoinGeko/CoinGekoCache';
 import { logger } from '@jsinfo/utils/logger';
 import { LockedVestingTokensService } from '../global/LockedVestingTokensResource';
 import { IsMeaningfulText } from '@jsinfo/utils/fmt';
+import { RpcPeriodicEndpointCache } from '@jsinfo/restRpc/lavaRpcPeriodicEndpointCache';
 
 // Renamed interface
 interface TotalValueLockedItem {
@@ -31,6 +32,9 @@ export class TotalValueLockedResource extends RedisResourceBase<TotalValueLocked
 
             currentStep = 'fetchIndexProviderDelegationSum';
             await this.addIndexStakesAndDelegationToResult(result, currentLavaUSDPrice);
+
+            currentStep = 'addEmptyProviderDelegationsToResult';
+            await this.addEmptyProviderDelegationsToResult(result, currentLavaUSDPrice);
 
             currentStep = 'addRewardsPoolsToResult';
             await this.addRewardsPoolsToResult(result, currentLavaUSDPrice);
@@ -55,6 +59,22 @@ export class TotalValueLockedResource extends RedisResourceBase<TotalValueLocked
             });
             throw new Error(`TotalValueLockedResource: Failed to fetch total value locked during ${currentStep}`);
         }
+    }
+
+
+    private async addEmptyProviderDelegationsToResult(result: TotalValueLockedItem[], currentLavaUSDPrice: number): Promise<void> {
+        const delegations = await RpcPeriodicEndpointCache.GetEmptyProviderDelegations();
+        const emptyProviderDelegationsSum = delegations.reduce((sum, delegation) => {
+            if (delegation.amount.denom === 'ulava') {
+                return sum + BigInt(delegation.amount.amount);
+            }
+            return sum;
+        }, 0n);
+        result.push({
+            key: 'LavaEmptyProviderDelegation',
+            ulavaValue: Number(emptyProviderDelegationsSum),
+            USDValue: Number(emptyProviderDelegationsSum / 1000000n) * currentLavaUSDPrice
+        });
     }
 
     private async addLockedVestingTokensToResult(result: TotalValueLockedItem[], currentLavaUSDPrice: number): Promise<void> {

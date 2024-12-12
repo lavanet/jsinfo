@@ -187,6 +187,15 @@ class RpcPeriodicEndpointCacheClass {
         }
     }
 
+    public async GetEmptyProviderDelegations(): Promise<Delegation[]> {
+        const delegations = await RedisCache.getDict(REDIS_KEYS.EMPTY_PROVIDER_DELEGATIONS) as Delegation[];
+        if (!delegations) {
+            await this.refreshCache();
+            return await RedisCache.getDict(REDIS_KEYS.EMPTY_PROVIDER_DELEGATIONS) as Delegation[] || [];
+        }
+        return delegations;
+    }
+
     private async fetchAndCacheEmptyProviderDelegations(): Promise<void> {
         try {
             const cacheKey = REDIS_KEYS.EMPTY_PROVIDER_DELEGATIONS;

@@ -107,82 +107,155 @@ export class IndexerRedisResourceCaller {
         }
     }
 
+    private static async safeFetch<T>(
+        name: string,
+        fetchFn: () => Promise<T>,
+        currentFetches: Map<string, Promise<T>> = new Map()
+    ): Promise<T> {
+        if (currentFetches.has(name)) {
+            logger.info(`${name} fetch already running, skipping`);
+            return currentFetches.get(name)!;
+        }
+
+        const fetchPromise = (async () => {
+            try {
+                return await fetchFn();
+            } finally {
+                currentFetches.delete(name);
+            }
+        })();
+
+        currentFetches.set(name, fetchPromise);
+        return fetchPromise;
+    }
+
+    private static currentFetches = new Map<string, Promise<any>>();
+
     private static async refreshAjaxResources(): Promise<void> {
-        // AllProviderAPRResource
-        await new AllProviderAPRResource().fetch()
-            .catch(e => logger.error('Failed to refresh all provider APR:', e));
-        // Total Value Locked
-        await new TotalValueLockedResource().fetch()
-            .catch(e => logger.error('Failed to refresh total value locked:', e));
+        await this.safeFetch('AllProviderAPR',
+            () => new AllProviderAPRResource().fetch(),
+            this.currentFetches
+        ).catch(e => logger.error('Failed to refresh all provider APR:', e));
 
-        // Supply Resources
-        await new SupplyResource().fetch({ type: 'total' })
-            .catch(e => logger.error('Failed to refresh total supply:', e));
-        await new SupplyResource().fetch({ type: 'circulating' })
-            .catch(e => logger.error('Failed to refresh circulating supply:', e));
+        await this.safeFetch('TotalValueLocked',
+            () => new TotalValueLockedResource().fetch(),
+            this.currentFetches
+        ).catch(e => logger.error('Failed to refresh total value locked:', e));
 
-        // Chain Wallet Resources
-        await new ChainWalletResource().fetch({ type: 'stakers' })
-            .catch(e => logger.error('Failed to refresh stakers:', e));
-        await new ChainWalletResource().fetch({ type: 'restakers' })
-            .catch(e => logger.error('Failed to refresh restakers:', e));
+        await this.safeFetch('TotalSupply',
+            () => new SupplyResource().fetch({ type: 'total' }),
+            this.currentFetches
+        ).catch(e => logger.error('Failed to refresh total supply:', e));
 
-        // Other Ajax Resources
-        await new AprResource().fetch()
-            .catch(e => logger.error('Failed to refresh APR data:', e));
-        await new AutoCompleteResource().fetch()
-            .catch(e => logger.error('Failed to refresh autocomplete data:', e));
-        await new ListProvidersResource().fetch()
-            .catch(e => logger.error('Failed to refresh providers list:', e));
+        await this.safeFetch('CirculatingSupply',
+            () => new SupplyResource().fetch({ type: 'circulating' }),
+            this.currentFetches
+        ).catch(e => logger.error('Failed to refresh circulating supply:', e));
 
+        await this.safeFetch('Stakers',
+            () => new ChainWalletResource().fetch({ type: 'stakers' }),
+            this.currentFetches
+        ).catch(e => logger.error('Failed to refresh stakers:', e));
 
+        await this.safeFetch('Restakers',
+            () => new ChainWalletResource().fetch({ type: 'restakers' }),
+            this.currentFetches
+        ).catch(e => logger.error('Failed to refresh restakers:', e));
 
+        await this.safeFetch('APR',
+            () => new AprResource().fetch(),
+            this.currentFetches
+        ).catch(e => logger.error('Failed to refresh APR data:', e));
+
+        await this.safeFetch('AutoComplete',
+            () => new AutoCompleteResource().fetch(),
+            this.currentFetches
+        ).catch(e => logger.error('Failed to refresh autocomplete data:', e));
+
+        await this.safeFetch('ListProviders',
+            () => new ListProvidersResource().fetch(),
+            this.currentFetches
+        ).catch(e => logger.error('Failed to refresh providers list:', e));
     }
 
     private static async refreshIndexResources(): Promise<void> {
-        // Basic Index Resources
-        await new ProviderStakesAndDelegationResource().fetch()
-            .catch(e => logger.error('Failed to refresh index stakes:', e));
-        await new IndexLatestBlockResource().fetch()
-            .catch(e => logger.error('Failed to refresh latest block:', e));
-        await new IndexTotalCuResource().fetch()
-            .catch(e => logger.error('Failed to refresh index total CU:', e));
-        await new IndexTopChainsResource().fetch()
-            .catch(e => logger.error('Failed to refresh index top chains:', e));
-        await new IndexChartsResource().fetch()
-            .catch(e => logger.error('Failed to refresh index charts:', e));
-        await new Index30DayCuResource().fetch()
-            .catch(e => logger.error('Failed to refresh index 30-day CU:', e));
+        await this.safeFetch('ProviderStakesAndDelegation',
+            () => new ProviderStakesAndDelegationResource().fetch(),
+            this.currentFetches
+        ).catch(e => logger.error('Failed to refresh index stakes:', e));
 
-        // Provider-related Index Resources
+        await this.safeFetch('LatestBlock',
+            () => new IndexLatestBlockResource().fetch(),
+            this.currentFetches
+        ).catch(e => logger.error('Failed to refresh latest block:', e));
+
+        await this.safeFetch('TotalCU',
+            () => new IndexTotalCuResource().fetch(),
+            this.currentFetches
+        ).catch(e => logger.error('Failed to refresh index total CU:', e));
+
+        await this.safeFetch('TopChains',
+            () => new IndexTopChainsResource().fetch(),
+            this.currentFetches
+        ).catch(e => logger.error('Failed to refresh index top chains:', e));
+
+        await this.safeFetch('Charts',
+            () => new IndexChartsResource().fetch(),
+            this.currentFetches
+        ).catch(e => logger.error('Failed to refresh index charts:', e));
+
+        await this.safeFetch('30DayCU',
+            () => new Index30DayCuResource().fetch(),
+            this.currentFetches
+        ).catch(e => logger.error('Failed to refresh index 30-day CU:', e));
+
         await this.refreshProviderIndexResources();
     }
 
     private static async refreshProviderIndexResources(): Promise<void> {
-        // Active Providers
-        await new ActiveProvidersResource().fetch()
-            .catch(e => logger.error('Failed to refresh active providers:', e));
+        await this.safeFetch('ActiveProviders',
+            () => new ActiveProvidersResource().fetch(),
+            this.currentFetches
+        ).catch(e => logger.error('Failed to refresh active providers:', e));
 
-        // Index Providers
-        await new IndexProvidersResource().fetch({ type: 'count' })
-            .catch(e => logger.error('Failed to refresh index providers (count):', e));
-        await new IndexProvidersResource().fetch({ type: 'paginated' })
-            .catch(e => logger.error('Failed to refresh index providers (paginated):', e));
+        await this.safeFetch('ProvidersCount',
+            () => new IndexProvidersResource().fetch({ type: 'count' }),
+            this.currentFetches
+        ).catch(e => logger.error('Failed to refresh index providers (count):', e));
 
-        // Index Providers Active
-        await new IndexProvidersActiveResource().fetch({ type: 'count' })
-            .catch(e => logger.error('Failed to refresh active providers index (count):', e));
-        await new IndexProvidersActiveResource().fetch({ type: 'paginated' })
-            .catch(e => logger.error('Failed to refresh active providers index (paginated):', e));
+        await this.safeFetch('ProvidersPaginated',
+            () => new IndexProvidersResource().fetch({ type: 'paginated' }),
+            this.currentFetches
+        ).catch(e => logger.error('Failed to refresh index providers (paginated):', e));
+
+        await this.safeFetch('ActiveProvidersIndexCount',
+            () => new IndexProvidersActiveResource().fetch({ type: 'count' }),
+            this.currentFetches
+        ).catch(e => logger.error('Failed to refresh active providers index (count):', e));
+
+        await this.safeFetch('ActiveProvidersIndexPaginated',
+            () => new IndexProvidersActiveResource().fetch({ type: 'paginated' }),
+            this.currentFetches
+        ).catch(e => logger.error('Failed to refresh active providers index (paginated):', e));
     }
 
     private static async refreshGlobalResources(): Promise<void> {
-        await SpecAndConsumerService.fetch()
-            .catch(e => logger.error('Failed to refresh spec and consumer data:', e));
-        await ProviderMonikerService.fetch()
-            .catch(e => logger.error('Failed to refresh provider moniker spec data:', e));
-        await LockedVestingTokensService.fetch()
-            .catch(e => logger.error('Failed to refresh locked vesting tokens:', e));
+        await Promise.all([
+            this.safeFetch('SpecAndConsumer',
+                () => SpecAndConsumerService.fetch(),
+                this.currentFetches
+            ).catch(e => logger.error('Failed to refresh spec and consumer data:', e)),
+
+            this.safeFetch('ProviderMoniker',
+                () => ProviderMonikerService.fetch(),
+                this.currentFetches
+            ).catch(e => logger.error('Failed to refresh provider moniker spec data:', e)),
+
+            this.safeFetch('LockedVestingTokens',
+                () => LockedVestingTokensService.fetch(),
+                this.currentFetches
+            ).catch(e => logger.error('Failed to refresh locked vesting tokens:', e))
+        ]);
     }
 }
 

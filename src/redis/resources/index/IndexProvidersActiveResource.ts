@@ -64,20 +64,6 @@ export class IndexProvidersActiveResource extends RedisResourceBase<IndexProvide
         };
     }
 
-    protected getRedisKey(params: IndexProvidersActiveQueryParams = this.getDefaultParams()): string {
-        const queryType = params.type || 'paginated';
-        switch (queryType) {
-            case 'all':
-                return `${this.redisKey}:all`;
-            case 'count':
-                return `${this.redisKey}:count`;
-            case 'paginated':
-                return `${this.redisKey}:paginated:${params.pagination ? SerializePagination(params.pagination) : "default"}`;
-            default:
-                return this.redisKey;
-        }
-    }
-
     protected async fetchFromSource(params?: IndexProvidersActiveQueryParams): Promise<IndexProvidersActiveResourceResponse> {
         console.time('redis/resources/index/IndexProvidersActiveResource.fetchFromSource');
         try {

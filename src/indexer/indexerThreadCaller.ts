@@ -25,6 +25,7 @@ import { SaveTokenSupplyToDB } from './lavarpc_agregators/SupplyProcessor';
 import { SyncBlockchainEntities } from './blockchainEntities/blockchainEntitiesSync';
 import { FillUpBlocks } from '@jsinfo/indexer/indexerFillupBlocks';
 import { JSINFO_INDEXER_GRACEFULL_EXIT_AFTER_X_HOURS } from './indexerConsts';
+import { ConsumerOptimizerMetricsAgregator_Aggregate } from './agregators/ConsumerOptimizerMetricsAgregator';
 
 export class IndexerThreadManagerClass {
     private isRunning = false;
@@ -40,7 +41,7 @@ export class IndexerThreadManagerClass {
         this.startTime = Date.now();
         this.isRunning = true;
 
-        this.startBackgroundMonitors();
+        this.startBackgroundServices();
 
         while (true) {
             try {
@@ -76,7 +77,7 @@ export class IndexerThreadManagerClass {
         }
     }
 
-    private async startBackgroundMonitors(): Promise<void> {
+    private async startBackgroundServices(): Promise<void> {
         logger.info('IndexerThreadManager:: Starting background monitors');
 
         // Start all monitors in parallel
@@ -85,7 +86,8 @@ export class IndexerThreadManagerClass {
             DelegatorRewardsMonitor.start(),
             SpecTrackedInfoMonitor.start(),
             IndexerRedisResourceCaller.startIndexing(),
-            this.startFillUpBlocksMonitor()
+            this.startFillUpBlocksMonitor(),
+            ConsumerOptimizerMetricsAgregator_Aggregate()
         ]);
     }
 
@@ -135,7 +137,7 @@ export class IndexerThreadManagerClass {
             {
                 name: 'ProcessTokenSupply',
                 process: () => SaveTokenSupplyToDB()
-            }
+            },
         ];
 
         // Run all processors in parallel

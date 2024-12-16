@@ -2,7 +2,8 @@ import { RedisFetch } from '../../redis/RedisFetch';
 import { logger } from '@jsinfo/utils/logger';
 import { CoinGekoCache } from './CoinGeko/CoinGekoCache';
 
-// Define TypeScript interfaces for the response structure
+// https://app.osmosis.zone/assets/LAVA
+// also called LAVA here, not lava-network
 interface ReserveCoin {
     currency: {
         coinDenom: string;

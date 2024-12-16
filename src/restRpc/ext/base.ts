@@ -1,5 +1,10 @@
 import { logger } from '@jsinfo/utils/logger';
 import { RedisFetch } from '../../redis/RedisFetch';
+
+// LAVA/WETH
+// Axelar Wrapped LAVA Price(LAVA)
+// https://www.geckoterminal.com/base/pools/0xb593f062d5f235862643ff0dbab743d7316b5b9f
+// it's not called lava-network here , it's called LAVA
 interface PriceChangePercentage {
     m5: string;
     h1: string;

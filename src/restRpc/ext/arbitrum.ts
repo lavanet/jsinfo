@@ -2,7 +2,9 @@ import axios from 'axios';
 import { RedisCache } from '@jsinfo/redis/classes/RedisCache';
 import { logger } from '@jsinfo/utils/logger';
 
+// Axelar Wrapped LAVA:
 // https://app.uniswap.org/explore/tokens/arbitrum/0x11e969e9b3f89cb16d686a03cd8508c9fc0361af
+// it's not called lava-network here , it's called LAVA
 
 async function fetchTokenData() {
     const url = 'https://interface.gateway.uniswap.org/v1/graphql';

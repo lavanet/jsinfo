@@ -13,7 +13,7 @@ import { RpcPeriodicEndpointCache } from '@jsinfo/restRpc/lavaRpcPeriodicEndpoin
 import { REWARD_POOL_NAMES_TO_CONSIDER_IN_TOTAL_TOKEN_VALUE_CALCULATIONS } from '@jsinfo/utils/consts';
 
 // Renamed interface
-interface TotalValueLockedItem {
+export interface TotalValueLockedItem {
     key: string;
     ulavaValue: number;
     USDValue: number;

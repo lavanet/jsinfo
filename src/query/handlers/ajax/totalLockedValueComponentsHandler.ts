@@ -1,6 +1,7 @@
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { TotalValueLockedResource } from '@jsinfo/redis/resources/ajax/TotalValueLockedResource';
+import { TotalValueLockedItem, TotalValueLockedResource } from '@jsinfo/redis/resources/ajax/TotalValueLockedResource';
 import { JSONStringify } from '@jsinfo/utils/fmt';
+
 export const TotalValueLockedComponentsHandlerOpts: RouteShorthandOptions = {
     schema: {
         response: {
@@ -26,6 +27,14 @@ export async function TotalValueLockedComponentsHandler(request: FastifyRequest,
     if (!totalValueLockedItems || totalValueLockedItems.length === 0) {
         return reply.status(400).send({ error: 'Failed to fetch Total Value Locked data' });
     }
+
+    const total: TotalValueLockedItem = {
+        key: 'Total',
+        ulavaValue: totalValueLockedItems.reduce((sum, item) => sum + item.ulavaValue, 0),
+        USDValue: totalValueLockedItems.reduce((sum, item) => sum + item.USDValue, 0)
+    };
+
+    totalValueLockedItems.push(total);
 
     reply.header('Content-Type', 'application/json');
     return JSONStringify(totalValueLockedItems);

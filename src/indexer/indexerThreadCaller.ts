@@ -41,7 +41,7 @@ export class IndexerThreadManagerClass {
         this.startTime = Date.now();
         this.isRunning = true;
 
-        this.startBackgroundMonitors();
+        this.startBackgroundServices();
 
         while (true) {
             try {
@@ -77,7 +77,7 @@ export class IndexerThreadManagerClass {
         }
     }
 
-    private async startBackgroundMonitors(): Promise<void> {
+    private async startBackgroundServices(): Promise<void> {
         logger.info('IndexerThreadManager:: Starting background monitors');
 
         // Start all monitors in parallel

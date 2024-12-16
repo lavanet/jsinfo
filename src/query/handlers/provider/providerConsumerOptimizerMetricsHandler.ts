@@ -30,8 +30,8 @@ export async function ProviderConsumerOptimizerMetricsHandler(request: FastifyRe
     const resource = new ConsumerOptimizerMetricsResource();
     const data = await resource.fetch({
         provider,
-        consumer: (request.query as any).consumer,
-        chain_id: (request.query as any).chain_id,
+        consumer: (request.query as any).consumer || undefined,
+        chain_id: (request.query as any).chain_id || undefined,
         from: (request.query as any).from ? new Date((request.query as any).from) : undefined,
         to: (request.query as any).to ? new Date((request.query as any).to) : undefined
     });

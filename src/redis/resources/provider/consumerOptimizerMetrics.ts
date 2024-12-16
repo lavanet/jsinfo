@@ -1,11 +1,11 @@
 // src/redis/resources/provider/consumerOptimizerMetrics.ts
 
-import { ConsumerOptimizerMetrics, consumerOptimizerMetrics } from '@jsinfo/schemas/relaysSchema';
+import { ConsumerOptimizerMetricsAgg, consumerOptimizerMetricsAgg } from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { and, eq, SQL, gt, lt } from 'drizzle-orm';
-import { queryRelays } from '@jsinfo/utils/db';
 import { RedisResourceBase } from '@jsinfo/redis/classes/RedisResourceBase';
 import { IsMeaningfulText, JSONStringify } from '@jsinfo/utils/fmt';
 import { ProviderMonikerService } from '../global/ProviderMonikerSpecResource';
+import { queryJsinfo } from '@jsinfo/utils/db';
 
 export interface ConsumerOptimizerMetricsFilterParams {
     consumer?: string;
@@ -20,12 +20,12 @@ export interface ConsumerOptimizerMetricsResponse {
         consumer?: string;
         chain_id?: string;
         provider?: string;
-        from: Date;
-        to: Date;
+        from?: Date;
+        to?: Date;
     };
     possibleChainIds: string[];
     possibleConsumers: string[];
-    metrics: ConsumerOptimizerMetrics[];
+    metrics: ConsumerOptimizerMetricsAgg[];
     error?: string;
 }
 
@@ -36,7 +36,7 @@ export class ConsumerOptimizerMetricsResource extends RedisResourceBase<Consumer
     protected async fetchFromSource(args?: ConsumerOptimizerMetricsFilterParams): Promise<ConsumerOptimizerMetricsResponse> {
         if (!args?.consumer && !args?.chain_id && !args?.provider) {
             return {
-                filters: { from: new Date(), to: new Date() },
+                filters: { from: undefined, to: undefined },
                 possibleChainIds: [],
                 possibleConsumers: [],
                 metrics: [],
@@ -112,23 +112,23 @@ export class ConsumerOptimizerMetricsResource extends RedisResourceBase<Consumer
         }
 
         const conditions: SQL<unknown>[] = [];
-        conditions.push(gt(consumerOptimizerMetrics.timestamp, from));
-        conditions.push(lt(consumerOptimizerMetrics.timestamp, to));
+        conditions.push(gt(consumerOptimizerMetricsAgg.timestamp, from));
+        conditions.push(lt(consumerOptimizerMetricsAgg.timestamp, to));
 
         if (args?.consumer) {
-            conditions.push(eq(consumerOptimizerMetrics.consumer, args.consumer));
+            conditions.push(eq(consumerOptimizerMetricsAgg.consumer, args.consumer));
         }
         if (args?.chain_id) {
-            conditions.push(eq(consumerOptimizerMetrics.chain_id, args.chain_id));
+            conditions.push(eq(consumerOptimizerMetricsAgg.chain_id, args.chain_id));
         }
         if (args?.provider) {
-            conditions.push(eq(consumerOptimizerMetrics.provider, args.provider));
+            conditions.push(eq(consumerOptimizerMetricsAgg.provider, args.provider));
         }
 
-        const metrics = await queryRelays(
-            db => db.select().from(consumerOptimizerMetrics)
+        const metrics = await queryJsinfo(
+            db => db.select().from(consumerOptimizerMetricsAgg)
                 .where(and(...conditions))
-                .orderBy(consumerOptimizerMetrics.timestamp).limit(200),
+                .orderBy(consumerOptimizerMetricsAgg.timestamp).limit(200),
             `ConsumerOptimizerMetricsResource::fetchFromSource_${JSONStringify(args)}`
         );
 
@@ -170,13 +170,13 @@ class ConsumerOptimizerMetricsOptionsResource extends RedisResourceBase<Consumer
             throw new Error('Provider does not exist');
         }
 
-        const metrics = await queryRelays(
+        const metrics = await queryJsinfo(
             db => db.select({
-                chain_id: consumerOptimizerMetrics.chain_id,
-                consumer: consumerOptimizerMetrics.consumer
+                chain_id: consumerOptimizerMetricsAgg.chain_id,
+                consumer: consumerOptimizerMetricsAgg.consumer
             })
-                .from(consumerOptimizerMetrics)
-                .where(eq(consumerOptimizerMetrics.provider, provider)),
+                .from(consumerOptimizerMetricsAgg)
+                .where(eq(consumerOptimizerMetricsAgg.provider, provider)),
             'all_metrics'
         );
 

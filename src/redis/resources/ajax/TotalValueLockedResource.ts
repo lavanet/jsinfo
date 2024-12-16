@@ -46,8 +46,8 @@ export class TotalValueLockedResource extends RedisResourceBase<TotalValueLocked
             currentStep = 'addDexesToResult';
             await this.addDexesToResult(result, currentLavaUSDPrice);
 
-            currentStep = 'addLockedVestingTokensToResult';
-            await this.addLockedVestingTokensToResult(result, currentLavaUSDPrice);
+            // currentStep = 'addLockedVestingTokensToResult';
+            // await this.addLockedVestingTokensToResult(result, currentLavaUSDPrice);
 
             currentStep = 'addStakingPool';
             await this.addStakingPoolToResult(result, currentLavaUSDPrice);

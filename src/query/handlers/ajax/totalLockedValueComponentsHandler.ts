@@ -36,7 +36,7 @@ export async function TotalValueLockedComponentsHandler(request: FastifyRequest,
     };
 
     const coinGeckoRate: TotalValueLockedItem = {
-        key: 'Misc_CoinGecko-Rate',
+        key: 'Misc_CoinGecko-LavaNetwork-Rate',
         ulavaValue: 1000000,
         USDValue: await CoinGekoCache.GetLavaUSDRate()
     };

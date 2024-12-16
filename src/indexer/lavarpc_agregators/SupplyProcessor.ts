@@ -6,6 +6,7 @@ import { logger } from '@jsinfo/utils/logger';
 import { queryJsinfo } from "@jsinfo/utils/db";
 import { queryRpc } from "../utils/lavajsRpc";
 import { LockedVestingTokensService } from "@jsinfo/redis/resources/global/LockedVestingTokensResource";
+import { REWARD_POOL_NAMES_TO_CONSIDER_IN_TOTAL_TOKEN_VALUE_CALCULATIONS } from "@jsinfo/utils/consts";
 
 async function getPoolsAmount(client: LavaClient): Promise<bigint> {
     const lavaClient = client.lavanet.lava.rewards;
@@ -15,7 +16,7 @@ async function getPoolsAmount(client: LavaClient): Promise<bigint> {
 
     // check why iprpc pools are missin
     pools.pools.forEach((pool: any) => {
-        if (["validators_rewards_distribution_pool", "validators_rewards_allocation_pool", "providers_rewards_distribution_pool", "providers_rewards_allocation_pool"].includes(pool.name)) {
+        if (REWARD_POOL_NAMES_TO_CONSIDER_IN_TOTAL_TOKEN_VALUE_CALCULATIONS.includes(pool.name)) {
             totalAmount += BigInt(pool.balance[0].amount);
         }
     })

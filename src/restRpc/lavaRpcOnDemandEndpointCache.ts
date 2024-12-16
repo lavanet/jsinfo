@@ -68,6 +68,13 @@ export interface RewardsPoolsResponse {
     allocation_pool_months_left: string;
 }
 
+export interface StakingPoolResponse {
+    pool: {
+        not_bonded_tokens: string;
+        bonded_tokens: string;
+    }
+}
+
 const CACHE_KEYS = {
     DENOM_TRACE: (denom: string) => `denom_trace:${denom}`,
     VALIDATOR_REWARDS: (validator: string, amount: number, denom: string) =>
@@ -290,6 +297,32 @@ class RpcOnDemandEndpointCacheClass {
             return response;
         } catch (error) {
             logger.error(`Error fetching rewards pools`, { error: TruncateError(error) });
+            throw error;
+        }
+    }
+
+    public async GetStakingPool(): Promise<StakingPoolResponse> {
+        const cacheKey = 'staking_pool';
+        let stakingPool = await RedisCache.getDict(cacheKey) as StakingPoolResponse;
+
+        if (!stakingPool) {
+            stakingPool = await this.fetchAndCacheStakingPool();
+            if (!stakingPool) {
+                logger.warn('Staking pool not found in cache after refresh');
+                return { pool: { not_bonded_tokens: "0", bonded_tokens: "0" } };
+            }
+        }
+
+        return stakingPool;
+    }
+
+    private async fetchAndCacheStakingPool(): Promise<StakingPoolResponse> {
+        try {
+            const response = await QueryLavaRPC<StakingPoolResponse>('/cosmos/staking/v1beta1/pool');
+            RedisCache.setDict('staking_pool', response, this.cacheRefreshInterval);
+            return response;
+        } catch (error) {
+            logger.error('Error fetching staking pool', { error: TruncateError(error) });
             throw error;
         }
     }

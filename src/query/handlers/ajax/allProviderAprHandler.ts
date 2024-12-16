@@ -27,5 +27,5 @@ export async function AllProviderAPRRawHandler(request: FastifyRequest, reply: F
         return reply.status(400).send({ error: 'Failed to fetch All Provider APR data' });
     }
     reply.header('Content-Type', 'application/json');
-    return JSONStringify(data);
+    return reply.send(JSONStringify(data));
 }

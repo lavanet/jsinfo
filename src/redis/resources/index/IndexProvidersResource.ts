@@ -42,20 +42,6 @@ export class IndexProvidersResource extends RedisResourceBase<IndexProvidersReso
     protected readonly redisKey = 'index:providers';
     protected readonly cacheExpirySeconds = 600; // 10 minutes cache
 
-    protected getRedisKey(params: IndexProvidersQueryParams = this.getDefaultParams()): string {
-        const queryType = params.type || 'paginated';
-        switch (queryType) {
-            case 'all':
-                return `${this.redisKey}:all`;
-            case 'count':
-                return `${this.redisKey}:count`;
-            case 'paginated':
-                return `${this.redisKey}:paginated:${params.pagination ? SerializePagination(params.pagination) : "default"}`;
-            default:
-                return this.redisKey;
-        }
-    }
-
     protected async fetchFromSource(params?: IndexProvidersQueryParams): Promise<IndexProvidersResourceResponse> {
         const queryParams = params || this.getDefaultParams();
         const queryType = queryParams.type || 'paginated';

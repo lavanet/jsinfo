@@ -43,10 +43,6 @@ export class IndexChartsResource extends RedisResourceBase<IndexChartResponse[],
     protected readonly redisKey = 'index:charts';
     protected readonly cacheExpirySeconds = 300; // 5 minutes cache
 
-    protected getRedisKey(params: QueryParams = this.getDefaultParams()): string {
-        return `${this.redisKey}:${params.from.getTime()}:${params.to.getTime()}`;
-    }
-
     protected async fetchFromSource(params?: QueryParams): Promise<IndexChartResponse[]> {
         // Use default params if none provided
         const queryParams = params || this.getDefaultParams();

@@ -1,6 +1,7 @@
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { TotalValueLockedItem, TotalValueLockedResource } from '@jsinfo/redis/resources/ajax/TotalValueLockedResource';
 import { JSONStringify } from '@jsinfo/utils/fmt';
+import { CoinGekoCache } from '@jsinfo/restRpc/ext/CoinGeko/CoinGekoCache';
 
 export const TotalValueLockedComponentsHandlerOpts: RouteShorthandOptions = {
     schema: {
@@ -29,13 +30,19 @@ export async function TotalValueLockedComponentsHandler(request: FastifyRequest,
     }
 
     const total: TotalValueLockedItem = {
-        key: 'Total',
+        key: 'Misc_Total',
         ulavaValue: totalValueLockedItems.reduce((sum, item) => sum + item.ulavaValue, 0),
         USDValue: totalValueLockedItems.reduce((sum, item) => sum + item.USDValue, 0)
     };
 
-    totalValueLockedItems.push(total);
+    const coinGeckoRate: TotalValueLockedItem = {
+        key: 'Misc_CoinGecko-Rate',
+        ulavaValue: 1000000,
+        USDValue: await CoinGekoCache.GetLavaUSDRate()
+    };
 
+    totalValueLockedItems.push(total);
+    totalValueLockedItems.push(coinGeckoRate);
     reply.header('Content-Type', 'application/json');
     return JSONStringify(totalValueLockedItems);
 }

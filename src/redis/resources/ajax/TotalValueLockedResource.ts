@@ -77,7 +77,7 @@ export class TotalValueLockedResource extends RedisResourceBase<TotalValueLocked
         result.push({
             key: 'Lava_EmptyProviderDelegatorsThatDidNotUseLavaApi',
             ulavaValue: Number(emptyProviderDelegationsSum),
-            USDValue: Number(emptyProviderDelegationsSum / 1000000n) * currentLavaUSDPrice
+            USDValue: this.convertUlavaToUSD(emptyProviderDelegationsSum, currentLavaUSDPrice)
         });
     }
 
@@ -87,18 +87,16 @@ export class TotalValueLockedResource extends RedisResourceBase<TotalValueLocked
             throw new Error('Error getting locked tokens');
         }
 
-        const continuousVesting = lockedTokensStats.ContinuousVesting;
         result.push({
             key: 'Cosmos_LavaLockedVestingTokens_Continuous',
-            ulavaValue: Number(continuousVesting.total),
-            USDValue: Number(BigInt(continuousVesting.total) / 1000000n) * currentLavaUSDPrice
+            ulavaValue: Number(lockedTokensStats.ContinuousVesting.total),
+            USDValue: this.convertUlavaToUSD(lockedTokensStats.ContinuousVesting.total, currentLavaUSDPrice)
         });
 
-        const periodicVesting = lockedTokensStats.PeriodicVesting;
         result.push({
             key: 'Cosmos_LavaLockedVestingTokens_Periodic',
-            ulavaValue: Number(periodicVesting.total),
-            USDValue: Number(BigInt(periodicVesting.total) / 1000000n) * currentLavaUSDPrice
+            ulavaValue: Number(lockedTokensStats.PeriodicVesting.total),
+            USDValue: this.convertUlavaToUSD(lockedTokensStats.PeriodicVesting.total, currentLavaUSDPrice)
         });
     }
 
@@ -139,12 +137,12 @@ export class TotalValueLockedResource extends RedisResourceBase<TotalValueLocked
         result.push({
             key: 'Lava_TotalProviderStakes',
             ulavaValue: Number(stakesSum),
-            USDValue: Number(BigInt(stakesSum) / 1000000n) * currentLavaUSDPrice
+            USDValue: this.convertUlavaToUSD(stakesSum, currentLavaUSDPrice)
         });
         result.push({
             key: 'Lava_TotalDelegationsToProvider',
             ulavaValue: Number(delegationSum),
-            USDValue: Number(BigInt(delegationSum) / 1000000n) * currentLavaUSDPrice
+            USDValue: this.convertUlavaToUSD(delegationSum, currentLavaUSDPrice)
         });
     }
 
@@ -159,7 +157,7 @@ export class TotalValueLockedResource extends RedisResourceBase<TotalValueLocked
             result.push({
                 key: `Lava_RewardsPool_${pool.name}`,
                 ulavaValue: Number(poolUlavaValue),
-                USDValue: poolUSDValue + (Number(BigInt(poolUlavaValue) / 1000000n) * currentLavaUSDPrice)
+                USDValue: poolUSDValue
             });
         }
     }
@@ -177,7 +175,7 @@ export class TotalValueLockedResource extends RedisResourceBase<TotalValueLocked
             }
 
             poolUlavaValue += amount;
-            poolUSDValue += Number(BigInt(amount) / 1000000n) * currentLavaUSDPrice;
+            poolUSDValue += this.convertUlavaToUSD(amount, currentLavaUSDPrice);
         }
 
         return { poolUlavaValue, poolUSDValue };
@@ -186,23 +184,17 @@ export class TotalValueLockedResource extends RedisResourceBase<TotalValueLocked
     private async addSubscriptionsToResult(result: TotalValueLockedItem[], currentLavaUSDPrice: number): Promise<void> {
         const subscriptionListResponse = await GetSubscriptionList();
         let subsUlavaValue = 0n;
-        let subsUSDValue = 0;
 
         for (const sub of subscriptionListResponse.subs_info) {
             const amount = BigInt(sub.credit.amount);
-            if (amount === 0n) continue;
-
-            if (sub.credit.denom !== 'ulava') {
-                continue;
-            }
+            if (amount === 0n || sub.credit.denom !== 'ulava') continue;
             subsUlavaValue += amount;
-            subsUSDValue += Number(BigInt(amount) / 1000000n) * currentLavaUSDPrice;
         }
 
         result.push({
             key: 'Lava_Subscriptions',
             ulavaValue: Number(subsUlavaValue),
-            USDValue: subsUSDValue + (Number(BigInt(subsUlavaValue) / 1000000n) * currentLavaUSDPrice)
+            USDValue: this.convertUlavaToUSD(subsUlavaValue, currentLavaUSDPrice)
         });
     }
 
@@ -226,8 +218,25 @@ export class TotalValueLockedResource extends RedisResourceBase<TotalValueLocked
         result.push({
             key: 'Cosmos_BondedTokens',
             ulavaValue: Number(stakingPool.pool.bonded_tokens),
-            USDValue: Number(BigInt(stakingPool.pool.bonded_tokens) / 1000000n) * currentLavaUSDPrice
+            USDValue: this.convertUlavaToUSD(stakingPool.pool.bonded_tokens, currentLavaUSDPrice)
         });
+    }
+
+    private convertUlavaToUSD(ulavaAmount: string | number | bigint, lavaUSDPrice: number): number {
+        if (typeof ulavaAmount === 'bigint') {
+            return Number(ulavaAmount * BigInt(Math.round(lavaUSDPrice * 1000000)) / 1000000n) / 1000000;
+        }
+
+        if (typeof ulavaAmount === 'string') {
+            return this.convertUlavaToUSD(BigInt(ulavaAmount), lavaUSDPrice);
+        }
+
+        if (typeof ulavaAmount === 'number') {
+            return (ulavaAmount / 1000000) * lavaUSDPrice;
+        }
+
+        logger.warn('Invalid ulava amount type', { type: typeof ulavaAmount, value: ulavaAmount });
+        return 0;
     }
 
     protected async fetchFromSource(): Promise<TotalValueLockedItem[]> {

@@ -1,4 +1,4 @@
-import { desc } from 'drizzle-orm';
+import { desc, sql } from 'drizzle-orm';
 import { RedisResourceBase } from '@jsinfo/redis/classes/RedisResourceBase';
 import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { queryJsinfo } from '@jsinfo/utils/db';
@@ -23,11 +23,10 @@ export class ProviderStakesAndDelegationResource extends RedisResourceBase<Provi
     protected async fetchFromSource(): Promise<ProviderStakesAndDelegationData> {
         const stakesRes = await queryJsinfo(db => db.select({
             provider: JsinfoSchema.providerStakes.provider,
-            stake: JsinfoSchema.providerStakes.stake,
-            delegateTotal: JsinfoSchema.providerStakes.delegateTotal,
+            stake: sql<bigint>`sum(${JsinfoSchema.providerStakes.stake})`,
+            delegateTotal: sql<bigint>`sum(${JsinfoSchema.providerStakes.delegateTotal})`,
         })
-            .from(JsinfoSchema.providerStakes)
-            .orderBy(desc(JsinfoSchema.providerStakes.stake)),
+            .from(JsinfoSchema.providerStakes).groupBy(JsinfoSchema.providerStakes.provider),
             'ProviderStakesAndDelegationResource::fetchFromSource'
         );
 

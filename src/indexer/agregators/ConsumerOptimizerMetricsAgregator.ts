@@ -15,6 +15,8 @@ import { queryRelays, queryJsinfo } from '@jsinfo/utils/db';
 import { IsMeaningfulText, JSONStringify } from '@jsinfo/utils/fmt';
 import { logger } from '@jsinfo/utils/logger';
 
+import { avg } from '@jsinfo/utils/math';
+
 type AggregatedMetricTempData = {
     timestamp: Date;
     consumer: string;
@@ -260,10 +262,6 @@ export class ConsumerOptimizerMetricsAgregator {
 
         return this.currentAggregation;
     }
-}
-
-function avg(numbers: number[]): number {
-    return numbers.length ? numbers.reduce((a, b) => a + b) / numbers.length : 0;
 }
 
 export async function ConsumerOptimizerMetricsAgregator_Aggregate() {

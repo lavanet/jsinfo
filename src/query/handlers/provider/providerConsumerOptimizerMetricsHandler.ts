@@ -115,8 +115,6 @@ function aggregateMetrics(metrics: ConsumerOptimizerMetricsAgg[], consumer: stri
         if (consumer !== 'all' && metric.consumer !== consumer) continue;
         if (chain_id !== 'all' && metric.chain_id !== chain_id) continue;
 
-        console.log("metric.timestamp", metric.timestamp);
-
         const key = [
             metric.timestamp,
             consumer === 'all' ? 'all' : metric.consumer,

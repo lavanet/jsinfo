@@ -1,7 +1,7 @@
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { TotalValueLockedResource } from '@jsinfo/redis/resources/ajax/TotalValueLockedResource';
+import { LockedTokenValuesResource } from '@jsinfo/redis/resources/ajax/LockedTokenValuesResource';
 
-export const TotalValueLockedHandlerOpts: RouteShorthandOptions = {
+export const TotalLockedValueHandlerOpts: RouteShorthandOptions = {
     schema: {
         response: {
             200: {
@@ -24,15 +24,17 @@ export const TotalValueLockedHandlerOpts: RouteShorthandOptions = {
     }
 }
 
-export async function TotalValueLockedHandler(request: FastifyRequest, reply: FastifyReply) {
-    const resource = new TotalValueLockedResource();
+export async function TotalLockedValueHandler(request: FastifyRequest, reply: FastifyReply) {
+    const resource = new LockedTokenValuesResource();
     const totalValueLockedItems = await resource.fetch();
 
     if (!totalValueLockedItems || totalValueLockedItems.length === 0) {
         return reply.status(400).send({ error: 'Failed to fetch Total Value Locked data' });
     }
 
-    const totalLava = totalValueLockedItems.reduce((sum, item) => sum + item.ulavaValue, 0) / 1000000;
+    const totalLava = totalValueLockedItems
+        .filter(item => item.countForTlv)
+        .reduce((sum, item) => sum + item.ulavaValue, 0) / 1000000;
 
     return { tvl: totalLava.toFixed(4) };
 }

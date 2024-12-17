@@ -1,9 +1,9 @@
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { TotalValueLockedItem, TotalValueLockedResource } from '@jsinfo/redis/resources/ajax/TotalValueLockedResource';
+import { LockedTokenValuesItem, LockedTokenValuesResource } from '@jsinfo/redis/resources/ajax/LockedTokenValuesResource';
 import { JSONStringify } from '@jsinfo/utils/fmt';
 import { CoinGekoCache } from '@jsinfo/restRpc/ext/CoinGeko/CoinGekoCache';
 
-export const TotalValueLockedComponentsHandlerOpts: RouteShorthandOptions = {
+export const AllLockedValuesHandlerOpts: RouteShorthandOptions = {
     schema: {
         response: {
             200: {
@@ -21,27 +21,21 @@ export const TotalValueLockedComponentsHandlerOpts: RouteShorthandOptions = {
     }
 }
 
-export async function TotalValueLockedComponentsHandler(request: FastifyRequest, reply: FastifyReply) {
-    const resource = new TotalValueLockedResource();
+export async function AllLockedValuesHandler(request: FastifyRequest, reply: FastifyReply) {
+    const resource = new LockedTokenValuesResource();
     const totalValueLockedItems = await resource.fetch();
 
     if (!totalValueLockedItems || totalValueLockedItems.length === 0) {
         return reply.status(400).send({ error: 'Failed to fetch Total Value Locked data' });
     }
 
-    const total: TotalValueLockedItem = {
-        key: 'Misc_Total',
-        ulavaValue: totalValueLockedItems.reduce((sum, item) => sum + item.ulavaValue, 0),
-        USDValue: totalValueLockedItems.reduce((sum, item) => sum + item.USDValue, 0)
-    };
-
-    const coinGeckoRate: TotalValueLockedItem = {
+    const coinGeckoRate: LockedTokenValuesItem = {
         key: 'Misc_CoinGecko-LavaNetwork-Rate',
         ulavaValue: 1000000,
-        USDValue: await CoinGekoCache.GetLavaUSDRate()
+        USDValue: await CoinGekoCache.GetLavaUSDRate(),
+        countForTlv: false
     };
 
-    totalValueLockedItems.push(total);
     totalValueLockedItems.push(coinGeckoRate);
     reply.header('Content-Type', 'application/json');
     return JSONStringify(totalValueLockedItems);

@@ -22,7 +22,7 @@ import { IndexTopChainsResource } from '../resources/index/IndexTopChainsResourc
 import { IndexTotalCuResource } from '../resources/index/IndexTotalCuResource';
 import { ActiveProvidersResource } from '../resources/index/ActiveProvidersResource';
 import { AllProviderAPRResource } from '../resources/ajax/AllProviderAprResource';
-import { TotalValueLockedResource } from '../resources/ajax/TotalValueLockedResource';
+import { LockedTokenValuesResource } from '../resources/ajax/LockedTokenValuesResource';
 import { LockedVestingTokensService } from '../resources/global/LockedVestingTokensResource';
 
 export class IndexerRedisResourceCaller {
@@ -132,10 +132,19 @@ export class IndexerRedisResourceCaller {
     private static currentFetches = new Map<string, Promise<any>>();
 
     private static async refreshAjaxResources(): Promise<void> {
+<<<<<<< HEAD
         await this.safeFetch('AllProviderAPR',
             () => new AllProviderAPRResource().fetch(),
             this.currentFetches
         ).catch(e => logger.error('Failed to refresh all provider APR:', e));
+=======
+        // AllProviderAPRResource
+        await new AllProviderAPRResource().fetch()
+            .catch(e => logger.error('Failed to refresh all provider APR:', e));
+        // Total Value Locked
+        await new LockedTokenValuesResource().fetch()
+            .catch(e => logger.error('Failed to refresh total value locked:', e));
+>>>>>>> mainnet
 
         await this.safeFetch('TotalValueLocked',
             () => new TotalValueLockedResource().fetch(),

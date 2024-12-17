@@ -97,9 +97,10 @@ import {
 // -- Internal data endpoints --
 import { ConsumerV2CahcedHandler, ConsumerV2CahcedHandlerOpts } from './handlers/consumer/consumerV2Handler';
 import { ChainWalletApiHandlerOpts, LavaChainRestakersHandler, LavaChainStakersHandler } from './handlers/ajax/chainWalletApiHandlers';
-import { TotalValueLockedHandler, TotalValueLockedHandlerOpts } from './handlers/ajax/totalLockedValueHandler';
 import { ValidatorsPaginatedHandler, ValidatorsPaginatedHandlerOpts } from './handlers/ajax/validatorsHandler';
-import { TotalValueLockedComponentsHandler, TotalValueLockedComponentsHandlerOpts } from './handlers/ajax/totalLockedValueComponentsHandler';
+import { TotalLockedValueHandler, TotalLockedValueHandlerOpts } from './handlers/ajax/totalLockedValueHandler';
+import { TotalLockedValuesComponentsHandler, TotalLockedValuesComponentsHandlerOpts } from './handlers/ajax/totalLockedValuesComponentsHandler';
+import { AllLockedValuesHandler, AllLockedValuesHandlerOpts } from './handlers/ajax/allLockedValuesHandler';
 
 // -- Server status ajax --
 GetServerInstance().get('/latest', LatestRawHandlerOpts, LatestRawHandler);
@@ -217,6 +218,10 @@ const tvlRoutes = [
     '/tlv'
 ];
 
+tvlRoutes.forEach(route => {
+    GetServerInstance().get(route, TotalLockedValueHandlerOpts, TotalLockedValueHandler);
+});
+
 const tvlComponentsRoutes = [
     '/total_value_locked_components',
     '/total_locked_value_components',
@@ -224,10 +229,8 @@ const tvlComponentsRoutes = [
     '/tlv_components'
 ];
 
-tvlRoutes.forEach(route => {
-    GetServerInstance().get(route, TotalValueLockedHandlerOpts, TotalValueLockedHandler);
+tvlComponentsRoutes.forEach(route => {
+    GetServerInstance().get(route, TotalLockedValuesComponentsHandlerOpts, TotalLockedValuesComponentsHandler);
 });
 
-tvlComponentsRoutes.forEach(route => {
-    GetServerInstance().get(route, TotalValueLockedComponentsHandlerOpts, TotalValueLockedComponentsHandler);
-});
+GetServerInstance().get("/all_locked_values", AllLockedValuesHandlerOpts, AllLockedValuesHandler);

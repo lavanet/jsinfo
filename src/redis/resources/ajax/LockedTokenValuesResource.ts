@@ -13,29 +13,30 @@ import { RpcPeriodicEndpointCache } from '@jsinfo/restRpc/lavaRpcPeriodicEndpoin
 import { REWARD_POOL_NAMES_TO_CONSIDER_IN_TOTAL_TOKEN_VALUE_CALCULATIONS } from '@jsinfo/utils/consts';
 
 // Renamed interface
-export interface TotalValueLockedItem {
+export interface LockedTokenValuesItem {
     key: string;
     ulavaValue: number;
     USDValue: number;
+    countForTlv: boolean;
 }
 
-export class TotalValueLockedResource extends RedisResourceBase<TotalValueLockedItem[], {}> {
-    protected readonly redisKey = 'totalValueLocked';
+export class LockedTokenValuesResource extends RedisResourceBase<LockedTokenValuesItem[], {}> {
+    protected readonly redisKey = 'LockedTokenValues';
     protected readonly cacheExpirySeconds = 300;
 
-    private async fetchTotalValueLocked(): Promise<TotalValueLockedItem[]> {
+    private async fetchLockedTokenValues(): Promise<LockedTokenValuesItem[]> {
         let currentStep = 'initialization';
         try {
-            const result: TotalValueLockedItem[] = [];
+            const result: LockedTokenValuesItem[] = [];
 
             currentStep = 'GetLavaUSDRate';
             const currentLavaUSDPrice = await CoinGekoCache.GetLavaUSDRate();
 
-            // currentStep = 'fetchIndexProviderDelegationSum';
-            // await this.addIndexStakesAndDelegationToResult(result, currentLavaUSDPrice);
+            currentStep = 'fetchIndexProviderDelegationSum';
+            await this.addIndexStakesAndDelegationToResult(result, currentLavaUSDPrice);
 
-            // currentStep = 'addEmptyProviderDelegationsToResult';
-            // await this.addEmptyProviderDelegationsToResult(result, currentLavaUSDPrice);
+            currentStep = 'addEmptyProviderDelegationsToResult';
+            await this.addEmptyProviderDelegationsToResult(result, currentLavaUSDPrice);
 
             currentStep = 'addRewardsPoolsToResult';
             await this.addRewardsPoolsToResult(result, currentLavaUSDPrice);
@@ -46,27 +47,27 @@ export class TotalValueLockedResource extends RedisResourceBase<TotalValueLocked
             currentStep = 'addDexesToResult';
             await this.addDexesToResult(result, currentLavaUSDPrice);
 
-            // currentStep = 'addLockedVestingTokensToResult';
-            // await this.addLockedVestingTokensToResult(result, currentLavaUSDPrice);
+            currentStep = 'addLockedVestingTokensToResult';
+            await this.addLockedVestingTokensToResult(result, currentLavaUSDPrice);
 
             currentStep = 'addStakingPool';
             await this.addStakingPoolToResult(result, currentLavaUSDPrice);
 
             return result;
         } catch (error) {
-            logger.error('TotalValueLockedResource: Error fetching total value locked:', {
+            logger.error('LockedTokenValuesResource: Error fetching total value locked:', {
                 failedStep: currentStep,
                 error: error instanceof Error ? error.message : error,
                 stack: error instanceof Error ? error.stack : undefined,
                 details: JSON.stringify(error, Object.getOwnPropertyNames(error)),
                 timestamp: new Date().toISOString()
             });
-            throw new Error(`TotalValueLockedResource: Failed to fetch total value locked during ${currentStep}`);
+            throw new Error(`LockedTokenValuesResource: Failed to fetch total value locked during ${currentStep}`);
         }
     }
 
 
-    private async addEmptyProviderDelegationsToResult(result: TotalValueLockedItem[], currentLavaUSDPrice: number): Promise<void> {
+    private async addEmptyProviderDelegationsToResult(result: LockedTokenValuesItem[], currentLavaUSDPrice: number): Promise<void> {
         const delegations = await RpcPeriodicEndpointCache.GetEmptyProviderDelegations();
         const emptyProviderDelegationsSum = delegations.reduce((sum, delegation) => {
             if (delegation.amount.denom === 'ulava') {
@@ -77,11 +78,12 @@ export class TotalValueLockedResource extends RedisResourceBase<TotalValueLocked
         result.push({
             key: 'Lava_EmptyProviderDelegatorsThatDidNotUseLavaApi',
             ulavaValue: Number(emptyProviderDelegationsSum),
-            USDValue: this.convertUlavaToUSD(emptyProviderDelegationsSum, currentLavaUSDPrice)
+            USDValue: this.convertUlavaToUSD(emptyProviderDelegationsSum, currentLavaUSDPrice),
+            countForTlv: false
         });
     }
 
-    private async addLockedVestingTokensToResult(result: TotalValueLockedItem[], currentLavaUSDPrice: number): Promise<void> {
+    private async addLockedVestingTokensToResult(result: LockedTokenValuesItem[], currentLavaUSDPrice: number): Promise<void> {
         const lockedTokensStats = await LockedVestingTokensService.fetch();
         if (!lockedTokensStats) {
             throw new Error('Error getting locked tokens');
@@ -90,24 +92,27 @@ export class TotalValueLockedResource extends RedisResourceBase<TotalValueLocked
         result.push({
             key: 'Cosmos_LavaLockedVestingTokens_Continuous',
             ulavaValue: Number(lockedTokensStats.ContinuousVesting.total),
-            USDValue: this.convertUlavaToUSD(lockedTokensStats.ContinuousVesting.total, currentLavaUSDPrice)
+            USDValue: this.convertUlavaToUSD(lockedTokensStats.ContinuousVesting.total, currentLavaUSDPrice),
+            countForTlv: false
         });
 
         result.push({
             key: 'Cosmos_LavaLockedVestingTokens_Periodic',
             ulavaValue: Number(lockedTokensStats.PeriodicVesting.total),
-            USDValue: this.convertUlavaToUSD(lockedTokensStats.PeriodicVesting.total, currentLavaUSDPrice)
+            USDValue: this.convertUlavaToUSD(lockedTokensStats.PeriodicVesting.total, currentLavaUSDPrice),
+            countForTlv: false
         });
     }
 
-    private async addDexesToResult(result: TotalValueLockedItem[], currentLavaUSDPrice: number): Promise<void> {
+    private async addDexesToResult(result: LockedTokenValuesItem[], currentLavaUSDPrice: number): Promise<void> {
         // Add Osmosis TVL
         const osmosisValues = await OsmosisGetTotalLavaLockedValue();
         if (osmosisValues && IsMeaningfulText(osmosisValues.ulavaValue + "")) {
             result.push({
                 key: 'Dex_Osmosis',
                 ulavaValue: osmosisValues.ulavaValue,
-                USDValue: osmosisValues.usdValue
+                USDValue: osmosisValues.usdValue,
+                countForTlv: true
             });
         }
 
@@ -117,7 +122,8 @@ export class TotalValueLockedResource extends RedisResourceBase<TotalValueLocked
             result.push({
                 key: 'Dex_Base',
                 ulavaValue: Math.round((Number(baseTotalLockedValueInUsd) / currentLavaUSDPrice) * 1000000),
-                USDValue: Number(baseTotalLockedValueInUsd)
+                USDValue: Number(baseTotalLockedValueInUsd),
+                countForTlv: true
             });
         }
 
@@ -127,37 +133,39 @@ export class TotalValueLockedResource extends RedisResourceBase<TotalValueLocked
             result.push({
                 key: 'Dex_Arbitrum',
                 ulavaValue: Math.round((Number(arbitrumTotalLockedValueInUsd) / currentLavaUSDPrice) * 1000000),
-                USDValue: Number(arbitrumTotalLockedValueInUsd)
+                USDValue: Number(arbitrumTotalLockedValueInUsd),
+                countForTlv: true
             });
         }
     }
 
-    private async addIndexStakesAndDelegationToResult(result: TotalValueLockedItem[], currentLavaUSDPrice: number): Promise<void> {
+    private async addIndexStakesAndDelegationToResult(result: LockedTokenValuesItem[], currentLavaUSDPrice: number): Promise<void> {
         const { stakesSum, delegationSum } = await this.fetchIndexStakesAndDelegationSums();
         result.push({
             key: 'Lava_TotalProviderStakes',
             ulavaValue: Number(stakesSum),
-            USDValue: this.convertUlavaToUSD(stakesSum, currentLavaUSDPrice)
+            USDValue: this.convertUlavaToUSD(stakesSum, currentLavaUSDPrice),
+            countForTlv: false
         });
         result.push({
             key: 'Lava_TotalDelegationsToProvider',
             ulavaValue: Number(delegationSum),
-            USDValue: this.convertUlavaToUSD(delegationSum, currentLavaUSDPrice)
+            USDValue: this.convertUlavaToUSD(delegationSum, currentLavaUSDPrice),
+            countForTlv: false
         });
     }
 
-    private async addRewardsPoolsToResult(result: TotalValueLockedItem[], currentLavaUSDPrice: number): Promise<void> {
+    private async addRewardsPoolsToResult(result: LockedTokenValuesItem[], currentLavaUSDPrice: number): Promise<void> {
         const rewardsPools = await RpcOnDemandEndpointCache.GetRewardsPools();
 
         for (const pool of rewardsPools.pools) {
-            if (!REWARD_POOL_NAMES_TO_CONSIDER_IN_TOTAL_TOKEN_VALUE_CALCULATIONS.includes(pool.name)) continue;
-
             const { poolUlavaValue, poolUSDValue } = await this.calculateRewardPoolValues(pool, currentLavaUSDPrice);
 
             result.push({
                 key: `Lava_RewardsPool_${pool.name}`,
                 ulavaValue: Number(poolUlavaValue),
-                USDValue: poolUSDValue
+                USDValue: poolUSDValue,
+                countForTlv: REWARD_POOL_NAMES_TO_CONSIDER_IN_TOTAL_TOKEN_VALUE_CALCULATIONS.includes(pool.name)
             });
         }
     }
@@ -181,7 +189,7 @@ export class TotalValueLockedResource extends RedisResourceBase<TotalValueLocked
         return { poolUlavaValue, poolUSDValue };
     }
 
-    private async addSubscriptionsToResult(result: TotalValueLockedItem[], currentLavaUSDPrice: number): Promise<void> {
+    private async addSubscriptionsToResult(result: LockedTokenValuesItem[], currentLavaUSDPrice: number): Promise<void> {
         const subscriptionListResponse = await GetSubscriptionList();
         let subsUlavaValue = 0n;
 
@@ -194,12 +202,15 @@ export class TotalValueLockedResource extends RedisResourceBase<TotalValueLocked
         result.push({
             key: 'Lava_Subscriptions',
             ulavaValue: Number(subsUlavaValue),
-            USDValue: this.convertUlavaToUSD(subsUlavaValue, currentLavaUSDPrice)
+            USDValue: this.convertUlavaToUSD(subsUlavaValue, currentLavaUSDPrice),
+            countForTlv: true
         });
     }
 
     private async fetchIndexStakesAndDelegationSums(): Promise<{ stakesSum: bigint, delegationSum: bigint }> {
         const indexStakes = await new ProviderStakesAndDelegationResource().fetch();
+        console.log('indexStakes', indexStakes);
+
         if (!indexStakes) {
             throw new Error('Failed to fetch index stakes');
         }
@@ -212,13 +223,14 @@ export class TotalValueLockedResource extends RedisResourceBase<TotalValueLocked
         };
     }
 
-    private async addStakingPoolToResult(result: TotalValueLockedItem[], currentLavaUSDPrice: number): Promise<void> {
+    private async addStakingPoolToResult(result: LockedTokenValuesItem[], currentLavaUSDPrice: number): Promise<void> {
         const stakingPool = await RpcOnDemandEndpointCache.GetStakingPool();
 
         result.push({
             key: 'Cosmos_BondedTokens',
             ulavaValue: Number(stakingPool.pool.bonded_tokens),
-            USDValue: this.convertUlavaToUSD(stakingPool.pool.bonded_tokens, currentLavaUSDPrice)
+            USDValue: this.convertUlavaToUSD(stakingPool.pool.bonded_tokens, currentLavaUSDPrice),
+            countForTlv: true,
         });
     }
 
@@ -239,7 +251,7 @@ export class TotalValueLockedResource extends RedisResourceBase<TotalValueLocked
         return 0;
     }
 
-    protected async fetchFromSource(): Promise<TotalValueLockedItem[]> {
-        return await this.fetchTotalValueLocked();
+    protected async fetchFromSource(): Promise<LockedTokenValuesItem[]> {
+        return await this.fetchLockedTokenValues();
     }
 }

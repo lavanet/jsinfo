@@ -37,12 +37,12 @@ export class ProviderStakesAndDelegationResource extends RedisResourceBase<Provi
         stakesRes.forEach((stake) => {
             if (stake.provider !== null && !IsMeaningfulText(stake.provider)) return;
 
-            stakeSum += stake.stake || 0n;
-            delegationSum += stake.delegateTotal || 0n;
+            stakeSum += BigInt(stake.stake || 0n);
+            delegationSum += BigInt(stake.delegateTotal || 0n);
 
             providerStakes[stake.provider!] = {
-                stake: (stake.stake || 0n).toString(),
-                delegateTotal: (stake.delegateTotal || 0n).toString()
+                stake: BigInt(stake.stake || 0n).toString(),
+                delegateTotal: BigInt(stake.delegateTotal || 0n).toString()
             };
         });
 

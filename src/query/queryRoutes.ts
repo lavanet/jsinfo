@@ -58,7 +58,7 @@ import { ProviderBlockReportsPaginatedHandlerOpts, ProviderBlockReportsPaginated
 
 import { ProviderHealthLatestPaginatedHandler, ProviderHealthLatestPaginatedHandlerOpts } from './handlers/provider/providerHealthLatestHandler';
 
-import { ProviderConsumerOptimizerMetricsHandler, ProviderConsumerOptimizerMetricsHandlerOpts } from './handlers/provider/providerConsumerOptimizerMetricsHandler';
+import { ProviderConsumerOptimizerMetricsHandler, ProviderConsumerOptimizerMetricsHandlerOpts, ProviderConsumerOptimizerMetricsQuery } from './handlers/provider/providerConsumerOptimizerMetricsHandler';
 
 // -- Events page ajax -- 
 import { EventsPaginatedHandler, EventsPaginatedHandlerOpts } from './handlers/events/eventsHandler';
@@ -176,7 +176,11 @@ GetServerInstance().get('/providerRewardsCsv/:addr', ProviderRewardsCSVRawHandle
 GetServerInstance().get('/providerReportsCsv/:addr', ProviderReportsCSVRawHandler);
 GetServerInstance().get('/providerBlockReportsCsv/:addr', ProviderBlockReportsCSVRawHandler);
 
-GetServerInstance().get('/providerConsumerOptimizerMetrics/:addr', ProviderConsumerOptimizerMetricsHandlerOpts, ProviderConsumerOptimizerMetricsHandler);
+GetServerInstance().get<{ Querystring: ProviderConsumerOptimizerMetricsQuery }>(
+    '/providerConsumerOptimizerMetrics/:addr',
+    ProviderConsumerOptimizerMetricsHandlerOpts,
+    ProviderConsumerOptimizerMetricsHandler
+);
 
 // -- Consumer page ajax --
 RegisterRedisBackedHandler('/consumerV2/:addr', ConsumerV2CahcedHandlerOpts, ConsumerV2CahcedHandler);

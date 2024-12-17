@@ -68,7 +68,7 @@ export class ConsumerOptimizerMetricsResource extends RedisResourceBase<Consumer
         const metrics = await queryJsinfo(
             db => db.select().from(consumerOptimizerMetricsAgg)
                 .where(and(...conditions))
-                .orderBy(consumerOptimizerMetricsAgg.timestamp).limit(200),
+                .orderBy(consumerOptimizerMetricsAgg.timestamp),
             `ConsumerOptimizerMetricsResource::fetchFromSource_${JSONStringify(args)}`
         );
 

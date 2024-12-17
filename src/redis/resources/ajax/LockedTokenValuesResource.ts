@@ -209,7 +209,6 @@ export class LockedTokenValuesResource extends RedisResourceBase<LockedTokenValu
 
     private async fetchIndexStakesAndDelegationSums(): Promise<{ stakesSum: bigint, delegationSum: bigint }> {
         const indexStakes = await new ProviderStakesAndDelegationResource().fetch();
-        console.log('indexStakes', indexStakes);
 
         if (!indexStakes) {
             throw new Error('Failed to fetch index stakes');

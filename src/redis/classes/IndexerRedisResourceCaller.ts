@@ -132,22 +132,13 @@ export class IndexerRedisResourceCaller {
     private static currentFetches = new Map<string, Promise<any>>();
 
     private static async refreshAjaxResources(): Promise<void> {
-<<<<<<< HEAD
         await this.safeFetch('AllProviderAPR',
             () => new AllProviderAPRResource().fetch(),
             this.currentFetches
         ).catch(e => logger.error('Failed to refresh all provider APR:', e));
-=======
-        // AllProviderAPRResource
-        await new AllProviderAPRResource().fetch()
-            .catch(e => logger.error('Failed to refresh all provider APR:', e));
-        // Total Value Locked
-        await new LockedTokenValuesResource().fetch()
-            .catch(e => logger.error('Failed to refresh total value locked:', e));
->>>>>>> mainnet
 
         await this.safeFetch('TotalValueLocked',
-            () => new TotalValueLockedResource().fetch(),
+            () => new LockedTokenValuesResource().fetch(),
             this.currentFetches
         ).catch(e => logger.error('Failed to refresh total value locked:', e));
 

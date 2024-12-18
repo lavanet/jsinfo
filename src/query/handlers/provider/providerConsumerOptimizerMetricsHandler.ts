@@ -57,9 +57,16 @@ export async function ProviderConsumerOptimizerMetricsHandler(
     }
 
     const possibleChainIds = [...new Set(data.metrics.map(m => m.chain_id))].filter((id): id is string => id !== null);
-    const possibleConsumers = [...new Set(data.metrics.map(m => m.consumer))].filter((c): c is string => c !== null);
+    const possibleConsumers = [...new Set(data.metrics
+        .map(m => m.consumer?.startsWith('lava@') ? m.consumer : null)
+        .filter((c): c is string => c !== null)
+    )];
+    const possibleHostnames = [...new Set(data.metrics
+        .map(m => m.consumer_hostname === 'nenad-test' ? 'test_machine' : m.consumer_hostname)
+        .filter((h): h is string => h !== null)
+    )];
 
-    if (!is_consumer_all && !possibleConsumers.some(c => c === consumer)) {
+    if (!is_consumer_all && !(possibleConsumers.some(c => c === consumer) || possibleHostnames.some(h => h === consumer))) {
         return reply.send(JSONStringify({ error: 'no match for consumer found' }));
     }
 
@@ -79,7 +86,7 @@ export async function ProviderConsumerOptimizerMetricsHandler(
             provider: provider
         },
         possibleChainIds,
-        possibleConsumers
+        possibleConsumers: [...possibleConsumers, ...possibleHostnames]
     }
 
     return reply.send(JSONStringify(ret));
@@ -112,12 +119,14 @@ function aggregateMetrics(metrics: ConsumerOptimizerMetricsAgg[], consumer: stri
     }>();
 
     for (const metric of metrics) {
-        if (consumer !== 'all' && metric.consumer !== consumer) continue;
+        const consumerHostname = metric.consumer_hostname === 'nenad-test' ? 'test_machine' : metric.consumer_hostname;
+        if (consumer !== 'all' && metric.consumer !== consumer && consumerHostname !== consumer) continue;
+
         if (chain_id !== 'all' && metric.chain_id !== chain_id) continue;
 
         const key = [
             metric.timestamp,
-            consumer === 'all' ? 'all' : metric.consumer,
+            consumer === 'all' ? 'all' : (metric.consumer?.startsWith('lava@') ? metric.consumer : metric.consumer_hostname),
             chain_id === 'all' ? 'all' : metric.chain_id
         ].join(':::');
 

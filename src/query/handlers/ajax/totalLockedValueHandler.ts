@@ -34,7 +34,7 @@ export async function TotalLockedValueHandler(request: FastifyRequest, reply: Fa
 
     const totalLava = totalValueLockedItems
         .filter(item => item.countForTlv)
-        .reduce((sum, item) => sum + item.ulavaValue, 0) / 1000000;
+        .reduce((sum, item) => sum + item.USDValue, 0)
 
     return { tvl: totalLava.toFixed(4) };
 }

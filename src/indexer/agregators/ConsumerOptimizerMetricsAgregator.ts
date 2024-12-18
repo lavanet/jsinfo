@@ -124,12 +124,13 @@ export class ConsumerOptimizerMetricsAgregator {
                 aggregated.set(key, agg);
             }
 
-            if (Number(metric.latency_score) !== 0) agg.latency_scores.push(Number(metric.latency_score));
-            if (Number(metric.availability_score) !== 0) agg.availability_scores.push(Number(metric.availability_score));
-            if (Number(metric.sync_score) !== 0) agg.sync_scores.push(Number(metric.sync_score));
+            if (Number(metric.latency_score) >= 0 && Number(metric.latency_score) <= 1) agg.latency_scores.push(Number(metric.latency_score));
+            if (Number(metric.availability_score) >= 0 && Number(metric.availability_score) <= 1) agg.availability_scores.push(Number(metric.availability_score));
+            if (Number(metric.sync_score) >= 0 && Number(metric.sync_score) <= 1) agg.sync_scores.push(Number(metric.sync_score));
+            if (Number(metric.generic_score) >= 0 && Number(metric.generic_score) <= 1) agg.generic_scores.push(Number(metric.generic_score));
+
             if (Number(metric.node_error_rate) !== 0) agg.node_error_rates.push(Number(metric.node_error_rate));
             if (Number(metric.entry_index) !== 0) agg.entry_indices.push(Number(metric.entry_index));
-            if (Number(metric.generic_score) !== 0) agg.generic_scores.push(Number(metric.generic_score));
 
             if (metric.provider_stake) {
                 agg.provider_stake = Math.max(agg.provider_stake, metric.provider_stake);

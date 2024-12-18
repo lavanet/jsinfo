@@ -145,13 +145,21 @@ function aggregateMetrics(metrics: ConsumerOptimizerMetricsAgg[], consumer: stri
 
         const agg = aggregations.get(key)!;
 
+        // Scores that should be between 0 and 1
         [
             { value: metric.latency_score, array: agg.latency_scores },
             { value: metric.availability_score, array: agg.availability_scores },
             { value: metric.sync_score, array: agg.sync_scores },
-            { value: metric.node_error_rate, array: agg.node_error_rates },
-            { value: metric.entry_index, array: agg.entry_indices },
             { value: metric.generic_score, array: agg.generic_scores }
+        ].forEach(({ value, array }) => {
+            const numValue = Number(value);
+            if (numValue >= 0 && numValue <= 1) array.push(numValue);
+        });
+
+        // Other metrics without range restriction
+        [
+            { value: metric.node_error_rate, array: agg.node_error_rates },
+            { value: metric.entry_index, array: agg.entry_indices }
         ].forEach(({ value, array }) => {
             const numValue = Number(value);
             if (numValue !== 0) array.push(numValue);

@@ -4,7 +4,7 @@ import { queryJsinfo } from '@jsinfo/utils/db';
 import { eq } from 'drizzle-orm';
 
 interface SupplyData {
-    amount: string;
+    amount: bigint;
 }
 
 interface SupplyArgs {
@@ -24,10 +24,10 @@ export class SupplyResource extends RedisResourceBase<SupplyData, SupplyArgs> {
         );
 
         if (result.length > 0 && result[0].amount) {
-            const amount = BigInt(result[0].amount) / BigInt(1000000);
-            return { amount: amount.toString() };
+            const amount = BigInt(result[0].amount);
+            return { amount: amount };
         }
 
-        return { amount: "0" };
+        return { amount: 0n };
     }
 }

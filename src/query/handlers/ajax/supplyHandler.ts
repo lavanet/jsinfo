@@ -16,12 +16,12 @@ export const SupplyRawHandlerOpts: RouteShorthandOptions = {
 export async function TotalSupplyRawHandler(request: FastifyRequest, reply: FastifyReply) {
     const supplyResource = new SupplyResource();
     const result = await supplyResource.fetch({ type: 'total' });
-    return result?.amount || 0;
+    return (BigInt(result?.amount || 0) / BigInt(1000000)).toString();
 }
 
 export async function CirculatingSupplyRawHandler(request: FastifyRequest, reply: FastifyReply) {
     const supplyResource = new SupplyResource();
     const result = await supplyResource.fetch({ type: 'circulating' });
-    return result?.amount || 0;
+    return (BigInt(result?.amount || 0) / BigInt(1000000)).toString();
 }
 

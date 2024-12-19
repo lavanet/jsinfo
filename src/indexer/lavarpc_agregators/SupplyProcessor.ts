@@ -30,7 +30,9 @@ async function getTotalTokenSupply(client: LavaClient): Promise<bigint> {
     let totalSupply = 0n;
 
     supplies.supply.forEach((supply) => {
-        totalSupply += BigInt(supply.amount);
+        if (supply.denom === 'ulava') {
+            totalSupply += BigInt(supply.amount);
+        }
     });
 
     return totalSupply;

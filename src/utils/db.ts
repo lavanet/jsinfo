@@ -196,9 +196,6 @@ class DbConnectionPoolClass {
                 const url = await this.getNextValidUrl(urls);
                 const db = await this.createDbConnection(url);
                 await db.select({ now: sql`NOW()` }).from(sql`(SELECT 1) AS foo`).limit(1);
-                // logger.info('Database connection established', {
-                //     url: MaskPassword(url)
-                // });
                 return {
                     db,
                     lastUsed: Date.now(),

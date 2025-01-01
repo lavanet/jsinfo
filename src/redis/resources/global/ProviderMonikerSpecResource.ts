@@ -165,7 +165,6 @@ export class ProviderMonikerSpecResource extends RedisResourceBase<ProviderMonik
     public async IsValidProvider(provider: string): Promise<boolean> {
         const data = await this.fetch();
         if (!data) return false;
-
         return data.providers.some(p => p.provider === provider);
     }
 }

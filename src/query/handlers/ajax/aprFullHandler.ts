@@ -31,5 +31,5 @@ export async function APRFullHandler(request: FastifyRequest, reply: FastifyRepl
         return reply;
     }
     reply.header('Content-Type', 'application/json');
-    return JSONStringify(data);
+    return reply.send(JSONStringify(data));
 }

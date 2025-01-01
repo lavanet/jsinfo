@@ -23,7 +23,6 @@ export async function SpecsPaginatedHandler(request: FastifyRequest, reply: Fast
 
 
     const res = await SpecAndConsumerService.GetAllSpecs();
-
     return {
         specs: res,
     }

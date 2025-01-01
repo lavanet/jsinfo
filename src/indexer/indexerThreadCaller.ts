@@ -21,7 +21,6 @@ import { AggProviderRelayPayments } from '@jsinfo/indexer/agregators/providerRel
 import { IndexerRedisResourceCaller } from "@jsinfo/redis/classes/IndexerRedisResourceCaller";
 
 // Supply Processor
-import { SaveTokenSupplyToDB } from './lavarpc_agregators/SupplyProcessor';
 import { SyncBlockchainEntities } from './blockchainEntities/blockchainEntitiesSync';
 import { FillUpBlocks } from '@jsinfo/indexer/indexerFillupBlocks';
 import { JSINFO_INDEXER_GRACEFULL_EXIT_AFTER_X_HOURS } from './indexerConsts';
@@ -133,10 +132,6 @@ export class IndexerThreadManagerClass {
             {
                 name: 'SyncBlockchainEntities',
                 process: () => SyncBlockchainEntities()
-            },
-            {
-                name: 'ProcessTokenSupply',
-                process: () => SaveTokenSupplyToDB()
             },
         ];
 

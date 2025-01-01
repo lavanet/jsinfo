@@ -25,6 +25,7 @@ export interface EstimatedRewardsResponse {
         denom: string;
         amount: string;
     }[];
+    recommended_block: string;
 }
 
 export interface DelegatorRewardAmount {
@@ -75,6 +76,18 @@ export interface StakingPoolResponse {
     }
 }
 
+export interface ValidatorDistributionInfoResponse {
+    operator_address: string;
+    self_bond_rewards: {
+        denom: string;
+        amount: string;
+    }[];
+    commission: {
+        denom: string;
+        amount: string;
+    }[];
+}
+
 const CACHE_KEYS = {
     DENOM_TRACE: (denom: string) => `denom_trace:${denom}`,
     VALIDATOR_REWARDS: (validator: string, amount: number, denom: string) =>
@@ -83,6 +96,10 @@ const CACHE_KEYS = {
         `provider_rewards:${provider}:${amount}:${denom}`,
     DELEGATOR_REWARDS: (delegator: string) => `delegator_rewards:${delegator}`,
     SPEC_TRACKED_INFO: (chainId: string) => `spec_tracked_info:${chainId}`,
+    DISTRIBUTED_PROVIDER_REWARDS: (provider: string) =>
+        `distributed_provider_rewards:${provider}`,
+    VALIDATOR_DISTRIBUTION_INFO: (validator: string) =>
+        `validator_distribution_info:${validator}`,
 } as const;
 
 class RpcOnDemandEndpointCacheClass {
@@ -172,11 +189,11 @@ class RpcOnDemandEndpointCacheClass {
                 rewards = await this.fetchEstimatedProviderRewards(provider, amount, denom);
             } catch (error) {
                 logger.error(`Error fetching estimated provider rewards for ${provider}`, { error: TruncateError(error) });
-                return { info: [], total: [] };
+                return { info: [], total: [], recommended_block: "0" };
 
             }
             if (!rewards) {
-                return { info: [], total: [] };
+                return { info: [], total: [], recommended_block: "0" };
             }
         }
 
@@ -323,6 +340,58 @@ class RpcOnDemandEndpointCacheClass {
             return response;
         } catch (error) {
             logger.error('Error fetching staking pool', { error: TruncateError(error) });
+            throw error;
+        }
+    }
+
+    public async GetDistributedProviderRewards(provider: string): Promise<EstimatedRewardsResponse> {
+        const cacheKey = CACHE_KEYS.DISTRIBUTED_PROVIDER_REWARDS(provider);
+        let rewards = await RedisCache.getDict(cacheKey) as EstimatedRewardsResponse;
+
+        if (!rewards) {
+            rewards = await this.fetchAndCacheDistributedProviderRewards(provider);
+        }
+
+        return rewards;
+    }
+
+    private async fetchAndCacheDistributedProviderRewards(provider: string): Promise<EstimatedRewardsResponse> {
+        try {
+            const initialResponse = await QueryLavaRPC<EstimatedRewardsResponse>(
+                `/lavanet/lava/subscription/estimated_provider_rewards/${provider}`
+            );
+
+            if (!initialResponse.recommended_block) {
+                throw new Error('No recommended block received');
+            }
+
+            const recommendedBlock = parseInt(initialResponse.recommended_block);
+            if (isNaN(recommendedBlock)) {
+                throw new Error('Invalid recommended block received');
+            }
+
+            if (recommendedBlock === 0) {
+                throw new Error('Recommended block is 0');
+            }
+
+            const recommendedBlockMinusOne = recommendedBlock - 1;
+
+            const DistributedRewards = await QueryLavaRPC<EstimatedRewardsResponse>(
+                `/lavanet/lava/subscription/estimated_provider_rewards/${provider}?height=${recommendedBlockMinusOne}`,
+            );
+
+            // Cache the results
+            RedisCache.setDict(
+                CACHE_KEYS.DISTRIBUTED_PROVIDER_REWARDS(provider),
+                DistributedRewards,
+                this.cacheRefreshInterval
+            );
+
+            return DistributedRewards;
+        } catch (error) {
+            logger.error(`Error fetching distributed provider rewards for ${provider}`, {
+                error: TruncateError(error)
+            });
             throw error;
         }
     }

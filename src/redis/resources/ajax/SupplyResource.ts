@@ -109,7 +109,7 @@ export class SupplyResource extends RedisResourceBase<SupplyData, SupplyArgs> {
                 return { amount: 0n };
             }
             const circulatingSupply = await queryRpc(
-                async (_, __, lavaClient) => getCirculatingTokenSupply(lavaClient, totalSupply.amount),
+                async (_, __, lavaClient) => getCirculatingTokenSupply(lavaClient, BigInt(totalSupply.amount)),
                 'getCirculatingTokenSupply'
             );
             logger.debug(`SaveTokenSupplyToDB: Circulating supply: ${circulatingSupply}`);

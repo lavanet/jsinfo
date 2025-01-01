@@ -54,20 +54,38 @@ async function getCirculatingTokenSupply(client: LavaClient, totalSupplyAmount: 
     }
     const poolsAmount = await getPoolsAmount(client);
 
-    const calculatedSupply = totalSupplyAmount - BigInt(lockedTokens.ContinuousVesting.total) - BigInt(lockedTokens.PeriodicVesting.total) - BigInt(poolsAmount);
+    try {
+        // Ensure all values are BigInt before calculation
+        const continuousVesting = BigInt(lockedTokens.ContinuousVesting.total);
+        const periodicVesting = BigInt(lockedTokens.PeriodicVesting.total);
 
-    if (calculatedSupply < 0n) {
-        logger.warn('Negative circulating supply detected', {
+        const calculatedSupply = totalSupplyAmount - continuousVesting - periodicVesting - poolsAmount;
+
+        if (calculatedSupply < 0n) {
+            try {
+                logger.warn('Negative circulating supply detected', {
+                    totalSupply: totalSupplyAmount.toString(),
+                    continuousVesting: continuousVesting.toString(),
+                    periodicVesting: periodicVesting.toString(),
+                    poolsAmount: poolsAmount.toString(),
+                    calculatedSupply: calculatedSupply.toString()
+                });
+            } catch (logError) {
+                logger.error('Error while logging negative supply', { error: logError });
+            }
+            return 0n;
+        }
+
+        return calculatedSupply;
+    } catch (error) {
+        logger.error('Error calculating circulating supply', {
+            error,
             totalSupply: totalSupplyAmount.toString(),
-            continuousVesting: lockedTokens.ContinuousVesting.total,
-            periodicVesting: lockedTokens.PeriodicVesting.total,
-            poolsAmount: poolsAmount.toString(),
-            calculatedSupply: calculatedSupply.toString()
+            lockedTokens: JSON.stringify(lockedTokens),
+            poolsAmount: poolsAmount.toString()
         });
         return 0n;
     }
-
-    return calculatedSupply;
 }
 
 export class SupplyResource extends RedisResourceBase<SupplyData, SupplyArgs> {
@@ -91,7 +109,7 @@ export class SupplyResource extends RedisResourceBase<SupplyData, SupplyArgs> {
                 return { amount: 0n };
             }
             const circulatingSupply = await queryRpc(
-                async (_, __, lavaClient) => getCirculatingTokenSupply(lavaClient, totalSupply.amount),
+                async (_, __, lavaClient) => getCirculatingTokenSupply(lavaClient, BigInt(totalSupply.amount)),
                 'getCirculatingTokenSupply'
             );
             logger.debug(`SaveTokenSupplyToDB: Circulating supply: ${circulatingSupply}`);

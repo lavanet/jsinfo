@@ -10,6 +10,7 @@ import { HealthStatusRawHandler, HealthStatusRawHandlerOpts } from './handlers/h
 
 // -- Server supply ajax --
 import { SupplyRawHandlerOpts, TotalSupplyRawHandler, CirculatingSupplyRawHandler } from './handlers/ajax/supplyHandler';
+import { SupplyHistoryHandlerOpts, supplyHistoryHandler } from './handlers/ajax/supplyHistoryHandler';
 
 // -- Server apr ajax --
 import { APRRawHandlerOpts, APRRawHandler } from './handlers/ajax/aprHandler';
@@ -113,6 +114,7 @@ GetServerInstance().get('/healthstatus', HealthStatusRawHandlerOpts, HealthStatu
 // -- Server supply ajax --
 GetServerInstance().get('/supply/total', SupplyRawHandlerOpts, TotalSupplyRawHandler);
 GetServerInstance().get('/supply/circulating', SupplyRawHandlerOpts, CirculatingSupplyRawHandler);
+GetServerInstance().get('/supply/history', SupplyHistoryHandlerOpts, supplyHistoryHandler);
 
 // -- Server chain wallet api ajax --
 GetServerInstance().get('/lava_chain_stakers', ChainWalletApiHandlerOpts, LavaChainStakersHandler);

@@ -297,13 +297,27 @@ export const supply = pgTable('supply', {
 export type Supply = typeof supply.$inferSelect;
 export type InsertSupply = typeof supply.$inferInsert;
 
+export const supplyHistory = pgTable('supply_history', {
+  key: text('key').notNull().primaryKey(), // Format: "YYYY-MM-DD-HH:circulating" or "YYYY-MM-DD-HH:total"
+  type: text('type').notNull(), // "circulating" or "total"
+  value: text('value').notNull(), // The supply amount as string
+  createdAt: timestamp('created_at', { mode: "date" }).defaultNow().notNull(),
+}, (table) => {
+  return {
+    keyIdx: index("supply_history_key_idx").on(table.key),
+    typeIdx: index("supply_history_type_idx").on(table.type),
+  };
+});
+
+export type SupplyHistory = typeof supplyHistory.$inferSelect;
+export type InsertSupplyHistory = typeof supplyHistory.$inferInsert;
+
 export const blocks = pgTable('blocks', {
   height: integer('height').unique(),
   datetime: timestamp('datetime', { mode: "date" }),
 });
 export type Block = typeof blocks.$inferSelect
 export type InsertBlock = typeof blocks.$inferInsert
-
 
 export const keyValueStore = pgTable('key_value_store', {
   key: text('key').notNull().primaryKey(),

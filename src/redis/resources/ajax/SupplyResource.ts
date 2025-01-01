@@ -14,6 +14,9 @@ import { logger } from '@jsinfo/utils/logger';
 import { queryRpc } from '@jsinfo/indexer/utils/lavajsRpc';
 import { LavaClient } from '@jsinfo/indexer/lavaTypes';
 import { IsMeaningfulText } from '@jsinfo/utils/fmt';
+import { supplyHistory } from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
+import { queryJsinfo } from '@jsinfo/utils/db';
+import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 
 async function getPoolsAmount(client: LavaClient): Promise<bigint> {
     const lavaClient = client.lavanet.lava.rewards;
@@ -88,8 +91,41 @@ async function getCirculatingTokenSupply(client: LavaClient, totalSupplyAmount: 
     }
 }
 
+async function saveSupplyHistory(type: 'circulating' | 'total', amount: bigint): Promise<void> {
+    try {
+        if (amount === 0n || !IsMeaningfulText(amount.toString())) {
+            logger.debug('Skipping supply history save - amount is 0', { type });
+            return;
+        }
+
+        const now = new Date();
+        now.setMinutes(0, 0, 0);
+        const key = `${now.toISOString().split(':')[0]}:${type}`;
+
+        await queryJsinfo(async (db: PostgresJsDatabase) => {
+            return await db.insert(supplyHistory)
+                .values({
+                    key,
+                    type,
+                    value: amount.toString(),
+                })
+                .onConflictDoUpdate({
+                    target: [supplyHistory.key],
+                    set: {
+                        value: amount.toString(),
+                    }
+                })
+                .execute();
+        }, 'saveSupplyHistory_' + type);
+
+        logger.debug('Supply history saved', { type, key, amount: amount.toString() });
+    } catch (error) {
+        logger.error('Error saving supply history', { error, type });
+    }
+}
+
 export class SupplyResource extends RedisResourceBase<SupplyData, SupplyArgs> {
-    protected readonly redisKey = 'supply-v2';
+    protected readonly redisKey = 'supply-v3';
     protected readonly cacheExpirySeconds = 300; // 5 minutes cache
 
     protected async fetchFromSource(args: SupplyArgs): Promise<SupplyData> {
@@ -99,6 +135,10 @@ export class SupplyResource extends RedisResourceBase<SupplyData, SupplyArgs> {
                 'getTotalTokenSupply'
             );
             logger.debug(`SaveTokenSupplyToDB: Total token supply: ${totalSupply}`);
+
+            // Save to history
+            await saveSupplyHistory('total', BigInt(totalSupply));
+
             return { amount: BigInt(totalSupply) };
         }
 
@@ -112,6 +152,10 @@ export class SupplyResource extends RedisResourceBase<SupplyData, SupplyArgs> {
                 async (_, __, lavaClient) => getCirculatingTokenSupply(lavaClient, BigInt(totalSupply.amount)),
                 'getCirculatingTokenSupply'
             );
+
+            // Save to history
+            await saveSupplyHistory('circulating', BigInt(circulatingSupply));
+
             logger.debug(`SaveTokenSupplyToDB: Circulating supply: ${circulatingSupply}`);
             return { amount: BigInt(circulatingSupply) };
         }

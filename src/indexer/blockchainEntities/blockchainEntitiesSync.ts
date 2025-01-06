@@ -79,7 +79,7 @@ export async function SyncBlockchainEntities() {
                                     extensions: stake.extensions,
                                     status: stake.status,
                                     delegateCommission: stake.delegateCommission,
-                                    delegateLimit: stake.delegateLimit,
+                                    // delegateLimit: stake.delegateLimit,
                                     delegateTotal: stake.delegateTotal,
                                 },
                             });

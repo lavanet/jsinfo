@@ -102,6 +102,7 @@ import { ValidatorsPaginatedHandler, ValidatorsPaginatedHandlerOpts } from './ha
 import { TotalLockedValueHandler, TotalLockedValueHandlerOpts } from './handlers/ajax/totalLockedValueHandler';
 import { TotalLockedValuesComponentsHandler, TotalLockedValuesComponentsHandlerOpts } from './handlers/ajax/totalLockedValuesComponentsHandler';
 import { AllLockedValuesHandler, AllLockedValuesHandlerOpts } from './handlers/ajax/allLockedValuesHandler';
+import { IpRpcEndpointsIndexHandler, IpRpcEndpointsIndexHandlerOpts } from './handlers/IpRpcEndpointsIndex/IpRpcEndpointsIndexHandler';
 
 // -- Server status ajax --
 GetServerInstance().get('/latest', LatestRawHandlerOpts, LatestRawHandler);
@@ -240,3 +241,6 @@ tvlComponentsRoutes.forEach(route => {
 });
 
 GetServerInstance().get("/all_locked_values", AllLockedValuesHandlerOpts, AllLockedValuesHandler);
+
+// lava_iprpc_endpoints
+GetServerInstance().get('/lava_iprpc_endpoints', IpRpcEndpointsIndexHandlerOpts, IpRpcEndpointsIndexHandler);

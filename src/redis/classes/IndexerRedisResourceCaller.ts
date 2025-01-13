@@ -24,6 +24,7 @@ import { ActiveProvidersResource } from '../resources/index/ActiveProvidersResou
 import { AllProviderAPRResource } from '../resources/ajax/AllProviderAprResource';
 import { LockedTokenValuesResource } from '../resources/ajax/LockedTokenValuesResource';
 import { LockedVestingTokensService } from '../resources/global/LockedVestingTokensResource';
+import { IpRpcEndpointsIndexService } from '../resources/IpRpcEndpointsIndex/IpRpcEndpointsResource';
 
 export class IndexerRedisResourceCaller {
     private static readonly REFRESH_INTERVAL = 60 * 1000; // 1 minute
@@ -97,7 +98,8 @@ export class IndexerRedisResourceCaller {
             await Promise.all([
                 this.refreshAjaxResources(),
                 this.refreshIndexResources(),
-                this.refreshGlobalResources()
+                this.refreshGlobalResources(),
+                this.refreshIpRpcEndpoints()
             ]);
 
             const duration = Date.now() - startTime;
@@ -256,6 +258,13 @@ export class IndexerRedisResourceCaller {
                 this.currentFetches
             ).catch(e => logger.error('Failed to refresh locked vesting tokens:', e))
         ]);
+    }
+
+    private static async refreshIpRpcEndpoints(): Promise<void> {
+        await this.safeFetch('IpRpcEndpoints',
+            () => IpRpcEndpointsIndexService.fetch(),
+            this.currentFetches
+        ).catch(e => logger.error('Failed to refresh ip rpc endpoints:', e));
     }
 }
 

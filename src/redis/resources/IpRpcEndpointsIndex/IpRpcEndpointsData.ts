@@ -375,38 +375,38 @@ export const IpRpcEndpointsData: ChainEndpoint[] = [
             "30d": 30247400
         }
     },
-    {
-        "chainId": "uniont",
-        "alias": "Testnet",
-        "ChainDisplayName": "Union Testnet",
-        "DisplayName": "Union Testnet (UNIONT)",
-        "geolocations": [
-            "US",
-            "EU",
-            "ASIA"
-        ],
-        "features": [
-            "Archive"
-        ],
-        "apiEndpoints": {
-            "rest": [
-                "https://uniont.lava.build:443"
-            ],
-            "tendermintrpc": [
-                "https://uniont.tendermintrpc.lava.build:443",
-                "wss://uniont.tendermintrpc.lava.build/websocket"
-            ],
-            "grpc": [
-                "uniont.grpc.lava.build:443"
-            ]
-        },
-        "logoURL": "https://gateway-fe-public-assets.s3.amazonaws.com/icons/union.png",
-        "requests": {
-            "24h": 29924,
-            "7d": 211456,
-            "30d": 907327
-        }
-    },
+    // {
+    //     "chainId": "uniont",
+    //     "alias": "Testnet",
+    //     "ChainDisplayName": "Union Testnet",
+    //     "DisplayName": "Union Testnet (UNIONT)",
+    //     "geolocations": [
+    //         "US",
+    //         "EU",
+    //         "ASIA"
+    //     ],
+    //     "features": [
+    //         "Archive"
+    //     ],
+    //     "apiEndpoints": {
+    //         "rest": [
+    //             "https://uniont.lava.build:443"
+    //         ],
+    //         "tendermintrpc": [
+    //             "https://uniont.tendermintrpc.lava.build:443",
+    //             "wss://uniont.tendermintrpc.lava.build/websocket"
+    //         ],
+    //         "grpc": [
+    //             "uniont.grpc.lava.build:443"
+    //         ]
+    //     },
+    //     "logoURL": "https://gateway-fe-public-assets.s3.amazonaws.com/icons/union.png",
+    //     "requests": {
+    //         "24h": 29924,
+    //         "7d": 211456,
+    //         "30d": 907327
+    //     }
+    // },
     {
         "chainId": "arb1",
         "alias": "Mainnet",

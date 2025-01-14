@@ -3,7 +3,7 @@ import { IpRpcEndpointsData, type ChainEndpoint } from './IpRpcEndpointsData';
 import { StatsService } from './StatsService';
 
 export class IpRpcEndpointsIndexResource extends RedisResourceBase<ChainEndpoint[], {}> {
-    protected readonly redisKey = 'ip-rpc-endpoints-index-v2';
+    protected readonly redisKey = 'ip-rpc-endpoints-index-v1';
     protected readonly cacheExpirySeconds = 3600;
 
     protected async fetchFromSource(): Promise<ChainEndpoint[]> {

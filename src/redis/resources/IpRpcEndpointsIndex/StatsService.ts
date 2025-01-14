@@ -75,30 +75,48 @@ export class StatsService {
         return { ...result, _timing: { chainId, period, duration } };
     }
 
-    public static async fetchStats(chainId: string, period: string): Promise<StatsResponse> {
-        try {
-            // Use correct URL format with query parameters
-            const url = `${this.STATS_API_URL}?chain_id=${chainId}&time_range=${period}`;
-            console.log(`[StatsService] Fetching stats from: ${url}`);
+    public static async fetchStats(chainId: string, period: string, retries = 2): Promise<StatsResponse> {
+        let attempts = 0;
 
-            const response = await axios.get<StatsResponse>(url, {
-                timeout: 30000,
-                headers: {
-                    'Accept': 'application/json',
-                    'Cache-Control': 'no-cache'
+        while (attempts <= retries) {
+            try {
+                const url = `${this.STATS_API_URL}?chain_id=${chainId}&time_range=${period}`;
+                console.log(`[StatsService] Fetching stats from: ${url} (attempt ${attempts + 1}/${retries + 1})`);
+
+                const response = await axios.get<StatsResponse>(url, {
+                    timeout: 30000,
+                    headers: {
+                        'Accept': 'application/json',
+                        'Cache-Control': 'no-cache'
+                    }
+                });
+
+                if (!response.data) {
+                    throw new Error('Empty response');
                 }
-            });
 
-            if (!response.data) {
-                throw new Error('Empty response');
+                if (response.data.total_requests === 0 && attempts < retries) {
+                    console.log(`[StatsService] Got zero total_requests for ${chainId}/${period}, retrying...`);
+                    attempts++;
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    continue;
+                }
+
+                console.log(`[StatsService] Response for ${chainId}/${period}:`, response.data);
+                return response.data;
+            } catch (error) {
+                if (attempts < retries) {
+                    console.error(`[StatsService] Error fetching stats for ${chainId}/${period}, retrying...`, error);
+                    attempts++;
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    continue;
+                }
+                console.error(`[StatsService] All retries failed for ${chainId}/${period}:`, error);
+                return this.getDefaultStats();
             }
-
-            console.log(`[StatsService] Response for ${chainId}/${period}:`, response.data);
-            return response.data;
-        } catch (error) {
-            console.error(`[StatsService] Error fetching stats for ${chainId}/${period}:`, error);
-            return this.getDefaultStats();
         }
+
+        return this.getDefaultStats();
     }
 
     public static async fetchAllStats(chainIds: string[]): Promise<{ [key: string]: { [K in StatsPeriod]: StatsResponse } }> {

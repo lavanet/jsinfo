@@ -1,7 +1,8 @@
 export interface ApiEndpoints {
-    rest: string[];
+    rest?: string[];
     tendermintrpc?: string[];
     grpc?: string[];
+    jsonrpc?: string[];
 }
 
 export interface RequestStats {
@@ -12,7 +13,7 @@ export interface RequestStats {
 
 export interface ChainEndpoint {
     chainId: string;
-    alias: "Mainnet" | "Testnet" | "Sepolia-Testnet";
+    alias: "Mainnet" | "Testnet" | "Sepolia-Testnet" | "Alfajores-Testnet";
     ChainDisplayName: string;
     DisplayName: string;
     geolocations: string[];
@@ -808,5 +809,337 @@ export const IpRpcEndpointsData: ChainEndpoint[] = [
             "7d": 29643902,
             "30d": 190583249
         }
-    }
+    },
+    {
+        "chainId": "optimism",
+        "alias": "Mainnet",
+        "ChainDisplayName": "Optimism",
+        "DisplayName": "Optimism (OP)",
+        "geolocations": ["US", "EU", "ASIA"],
+        "features": ["Archive"],
+        "apiEndpoints": {
+            "rest": ["https://optimism.jsonrpc.lava.build:443"]
+        },
+        "logoURL": "https://gateway-fe-public-staging-assets.s3.amazonaws.com/icons/optimism.webp",
+        "requests": { "24h": 0, "7d": 0, "30d": 0 }
+    },
+    // {
+    //     "chainId": "optimismt",
+    //     "alias": "Testnet",
+    //     "ChainDisplayName": "Optimism",
+    //     "DisplayName": "Optimism Testnet (OPT)",
+    //     "geolocations": ["US", "EU", "ASIA"],
+    //     "features": ["Archive"],
+    //     "apiEndpoints": {
+    //         "rest": ["https://optimismt.jsonrpc.lava.build:443"]
+    //     },
+    //     "logoURL": "https://gateway-fe-public-staging-assets.s3.amazonaws.com/icons/optimism.webp",
+    //     "requests": { "24h": 0, "7d": 0, "30d": 0 }
+    // },
+    // {
+    //     "chainId": "polygont",
+    //     "alias": "Testnet",
+    //     "ChainDisplayName": "Polygon",
+    //     "DisplayName": "Polygon Testnet (POLYGONT)",
+    //     "geolocations": ["US", "EU", "ASIA"],
+    //     "features": ["Archive"],
+    //     "apiEndpoints": {
+    //         "rest": ["https://polygont.jsonrpc.lava.build:443"]
+    //     },
+    //     "logoURL": "https://gateway-fe-public-staging-assets.s3.amazonaws.com/icons/polygon-icon.png",
+    //     "requests": { "24h": 0, "7d": 0, "30d": 0 }
+    // },
+    {
+        "chainId": "eth1",
+        "alias": "Mainnet",
+        "ChainDisplayName": "Ethereum",
+        "DisplayName": "Ethereum (ETH)",
+        "geolocations": ["US", "EU", "ASIA"],
+        "features": ["Archive"],
+        "apiEndpoints": {
+            "rest": ["https://eth1.jsonrpc.lava.build:443"]
+        },
+        "logoURL": "https://gateway-fe-public-staging-assets.s3.amazonaws.com/icons/ethereum-icon.png",
+        "requests": { "24h": 0, "7d": 0, "30d": 0 }
+    },
+    {
+        "chainId": "osmosis",
+        "alias": "Mainnet",
+        "ChainDisplayName": "Osmosis",
+        "DisplayName": "Osmosis (OSMO)",
+        "geolocations": ["US", "EU", "ASIA"],
+        "features": ["Archive"],
+        "apiEndpoints": {
+            "rest": ["https://osmosis.rest.lava.build:443"],
+            "tendermintrpc": [
+                "https://osmosis.tendermintrpc.lava.build:443",
+                "wss://osmosis.tendermintrpc.lava.build/websocket"
+            ],
+            "grpc": ["osmosis.grpc.lava.build:443"]
+        },
+        "logoURL": "https://gateway-fe-public-staging-assets.s3.amazonaws.com/icons/osmosis-icon.png",
+        "requests": { "24h": 0, "7d": 0, "30d": 0 }
+    },
+    {
+        "chainId": "osmosist",
+        "alias": "Testnet",
+        "ChainDisplayName": "Osmosis",
+        "DisplayName": "Osmosis Testnet (OSMOT)",
+        "geolocations": ["US", "EU", "ASIA"],
+        "features": ["Archive"],
+        "apiEndpoints": {
+            "rest": ["https://osmosist.rest.lava.build:443"],
+            "tendermintrpc": [
+                "https://osmosist.tendermintrpc.lava.build:443",
+                "wss://osmosist.tendermintrpc.lava.build/websocket"
+            ],
+            "grpc": ["osmosist.grpc.lava.build:443"]
+        },
+        "logoURL": "https://gateway-fe-public-staging-assets.s3.amazonaws.com/icons/osmosis-icon.png",
+        "requests": { "24h": 0, "7d": 0, "30d": 0 }
+    },
+    {
+        "chainId": "celestia",
+        "alias": "Mainnet",
+        "ChainDisplayName": "Celestia",
+        "DisplayName": "Celestia (TIA)",
+        "geolocations": ["US", "EU", "ASIA"],
+        "features": ["Archive"],
+        "apiEndpoints": {
+            "rest": ["https://celestia.rest.lava.build:443"],
+            "tendermintrpc": [
+                "https://celestia.tendermintrpc.lava.build:443",
+                "wss://celestia.tendermintrpc.lava.build/websocket"
+            ],
+            "grpc": ["celestia.grpc.lava.build:443"]
+        },
+        "logoURL": "https://gateway-fe-public-assets.s3.amazonaws.com/icons/celestia.png",
+        "requests": { "24h": 0, "7d": 0, "30d": 0 }
+    },
+    {
+        "chainId": "celestiatm",
+        "alias": "Testnet",
+        "ChainDisplayName": "Celestia",
+        "DisplayName": "Celestia Testnet (TIAT)",
+        "geolocations": ["US", "EU", "ASIA"],
+        "features": ["Archive"],
+        "apiEndpoints": {
+            "rest": ["https://celestiatm.rest.lava.build:443"],
+            "tendermintrpc": [
+                "https://celestiatm.tendermintrpc.lava.build:443",
+                "wss://celestiatm.tendermintrpc.lava.build/websocket"
+            ],
+            "grpc": ["celestiatm.grpc.lava.build:443"]
+        },
+        "logoURL": "https://gateway-fe-public-assets.s3.amazonaws.com/icons/celestia.png",
+        "requests": { "24h": 0, "7d": 0, "30d": 0 }
+    },
+    {
+        "chainId": "base",
+        "alias": "Mainnet",
+        "ChainDisplayName": "Base",
+        "DisplayName": "Base (BASE)",
+        "geolocations": ["US", "EU", "ASIA"],
+        "features": ["Archive"],
+        "apiEndpoints": {
+            "rest": ["https://base.jsonrpc.lava.build:443"]
+        },
+        "logoURL": "https://gateway-fe-public-staging-assets.s3.amazonaws.com/icons/base-icon.png",
+        "requests": { "24h": 0, "7d": 0, "30d": 0 }
+    },
+    // {
+    //     "chainId": "baset",
+    //     "alias": "Testnet",
+    //     "ChainDisplayName": "Base",
+    //     "DisplayName": "Base Testnet (BASET)",
+    //     "geolocations": ["US", "EU", "ASIA"],
+    //     "features": ["Archive"],
+    //     "apiEndpoints": {
+    //         "rest": ["https://baset.jsonrpc.lava.build:443"]
+    //     },
+    //     "logoURL": "https://gateway-fe-public-staging-assets.s3.amazonaws.com/icons/base-icon.png",
+    //     "requests": { "24h": 0, "7d": 0, "30d": 0 }
+    // },
+    {
+        "chainId": "avax",
+        "alias": "Mainnet",
+        "ChainDisplayName": "Avalanche",
+        "DisplayName": "Avalanche (AVAX)",
+        "geolocations": ["US", "EU", "ASIA"],
+        "features": ["Archive"],
+        "apiEndpoints": {
+            "rest": ["https://avax.jsonrpc.lava.build:443"]
+        },
+        "logoURL": "https://gateway-fe-public-staging-assets.s3.amazonaws.com/icons/avalanche-icon.png",
+        "requests": { "24h": 0, "7d": 0, "30d": 0 }
+    },
+    {
+        "chainId": "bsc",
+        "alias": "Mainnet",
+        "ChainDisplayName": "BNB Smart Chain",
+        "DisplayName": "BNB Smart Chain (BSC)",
+        "geolocations": ["US", "EU", "ASIA"],
+        "features": ["Archive"],
+        "apiEndpoints": {
+            "rest": ["https://bsc.jsonrpc.lava.build:443"]
+        },
+        "logoURL": "https://gateway-fe-public-assets.s3.us-east-1.amazonaws.com/icons/binance-smart-chain.png",
+        "requests": { "24h": 0, "7d": 0, "30d": 0 }
+    },
+    // {
+    //     "chainId": "bsct",
+    //     "alias": "Testnet",
+    //     "ChainDisplayName": "BNB Smart Chain",
+    //     "DisplayName": "BNB Smart Chain Testnet (BSCT)",
+    //     "geolocations": ["US", "EU", "ASIA"],
+    //     "features": ["Archive"],
+    //     "apiEndpoints": {
+    //         "rest": ["https://bsct.jsonrpc.lava.build:443"]
+    //     },
+    //     "logoURL": "https://gateway-fe-public-staging-assets.s3.amazonaws.com/icons/bsc-icon.png",
+    //     "requests": { "24h": 0, "7d": 0, "30d": 0 }
+    // },
+    {
+        "chainId": "solana",
+        "alias": "Mainnet",
+        "ChainDisplayName": "Solana",
+        "DisplayName": "Solana (SOL)",
+        "geolocations": ["US", "EU", "ASIA"],
+        "features": ["Archive"],
+        "apiEndpoints": {
+            "rest": ["https://solana.jsonrpc.lava.build:443"]
+        },
+        "logoURL": "https://gateway-fe-public-staging-assets.s3.amazonaws.com/icons/solana-icon.png",
+        "requests": { "24h": 0, "7d": 0, "30d": 0 }
+    },
+    // {
+    //     "chainId": "solanat",
+    //     "alias": "Testnet",
+    //     "ChainDisplayName": "Solana",
+    //     "DisplayName": "Solana Testnet (SOLT)",
+    //     "geolocations": ["US", "EU", "ASIA"],
+    //     "features": ["Archive"],
+    //     "apiEndpoints": {
+    //         "rest": ["https://solanat.jsonrpc.lava.build:443"]
+    //     },
+    //     "logoURL": "https://gateway-fe-public-staging-assets.s3.amazonaws.com/icons/solana-icon.png",
+    //     "requests": { "24h": 0, "7d": 0, "30d": 0 }
+    // },
+    // {
+    //     "chainId": "berat2",
+    //     "alias": "Testnet",
+    //     "ChainDisplayName": "Berachain",
+    //     "DisplayName": "Berachain Testnet (BERAT2)",
+    //     "geolocations": ["US", "EU", "ASIA"],
+    //     "features": ["Archive"],
+    //     "apiEndpoints": {
+    //         "rest": ["https://berat2.jsonrpc.lava.build:443"]
+    //     },
+    //     "logoURL": "https://gateway-fe-public-staging-assets.s3.amazonaws.com/icons/berachain-icon.png",
+    //     "requests": { "24h": 0, "7d": 0, "30d": 0 }
+    // },
+    // {
+    //     "chainId": "celo",
+    //     "alias": "Mainnet",
+    //     "ChainDisplayName": "Celo",
+    //     "DisplayName": "Celo (CELO)",
+    //     "geolocations": ["US", "EU", "ASIA"],
+    //     "features": ["Archive"],
+    //     "apiEndpoints": {
+    //         "jsonrpc": ["https://celo.jsonrpc.lava.build:443"]
+    //     },
+    //     "logoURL": "https://gateway-fe-public-staging-assets.s3.amazonaws.com/icons/celo-icon.png",
+    //     "requests": { "24h": 0, "7d": 0, "30d": 0 }
+    // },
+    // {
+    //     "chainId": "celoa",
+    //     "alias": "Alfajores-Testnet",
+    //     "ChainDisplayName": "Celo",
+    //     "DisplayName": "Celo Alfajores (CELOA)",
+    //     "geolocations": ["US", "EU", "ASIA"],
+    //     "features": ["Archive"],
+    //     "apiEndpoints": {
+    //         "jsonrpc": ["https://celoa.jsonrpc.lava.build:443"]
+    //     },
+    //     "logoURL": "https://gateway-fe-public-staging-assets.s3.amazonaws.com/icons/celo-icon.png",
+    //     "requests": { "24h": 0, "7d": 0, "30d": 0 }
+    // },
+    // {
+    //     "chainId": "fantom",
+    //     "alias": "Mainnet",
+    //     "ChainDisplayName": "Fantom",
+    //     "DisplayName": "Fantom (FTM)",
+    //     "geolocations": ["US", "EU", "ASIA"],
+    //     "features": ["Archive"],
+    //     "apiEndpoints": {
+    //         "jsonrpc": ["https://fantom.jsonrpc.lava.build:443"]
+    //     },
+    //     "logoURL": "https://gateway-fe-public-staging-assets.s3.amazonaws.com/icons/fantom-icon.png",
+    //     "requests": { "24h": 0, "7d": 0, "30d": 0 }
+    // },
+    // {
+    //     "chainId": "fantomt",
+    //     "alias": "Testnet",
+    //     "ChainDisplayName": "Fantom",
+    //     "DisplayName": "Fantom Testnet (FTMT)",
+    //     "geolocations": ["US", "EU", "ASIA"],
+    //     "features": ["Archive"],
+    //     "apiEndpoints": {
+    //         "jsonrpc": ["https://fantomt.jsonrpc.lava.build:443"]
+    //     },
+    //     "logoURL": "https://gateway-fe-public-staging-assets.s3.amazonaws.com/icons/fantom-icon.png",
+    //     "requests": { "24h": 0, "7d": 0, "30d": 0 }
+    // },
+    // {
+    //     "chainId": "fuse",
+    //     "alias": "Mainnet",
+    //     "ChainDisplayName": "Fuse",
+    //     "DisplayName": "Fuse (FUSE)",
+    //     "geolocations": ["US", "EU", "ASIA"],
+    //     "features": ["Archive"],
+    //     "apiEndpoints": {
+    //         "jsonrpc": ["https://fuse.jsonrpc.lava.build:443"]
+    //     },
+    //     "logoURL": "https://gateway-fe-public-assets.s3.us-east-1.amazonaws.com/icons/fuse_round.png",
+    //     "requests": { "24h": 0, "7d": 0, "30d": 0 }
+    // },
+    // {
+    //     "chainId": "fuses",
+    //     "alias": "Sepolia-Testnet",
+    //     "ChainDisplayName": "Fuse",
+    //     "DisplayName": "Fuse Sepolia (FUSES)",
+    //     "geolocations": ["US", "EU", "ASIA"],
+    //     "features": ["Archive"],
+    //     "apiEndpoints": {
+    //         "jsonrpc": ["https://fuses.jsonrpc.lava.build:443"]
+    //     },
+    //     "logoURL": "https://gateway-fe-public-assets.s3.us-east-1.amazonaws.com/icons/fuse_round.png",
+    //     "requests": { "24h": 0, "7d": 0, "30d": 0 }
+    // },
+    // {
+    //     "chainId": "movement",
+    //     "alias": "Mainnet",
+    //     "ChainDisplayName": "Movement",
+    //     "DisplayName": "Movement (MOVE)",
+    //     "geolocations": ["US", "EU", "ASIA"],
+    //     "features": ["Archive"],
+    //     "apiEndpoints": {
+    //         "rest": ["https://movement.rest.lava.build:443"]
+    //     },
+    //     "logoURL": "https://gateway-fe-public-assets.s3.amazonaws.com/icons/movement.png",
+    //     "requests": { "24h": 0, "7d": 0, "30d": 0 }
+    // },
+    // {
+    //     "chainId": "movementt",
+    //     "alias": "Testnet",
+    //     "ChainDisplayName": "Movement",
+    //     "DisplayName": "Movement Testnet (MOVET)",
+    //     "geolocations": ["US", "EU", "ASIA"],
+    //     "features": ["Archive"],
+    //     "apiEndpoints": {
+    //         "rest": ["https://movementt.rest.lava.build:443"]
+    //     },
+    //     "logoURL": "https://gateway-fe-public-assets.s3.amazonaws.com/icons/movement.png",
+    //     "requests": { "24h": 0, "7d": 0, "30d": 0 }
+    // },
 ]

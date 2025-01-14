@@ -83,7 +83,7 @@ async function checkEndpointWithPattern(url: string, patternName: string, patter
                 error: response.status === 200 ? undefined : `Status ${response.status}`
             };
         }
-    } catch (e) {
+    } catch (e: any) {
         return {
             status: 'unhealthy',
             url,
@@ -157,7 +157,7 @@ async function checkEndpoints() {
                         if (protocol === 'rest' || protocol === 'jsonrpc') {
                             console.log('    Trying all patterns...');
                             // Try all patterns
-                            const patternResults = [];
+                            const patternResults: CheckResult[] = [];
                             for (const [patternName, pattern] of Object.entries(PATTERNS)) {
                                 const result = await checkEndpointWithPattern(url, patternName, pattern);
                                 if (result.status === 'healthy') {

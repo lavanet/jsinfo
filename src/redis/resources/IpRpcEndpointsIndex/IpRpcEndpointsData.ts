@@ -13,7 +13,7 @@ export interface RequestStats {
 
 export interface ChainEndpoint {
     chainId: string;
-    alias: "Mainnet" | "Testnet" | "Sepolia-Testnet" | "Alfajores-Testnet";
+    alias: "Mainnet" | "Testnet" | "Sepolia-Testnet";
     ChainDisplayName: string;
     DisplayName: string;
     geolocations: string[];
@@ -1053,7 +1053,7 @@ export const IpRpcEndpointsData: ChainEndpoint[] = [
     // },
     // {
     //     "chainId": "celoa",
-    //     "alias": "Alfajores-Testnet",
+    //     "alias": "Testnet",
     //     "ChainDisplayName": "Celo",
     //     "DisplayName": "Celo Alfajores (CELOA)",
     //     "geolocations": ["US", "EU", "ASIA"],

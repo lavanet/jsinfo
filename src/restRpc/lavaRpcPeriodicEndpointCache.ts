@@ -5,6 +5,8 @@ import { QueryLavaRPC } from '@jsinfo/restRpc/lavaRpc';
 import { RedisCache } from '@jsinfo/redis/classes/RedisCache';
 import { TruncateError } from '@jsinfo/utils/fmt';
 import { IsMeaningfulText } from '@jsinfo/utils/fmt';
+import * as fs from 'fs';
+import * as path from 'path';
 
 const REDIS_KEYS = {
     PROVIDERS: 'providers',
@@ -130,6 +132,9 @@ class RpcPeriodicEndpointCacheClass {
 
     private async _refreshCache(): Promise<void> {
         try {
+            logger.info('Starting cache refresh...');
+            const startTime = Date.now();
+
             const promises = [
                 this.fetchAndCacheProviders(),
                 this.fetchAndCacheDelegators(),
@@ -137,25 +142,43 @@ class RpcPeriodicEndpointCacheClass {
                 this.fetchAndCacheValidators(),
                 this.fetchAndCacheChainList()
             ];
+
             await Promise.all(promises);
+
+            const duration = Date.now() - startTime;
+            logger.info(`Cache refresh completed in ${duration}ms`);
         } catch (error) {
-            logger.error('Error refreshing cache', { error: TruncateError(error) });
+            logger.error('Error refreshing cache', {
+                error: TruncateError(error),
+                stack: error instanceof Error ? error.stack : undefined
+            });
         }
     }
 
     private async fetchAndCacheProviders(): Promise<void> {
         try {
+            const startTime = Date.now();
+            logger.info('Fetching providers metadata...');
+
             const cacheKey = REDIS_KEYS.PROVIDERS;
-            const ttl = await RedisCache.getTTL(cacheKey); // Get TTL for providers
+            const ttl = await RedisCache.getTTL(cacheKey);
+
             if (ttl && ttl > CACHE_VALIDITY_PERIOD) {
+                logger.info(`Skipping providers refresh - TTL: ${ttl}s`);
                 return;
             }
+
             const response = await this.GetProviderMetadata();
             const providers = response.MetaData.map((meta) => meta.provider);
             await RedisCache.setArray(cacheKey, providers, this.cacheRefreshInterval);
-            logger.info('Providers cache refreshed successfully.');
+
+            const duration = Date.now() - startTime;
+            logger.info(`Providers cache refreshed: ${providers.length} providers in ${duration}ms`);
         } catch (error) {
-            logger.error('Error fetching providers metadata', { error: TruncateError(error) });
+            logger.error('Error fetching providers metadata', {
+                error: TruncateError(error),
+                stack: error instanceof Error ? error.stack : undefined
+            });
         }
     }
 
@@ -306,39 +329,201 @@ class RpcPeriodicEndpointCacheClass {
     }
 
     public async GetUniqueDelegatorCount(from?: number, includeEmptyProviders: boolean = false): Promise<number> {
+        const startTime = Date.now();
+        const summary: any = {
+            args: {
+                from: from ? new Date(from * 1000).toISOString() : 'none',
+                includeEmptyProviders
+            },
+            providers: {
+                total: 0,
+                processed: 0,
+                withDelegations: 0
+            },
+            delegators: {
+                total: 0,
+                byProvider: {},
+                timestamps: {
+                    first: null,
+                    last: null,
+                    range: null
+                }
+            },
+            timing: {
+                start: new Date().toISOString(),
+                durationMs: 0
+            }
+        };
+
         const providers = await this.GetProviders();
+        summary.providers.total = providers.length;
+
         const uniqueDelegators = new Set<string>();
+        let firstTimestamp: number | null = null;
+        let lastTimestamp: number | null = null;
 
         for (const provider of providers) {
             const delegations = await this.getProviderDelegations(provider);
+            summary.providers.processed++;
+
             if (!delegations) {
                 continue;
             }
 
+            summary.providers.withDelegations++;
+            const initialSize = uniqueDelegators.size;
+
+            summary.delegators.byProvider[provider] = {
+                count: uniqueDelegators.size - initialSize,
+                timestamps: {
+                    first: null,
+                    last: null,
+                    count: 0,
+                    all: []  // Array to store all timestamps
+                }
+            };
+
             for (const delegation of delegations) {
-                if (from && Number(delegation.timestamp) < from) {
+                const timestamp = Number(delegation.timestamp);
+                if (from && timestamp < from) {
                     continue;
                 }
                 if (IsMeaningfulText(delegation.delegator)) {
                     uniqueDelegators.add(delegation.delegator);
+
+                    // Track timestamps for this provider
+                    if (timestamp) {
+                        summary.delegators.byProvider[provider].timestamps.count++;
+                        summary.delegators.byProvider[provider].timestamps.all.push({
+                            timestamp: new Date(timestamp * 1000).toISOString(),
+                            delegator: delegation.delegator,
+                            amount: delegation.amount,
+                            provider: delegation.provider,
+                            chainID: delegation.chainID,
+                        });
+
+                        if (!summary.delegators.byProvider[provider].timestamps.first ||
+                            timestamp < Number(summary.delegators.byProvider[provider].timestamps.first)) {
+                            summary.delegators.byProvider[provider].timestamps.first = new Date(timestamp * 1000).toISOString();
+                        }
+                        if (!summary.delegators.byProvider[provider].timestamps.last ||
+                            timestamp > Number(summary.delegators.byProvider[provider].timestamps.last)) {
+                            summary.delegators.byProvider[provider].timestamps.last = new Date(timestamp * 1000).toISOString();
+                        }
+                    }
+
+                    // Track global timestamps
+                    if (!firstTimestamp || timestamp < firstTimestamp) {
+                        firstTimestamp = timestamp;
+                    }
+                    if (!lastTimestamp || timestamp > lastTimestamp) {
+                        lastTimestamp = timestamp;
+                    }
                 }
             }
         }
 
+        // Process empty providers with timestamp tracking
         if (includeEmptyProviders) {
             const emptyProviderDelegations = await this.getProviderDelegations('empty_provider');
             if (emptyProviderDelegations) {
+                const initialSize = uniqueDelegators.size;
+
+                summary.delegators.byProvider['empty_provider'] = {
+                    count: uniqueDelegators.size - initialSize,
+                    timestamps: {
+                        first: null,
+                        last: null,
+                        count: 0,
+                        all: []  // Array to store all timestamps
+                    }
+                };
+
                 for (const delegation of emptyProviderDelegations) {
-                    if (from && Number(delegation.timestamp) < from) {
+                    const timestamp = Number(delegation.timestamp);
+                    if (from && timestamp < from) {
                         continue;
                     }
                     if (IsMeaningfulText(delegation.delegator)) {
                         uniqueDelegators.add(delegation.delegator);
+
+                        // Track timestamps for empty providers
+                        if (timestamp) {
+                            summary.delegators.byProvider['empty_provider'].timestamps.count++;
+                            summary.delegators.byProvider['empty_provider'].timestamps.all.push({
+                                timestamp: new Date(timestamp * 1000).toISOString(),
+                                delegator: delegation.delegator,
+                                amount: delegation.amount,
+                                provider: delegation.provider,
+                                chainID: delegation.chainID,
+                            });
+
+                            if (!summary.delegators.byProvider['empty_provider'].timestamps.first ||
+                                timestamp < Number(summary.delegators.byProvider['empty_provider'].timestamps.first)) {
+                                summary.delegators.byProvider['empty_provider'].timestamps.first = new Date(timestamp * 1000).toISOString();
+                            }
+                            if (!summary.delegators.byProvider['empty_provider'].timestamps.last ||
+                                timestamp > Number(summary.delegators.byProvider['empty_provider'].timestamps.last)) {
+                                summary.delegators.byProvider['empty_provider'].timestamps.last = new Date(timestamp * 1000).toISOString();
+                            }
+                        }
+
+                        // Track global timestamps
+                        if (!firstTimestamp || timestamp < firstTimestamp) {
+                            firstTimestamp = timestamp;
+                        }
+                        if (!lastTimestamp || timestamp > lastTimestamp) {
+                            lastTimestamp = timestamp;
+                        }
                     }
                 }
-            } else {
-                logger.warn('No empty provider delegations found in cache.');
             }
+        }
+
+        // Add timestamp information to summary
+        if (firstTimestamp && lastTimestamp) {
+            summary.delegators.timestamps = {
+                first: new Date(firstTimestamp * 1000).toISOString(),
+                last: new Date(lastTimestamp * 1000).toISOString(),
+                range: `${((lastTimestamp - firstTimestamp) / (24 * 60 * 60)).toFixed(2)} days`
+            };
+        }
+
+        summary.delegators.total = uniqueDelegators.size;
+        summary.timing.durationMs = Date.now() - startTime;
+
+        // Log summary
+        logger.info('!! GetUniqueDelegatorCount Summary', {
+            ...summary,
+            timestamp: new Date().toISOString()
+        });
+
+        // Save to file
+        try {
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+            const delegatorType = includeEmptyProviders ? 'stakers' : 'restakers';
+            const filename = `mainnet_delegator_count_${delegatorType}_${timestamp}.json`;
+            const filepath = path.join(process.cwd(), 'logs', filename);
+
+            // Ensure logs directory exists
+            if (!fs.existsSync(path.join(process.cwd(), 'logs'))) {
+                fs.mkdirSync(path.join(process.cwd(), 'logs'));
+            }
+
+            // Add delegator type to summary
+            summary.type = delegatorType;
+
+            fs.writeFileSync(
+                filepath,
+                JSON.stringify(summary, null, 2),
+                'utf8'
+            );
+            logger.info(`${delegatorType.charAt(0).toUpperCase() + delegatorType.slice(1)} summary saved to ${filepath}`);
+        } catch (error) {
+            logger.error('Failed to save summary to file', {
+                error: TruncateError(error),
+                stack: error instanceof Error ? error.stack : undefined
+            });
         }
 
         return uniqueDelegators.size;

@@ -25,6 +25,10 @@ const indexer = async (): Promise<void> => {
     // console.log("stating apr monitor")
     // aprMonitor.start();
 
+
+    // await ProcessChainWalletApi();
+    // process.exit(0);
+
     await IndexerThreadCallerStart();
 }
 

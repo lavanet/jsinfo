@@ -779,31 +779,6 @@ export const IpRpcEndpointsData: ChainEndpoint[] = [
         }
     },
     {
-        "chainId": "optimism",
-        "alias": "Mainnet",
-        "ChainDisplayName": "Optimism",
-        "DisplayName": "Optimism (OP)",
-        "geolocations": [
-            "US",
-            "EU",
-            "ASIA"
-        ],
-        "features": [
-            "Archive"
-        ],
-        "apiEndpoints": {
-            "rest": [
-                "https://optimism.jsonrpc.lava.build:443"
-            ]
-        },
-        "logoURL": "https://gateway-fe-public-staging-assets.s3.amazonaws.com/icons/optimism.webp",
-        "requests": {
-            "24h": 1161970,
-            "7d": 5563661,
-            "30d": 58584641
-        }
-    },
-    {
         "chainId": "eth1",
         "alias": "Mainnet",
         "ChainDisplayName": "Ethereum",

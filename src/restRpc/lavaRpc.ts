@@ -9,11 +9,11 @@ const LavaRPCBaseUrl = (() => {
     return url;
 })();
 
-export async function QueryLavaRPC<T>(path: string, skipBackoff: boolean = false): Promise<T> {
+export async function QueryLavaRPC<T>(path: string): Promise<T> {
     if (LavaRPCBaseUrl.endsWith('/') && path.startsWith('/')) {
         path = path.slice(1);
     }
     const url = `${LavaRPCBaseUrl}${path}`;
-    return FetchRestData<T>(url, {}, skipBackoff);
+    return FetchRestData<T>(url);
 }
 

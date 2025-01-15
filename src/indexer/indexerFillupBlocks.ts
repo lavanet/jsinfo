@@ -277,7 +277,7 @@ export const FillUpBlocks = async () => {
 
     } catch (error) {
         logger.error('fillUp error:', error);
-        throw error; // Let the BackoffRetry handle the retry
+        throw error;
     }
 };
 

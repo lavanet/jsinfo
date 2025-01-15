@@ -6,6 +6,15 @@ import sys
 import requests
 import unittest
 import random
+import logging
+import time
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 # TESTS_FULL=True; 
 if os.getenv('TESTS_FULL', 'false').lower() != 'true':
@@ -19,16 +28,29 @@ class TestProviderEndpoints(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         """Fetch provider addresses before running tests."""
+        logger.info("Fetching provider addresses...")
         response = requests.get(f"{server_address}/providers")
         providers_data = response.json()
         cls.providers = providers_data['providers']
         cls.selected_providers = random.sample(cls.providers, 3) if len(cls.providers) >= 3 else cls.providers
-        print("TestProviderEndpoints:: selected_providers: ", cls.selected_providers)
+        logger.info(f"Selected providers for testing: {cls.selected_providers}")
+
+    def make_request(self, url: str) -> requests.Response:
+        logger.info(f"Making request to: {url}")
+        start_time = time.time()
+        response = requests.get(url)
+        duration = time.time() - start_time
+        logger.info(f"Response received in {duration:.2f}s - Status: {response.status_code}")
+        if response.status_code != 200:
+            logger.error(f"Error response: {response.text[:200]}")
+        return response
 
     def test_provider_health(self):
+        logger.info("\n=== Testing Provider Health ===")
         for provider in self.selected_providers:
             url = f"{server_address}/providerHealth/{provider}"
-            response = requests.get(url)
+            logger.info(f"\nTesting health for provider: {provider}")
+            response = self.make_request(url)
             try:
                 assert response.status_code == 200
                 if len(response.json()['data']) == 0:

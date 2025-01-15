@@ -59,15 +59,7 @@ class CoinGekoCacheClass {
 
         for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
             try {
-                const data = await FetchRestData<CoinGeckoRateResponse>(
-                    url,
-                    {},
-                    false,
-                    3,  // retries 
-                    2,  // backoff
-                    1200, // timeout
-                    5000  // delay
-                );
+                const data = await FetchRestData<CoinGeckoRateResponse>(url);
                 return data; // Return the fetched data if successful
             } catch (error: unknown) {
                 const errorMessage = (error instanceof Error) ? error.message : 'Unknown error';

@@ -96,6 +96,7 @@ Returns list of all active validators (addresses only)
 #### `/lava_chain_restakers`
 
 - Returns current and monthly unique staker counts
+- only delegation of active providers are taken into account
 - Response format:
 
 ```json

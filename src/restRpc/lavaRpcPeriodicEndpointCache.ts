@@ -5,6 +5,7 @@ import { QueryLavaRPC } from '@jsinfo/restRpc/lavaRpc';
 import { RedisCache } from '@jsinfo/redis/classes/RedisCache';
 import { TruncateError } from '@jsinfo/utils/fmt';
 import { IsMeaningfulText } from '@jsinfo/utils/fmt';
+import { ActiveProvidersService } from '@jsinfo/redis/resources/index/ActiveProvidersResource';
 
 const REDIS_KEYS = {
     PROVIDERS: 'providers',
@@ -306,8 +307,12 @@ class RpcPeriodicEndpointCacheClass {
     }
 
     public async GetUniqueDelegatorCount(from?: number, includeEmptyProviders: boolean = false): Promise<number> {
-        const providers = await this.GetAllProvidersFromRpc();
+        const providers = await ActiveProvidersService.fetch();
         const uniqueDelegators = new Set<string>();
+
+        if (!providers) {
+            return 0;
+        }
 
         for (const provider of providers) {
             const delegations = await this.getProviderDelegations(provider);

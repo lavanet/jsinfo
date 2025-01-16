@@ -307,7 +307,7 @@ class APRMonitorClass {
     try {
       const batchData = Array.from(aprValues.entries()).map(([provider, value]) => ({
         address: provider,
-        value: value.toString(),
+        value: Number(value).toFixed(18),
         timestamp: new Date(),
         type: caller
       }));

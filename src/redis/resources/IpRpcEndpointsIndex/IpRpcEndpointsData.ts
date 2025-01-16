@@ -380,7 +380,7 @@ export const IpRpcEndpointsData: ChainEndpoint[] = [
         "chainId": "arb1",
         "alias": "Mainnet",
         "ChainDisplayName": "Arbitrum",
-        "DisplayName": "Arbitrum (ARB1)",
+        "DisplayName": "Arbitrum (Arbitrum)",
         "geolocations": [
             "US",
             "EU",
@@ -391,14 +391,14 @@ export const IpRpcEndpointsData: ChainEndpoint[] = [
         ],
         "apiEndpoints": {
             "rest": [
-                "https://arb1.lava.build:443"
+                "https://arbitrum.lava.build:443"
             ],
             "tendermintrpc": [
-                "https://arb1.tendermintrpc.lava.build:443",
-                "wss://arb1.tendermintrpc.lava.build/websocket"
+                "https://arbitrum.tendermintrpc.lava.build:443",
+                "wss://arbitrum.tendermintrpc.lava.build/websocket"
             ],
             "grpc": [
-                "arb1.grpc.lava.build:443"
+                "arbitrum.grpc.lava.build:443"
             ]
         },
         "logoURL": "https://gateway-fe-public-staging-assets.s3.amazonaws.com/icons/arbitrum-icon.png",
@@ -718,7 +718,7 @@ export const IpRpcEndpointsData: ChainEndpoint[] = [
         "chainId": "arbn",
         "alias": "Mainnet",
         "ChainDisplayName": "Arbitrum",
-        "DisplayName": "Arbitrum-Nova (ARBN)",
+        "DisplayName": "Arbitrum-Nova (arbitrumn)",
         "geolocations": [
             "US",
             "EU",
@@ -729,14 +729,14 @@ export const IpRpcEndpointsData: ChainEndpoint[] = [
         ],
         "apiEndpoints": {
             "rest": [
-                "https://arbn.lava.build:443"
+                "https://arbitrumn.lava.build:443"
             ],
             "tendermintrpc": [
-                "https://arbn.tendermintrpc.lava.build:443",
-                "wss://arbn.tendermintrpc.lava.build/websocket"
+                "https://arbitrumn.tendermintrpc.lava.build:443",
+                "wss://arbitrumn.tendermintrpc.lava.build/websocket"
             ],
             "grpc": [
-                "arbn.grpc.lava.build:443"
+                "arbitrumn.grpc.lava.build:443"
             ]
         },
         "logoURL": "https://gateway-fe-public-staging-assets.s3.amazonaws.com/icons/arbitrum-icon.png",
@@ -750,7 +750,7 @@ export const IpRpcEndpointsData: ChainEndpoint[] = [
         "chainId": "arbs",
         "alias": "Sepolia-Testnet",
         "ChainDisplayName": "Arbitrum",
-        "DisplayName": "Arbitrum Sepolia Testnet (ARBS)",
+        "DisplayName": "Arbitrum Sepolia Testnet (arbitrums)",
         "geolocations": [
             "US",
             "EU",
@@ -761,14 +761,14 @@ export const IpRpcEndpointsData: ChainEndpoint[] = [
         ],
         "apiEndpoints": {
             "rest": [
-                "https://arbs.lava.build:443"
+                "https://arbitrums.lava.build:443"
             ],
             "tendermintrpc": [
-                "https://arbs.tendermintrpc.lava.build:443",
-                "wss://arbs.tendermintrpc.lava.build/websocket"
+                "https://arbitrums.tendermintrpc.lava.build:443",
+                "wss://arbitrums.tendermintrpc.lava.build/websocket"
             ],
             "grpc": [
-                "arbs.grpc.lava.build:443"
+                "arbitrums.grpc.lava.build:443"
             ]
         },
         "logoURL": "https://gateway-fe-public-staging-assets.s3.amazonaws.com/icons/arbitrum-icon.png",

@@ -28,22 +28,27 @@ Returns a comprehensive list of all Lava Network providers, including:
 - Supported chains and specifications
 - Staking details (amounts, delegation limits)
 - Commission rates and current status
+- And for each stake - the stakestatus (active/frozen/jailed)
 
 #### `/providers`
 
-Returns list of all providers
+Returns list of all providers (addresses only)
+
+#### `/active_providers`
+
+Returns list of all active providers (addresses only)
 
 #### `/consumers`
 
-Returns list of all consumers
+Returns list of all consumers (addresses only)
 
 #### `/specs`
 
-Returns list of all specs/chains
+Returns list of all specs/chains (spec names only)
 
 #### `/validators`
 
-Returns list of all validators
+Returns list of all validators (full info)
 
 ### Example Response
 
@@ -69,6 +74,10 @@ Returns list of all validators
   ]
 }
 ```
+
+#### `/active_validators`
+
+Returns list of all active validators (addresses only)
 
 ## Supply Endpoints
 
@@ -109,7 +118,8 @@ Returns list of all validators
    - Empty provider delegations are excluded from restaker counts
 
 3. Monthly Metrics:
-   - Represent unique users over the trailing 30-day period
+
+   - Represent unique users over 30-day period back from today
    - Updated continuously based on blockchain data
 
 ## APR (Annual Percentage Rewards) Endpoint
@@ -248,3 +258,4 @@ Both staking and restaking APRs are calculated similarly:
 - APR values represent potential returns before fees and slashing
 - Actual returns may vary based on validator/provider performance
 - Calculations include all reward types (LAVA + other tokens)
+- APR calculation only considers active validators/providers (not jailed or frozen)

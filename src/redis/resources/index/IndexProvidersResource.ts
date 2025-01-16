@@ -7,7 +7,7 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { sql, desc, not, eq, asc, and, isNull } from "drizzle-orm";
 import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import * as JsinfoProviderAgrSchema from '@jsinfo/schemas/jsinfoSchema/providerRelayPaymentsAgregation';
-import { Pagination, SerializePagination } from '@jsinfo/query/utils/queryPagination';
+import { Pagination } from '@jsinfo/query/utils/queryPagination';
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE } from '@jsinfo/query/queryConsts';
 import { ProviderMonikerService } from '@jsinfo/redis/resources/global/ProviderMonikerSpecResource';
 import { CSVEscape } from '@jsinfo/utils/fmt';

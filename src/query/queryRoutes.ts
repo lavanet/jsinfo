@@ -21,7 +21,7 @@ import { AllProviderAPRRawHandlerOpts, AllProviderAPRRawHandler } from './handle
 import { ListProvidersRawHandlerOpts, ListProvidersRawHandler } from './handlers/ajax/listProvidersHandler';
 
 // -- Server meta ajax --
-import { ProvidersPaginatedHandler, ProvidersPaginatedHandlerOpts } from './handlers/ajax/providersHandler';
+import { ActiveProvidersPaginatedHandler, ActiveProvidersPaginatedHandlerOpts, ProvidersPaginatedHandler, ProvidersPaginatedHandlerOpts } from './handlers/ajax/providersHandler';
 import { SpecsPaginatedHandler, SpecsPaginatedHandlerOpts } from './handlers/ajax/specsHandler';
 import { ConsumersPaginatedHandler, ConsumersPaginatedHandlerOpts } from './handlers/ajax/consumersHandler';
 
@@ -98,7 +98,7 @@ import {
 // -- Internal data endpoints --
 import { ConsumerV2CahcedHandler, ConsumerV2CahcedHandlerOpts } from './handlers/consumer/consumerV2Handler';
 import { ChainWalletApiHandlerOpts, LavaChainRestakersHandler, LavaChainStakersHandler } from './handlers/ajax/chainWalletApiHandlers';
-import { ValidatorsPaginatedHandler, ValidatorsPaginatedHandlerOpts } from './handlers/ajax/validatorsHandler';
+import { ActiveValidatorsPaginatedHandler, ActiveValidatorsPaginatedHandlerOpts, ValidatorsPaginatedHandler, ValidatorsPaginatedHandlerOpts } from './handlers/ajax/validatorsHandler';
 import { TotalLockedValueHandler, TotalLockedValueHandlerOpts } from './handlers/ajax/totalLockedValueHandler';
 import { TotalLockedValuesComponentsHandler, TotalLockedValuesComponentsHandlerOpts } from './handlers/ajax/totalLockedValuesComponentsHandler';
 import { AllLockedValuesHandler, AllLockedValuesHandlerOpts } from './handlers/ajax/allLockedValuesHandler';
@@ -131,9 +131,11 @@ GetServerInstance().get('/listProviders', ListProvidersRawHandlerOpts, ListProvi
 
 // -- Server meta ajax --
 GetServerInstance().get('/providers', ProvidersPaginatedHandlerOpts, ProvidersPaginatedHandler);
+GetServerInstance().get('/active_providers', ActiveProvidersPaginatedHandlerOpts, ActiveProvidersPaginatedHandler);
 GetServerInstance().get('/specs', SpecsPaginatedHandlerOpts, SpecsPaginatedHandler);
 GetServerInstance().get('/consumers', ConsumersPaginatedHandlerOpts, ConsumersPaginatedHandler);
 GetServerInstance().get('/validators', ValidatorsPaginatedHandlerOpts, ValidatorsPaginatedHandler);
+GetServerInstance().get('/active_validators', ActiveValidatorsPaginatedHandlerOpts, ActiveValidatorsPaginatedHandler);
 
 // -- All pages ajax --
 GetServerInstance().get('/autoCompleteLinksV2Handler', AutoCompleteLinksV2PaginatedHandlerOpts, AutoCompleteLinksV2PaginatedHandler);

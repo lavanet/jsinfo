@@ -8,8 +8,9 @@ import { pgTable, index, text, integer, serial, bigint, real, timestamp, varchar
 export enum LavaProviderStakeStatus {
   Active = 1,
   Frozen,
-  Unstaking,
-  Inactive,
+  Unstaking, // not used
+  Inactive, // not used
+  Jailed,
 }
 export const providerStakes = pgTable('provider_stakes', {
   stake: bigint('stake', { mode: 'bigint' }),

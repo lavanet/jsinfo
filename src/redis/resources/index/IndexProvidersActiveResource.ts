@@ -7,12 +7,12 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { sql, desc, eq, asc, inArray } from "drizzle-orm";
 import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import * as JsinfoProviderAgrSchema from '@jsinfo/schemas/jsinfoSchema/providerRelayPaymentsAgregation';
-import { Pagination, SerializePagination } from '@jsinfo/query/utils/queryPagination';
+import { Pagination } from '@jsinfo/query/utils/queryPagination';
 import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE } from '@jsinfo/query/queryConsts';
 import { ProviderMonikerService } from '@jsinfo/redis/resources/global/ProviderMonikerSpecResource';
 import { CSVEscape } from '@jsinfo/utils/fmt';
 import { ParsePaginationFromString } from '@jsinfo/query/utils/queryPagination';
-import { ActiveProvidersResource } from './ActiveProvidersResource';
+import { ActiveProvidersService } from './ActiveProvidersResource';
 import { queryJsinfo } from '@jsinfo/utils/db';
 import { JSONStringify } from '@jsinfo/utils/fmt';
 import { logger } from '@jsinfo/utils/logger';
@@ -45,16 +45,11 @@ export class IndexProvidersActiveResource extends RedisResourceBase<IndexProvide
     protected readonly cacheExpirySeconds = 600; // 10 minutes cache
 
     protected async getActiveProviderAddresses(): Promise<string[]> {
-        console.time('redis/resources/index/IndexProvidersActiveResource.getActiveProviderAddresses');
-        try {
-            const result = await new ActiveProvidersResource().fetch();
-            if (!result) {
-                throw new Error("No active providers found");
-            }
-            return result;
-        } finally {
-            console.timeEnd('redis/resources/index/IndexProvidersActiveResource.getActiveProviderAddresses');
+        const result = await ActiveProvidersService.fetch();
+        if (!result) {
+            throw new Error("No active providers found");
         }
+        return result;
     }
 
     protected getDefaultParams(): IndexProvidersActiveQueryParams {
@@ -265,30 +260,25 @@ export class IndexProvidersActiveResource extends RedisResourceBase<IndexProvide
     }
 
     public async ConvertRecordsToCsv(data: IndexProvidersActiveResponse[]): Promise<string> {
-        console.time('redis/resources/index/IndexProvidersActiveResource.ConvertRecordsToCsv');
-        try {
-            const columns = [
-                { key: "moniker", name: "Moniker" },
-                { key: "provider", name: "Provider Address" },
-                { key: "rewardSum", name: "Total Rewards" },
-                { key: "totalServices", name: "Total Services", },
-                { key: "totalStake", name: "Total Stake" },
-            ];
+        const columns = [
+            { key: "moniker", name: "Moniker" },
+            { key: "provider", name: "Provider Address" },
+            { key: "rewardSum", name: "Total Rewards" },
+            { key: "totalServices", name: "Total Services", },
+            { key: "totalStake", name: "Total Stake" },
+        ];
 
-            let csv = columns.map(column => CSVEscape(column.name)).join(',') + '\n';
+        let csv = columns.map(column => CSVEscape(column.name)).join(',') + '\n';
 
-            data.forEach((item: any) => {
-                csv += columns.map(column => {
-                    const keys = column.key.split('.');
-                    const value = keys.reduce((obj, key) => (obj && obj[key] !== undefined) ? obj[key] : '', item);
-                    return CSVEscape(String(value));
-                }).join(',') + '\n';
-            });
+        data.forEach((item: any) => {
+            csv += columns.map(column => {
+                const keys = column.key.split('.');
+                const value = keys.reduce((obj, key) => (obj && obj[key] !== undefined) ? obj[key] : '', item);
+                return CSVEscape(String(value));
+            }).join(',') + '\n';
+        });
 
-            return csv;
-        } finally {
-            console.timeEnd('redis/resources/index/IndexProvidersActiveResource.ConvertRecordsToCsv');
-        }
+        return csv;
     }
 }
 

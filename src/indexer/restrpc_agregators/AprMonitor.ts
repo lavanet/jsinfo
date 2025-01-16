@@ -9,6 +9,7 @@ import { queryJsinfo } from '@jsinfo/utils/db';
 import { HashJson } from '@jsinfo/utils/fmt';
 import { sql } from 'drizzle-orm';
 import { IsTestnet } from '@jsinfo/utils/env';
+import { ActiveProvidersService } from '@jsinfo/redis/resources/index/ActiveProvidersResource';
 
 // Constants
 const LAVA_RPC_BENCHMARK_AMOUNT = 10000 * 1000000;
@@ -306,7 +307,7 @@ class APRMonitorClass {
     try {
       const batchData = Array.from(aprValues.entries()).map(([provider, value]) => ({
         address: provider,
-        value: value.toString(),
+        value: Number(value).toFixed(18),
         timestamp: new Date(),
         type: caller
       }));
@@ -459,9 +460,15 @@ class APRMonitorClass {
 
         // 1) Calculate Restaking APR and update the database
         logger.info('Calculating Restaking APR...');
+        const providers = await ActiveProvidersService.fetch();
+        if (!providers) {
+          logger.error('No providers found');
+          return;
+        }
+
         promises.push(
           retry(() => this.calculateAPROnLavaAddresses(
-            () => RpcPeriodicEndpointCache.GetProviders(),
+            () => Promise.resolve(providers),
             (provider) => RpcOnDemandEndpointCache.GetEstimatedProviderRewards(provider, LAVA_RPC_BENCHMARK_AMOUNT, LAVA_RPC_BENCHMARK_DENOM),
             'Restaking APR'
           )).then(aprRestaking => {
@@ -473,7 +480,6 @@ class APRMonitorClass {
         // 2) Update APR for each provider concurrently
         const updateRestakingAPR = async () => {
           logger.info('Updating APR for each provider...');
-          const providers = await RpcPeriodicEndpointCache.GetProviders();
           for (const provider of providers) {
             const estimatedRewards = await RpcOnDemandEndpointCache.GetEstimatedProviderRewards(provider, LAVA_RPC_BENCHMARK_AMOUNT, LAVA_RPC_BENCHMARK_DENOM);
             const apr = await retry(() => this.calculateAPROnLavaAddresses(
@@ -490,7 +496,7 @@ class APRMonitorClass {
         // 3) Calculate Staking APR and update the database
         promises.push(
           retry(() => this.calculateAPROnLavaAddresses(
-            () => RpcPeriodicEndpointCache.GetAllValidatorsAddresses(),
+            () => RpcPeriodicEndpointCache.GetAllActiveValidatorsAddresses(),
             (validator) => RpcOnDemandEndpointCache.GetEstimatedValidatorRewards(validator, LAVA_RPC_BENCHMARK_AMOUNT, LAVA_RPC_BENCHMARK_DENOM),
             'Staking APR',
             6

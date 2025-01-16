@@ -1,7 +1,7 @@
 import { RedisResourceBase } from '@jsinfo/redis/classes/RedisResourceBase';
 import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { ProviderMonikerService } from '@jsinfo/redis/resources/global/ProviderMonikerSpecResource';
-import { desc } from 'drizzle-orm';
+import { desc, inArray } from 'drizzle-orm';
 import { queryJsinfo } from '@jsinfo/utils/db';
 
 interface ProviderEntry {
@@ -14,7 +14,6 @@ interface ProviderEntry {
         addons: string | null;
         extensions: string | null;
         delegateCommission: string | null;
-        // delegateLimit: string | null;
         delegateTotal: string | null;
         moniker: string;
     }[];
@@ -130,8 +129,8 @@ const LavaProviderStakeStatusDict: { [key: number]: string } = {
     [JsinfoSchema.LavaProviderStakeStatus.Frozen]: "Frozen",
     [JsinfoSchema.LavaProviderStakeStatus.Unstaking]: "Unstaking",
     [JsinfoSchema.LavaProviderStakeStatus.Inactive]: "Inactive",
+    [JsinfoSchema.LavaProviderStakeStatus.Jailed]: "Jailed",
 };
-
 export class ListProvidersResource extends RedisResourceBase<ProvidersData, {}> {
     protected redisKey = 'listProviders';
     protected cacheExpirySeconds = 300; // 5 minutes cache
@@ -146,9 +145,9 @@ export class ListProvidersResource extends RedisResourceBase<ProvidersData, {}> 
                 addons: JsinfoSchema.providerStakes.addons,
                 extensions: JsinfoSchema.providerStakes.extensions,
                 delegateCommission: JsinfoSchema.providerStakes.delegateCommission,
-                // delegateLimit: JsinfoSchema.providerStakes.delegateLimit,
                 delegateTotal: JsinfoSchema.providerStakes.delegateTotal,
-            }).from(JsinfoSchema.providerStakes),
+            }).from(JsinfoSchema.providerStakes)
+                .where(inArray(JsinfoSchema.providerStakes.status, [JsinfoSchema.LavaProviderStakeStatus.Active, JsinfoSchema.LavaProviderStakeStatus.Frozen, JsinfoSchema.LavaProviderStakeStatus.Jailed])),
             'ListProvidersResource_fetchFromSource'
         );
 
@@ -169,7 +168,6 @@ export class ListProvidersResource extends RedisResourceBase<ProvidersData, {}> 
                 addons: stake.addons || '',
                 extensions: stake.extensions || '',
                 delegateCommission: stake.delegateCommission?.toString() ?? '',
-                // delegateLimit: stake.delegateLimit?.toString() ?? '',
                 delegateTotal: stake.delegateTotal?.toString() ?? '',
                 moniker: monikers[index],
             };

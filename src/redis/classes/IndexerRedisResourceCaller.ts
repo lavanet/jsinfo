@@ -20,10 +20,11 @@ import { IndexProvidersResource } from '../resources/index/IndexProvidersResourc
 import { ProviderStakesAndDelegationResource } from '../resources/global/ProviderStakesAndDelegationResource';
 import { IndexTopChainsResource } from '../resources/index/IndexTopChainsResource';
 import { IndexTotalCuResource } from '../resources/index/IndexTotalCuResource';
-import { ActiveProvidersResource } from '../resources/index/ActiveProvidersResource';
+import { ActiveProvidersService } from '../resources/index/ActiveProvidersResource';
 import { AllProviderAPRResource } from '../resources/ajax/AllProviderAprResource';
 import { LockedTokenValuesResource } from '../resources/ajax/LockedTokenValuesResource';
 import { LockedVestingTokensService } from '../resources/global/LockedVestingTokensResource';
+import { IpRpcEndpointsIndexService } from '../resources/IpRpcEndpointsIndex/IpRpcEndpointsResource';
 
 export class IndexerRedisResourceCaller {
     private static readonly REFRESH_INTERVAL = 60 * 1000; // 1 minute
@@ -97,7 +98,8 @@ export class IndexerRedisResourceCaller {
             await Promise.all([
                 this.refreshAjaxResources(),
                 this.refreshIndexResources(),
-                this.refreshGlobalResources()
+                this.refreshGlobalResources(),
+                this.refreshIpRpcEndpoints()
             ]);
 
             const duration = Date.now() - startTime;
@@ -214,7 +216,7 @@ export class IndexerRedisResourceCaller {
 
     private static async refreshProviderIndexResources(): Promise<void> {
         await this.safeFetch('ActiveProviders',
-            () => new ActiveProvidersResource().fetch(),
+            () => ActiveProvidersService.fetch(),
             this.currentFetches
         ).catch(e => logger.error('Failed to refresh active providers:', e));
 
@@ -256,6 +258,13 @@ export class IndexerRedisResourceCaller {
                 this.currentFetches
             ).catch(e => logger.error('Failed to refresh locked vesting tokens:', e))
         ]);
+    }
+
+    private static async refreshIpRpcEndpoints(): Promise<void> {
+        await this.safeFetch('IpRpcEndpoints',
+            () => IpRpcEndpointsIndexService.fetch(),
+            this.currentFetches
+        ).catch(e => logger.error('Failed to refresh ip rpc endpoints:', e));
     }
 }
 

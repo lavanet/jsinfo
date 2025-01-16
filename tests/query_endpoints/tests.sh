@@ -72,6 +72,8 @@ commands=(
 
   "python3 ./tests/spec_page_endpoints.py"
   "python3 ./tests/spec_providerhealth_endpoint.py"
+
+  "python3 ./tests/lava_iprpc_endpoint.py"
 )
 
 # Loop through the commands and execute them

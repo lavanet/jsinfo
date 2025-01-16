@@ -67,3 +67,23 @@ export async function ValidatorsPaginatedHandler(request: FastifyRequest, reply:
         validators: validatorInfo
     };
 }
+
+export const ActiveValidatorsPaginatedHandlerOpts: RouteShorthandOptions = {
+    schema: {
+        response: {
+            200: {
+                type: 'object',
+                properties: {
+                    validators: { type: 'array' },
+                }
+            }
+        }
+    }
+}
+
+export async function ActiveValidatorsPaginatedHandler(request: FastifyRequest, reply: FastifyReply) {
+    const validators = await RpcPeriodicEndpointCache.GetAllActiveValidatorsAddresses();
+    return {
+        validators: validators,
+    }
+}

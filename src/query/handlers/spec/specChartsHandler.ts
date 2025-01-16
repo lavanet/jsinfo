@@ -12,6 +12,7 @@ import { ProviderMonikerService } from '@jsinfo/redis/resources/global/ProviderM
 import { PgColumn } from 'drizzle-orm/pg-core';
 import { JSONStringifySpaced } from '@jsinfo/utils/fmt';
 import { queryJsinfo } from '@jsinfo/utils/db';
+import { ActiveProvidersService } from '@jsinfo/redis/resources/index/ActiveProvidersResource';
 
 type SpecChartCuRelay = {
     provider: string;
@@ -106,13 +107,23 @@ class SpecChartsData extends RequestHandlerBase<SpecChartResponse> {
             return this.specTop10ProvidersCache;
         }
 
+        let activeProviders = await ActiveProvidersService.fetch();
+        if (GetDataLength(activeProviders) === 0 || !activeProviders) {
+            return {};
+        }
+
         // First query to get top 10 providers
         let top10Providers = await queryJsinfo(
             async (db) => await db.select({
                 provider: JsinfoSchema.providerStakes.provider,
             })
                 .from(JsinfoSchema.providerStakes)
-                .where(eq(JsinfoSchema.providerStakes.specId, this.spec))
+                .where(
+                    and(
+                        eq(JsinfoSchema.providerStakes.specId, this.spec),
+                        inArray(JsinfoSchema.providerStakes.provider, activeProviders)
+                    )
+                )
                 .orderBy(desc(JsinfoSchema.providerStakes.stake))
                 .limit(10),
             `SpecCharts_getSpecTop10Providers_${this.spec}`

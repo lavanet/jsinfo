@@ -5,6 +5,7 @@ import { QueryLavaRPC } from '@jsinfo/restRpc/lavaRpc';
 import { RedisCache } from '@jsinfo/redis/classes/RedisCache';
 import { TruncateError } from '@jsinfo/utils/fmt';
 import { IsMeaningfulText } from '@jsinfo/utils/fmt';
+import { ActiveProvidersService } from '@jsinfo/redis/resources/index/ActiveProvidersResource';
 
 const REDIS_KEYS = {
     PROVIDERS: 'providers',
@@ -212,7 +213,7 @@ class RpcPeriodicEndpointCacheClass {
     }
 
     public async GetTotalDelegatedAmount(from?: number, includeEmptyProviders: boolean = false): Promise<bigint> {
-        const providers = await this.GetProviders();
+        const providers = await this.GetAllProvidersFromRpc();
         let totalAmount = BigInt(0);
 
         for (const provider of providers) {
@@ -257,7 +258,7 @@ class RpcPeriodicEndpointCacheClass {
         return delegators;
     }
 
-    public async GetProviders(): Promise<string[]> {
+    public async GetAllProvidersFromRpc(): Promise<string[]> {
         const providers = await RedisCache.getArray(REDIS_KEYS.PROVIDERS) as string[];
         if (!providers) {
             await this.refreshCache();
@@ -306,8 +307,12 @@ class RpcPeriodicEndpointCacheClass {
     }
 
     public async GetUniqueDelegatorCount(from?: number, includeEmptyProviders: boolean = false): Promise<number> {
-        const providers = await this.GetProviders();
+        const providers = await ActiveProvidersService.fetch();
         const uniqueDelegators = new Set<string>();
+
+        if (!providers) {
+            return 0;
+        }
 
         for (const provider of providers) {
             const delegations = await this.getProviderDelegations(provider);
@@ -346,6 +351,10 @@ class RpcPeriodicEndpointCacheClass {
 
     public async GetAllValidatorsAddresses(): Promise<string[]> {
         return (await this.GetAllValidators()).map(v => v.operator_address);
+    }
+
+    public async GetAllActiveValidatorsAddresses(): Promise<string[]> {
+        return (await this.GetAllValidators()).filter(v => v.jailed === true).map(v => v.operator_address);
     }
 
     private async getValidatorsFromJson(validatorsJson: string | null): Promise<AllValidatorsResponse['validators']> {

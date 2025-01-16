@@ -22,7 +22,7 @@ export class ActiveProvidersResource extends RedisResourceBase<string[], {}> {
             .where(
                 and(
                     and(
-                        not(eq(JsinfoSchema.providerStakes.status, JsinfoSchema.LavaProviderStakeStatus.Frozen)),
+                        eq(JsinfoSchema.providerStakes.status, JsinfoSchema.LavaProviderStakeStatus.Active),
                         not(isNull(JsinfoSchema.providerStakes.provider)),
                     ),
                     not(eq(JsinfoSchema.providerStakes.provider, ''))
@@ -42,4 +42,6 @@ export class ActiveProvidersResource extends RedisResourceBase<string[], {}> {
             .filter((provider): provider is string => provider !== null)
             .map(provider => provider.toString());
     }
-} 
+}
+
+export const ActiveProvidersService = new ActiveProvidersResource();

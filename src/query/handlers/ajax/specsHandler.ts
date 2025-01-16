@@ -20,8 +20,6 @@ export const SpecsPaginatedHandlerOpts: RouteShorthandOptions = {
 }
 
 export async function SpecsPaginatedHandler(request: FastifyRequest, reply: FastifyReply) {
-
-
     const res = await SpecAndConsumerService.GetAllSpecs();
     return {
         specs: res,

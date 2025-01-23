@@ -716,9 +716,9 @@ export const IpRpcEndpointsData: ChainEndpoint[] = [
     },
     {
         "chainId": "arbn",
-        "alias": "Mainnet",
+        "alias": "Testnet",
         "ChainDisplayName": "Arbitrum",
-        "DisplayName": "Arbitrum-Nova (arbitrumn)",
+        "DisplayName": "Arbitrum Nova Testnet (arbn)",
         "geolocations": [
             "US",
             "EU",
@@ -729,14 +729,14 @@ export const IpRpcEndpointsData: ChainEndpoint[] = [
         ],
         "apiEndpoints": {
             "rest": [
-                "https://arbitrumn.lava.build:443"
+                "https://arbn.lava.build:443"
             ],
             "tendermintrpc": [
-                "https://arbitrumn.tendermintrpc.lava.build:443",
-                "wss://arbitrumn.tendermintrpc.lava.build/websocket"
+                "https://arbn.tendermintrpc.lava.build:443",
+                "wss://arbn.tendermintrpc.lava.build/websocket"
             ],
             "grpc": [
-                "arbitrumn.grpc.lava.build:443"
+                "arbn.grpc.lava.build:443"
             ]
         },
         "logoURL": "https://gateway-fe-public-staging-assets.s3.amazonaws.com/icons/arbitrum-icon.png",

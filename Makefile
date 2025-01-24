@@ -20,13 +20,13 @@
 		macos_query_port_pid \
 		query_endpoints_full_tests_all
 
-bun_create_migrations:
+create_migrations:
 	bun run generate
 
-bun_build:
+build:
 	bun run build --verbose
 
-bun_clean_cache:
+clean_cache:
 	bun pm cache rm
 
 docker_build:

@@ -17,19 +17,19 @@ interface MainnetActiveProvidersResponse {
     providers: string[];
 }
 
-interface ProcessedInfoItem {
+export interface ProcessedInfoItem {
     source: string;
     amount: ProcessedTokenArray;
 }
 
-interface BlockMetadata {
+export interface BlockMetadata {
     height: number;
     time: string;
     seconds_off: number;
     date: string;
 }
 
-interface ProviderRewardsData {
+export interface ProviderRewardsData {
     providers: Array<{
         address: string;
         rewards_by_block: {
@@ -192,7 +192,7 @@ async function processRewardsResponse(rewards: EstimatedRewardsResponse): Promis
     };
 }
 
-async function GenLavaLatestProviderRewards(): Promise<ProviderRewardsData> {
+export async function GenLavaLatestProviderRewards(): Promise<ProviderRewardsData> {
     // logger.info('Generating latest provider rewards...');
 
     const latestBlock = await getMainnetLatestBlock();
@@ -289,8 +289,3 @@ async function GenLavaLatestProviderRewards(): Promise<ProviderRewardsData> {
         }
     };
 }
-
-export {
-    GenLavaLatestProviderRewards,
-    ProviderRewardsData
-};

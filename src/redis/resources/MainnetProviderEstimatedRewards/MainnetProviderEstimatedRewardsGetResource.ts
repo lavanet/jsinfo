@@ -1,6 +1,11 @@
 import { logger } from '@jsinfo/utils/logger';
 import { RedisResourceBase } from '@jsinfo/redis/classes/RedisResourceBase';
-import { BlockMetadata, GenLavaLatestProviderRewards, ProcessedInfoItem, ProviderRewardsData } from './MainnetGenLavaLatestProviderRewards';
+import {
+    BlockMetadata,
+    GenLavaLatestProviderRewards,
+    ProcessedInfoItem,
+    ProviderRewardsData
+} from './MainnetGenLavaLatestProviderRewards';
 import * as fs from 'fs';
 import * as path from 'path';
 

@@ -118,7 +118,7 @@ class MainnetProviderEstimatedRewardsSpecFilterResource extends RedisResourceBas
                     }
                     acc[normalizedSource].push(info.amount.tokens);
                     return acc;
-                }, {} as Record<string, Array<Array<{ amount: string; denom: string; original_denom: string; value_usd: string }>>>)
+                }, {} as Record<string, Array<{ amount: string; denom: string; original_denom: string; value_usd: string; }[]>>)
             ).map(([source, tokenArrays]) => ({
                 source,
                 rewards: this.sumTokens(tokenArrays.flat())

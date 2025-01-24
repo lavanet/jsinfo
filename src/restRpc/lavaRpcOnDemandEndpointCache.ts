@@ -1,7 +1,7 @@
 // src/indexer/classes/RpcEndpointCahce.ts
 
 import { logger } from '@jsinfo/utils/logger';
-import { QueryLavaRPC, QueryLavaMainnetRPC } from '@jsinfo/restRpc/lavaRpc';
+import { QueryLavaMainnetRPC, QueryLavaRPC } from '@jsinfo/restRpc/lavaRpc';
 import { RedisCache } from '@jsinfo/redis/classes/RedisCache';
 import { IsMeaningfulText, TruncateError } from '@jsinfo/utils/fmt';
 import { IsMainnet } from '@jsinfo/utils/env';
@@ -98,14 +98,12 @@ const CACHE_KEYS = {
     SPEC_TRACKED_INFO: (chainId: string) => `spec_tracked_info:${chainId}`,
     VALIDATOR_DISTRIBUTION_INFO: (validator: string) =>
         `validator_distribution_info:${validator}`,
+    MAINNET_PROVIDER_REWARDS_NO_AMOUNT_NO_DENOM: (provider: string) =>
+        `mainnet_provider_rewards_no_amount_no_denom:${provider}`,
 } as const;
 
 class RpcOnDemandEndpointCacheClass {
     private cacheRefreshInterval = 30 * 60; // 0 minutes
-
-    protected async QueryLavaRPC<T>(path: string): Promise<T> {
-        return QueryLavaRPC<T>(path);
-    }
 
     public async GetDenomTrace(denom: string): Promise<DenomTraceResponse> {
         const cacheKey = CACHE_KEYS.DENOM_TRACE(denom);
@@ -127,7 +125,7 @@ class RpcOnDemandEndpointCacheClass {
             throw new Error(`lavaRpcOnDemandEndpointCache:: Using testnet denom on mainnet - something is wrong - ${denom} (samoleans)`);
         }
         try {
-            const response = await this.QueryLavaRPC<DenomTraceResponse>(`/ibc/apps/transfer/v1/denom_traces/${denom}`);
+            const response = await QueryLavaRPC<DenomTraceResponse>(`/ibc/apps/transfer/v1/denom_traces/${denom}`);
             RedisCache.setDict(CACHE_KEYS.DENOM_TRACE(denom), response, this.cacheRefreshInterval);
             return response;
         } catch (error) {
@@ -156,7 +154,7 @@ class RpcOnDemandEndpointCacheClass {
 
         while (attempt < retries) {
             try {
-                const response = await this.QueryLavaRPC<EstimatedRewardsResponse>(`/lavanet/lava/subscription/estimated_validator_rewards/${validator}/${amount}${denom}`);
+                const response = await QueryLavaRPC<EstimatedRewardsResponse>(`/lavanet/lava/subscription/estimated_validator_rewards/${validator}/${amount}${denom}`);
                 RedisCache.setDict(
                     CACHE_KEYS.VALIDATOR_REWARDS(validator, amount, denom),
                     response,
@@ -192,6 +190,7 @@ class RpcOnDemandEndpointCacheClass {
             } catch (error) {
                 logger.error(`Error fetching estimated provider rewards for ${provider}`, { error: TruncateError(error) });
                 return { info: [], total: [], recommended_block: "0" };
+
             }
             if (!rewards) {
                 return { info: [], total: [], recommended_block: "0" };
@@ -203,7 +202,7 @@ class RpcOnDemandEndpointCacheClass {
 
     private async fetchEstimatedProviderRewards(provider: string, amount: number, denom: string): Promise<EstimatedRewardsResponse> {
         try {
-            const response = await this.QueryLavaRPC<EstimatedRewardsResponse>(`/lavanet/lava/subscription/estimated_provider_rewards/${provider}/${amount}${denom}`);
+            const response = await QueryLavaRPC<EstimatedRewardsResponse>(`/lavanet/lava/subscription/estimated_provider_rewards/${provider}/${amount}${denom}`);
             RedisCache.setDict(
                 CACHE_KEYS.PROVIDER_REWARDS(provider, amount, denom),
                 response,
@@ -230,7 +229,7 @@ class RpcOnDemandEndpointCacheClass {
     private async fetchAndCacheDelegatorRewards(delegator: string): Promise<DelegatorRewardsResponse> {
         const cacheKey = CACHE_KEYS.DELEGATOR_REWARDS(delegator);
         try {
-            const response = await this.QueryLavaRPC<DelegatorRewardsResponse>(
+            const response = await QueryLavaRPC<DelegatorRewardsResponse>(
                 `/lavanet/lava/dualstaking/delegator_rewards/${delegator}`
             );
 
@@ -287,7 +286,7 @@ class RpcOnDemandEndpointCacheClass {
 
     private async fetchAndCacheSpecTrackedInfo(chainId: string): Promise<SpecTrackedInfoResponse> {
         try {
-            const response = await this.QueryLavaRPC<SpecTrackedInfoResponse>(`/lavanet/lava/rewards/SpecTrackedInfo/${chainId}/`);
+            const response = await QueryLavaRPC<SpecTrackedInfoResponse>(`/lavanet/lava/rewards/SpecTrackedInfo/${chainId}/`);
             RedisCache.setDict(CACHE_KEYS.SPEC_TRACKED_INFO(chainId), response, this.cacheRefreshInterval);
             return response;
         } catch (error) {
@@ -310,7 +309,7 @@ class RpcOnDemandEndpointCacheClass {
     private async fetchAndCacheRewardsPools(): Promise<RewardsPoolsResponse> {
         const cacheKey = 'rewards_pools';
         try {
-            const response = await this.QueryLavaRPC<RewardsPoolsResponse>('/lavanet/lava/rewards/pools');
+            const response = await QueryLavaRPC<RewardsPoolsResponse>('/lavanet/lava/rewards/pools');
             RedisCache.setDict(cacheKey, response, this.cacheRefreshInterval);
             return response;
         } catch (error) {
@@ -336,7 +335,7 @@ class RpcOnDemandEndpointCacheClass {
 
     private async fetchAndCacheStakingPool(): Promise<StakingPoolResponse> {
         try {
-            const response = await this.QueryLavaRPC<StakingPoolResponse>('/cosmos/staking/v1beta1/pool');
+            const response = await QueryLavaRPC<StakingPoolResponse>('/cosmos/staking/v1beta1/pool');
             RedisCache.setDict('staking_pool', response, this.cacheRefreshInterval);
             return response;
         } catch (error) {
@@ -344,14 +343,28 @@ class RpcOnDemandEndpointCacheClass {
             throw error;
         }
     }
-
-}
-
-class MainnetRpcOnDemandEndpointCacheClass extends RpcOnDemandEndpointCacheClass {
-    protected async QueryLavaRPC<T>(path: string): Promise<T> {
-        return QueryLavaMainnetRPC<T>(path);
-    }
 }
 
 export const RpcOnDemandEndpointCache = new RpcOnDemandEndpointCacheClass();
-export const MainnetRpcOnDemandEndpointCache = new MainnetRpcOnDemandEndpointCacheClass();
+
+export async function MainnetGetEstimatedProviderRewardsNoAmountNoDenom(provider: string): Promise<EstimatedRewardsResponse> {
+    if (!IsMeaningfulText(provider)) {
+        throw new Error(`Invalid provider: ${provider}`);
+    }
+
+    const cacheKey = CACHE_KEYS.MAINNET_PROVIDER_REWARDS_NO_AMOUNT_NO_DENOM(provider);
+    let rewards = await RedisCache.getDict(cacheKey) as EstimatedRewardsResponse;
+
+    if (!rewards) {
+        try {
+            const response = await QueryLavaMainnetRPC<EstimatedRewardsResponse>(`/lavanet/lava/subscription/estimated_provider_rewards/${provider}/`);
+            rewards = response;
+            RedisCache.setDict(cacheKey, response, 30 * 60);
+        } catch (error) {
+            logger.error(`Error fetching estimated provider rewards for ${provider}`, { error: TruncateError(error) });
+            return { info: [], total: [], recommended_block: "0" };
+        }
+    }
+
+    return rewards || { info: [], total: [], recommended_block: "0" };
+}

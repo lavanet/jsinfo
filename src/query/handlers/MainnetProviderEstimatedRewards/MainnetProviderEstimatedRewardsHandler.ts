@@ -1,10 +1,13 @@
 import { FastifyRequest, FastifyReply, RouteShorthandOptions, RouteGenericInterface } from 'fastify';
-import { MainnetProviderEstimatedRewards, ProviderRewardsQueryType } from '@jsinfo/redis/resources/MainnetProviderEstimatedRewards/MainnetProviderEstimatedRewardsResource';
+import { MainnetProviderEstimatedRewardsGetService } from '@jsinfo/redis/resources/MainnetProviderEstimatedRewards/MainnetProviderEstimatedRewardsGetResource';
+import { MainnetProviderEstimatedRewardsListService } from '@jsinfo/redis/resources/MainnetProviderEstimatedRewards/MainnetProviderEstimatedRewardsListResource';
+import { MainnetProviderEstimatedRewardsSpecFilterService } from '@jsinfo/redis/resources/MainnetProviderEstimatedRewards/MainnetProviderEstimatedRewardsSpecFilterResource';
 import { JSONStringify } from '@jsinfo/utils/fmt';
 
 interface QueryParams {
-    type?: ProviderRewardsQueryType;
+    type?: 'list' | 'get' | 'spec';
     block?: string;
+    spec?: string;
 }
 
 interface RouteGeneric extends RouteGenericInterface {
@@ -18,11 +21,14 @@ export const MainnetProviderEstimatedRewardsHandlerOpts: RouteShorthandOptions =
             properties: {
                 type: {
                     type: 'string',
-                    enum: ['latest', 'historical', 'blocks']
+                    enum: ['list', 'get', 'spec']
                 },
                 block: {
                     type: 'string',
-                    pattern: '^[0-9]+$'
+                    pattern: '^(latest|[0-9]+)$'
+                },
+                spec: {
+                    type: 'string'
                 }
             }
         },
@@ -39,17 +45,30 @@ export async function MainnetProviderEstimatedRewardsHandler(
     reply: FastifyReply
 ) {
     try {
-        const { type = 'latest', block } = request.query;
+        const { type = 'list', block = 'latest', spec } = request.query;
 
-        const queryParams = {
-            type,
-            ...(block ? { block: parseInt(block) } : {})
-        };
+        switch (type) {
+            case 'list':
+                const listResponse = await MainnetProviderEstimatedRewardsListService.fetch();
+                reply.header('Content-Type', 'application/json');
+                return reply.send(JSONStringify(listResponse));
 
-        const response = await MainnetProviderEstimatedRewards.fetch(queryParams);
+            case 'get':
+                const getResponse = await MainnetProviderEstimatedRewardsGetService.fetch({ block });
+                reply.header('Content-Type', 'application/json');
+                return reply.send(JSONStringify(getResponse));
 
-        reply.header('Content-Type', 'application/json');
-        return reply.send(JSONStringify(response));
+            case 'spec':
+                if (!spec) {
+                    return reply.status(400).send({ error: 'Spec parameter is required for spec type' });
+                }
+                const specResponse = await MainnetProviderEstimatedRewardsSpecFilterService.fetch({ spec, block });
+                reply.header('Content-Type', 'application/json');
+                return reply.send(JSONStringify(specResponse));
+
+            default:
+                return reply.status(400).send({ error: 'Invalid type parameter' });
+        }
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         return reply.status(500).send({
@@ -58,3 +77,8 @@ export async function MainnetProviderEstimatedRewardsHandler(
         });
     }
 }
+
+export default {
+    MainnetProviderEstimatedRewardsHandler,
+    MainnetProviderEstimatedRewardsHandlerOpts
+};

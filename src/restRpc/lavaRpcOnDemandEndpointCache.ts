@@ -1,7 +1,7 @@
 // src/indexer/classes/RpcEndpointCahce.ts
 
 import { logger } from '@jsinfo/utils/logger';
-import { QueryLavaRPC } from '@jsinfo/restRpc/lavaRpc';
+import { QueryLavaMainnetRPC, QueryLavaRPC } from '@jsinfo/restRpc/lavaRpc';
 import { RedisCache } from '@jsinfo/redis/classes/RedisCache';
 import { IsMeaningfulText, TruncateError } from '@jsinfo/utils/fmt';
 import { IsMainnet } from '@jsinfo/utils/env';
@@ -96,10 +96,10 @@ const CACHE_KEYS = {
         `provider_rewards:${provider}:${amount}:${denom}`,
     DELEGATOR_REWARDS: (delegator: string) => `delegator_rewards:${delegator}`,
     SPEC_TRACKED_INFO: (chainId: string) => `spec_tracked_info:${chainId}`,
-    DISTRIBUTED_PROVIDER_REWARDS: (provider: string) =>
-        `distributed_provider_rewards:${provider}`,
     VALIDATOR_DISTRIBUTION_INFO: (validator: string) =>
         `validator_distribution_info:${validator}`,
+    MAINNET_PROVIDER_REWARDS_NO_AMOUNT_NO_DENOM: (provider: string) =>
+        `mainnet_provider_rewards_no_amount_no_denom:${provider}`,
 } as const;
 
 class RpcOnDemandEndpointCacheClass {
@@ -343,58 +343,28 @@ class RpcOnDemandEndpointCacheClass {
             throw error;
         }
     }
-
-    public async GetDistributedProviderRewards(provider: string): Promise<EstimatedRewardsResponse> {
-        const cacheKey = CACHE_KEYS.DISTRIBUTED_PROVIDER_REWARDS(provider);
-        let rewards = await RedisCache.getDict(cacheKey) as EstimatedRewardsResponse;
-
-        if (!rewards) {
-            rewards = await this.fetchAndCacheDistributedProviderRewards(provider);
-        }
-
-        return rewards;
-    }
-
-    private async fetchAndCacheDistributedProviderRewards(provider: string): Promise<EstimatedRewardsResponse> {
-        try {
-            const initialResponse = await QueryLavaRPC<EstimatedRewardsResponse>(
-                `/lavanet/lava/subscription/estimated_provider_rewards/${provider}`
-            );
-
-            if (!initialResponse.recommended_block) {
-                throw new Error('No recommended block received');
-            }
-
-            const recommendedBlock = parseInt(initialResponse.recommended_block);
-            if (isNaN(recommendedBlock)) {
-                throw new Error('Invalid recommended block received');
-            }
-
-            if (recommendedBlock === 0) {
-                throw new Error('Recommended block is 0');
-            }
-
-            const recommendedBlockMinusOne = recommendedBlock - 1;
-
-            const DistributedRewards = await QueryLavaRPC<EstimatedRewardsResponse>(
-                `/lavanet/lava/subscription/estimated_provider_rewards/${provider}?height=${recommendedBlockMinusOne}`,
-            );
-
-            // Cache the results
-            RedisCache.setDict(
-                CACHE_KEYS.DISTRIBUTED_PROVIDER_REWARDS(provider),
-                DistributedRewards,
-                this.cacheRefreshInterval
-            );
-
-            return DistributedRewards;
-        } catch (error) {
-            logger.error(`Error fetching distributed provider rewards for ${provider}`, {
-                error: TruncateError(error)
-            });
-            throw error;
-        }
-    }
 }
 
 export const RpcOnDemandEndpointCache = new RpcOnDemandEndpointCacheClass();
+
+export async function MainnetGetEstimatedProviderRewardsNoAmountNoDenom(provider: string): Promise<EstimatedRewardsResponse> {
+    if (!IsMeaningfulText(provider)) {
+        throw new Error(`Invalid provider: ${provider}`);
+    }
+
+    const cacheKey = CACHE_KEYS.MAINNET_PROVIDER_REWARDS_NO_AMOUNT_NO_DENOM(provider);
+    let rewards = await RedisCache.getDict(cacheKey) as EstimatedRewardsResponse;
+
+    if (!rewards) {
+        try {
+            const response = await QueryLavaMainnetRPC<EstimatedRewardsResponse>(`/lavanet/lava/subscription/estimated_provider_rewards/${provider}/`);
+            rewards = response;
+            RedisCache.setDict(cacheKey, response, 30 * 60);
+        } catch (error) {
+            logger.error(`Error fetching estimated provider rewards for ${provider}`, { error: TruncateError(error) });
+            return { info: [], total: [], recommended_block: "0" };
+        }
+    }
+
+    return rewards || { info: [], total: [], recommended_block: "0" };
+}

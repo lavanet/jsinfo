@@ -102,7 +102,14 @@ import { ActiveValidatorsPaginatedHandler, ActiveValidatorsPaginatedHandlerOpts,
 import { TotalLockedValueHandler, TotalLockedValueHandlerOpts } from './handlers/ajax/totalLockedValueHandler';
 import { TotalLockedValuesComponentsHandler, TotalLockedValuesComponentsHandlerOpts } from './handlers/ajax/totalLockedValuesComponentsHandler';
 import { AllLockedValuesHandler, AllLockedValuesHandlerOpts } from './handlers/ajax/allLockedValuesHandler';
+
+// -- IpRpcEndpointsIndex --
 import { IpRpcEndpointsIndexHandler, IpRpcEndpointsIndexHandlerOpts } from './handlers/IpRpcEndpointsIndex/IpRpcEndpointsIndexHandler';
+
+// -- lava_mainnet_provider_estimated_rewards --
+import { MainnetProviderEstimatedRewardsHandler } from './handlers/MainnetProviderEstimatedRewards/MainnetProviderEstimatedRewardsHandler';
+import { MainnetProviderEstimatedRewardsHandlerOpts } from './handlers/MainnetProviderEstimatedRewards/MainnetProviderEstimatedRewardsHandler';
+
 
 // -- Server status ajax --
 GetServerInstance().get('/latest', LatestRawHandlerOpts, LatestRawHandler);
@@ -246,3 +253,6 @@ GetServerInstance().get("/all_locked_values", AllLockedValuesHandlerOpts, AllLoc
 
 // lava_iprpc_endpoints
 GetServerInstance().get('/lava_iprpc_endpoints', IpRpcEndpointsIndexHandlerOpts, IpRpcEndpointsIndexHandler);
+
+// lava_mainnet_provider_estimated_rewards
+GetServerInstance().get('/lava_mainnet_provider_estimated_rewards', MainnetProviderEstimatedRewardsHandlerOpts, MainnetProviderEstimatedRewardsHandler);

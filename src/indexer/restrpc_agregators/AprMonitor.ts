@@ -4,7 +4,7 @@ import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { logger } from '@jsinfo/utils/logger';
 import { RpcPeriodicEndpointCache } from '@jsinfo/restRpc/lavaRpcPeriodicEndpointCache';
 import { EstimatedRewardsResponse, RpcOnDemandEndpointCache } from '@jsinfo/restRpc/lavaRpcOnDemandEndpointCache';
-import { ConvertToBaseDenom, GetUSDCValue } from './CurrencyConverstionUtils';
+import { ConvertToBaseDenom, GetUSDCValue } from '../../restRpc/CurrencyConverstionUtils';
 import { queryJsinfo } from '@jsinfo/utils/db';
 import { HashJson } from '@jsinfo/utils/fmt';
 import { sql } from 'drizzle-orm';

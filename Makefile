@@ -82,6 +82,9 @@ indexer_with_migrations:
 indexer_with_debugger:
 	NODE_TLS_REJECT_UNAUTHORIZED=0 bun --inspect-brk run src/indexer.ts
 
+run:
+	make query
+
 query:
 	npx --yes nodemon --watch src --ext ts --exec "JSINFO_QUERY_IS_DEBUG_MODE=true bun run src/query.ts"
 

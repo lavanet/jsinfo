@@ -171,7 +171,7 @@ This endpoint returns a list of all providers along with their APR, commission r
       // [same as on the rewards website](https://rewards.lavanet.xyz/provider_rewards)
       // but return spec to
       {
-        "chain": "lava mainnet",
+        "chain": "Lava Mainnet",
         "spec": "LAVA",
         "tokens": [
           {
@@ -196,7 +196,7 @@ This endpoint returns a list of all providers along with their APR, commission r
         "delegateCommission": "50", // Delegation commission
         "delegateTotal": "94912424429", // Total delegations
         "moniker": "Protofire DAO" // Provider name for this spec
-        "icon": <easy>
+        "icon": "url" ...
       },
       {
         "chain": "fvm mainnet",

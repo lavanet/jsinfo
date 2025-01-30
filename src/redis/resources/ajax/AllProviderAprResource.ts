@@ -7,7 +7,6 @@ import * as JsinfoProviderAgrSchema from '@jsinfo/schemas/jsinfoSchema/providerR
 import { EstimatedRewardsResponse } from '@jsinfo/restRpc/lavaRpcOnDemandEndpointCache';
 import { IsMeaningfulText } from '@jsinfo/utils/fmt';
 import { ConvertToBaseDenom } from '@jsinfo/restRpc/CurrencyConverstionUtils';
-import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 
 export interface AllAprProviderData {
     address: string;

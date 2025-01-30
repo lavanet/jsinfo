@@ -15,7 +15,7 @@ import { SupplyHistoryHandlerOpts, supplyHistoryHandler } from './handlers/ajax/
 // -- Server apr ajax --
 import { APRRawHandlerOpts, APRRawHandler } from './handlers/ajax/aprHandler';
 import { APRFullHandler, APRFullHandlerOpts } from './handlers/ajax/aprFullHandler';
-import { AllProviderAPRRawHandlerOpts, AllProviderAPRRawHandler } from './handlers/ajax/allProviderAprHandler';
+import { ProviderPerformanceHandlerOpts, ProviderPerformanceRawHandler } from './handlers/ajax/providerPerfomanceHandler';
 
 // -- list all providers and monikers endpoint ---
 import { ListProvidersRawHandlerOpts, ListProvidersRawHandler } from './handlers/ajax/listProvidersHandler';
@@ -131,7 +131,10 @@ GetServerInstance().get('/lava_chain_restakers', ChainWalletApiHandlerOpts, Lava
 // -- Server APR ajax --
 GetServerInstance().get('/apr', APRRawHandlerOpts, APRRawHandler);
 GetServerInstance().get('/apr_full', APRFullHandlerOpts, APRFullHandler);
-GetServerInstance().get('/all_providers_apr', AllProviderAPRRawHandlerOpts, AllProviderAPRRawHandler);
+
+// -- providers_performance --
+GetServerInstance().get('/providers_performance', ProviderPerformanceHandlerOpts, ProviderPerformanceRawHandler);
+GetServerInstance().get('/all_providers_apr', ProviderPerformanceHandlerOpts, ProviderPerformanceRawHandler);
 
 // -- list all providers and monikers endpoint ---
 GetServerInstance().get('/listProviders', ListProvidersRawHandlerOpts, ListProvidersRawHandler);

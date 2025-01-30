@@ -1,35 +1,28 @@
 import { RedisResourceBase } from '@jsinfo/redis/classes/RedisResourceBase';
 import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { queryJsinfo } from '@jsinfo/utils/db';
-import { gt, sql } from 'drizzle-orm';
+import { and, eq, gt, sql } from 'drizzle-orm';
 import { ProviderMonikerService } from '@jsinfo/redis/resources/global/ProviderMonikerSpecResource';
 import * as JsinfoProviderAgrSchema from '@jsinfo/schemas/jsinfoSchema/providerRelayPaymentsAgregation';
 import { EstimatedRewardsResponse } from '@jsinfo/restRpc/lavaRpcOnDemandEndpointCache';
 import { IsMeaningfulText } from '@jsinfo/utils/fmt';
 import { ConvertToBaseDenom } from '@jsinfo/restRpc/CurrencyConverstionUtils';
+import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 
-interface AllAprProviderData {
+export interface AllAprProviderData {
     address: string;
     moniker: string;
     apr?: string | null;
     commission?: string | null;
     '30_days_cu_served'?: string | null;
+    '30_days_relays_served'?: string | null;
     rewards: EstimatedRewardsResponse;
+    relaySum?: number;
 }
 
 // Helper function to get commission
 function ValueOrDash(provider: string | undefined): string {
     return IsMeaningfulText("" + provider) ? String(provider) : '-';
-}
-
-function formatToFourDecimals(value: number): string {
-    const formattedToFour = value.toFixed(4);
-    if (formattedToFour === '0.0000') {
-        const formattedToTen = value.toFixed(10);
-        if (formattedToTen === '0.0000000000') return '0';
-        return formattedToTen;
-    }
-    return formattedToFour;
 }
 
 function formatToPercent(value: number): string {
@@ -72,6 +65,7 @@ export class AllProviderAPRResource extends RedisResourceBase<AllAprProviderData
             const [addressAndAprData, providerCommissionsData, cuServedData] = await this.fetchData(db);
             const providerCommissionsDataMapByProviderId = this.mapProviderCommissions(providerCommissionsData);
             const cuServedDataMapByProviderId = this.mapCuServedData(cuServedData);
+            const relayServedDataMapByProviderId = this.mapRelayServedData(cuServedData);
 
             const { addressAndAprDataRestakingById, addressAndAprDataStackingById, addressAndAprDataRewardsById } =
                 await this.processAddressAndAprData(addressAndAprData);
@@ -80,7 +74,7 @@ export class AllProviderAPRResource extends RedisResourceBase<AllAprProviderData
             this.calculateAverages(addressAndAprDataStackingById);
 
             return this.constructProcessedData(addressAndAprDataRestakingById, addressAndAprDataStackingById,
-                providerCommissionsDataMapByProviderId, cuServedDataMapByProviderId, addressAndAprDataRewardsById);
+                providerCommissionsDataMapByProviderId, cuServedDataMapByProviderId, addressAndAprDataRewardsById, relayServedDataMapByProviderId);
         }, `ProviderAPRResource::fetchFromSource`);
 
         return result;
@@ -102,6 +96,7 @@ export class AllProviderAPRResource extends RedisResourceBase<AllAprProviderData
             provider: JsinfoSchema.providerStakes.provider,
             commission: sql`AVG(CASE WHEN ${JsinfoSchema.providerStakes.delegateCommission} IS NOT NULL AND ${JsinfoSchema.providerStakes.delegateCommission} > 0 THEN ${JsinfoSchema.providerStakes.delegateCommission} END)`
         }).from(JsinfoSchema.providerStakes)
+            .where(eq(JsinfoSchema.providerStakes.status, JsinfoSchema.LavaProviderStakeStatus.Active))
             .groupBy(JsinfoSchema.providerStakes.provider);
 
         const cuServed = db.select({
@@ -132,6 +127,19 @@ export class AllProviderAPRResource extends RedisResourceBase<AllAprProviderData
                 cuServedDataMapByProviderId[provider] = 0; // Initialize if not present
             }
             cuServedDataMapByProviderId[provider] += parseInt("" + curr.cuSum); // Sum cuSum for the same provider
+        }
+        return cuServedDataMapByProviderId;
+    }
+
+    private mapRelayServedData(cuServedData: CuServed[]): Record<string, number> {
+        const cuServedDataMapByProviderId: Record<string, number> = {};
+        for (const curr of cuServedData) {
+            if (!IsMeaningfulText(curr.provider) || curr.provider === null) continue;
+            const provider = curr.provider!.toLowerCase().trim();
+            if (!cuServedDataMapByProviderId[provider]) {
+                cuServedDataMapByProviderId[provider] = 0; // Initialize if not present
+            }
+            cuServedDataMapByProviderId[provider] += parseInt("" + curr.relaySum); // Sum cuSum for the same provider
         }
         return cuServedDataMapByProviderId;
     }
@@ -229,7 +237,8 @@ export class AllProviderAPRResource extends RedisResourceBase<AllAprProviderData
         addressAndAprDataStackingById: Record<string, any>,
         providerCommissionsDataMapByProviderId: Record<string, string>,
         cuServedDataMapByProviderId: Record<string, number>,
-        addressAndAprDataRewardsById: Record<string, any>
+        addressAndAprDataRewardsById: Record<string, any>,
+        relayServedDataMapByProviderId: Record<string, number>
     ): Promise<AllAprProviderData[]> {
         const processedAddressAndAprData: AllAprProviderData[] = [];
         const entries = new Set<string>(Object.keys(addressAndAprDataRestakingById));
@@ -240,9 +249,9 @@ export class AllProviderAPRResource extends RedisResourceBase<AllAprProviderData
                 address: address,
                 moniker: ValueOrDash(moniker),
                 apr: ValueOrDash(String(addressAndAprDataRestakingById[address])),
-                // stacking_apr: ValueOrDash(String(addressAndAprDataStackingById[address])),
                 commission: formatCommissionPrecent(providerCommissionsDataMapByProviderId[address]),
                 '30_days_cu_served': ValueOrDash(String(cuServedDataMapByProviderId[address])),
+                '30_days_relays_served': ValueOrDash(String(relayServedDataMapByProviderId[address])),
                 rewards: addressAndAprDataRewardsById[address] || "-",
             };
             processedAddressAndAprData.push(ret);

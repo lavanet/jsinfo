@@ -4,7 +4,7 @@ import { ProviderMonikerService } from '@jsinfo/redis/resources/global/ProviderM
 import { desc, inArray } from 'drizzle-orm';
 import { queryJsinfo } from '@jsinfo/utils/db';
 
-interface ProviderEntry {
+export interface ProviderEntry {
     provider: string;
     specs: {
         chain: string;

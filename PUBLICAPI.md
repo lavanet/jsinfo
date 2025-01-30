@@ -140,49 +140,86 @@ Returns the 80th percentile APR values for both staking and restaking options in
 }
 ```
 
-#### `/all_providers_apr`
+#### `/all_providers_apr` / `/providers_performance`
 
-This endpoint returns a list of all providers along with their APR, commission rates, and other relevant information.
+This endpoint returns a list of all providers along with their APR, commission rates, rewards, and specifications.
 
 ### Response Format
 
-The response is a JSON array of objects, where each object contains the following fields:
-
 ```json
 [
   {
-    "address": "string", // The address of the provider
-    "moniker": "string", // The display name of the provider (moniker)
-    "apr": "string" or "-" // The APR value as a string (percentage) or "-" if not available
-    "commission": "string" or "-" // The commission rate as a string (formatted percentage) or "-" if not available
-    "30_days_cu_served": "string" or "-" // The cumulative units served in the last 30 days as a string or "-" if not available
-    "rewards": "array" or "-" // An array of rewards or "-" if no rewards
+    "address": "lava@16gjdwqfpvk3dyasy83wsr26pk27kjq9wvfz0qy", // Provider's lava address
+    "moniker": "Protofire DAO", // Provider's display name
+    "avatar": <todo>
+    "apr": "43.1998%", // APR as percentage
+    "commission": "50.0%", // The commision set by the provider
+    "30_days_cu_served": "220504230", // Compute units served in last 30 days
+    "30_days_relays_served": "12476269", // Number of relays served in last 30 days
+    "rewards_10k_lava_delegation": [
+    // Monthly estimated rewards for a 10,000 LAVA delegation
+     {
+        "denom": "usdc", // Token denomination
+        "amount": "35.230493" // Token amount
+      },
+      {
+        "denom": "lava",
+        "amount": "6.558887"
+      }
+    ],
+    "rewards_last_month": [
+      // [same as on the rewards website](https://rewards.lavanet.xyz/provider_rewards)
+      // but return spec to
+      {
+        "chain": "lava mainnet",
+        "spec": "LAVA",
+        "tokens": [
+          {
+            "amount": "15551928.000000000000000000",
+            "denom": "lava",
+            "original_denom": "ulava",
+            "value_usd": "$1.85"
+          },
+        ],
+        "total_usd": 1.848455506296
+      },
+    ],
+    "specs": [
+      // Array of chain specifications as returned by the listProviders api
+      {
+        "chain": "lava mainnet", // Chain name
+        "spec": "LAVA", // Specification identifier
+        "stakestatus": "Active", // Status (Active/Frozen/Jailed)
+        "stake": "4850000000", // Staked amount
+        "addons": "", // Provider addons
+        "extensions": "", // Provider extensions
+        "delegateCommission": "50", // Delegation commission
+        "delegateTotal": "94912424429", // Total delegations
+        "moniker": "Protofire DAO" // Provider name for this spec
+        "icon": <easy>
+      },
+      {
+        "chain": "fvm mainnet",
+        "spec": "FVM",
+        "stakestatus": "Active",
+        "stake": "5000000000",
+        "addons": "",
+        "extensions": "archive",
+        "delegateCommission": "50",
+        "delegateTotal": "97847860237",
+        "moniker": "Protofire DAO"
+      }
+    ],
+    "stake": "4850000000", // Provider's stake amount
+    "stakestatus": "Active", // Provider's status
+    "addons": "", // Provider's addons
+    "extensions": "", // Provider's extensions
+    "delegateTotal": "94912424429" // Total delegations
   }
 ]
 ```
 
-### Example Response
-
-```json
-[
-  {
-    "address": "lava@1gnkhmyhfd4vf03zwwczw2j4wmpckq5wgv2eugv",
-    "moniker": "-",
-    "apr": "-",
-    "commission": "100.0%",
-    "30_days_cu_served": "-",
-    "rewards": "-"
-  },
-  {
-    "address": "lava@1gpl2h7wwnwmzcxmlmg95rn2pr2m6epddg0ede4",
-    "moniker": "DTEAM",
-    "apr": "0.0115%",
-    "commission": "50.0%",
-    "30_days_cu_served": "158635270",
-    "rewards": [{ "denom": "lava", "amount": "0.096037" }]
-  }
-]
-```
+All string fields will return "-" if the data is not available.
 
 #### `/apr_full`
 
@@ -260,3 +297,59 @@ Both staking and restaking APRs are calculated similarly:
 - Actual returns may vary based on validator/provider performance
 - Calculations include all reward types (LAVA + other tokens)
 - APR calculation only considers active validators/providers (not jailed or frozen)
+
+### Example Response
+
+```json
+[
+  {
+    "address": "lava@16gjdwqfpvk3dyasy83wsr26pk27kjq9wvfz0qy",
+    "moniker": "Protofire DAO",
+    "apr": "43.1998%",
+    "commission": "50.0%",
+    "30_days_cu_served": "220504230",
+    "30_days_relays_served": "12476269",
+    "rewards": [
+      {
+        "denom": "usdc",
+        "amount": "35.230493"
+      },
+      {
+        "denom": "lava",
+        "amount": "6.558887"
+      }
+    ],
+    "specs": [
+      {
+        "chain": "lava mainnet",
+        "spec": "LAVA",
+        "stakestatus": "Active",
+        "stake": "4850000000",
+        "addons": "",
+        "extensions": "",
+        "delegateCommission": "50",
+        "delegateTotal": "94912424429",
+        "moniker": "Protofire DAO"
+      },
+      {
+        "chain": "fvm mainnet",
+        "spec": "FVM",
+        "stakestatus": "Active",
+        "stake": "5000000000",
+        "addons": "",
+        "extensions": "archive",
+        "delegateCommission": "50",
+        "delegateTotal": "97847860237",
+        "moniker": "Protofire DAO"
+      }
+    ],
+    "stake": "4850000000",
+    "stakestatus": "Active",
+    "addons": "",
+    "extensions": "",
+    "delegateTotal": "94912424429"
+  }
+]
+```
+
+All string fields will return "-" if the data is not available.

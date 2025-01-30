@@ -94,7 +94,8 @@ const chainMapping: Record<string, string> = {
     STRKT: "Starknet Testnet",
     SUI: "Sui Devnet",
     FUSET: "Fuse Testnet",
-    UNION: "Union Mainnet"
+    UNION: "Union Mainnet",
+    FUSE: "Fuse Mainnet"
 };
 
 /**

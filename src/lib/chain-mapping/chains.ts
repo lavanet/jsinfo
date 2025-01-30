@@ -95,7 +95,12 @@ const chainMapping: Record<string, string> = {
     SUI: "Sui Devnet",
     FUSET: "Fuse Testnet",
     UNION: "Union Mainnet",
-    FUSE: "Fuse Mainnet"
+    FUSE: "Fuse Mainnet",
+    ARBITRUM: "Arbitrum Mainnet",
+    ARBITRUMT: "Arbitrum Testnet",
+    ARBITRUMSP: "Arbitrum Sepolia Testnet",
+    ARBITRUMS: "Arbitrum Sepolia Testnet",
+    BASESP: "Base Sepolia Testnet",
 };
 
 /**

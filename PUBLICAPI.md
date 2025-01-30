@@ -151,7 +151,7 @@ This endpoint returns a list of all providers along with their APR, commission r
   {
     "address": "lava@16gjdwqfpvk3dyasy83wsr26pk27kjq9wvfz0qy", // Provider's lava address
     "moniker": "Protofire DAO", // Provider's display name
-    "avatar": <todo>
+    "avatar": <todo>,
     "apr": "43.1998%", // APR as percentage
     "commission": "50.0%", // The commision set by the provider
     "30_days_cu_served": "220504230", // Compute units served in last 30 days
@@ -195,7 +195,7 @@ This endpoint returns a list of all providers along with their APR, commission r
         "extensions": "", // Provider extensions
         "delegateCommission": "50", // Delegation commission
         "delegateTotal": "94912424429", // Total delegations
-        "moniker": "Protofire DAO" // Provider name for this spec
+        "moniker": "Protofire DAO", // Provider name for this spec
         "icon": "url" ...
       },
       {

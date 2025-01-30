@@ -3,8 +3,9 @@ import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { ProviderMonikerService } from '@jsinfo/redis/resources/global/ProviderMonikerSpecResource';
 import { desc, inArray } from 'drizzle-orm';
 import { queryJsinfo } from '@jsinfo/utils/db';
-import getIconForSpec from '@jsinfo/lib/icons/icons';
+import GetIconForSpec from '@jsinfo/lib/icons/icons';
 import { ConvertToChainName } from '@jsinfo/lib/chain-mapping/chains';
+
 export interface ProviderEntry {
     provider: string;
     specs: {
@@ -77,7 +78,7 @@ export class ListProvidersResource extends RedisResourceBase<ProvidersData, {}> 
             };
 
             // Get the icon
-            const icon = getIconForSpec(stake.specId);
+            const icon = GetIconForSpec(stake.specId);
             if (icon) {
                 specEntry.icon = icon;
             }

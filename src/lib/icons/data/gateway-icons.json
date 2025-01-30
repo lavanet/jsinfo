@@ -1,0 +1,422 @@
+[
+  {
+    "id": "Evmos",
+    "thumbnail": "https://gateway-fe-public-staging-assets.s3.amazonaws.com/icons/evmos.webp",
+    "services": [
+      {
+        "name": "Evmos Testnet (EVMOST)",
+        "type": "Testnet",
+        "onChainId": "EVMOST"
+      },
+      {
+        "name": "Evmos Mainnet (EVMOS)",
+        "type": "Mainnet",
+        "onChainId": "EVMOS"
+      }
+    ]
+  },
+  {
+    "id": "Canto",
+    "thumbnail": "https://gateway-fe-public-staging-assets.s3.amazonaws.com/icons/canto-network.webp",
+    "services": [
+      {
+        "name": "Canto Mainnet (CANTO)",
+        "type": "Mainnet",
+        "onChainId": "CANTO"
+      }
+    ]
+  },
+  {
+    "id": "Subsquid",
+    "thumbnail": "https://gateway-fe-public-staging-assets.s3.amazonaws.com/icons/subsquid2.png",
+    "services": [
+      {
+        "name": "Subsquid subgraphs (SQDSUBGRAPH)",
+        "type": "Mainnet",
+        "onChainId": "SQDSUBGRAPH"
+      }
+    ]
+  },
+  {
+    "id": "Avalanche",
+    "thumbnail": "https://gateway-fe-public-assets.s3.amazonaws.com/icons/avalanche-icon.png",
+    "services": [
+      {
+        "name": "Avalanche Mainnet (AVAX)",
+        "type": "Mainnet",
+        "onChainId": "AVAX"
+      }
+    ]
+  },
+  {
+    "id": "Starknet",
+    "thumbnail": "https://gateway-fe-public-staging-assets.s3.amazonaws.com/icons/starknet-icon.png",
+    "services": [
+      {
+        "name": "Starknet (STRK)",
+        "type": "Mainnet",
+        "onChainId": "STRK"
+      },
+      {
+        "name": "Starknet Sepolia Testnet (STRKS)",
+        "type": "Testnet",
+        "onChainId": "STRKS"
+      }
+    ]
+  },
+  {
+    "id": "Aptos",
+    "thumbnail": "https://gateway-fe-public-staging-assets.s3.amazonaws.com/icons/aptos-icon.png",
+    "services": [
+      {
+        "name": "Aptos Mainnet (APT1)",
+        "type": "Mainnet",
+        "onChainId": "APT1"
+      }
+    ]
+  },
+  {
+    "id": "Near",
+    "thumbnail": "https://gateway-fe-public-assets.s3.amazonaws.com/icons/near-icon.png",
+    "services": [
+      {
+        "name": "Near Testnet (NEART)",
+        "type": "Testnet",
+        "onChainId": "NEART"
+      },
+      {
+        "name": "Near Mainnet (NEAR)",
+        "type": "Mainnet",
+        "onChainId": "NEAR"
+      }
+    ]
+  },
+  {
+    "id": "Movement",
+    "thumbnail": "https://gateway-fe-public-assets.s3.amazonaws.com/icons/movement.png",
+    "services": [
+      {
+        "name": "Movement Mainnet (MOVEMENT)",
+        "type": "Mainnet",
+        "onChainId": "MOVEMENT"
+      }
+    ]
+  },
+  {
+    "id": "Stargaze",
+    "thumbnail": "https://gateway-fe-public-staging-assets.s3.amazonaws.com/icons/stargaze.png",
+    "services": [
+      {
+        "name": "Stargaze mainnet (STRGZ)",
+        "type": "Mainnet",
+        "onChainId": "STRGZ"
+      },
+      {
+        "name": "Stargaze testnet (STRGZT)",
+        "type": "Testnet",
+        "onChainId": "STRGZT"
+      }
+    ]
+  },
+  {
+    "id": "Juno",
+    "thumbnail": "https://gateway-fe-public-staging-assets.s3.amazonaws.com/icons/juno-icon.png",
+    "services": [
+      {
+        "name": "Juno (JUN1)",
+        "type": "Mainnet",
+        "onChainId": "JUN1"
+      },
+      {
+        "name": "Juno Testnet (JUNT1)",
+        "type": "Testnet",
+        "onChainId": "JUNT1"
+      }
+    ]
+  },
+  {
+    "id": "Osmosis",
+    "thumbnail": "https://gateway-fe-public-staging-assets.s3.amazonaws.com/icons/osmosis-icon.png",
+    "services": [
+      {
+        "name": "Osmosis Testnet (OSMOSIST)",
+        "type": "Testnet",
+        "onChainId": "OSMOSIST"
+      },
+      {
+        "name": "Osmosis (OSMOSIS)",
+        "type": "Mainnet",
+        "onChainId": "OSMOSIS"
+      }
+    ]
+  },
+  {
+    "id": "Cosmos Hub",
+    "thumbnail": "https://gateway-fe-public-staging-assets.s3.amazonaws.com/icons/atom-icon.png",
+    "services": [
+      {
+        "name": "Cosmos Hub (COSMOSHUB)",
+        "type": "Mainnet",
+        "onChainId": "COSMOSHUB"
+      },
+      {
+        "name": "Cosmos Hub Testnet (COSMOSHUBT)",
+        "type": "Testnet",
+        "onChainId": "COSMOSHUBT"
+      }
+    ]
+  },
+  {
+    "id": "Celestia",
+    "thumbnail": "https://gateway-fe-public-assets.s3.amazonaws.com/icons/celestia.png",
+    "services": [
+      {
+        "name": "Celestia mainnet (CELESTIA)",
+        "type": "Mainnet",
+        "onChainId": "CELESTIA"
+      },
+      {
+        "name": "Celestia mocha testnet (CELESTIAT)",
+        "type": "Testnet",
+        "onChainId": "CELESTIAT"
+      }
+    ]
+  },
+  {
+    "id": "Axelar",
+    "thumbnail": "https://gateway-fe-public-staging-assets.s3.amazonaws.com/icons/axelar-icon.png",
+    "services": [
+      {
+        "name": "Axelar Testnet (AXELART)",
+        "type": "Testnet",
+        "onChainId": "AXELART"
+      },
+      {
+        "name": "Axelar Mainnet (AXELAR)",
+        "type": "Mainnet",
+        "onChainId": "AXELAR"
+      }
+    ]
+  },
+  {
+    "id": "Agoric",
+    "thumbnail": "https://gateway-fe-public-assets.s3.amazonaws.com/icons/agoric.png",
+    "services": [
+      {
+        "name": "Agoric Mainnet (AGR)",
+        "type": "Mainnet",
+        "onChainId": "AGR"
+      },
+      {
+        "name": "Agoric Testnet (AGRT)",
+        "type": "Testnet",
+        "onChainId": "AGRT"
+      }
+    ]
+  },
+  {
+    "id": "Lava",
+    "thumbnail": "https://gateway-fe-public-staging-assets.s3.amazonaws.com/icons/lava-icon.png",
+    "services": [
+      {
+        "name": "Lava (LAV1)",
+        "type": "Mainnet",
+        "onChainId": "LAV1"
+      }
+    ]
+  },
+  {
+    "id": "Koii",
+    "thumbnail": "https://gateway-fe-public-assets.s3.amazonaws.com/icons/koii-icon.png",
+    "services": [
+      {
+        "name": "Koii Testnet (KOIIT)",
+        "type": "Testnet",
+        "onChainId": "KOIIT"
+      }
+    ]
+  },
+  {
+    "id": "Solana",
+    "thumbnail": "https://gateway-fe-public-staging-assets.s3.amazonaws.com/icons/solana-icon.png",
+    "services": [
+      {
+        "name": "Solana Mainnet (SOLANA)",
+        "type": "Mainnet",
+        "onChainId": "SOLANA"
+      },
+      {
+        "name": "Solana Testnet (SOLANAT)",
+        "type": "Testnet",
+        "onChainId": "SOLANAT"
+      }
+    ]
+  },
+  {
+    "id": "Base",
+    "thumbnail": "https://gateway-fe-public-staging-assets.s3.amazonaws.com/icons/base-icon.png",
+    "services": [
+      {
+        "name": "Base Testnet (BASET)",
+        "type": "Testnet",
+        "onChainId": "BASET"
+      },
+      {
+        "name": "Base Mainnet (BASE)",
+        "type": "Mainnet",
+        "onChainId": "BASE"
+      }
+    ]
+  },
+  {
+    "id": "Fuse",
+    "thumbnail": "https://gateway-fe-public-assets.s3.us-east-1.amazonaws.com/icons/fuse_round.png",
+    "services": [
+      {
+        "name": "Fuse Mainnet",
+        "type": "Mainnet",
+        "onChainId": "FUSE"
+      }
+    ]
+  },
+  {
+    "id": "Ethereum",
+    "thumbnail": "https://gateway-fe-public-staging-assets.s3.amazonaws.com/icons/ethereum-icon.png",
+    "services": [
+      {
+        "name": "Ethereum (ETH1)",
+        "type": "Mainnet",
+        "onChainId": "ETH1"
+      },
+      {
+        "name": "Sepolia (SEP1)",
+        "type": "Testnet",
+        "onChainId": "SEP1"
+      },
+      {
+        "name": "Holesky (HOL1)",
+        "type": "Testnet",
+        "onChainId": "HOL1"
+      },
+      {
+        "name": "Beacon (ETHBEACON)",
+        "type": "Testnet",
+        "onChainId": "ETHBEACON"
+      }
+    ]
+  },
+  {
+    "id": "Fantom",
+    "thumbnail": "https://gateway-fe-public-staging-assets.s3.amazonaws.com/icons/fantom-icon.png",
+    "services": [
+      {
+        "name": "Fantom (FTM250)",
+        "type": "Mainnet",
+        "onChainId": "FTM250"
+      }
+    ]
+  },
+  {
+    "id": "Polygon",
+    "thumbnail": "https://gateway-fe-public-staging-assets.s3.amazonaws.com/icons/polygon-icon.png",
+    "services": [
+      {
+        "name": "Polygon (POLYGON1)",
+        "type": "Mainnet",
+        "onChainId": "POLYGON1"
+      }
+    ]
+  },
+  {
+    "id": "Filecoin",
+    "thumbnail": "https://gateway-fe-public-staging-assets.s3.amazonaws.com/icons/filecoin.png",
+    "services": [
+      {
+        "name": "Filecoin Mainnet (FVM)",
+        "type": "Mainnet",
+        "onChainId": "FVM"
+      }
+    ]
+  },
+  {
+    "id": "Celo",
+    "thumbnail": "https://gateway-fe-public-staging-assets.s3.amazonaws.com/icons/celo-icon.png",
+    "services": [
+      {
+        "name": "Celo (CELO)",
+        "type": "Mainnet",
+        "onChainId": "CELO"
+      },
+      {
+        "name": "Celo - Alfajores (ALFAJORES)",
+        "type": "Testnet",
+        "onChainId": "ALFAJORES"
+      }
+    ]
+  },
+  {
+    "id": "Arbitrum",
+    "thumbnail": "https://gateway-fe-public-staging-assets.s3.amazonaws.com/icons/arbitrum-icon.png",
+    "services": [
+      {
+        "name": "Arbitrum (ARB1)",
+        "type": "Mainnet",
+        "onChainId": "ARB1"
+      },
+      {
+        "name": "Arbitrum-Nova (ARBN)",
+        "type": "Mainnet",
+        "onChainId": "ARBN"
+      },
+      {
+        "name": "Arbitrum Sepolia Testnet (ARBS)",
+        "type": "Testnet",
+        "onChainId": "ARBS"
+      }
+    ]
+  },
+  {
+    "id": "Optimism",
+    "thumbnail": "https://gateway-fe-public-staging-assets.s3.amazonaws.com/icons/optimism.webp",
+    "services": [
+      {
+        "name": "Optimism Mainnet (OPTM)",
+        "type": "Mainnet",
+        "onChainId": "OPTM"
+      }
+    ]
+  },
+  {
+    "id": "Blast",
+    "thumbnail": "https://gateway-fe-public-staging-assets.s3.amazonaws.com/icons/blast.png",
+    "services": [
+      {
+        "name": "Blast mainnet (BLAST)",
+        "type": "Mainnet",
+        "onChainId": "BLAST"
+      }
+    ]
+  },
+  {
+    "id": "Kakarot",
+    "thumbnail": "https://gateway-fe-public-assets.s3.amazonaws.com/icons/kakarot.png",
+    "services": [
+      {
+        "name": "Kakarot Sepolia Testnet (KAKAROTT)",
+        "type": "Testnet",
+        "onChainId": "KAKAROTT"
+      }
+    ]
+  },
+  {
+    "id": "Berachain",
+    "thumbnail": "https://gateway-fe-public-assets.s3.amazonaws.com/icons/berachain-icon.png",
+    "services": [
+      {
+        "name": "Berachain bArtio (BERAT2)",
+        "type": "Testnet",
+        "onChainId": "BERAT2"
+      }
+    ]
+  }
+]

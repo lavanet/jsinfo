@@ -110,6 +110,14 @@ import { IpRpcEndpointsIndexHandler, IpRpcEndpointsIndexHandlerOpts } from './ha
 import { MainnetProviderEstimatedRewardsHandler } from './handlers/MainnetProviderEstimatedRewards/MainnetProviderEstimatedRewardsHandler';
 import { MainnetProviderEstimatedRewardsHandlerOpts } from './handlers/MainnetProviderEstimatedRewards/MainnetProviderEstimatedRewardsHandler';
 
+// -- Provider avatar ajax --
+import {
+    GetProviderAvatarHandler,
+    GetProviderAvatarHandlerOpts,
+    ListProviderAvatarsHandler,
+    ListProviderAvatarsHandlerOpts,
+    ProviderAvatarParams
+} from './handlers/ajax/providerAvatarHandler';
 
 // -- Server status ajax --
 GetServerInstance().get('/latest', LatestRawHandlerOpts, LatestRawHandler);
@@ -259,3 +267,7 @@ GetServerInstance().get('/lava_iprpc_endpoints', IpRpcEndpointsIndexHandlerOpts,
 
 // lava_mainnet_provider_estimated_rewards
 GetServerInstance().get('/lava_mainnet_provider_estimated_rewards', MainnetProviderEstimatedRewardsHandlerOpts, MainnetProviderEstimatedRewardsHandler);
+
+// -- Provider avatar ajax --
+GetServerInstance().get<ProviderAvatarParams>('/provider_avatar/:providerId', GetProviderAvatarHandlerOpts, GetProviderAvatarHandler);
+GetServerInstance().get('/provider_avatars', ListProviderAvatarsHandlerOpts, ListProviderAvatarsHandler);

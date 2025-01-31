@@ -5,6 +5,7 @@
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { ProvidersData, ListProvidersResource } from '@jsinfo/redis/resources/ajax/ListProvidersResource';
+import { GetProviderAvatar } from '@jsinfo/restRpc/GetProviderAvatar';
 
 export const ListProvidersRawHandlerOpts: RouteShorthandOptions = {
     schema: {
@@ -23,6 +24,7 @@ export const ListProvidersRawHandlerOpts: RouteShorthandOptions = {
                                     type: 'object',
                                     properties: {
                                         provider: { type: 'string' },
+                                        avatar: { type: ['string', 'null'] },
                                         specs: {
                                             type: 'array',
                                             items: {
@@ -36,8 +38,8 @@ export const ListProvidersRawHandlerOpts: RouteShorthandOptions = {
                                                     addons: { type: 'string' },
                                                     extensions: { type: 'string' },
                                                     delegateCommission: { type: 'string' },
-                                                    // delegateLimit: { type: 'string' },
                                                     delegateTotal: { type: 'string' },
+                                                    icon: { type: 'string' }
                                                 },
                                                 required: ['spec', 'moniker']
                                             }
@@ -63,10 +65,32 @@ export const ListProvidersRawHandlerOpts: RouteShorthandOptions = {
     }
 };
 
+export interface ProviderData {
+    provider: string;
+    specs: {
+        chain: string;
+        spec: string | null;
+        moniker: string;
+        stakestatus: string | null;
+        stake: string | null;
+        addons: string | null;
+        extensions: string | null;
+        delegateCommission: string | null;
+        delegateTotal: string | null;
+        icon?: string;
+    }[];
+}
+
+export interface ProvidersResponse {
+    height: number;
+    datetime: number;
+    providers: ProviderData[];
+}
+
 export async function ListProvidersRawHandler(
     request: FastifyRequest,
     reply: FastifyReply
-): Promise<{ data: ProvidersData }> {
+): Promise<{ data: ProvidersResponse }> {
     const resource = new ListProvidersResource();
     const data = await resource.fetch();
     if (!data) {
@@ -74,5 +98,17 @@ export async function ListProvidersRawHandler(
         reply.send({ error: 'Failed to fetch providers data' });
         return reply;
     }
-    return { data };
+
+    // Add avatars to providers
+    const providersWithAvatars = {
+        height: data.height,
+        datetime: data.datetime,
+        providers: await Promise.all(data.providers.map(async (provider: ProviderData) => ({
+            provider: provider.provider,
+            avatar: await GetProviderAvatar(provider.provider),
+            specs: provider.specs
+        })))
+    };
+
+    return { data: providersWithAvatars };
 }

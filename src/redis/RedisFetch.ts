@@ -2,7 +2,7 @@ import { RedisCache } from "@jsinfo/redis/classes/RedisCache";
 import { FetchRestData } from "../restRpc/fetch";
 import { logger } from "@jsinfo/utils/logger";
 
-export async function RedisFetch<T>(url: string): Promise<T> {
+export async function RedisFetch<T>(url: string, ttl: number = 1200): Promise<T> {
     // Check if the data is in the cache
     const cachedData = await RedisCache.get("url:" + url);
     if (cachedData) {
@@ -18,7 +18,7 @@ export async function RedisFetch<T>(url: string): Promise<T> {
             throw new Error(`Failed to fetch data: ${response}`);
         }
 
-        RedisCache.set("url:" + url, JSON.stringify(response), 1200); // 20 minutes
+        RedisCache.set("url:" + url, JSON.stringify(response), ttl); // 20 minutes
         return response as T;
     } catch (error) {
         logger.error(`Error fetching data from ${url}:`, error); // Use logger for error

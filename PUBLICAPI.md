@@ -29,12 +29,9 @@ Returns a comprehensive list of all Lava Network providers, including:
 - Staking details (amounts, delegation limits)
 - Commission rates and current status
 - And for each stake - the stakestatus (active/frozen/jailed)
+- Returns avatar for each provider
 
-#### `/providers`
-
-Returns list of all providers (addresses only)
-
-#### `/active_providers`
+#### `/providers`, `/active_providers`
 
 Returns list of all active providers (addresses only)
 
@@ -151,14 +148,14 @@ This endpoint returns a list of all providers along with their APR, commission r
   {
     "address": "lava@16gjdwqfpvk3dyasy83wsr26pk27kjq9wvfz0qy", // Provider's lava address
     "moniker": "Protofire DAO", // Provider's display name
-    "avatar": <todo>,
+    "avatar": "url", // Provider's avatar as set in the provider metadata identity (keybase.io)
     "apr": "43.1998%", // APR as percentage
     "commission": "50.0%", // The commision set by the provider
     "30_days_cu_served": "220504230", // Compute units served in last 30 days
     "30_days_relays_served": "12476269", // Number of relays served in last 30 days
     "rewards_10k_lava_delegation": [
-    // Monthly estimated rewards for a 10,000 LAVA delegation
-     {
+      // Monthly estimated rewards for a 10,000 LAVA delegation
+      {
         "denom": "usdc", // Token denomination
         "amount": "35.230493" // Token amount
       },
@@ -179,10 +176,10 @@ This endpoint returns a list of all providers along with their APR, commission r
             "denom": "lava",
             "original_denom": "ulava",
             "value_usd": "$1.85"
-          },
+          }
         ],
         "total_usd": 1.848455506296
-      },
+      }
     ],
     "specs": [
       // Array of chain specifications as returned by the listProviders api

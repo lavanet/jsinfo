@@ -6,6 +6,7 @@ import { JSONStringify } from '@jsinfo/utils/fmt';
 import { logger } from '@jsinfo/utils/logger';
 import GetIconForSpec from '@jsinfo/lib/icons/icons';
 import { ConvertToChainName } from '@jsinfo/lib/chain-mapping/chains';
+import { GetProviderAvatar } from '@jsinfo/restRpc/GetProviderAvatar';
 
 interface RewardToken {
     denom: string;
@@ -34,6 +35,7 @@ interface ProviderPerformanceData extends Omit<AllAprProviderData, 'rewards'> {
         total_usd: number;
         icon?: string;
     }>;
+    avatar?: string | null;
 }
 
 export const ProviderPerformanceHandlerOpts: RouteShorthandOptions = {
@@ -106,7 +108,8 @@ export const ProviderPerformanceHandlerOpts: RouteShorthandOptions = {
                         stakestatus: { type: 'string' },
                         addons: { type: 'string' },
                         extensions: { type: 'string' },
-                        delegateTotal: { type: 'string' }
+                        delegateTotal: { type: 'string' },
+                        avatar: { type: 'string' }
                     }
                 }
             },
@@ -181,9 +184,10 @@ export async function ProviderPerformanceRawHandler(request: FastifyRequest, rep
         );
 
         // Combine the data
-        const combinedData = aprResource.map(apr => {
+        const combinedData = await Promise.all(aprResource.map(async apr => {
             const provider = providersMap.get(apr.address);
             const rewards_last_month = processRewardsBySpec(rewardsMap.get(apr.address));
+            const avatar = await GetProviderAvatar(apr.address);
 
             const result: ProviderPerformanceData = {
                 ...apr,
@@ -199,13 +203,13 @@ export async function ProviderPerformanceRawHandler(request: FastifyRequest, rep
                 stakestatus: provider?.specs?.[0]?.stakestatus || '',
                 addons: provider?.specs?.[0]?.addons || '',
                 extensions: provider?.specs?.[0]?.extensions || '',
-                delegateTotal: provider?.specs?.[0]?.delegateTotal || ''
+                delegateTotal: provider?.specs?.[0]?.delegateTotal || '',
+                avatar
             };
 
             delete (result as any).rewards;
-
             return result;
-        });
+        }));
 
         reply.header('Content-Type', 'application/json');
         return reply.send(JSONStringify(combinedData));

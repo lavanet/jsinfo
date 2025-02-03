@@ -18,10 +18,10 @@ export interface MainnetActiveProvidersResponse {
 
 export interface TokenInfo {
     source_denom: string;
+    resolved_amount: string;
     resolved_denom: string;
     display_denom: string;
     display_amount: string;
-    resolved_amount: string;
     value_usd: string;
 }
 
@@ -77,12 +77,7 @@ export interface ProviderRewardsData {
             latest: {
                 info: ProcessedInfoItem[];
                 total: {
-                    tokens: Array<{
-                        amount: string;
-                        denom: string;
-                        original_denom: string;
-                        value_usd: string;
-                    }>;
+                    tokens: TokenInfo[];
                     total_usd: number;
                 };
                 recommended_block: string;
@@ -156,12 +151,7 @@ export async function GenLavaLatestProviderRewards(): Promise<ProviderRewardsDat
             latest: {
                 info: ProcessedInfoItem[];
                 total: {
-                    tokens: Array<{
-                        amount: string;
-                        denom: string;
-                        original_denom: string;
-                        value_usd: string;
-                    }>;
+                    tokens: TokenInfo[];
                     total_usd: number;
                 };
                 recommended_block: string;
@@ -193,10 +183,17 @@ export async function GenLavaLatestProviderRewards(): Promise<ProviderRewardsDat
                         latest: {
                             info: processed.info || [],
                             total: {
-                                tokens: processed.tokens,
+                                tokens: processed.tokens.map(t => ({
+                                    source_denom: t.denom,
+                                    resolved_amount: t.amount,
+                                    resolved_denom: t.denom,
+                                    display_denom: t.denom,
+                                    display_amount: t.amount,
+                                    value_usd: t.value_usd
+                                })),
                                 total_usd: processed.total_usd
                             },
-                            recommended_block: recommendedBlock // Use the extracted value
+                            recommended_block: recommendedBlock
                         }
                     }
                 });
@@ -225,6 +222,8 @@ export async function GenLavaLatestProviderRewards(): Promise<ProviderRewardsDat
         providers_with_rewards: providersData.length
     });
 
+    const coingeckoPrices = getCoingeckoPricesResolvedMap(timestamp);
+
     return {
         providers: providersData,
         timestamp: now.toISOString().slice(0, 10).replace(/-/g, '_'),
@@ -238,7 +237,14 @@ export async function GenLavaLatestProviderRewards(): Promise<ProviderRewardsDat
                 seconds_off: 0,
                 date: blockTime.toISOString().split('T')[0]
             },
-            coingecko_prices: getCoingeckoPricesResolvedMap(timestamp)
+            coingecko_prices: {
+                tokens: Object.entries(coingeckoPrices).map(([_, price]) => ({
+                    source_denom: price.source_denom,
+                    resolved_denom: price.resolved_denom,
+                    display_denom: price.display_denom,
+                    value_usd: `$${price.price}`
+                }))
+            }
         }
     };
 }

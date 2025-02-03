@@ -35,12 +35,30 @@ interface CoinGeckoPriceInfo {
 // Global price cache map
 const COINGECKO_PRICES_RESOLVED_MAP: Record<string, Record<string, CoinGeckoPriceInfo>> = {};
 
-export function getCoingeckoPricesResolvedMap(timestamp: number | null = null): Record<string, CoinGeckoPriceInfo> {
-    const key = timestamp === null ? "latest" : timestamp.toString();
-    if (!COINGECKO_PRICES_RESOLVED_MAP[key]) {
-        COINGECKO_PRICES_RESOLVED_MAP[key] = {};
-    }
-    return COINGECKO_PRICES_RESOLVED_MAP[key];
+export function getCoingeckoPricesResolvedMap(timestamp: string | null) {
+    const prices = CoinGekoCache.getPrices();
+    return Object.entries(prices).reduce((acc, [denom, price]) => {
+        // Get the correct mapping for the token
+        const tokenInfo = getTokenInfo(denom);
+        if (!tokenInfo) return acc;
+
+        // Convert price to proper decimal places based on token
+        const displayPrice = convertToDisplayPrice(price, tokenInfo.decimals);
+
+        acc[denom] = {
+            source_denom: tokenInfo.source_denom,
+            resolved_denom: tokenInfo.resolved_denom,
+            display_denom: tokenInfo.display_denom,
+            price: displayPrice
+        };
+        return acc;
+    }, {} as Record<string, CoinGeckoPriceInfo>);
+}
+
+function convertToDisplayPrice(price: number, decimals: number): number {
+    // For most tokens, decimals is 6, so divide by 1,000,000
+    const divisor = Math.pow(10, decimals);
+    return price / divisor;
 }
 
 export async function processTokenArrayAtTime(

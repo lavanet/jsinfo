@@ -29,40 +29,14 @@ export interface TokenInfo {
 }
 
 export interface CoinGeckoPriceInfo {
-    source_denom: string;     // e.g. "ulava"
-    resolved_denom: string;   // e.g. "ulava"
-    display_denom: string;    // e.g. "lava"
-    value_usd: string;       // e.g. "$0.15017163"
-}
-
-export interface ProviderRewardsDataWithDynamicBlock {
-    providers: Array<{
-        address: string;
-        rewards_by_block: {
-            [key: string]: {
-                info: ProcessedInfoItem[];
-                total: {
-                    tokens: TokenInfo[];
-                    total_usd: number;
-                };
-                recommended_block: string;
-            };
-        };
-    }>;
-    timestamp: string;
-    total_providers: number;
-    providers_with_rewards: number;
-    metadata: {
-        generated_at: string;
-        block_info: BlockMetadata | null;
-        coingecko_prices: {
-            tokens: CoinGeckoPriceInfo[];
-        };
-    };
+    source_denom: string;
+    resolved_denom: string;
+    display_denom: string;
+    value_usd: string;
 }
 
 export interface GetResourceResponse {
-    data: ProviderRewardsDataWithDynamicBlock;
+    data: ProviderRewardsData;
 }
 
 class MainnetProviderEstimatedRewardsGetResource extends RedisResourceBase<GetResourceResponse, GetQueryParams> {
@@ -98,21 +72,11 @@ class MainnetProviderEstimatedRewardsGetResource extends RedisResourceBase<GetRe
 
             // For non-latest blocks, return data exactly as it is in the JSON file
             if (blockId !== 'latest') {
-                return { data: data as ProviderRewardsDataWithDynamicBlock };
+                return { data: data };
             }
 
             // Only transform data for 'latest' block
-            return {
-                data: {
-                    ...data,
-                    providers: data.providers.map(p => ({
-                        address: p.address,
-                        rewards_by_block: {
-                            [blockId]: p.rewards_by_block.latest
-                        }
-                    }))
-                }
-            };
+            return { data: data };
         } catch (error) {
             logger.error('Error fetching provider rewards data:', error);
             throw error;

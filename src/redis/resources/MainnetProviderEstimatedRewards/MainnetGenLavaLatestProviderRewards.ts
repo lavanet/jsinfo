@@ -25,13 +25,6 @@ export interface TokenInfo {
     value_usd: string;
 }
 
-export interface CoinGeckoPrice {
-    source_denom: string;
-    resolved_denom: string;
-    display_denom: string;
-    price: number;
-}
-
 export interface ProcessedInfoItem {
     source: string;
     amount: {
@@ -51,7 +44,7 @@ export interface ProcessedRewardsData {
         };
     };
     coingecko_prices: {
-        tokens: CoinGeckoPrice[];
+        tokens: CoinGeckoPriceInfo[];
     };
     date: string;
 }
@@ -67,7 +60,7 @@ export interface CoinGeckoPriceInfo {
     source_denom: string;
     resolved_denom: string;
     display_denom: string;
-    price: number;
+    value_usd: string;
 }
 
 export interface ProviderRewardsData {
@@ -90,7 +83,9 @@ export interface ProviderRewardsData {
     metadata: {
         generated_at: string;
         block_info: BlockMetadata | null;
-        coingecko_prices: Record<string, CoinGeckoPriceInfo>;
+        coingecko_prices: {
+            tokens: CoinGeckoPriceInfo[];
+        };
     };
 }
 
@@ -113,6 +108,12 @@ interface BlockData {
         tokens: TokenInfo[];
         total_usd: number;
     };
+}
+
+export interface ProcessedToken {
+    denom: string;
+    amount: string;
+    value_usd: string;
 }
 
 async function getMainnetLatestBlock(): Promise<MainnetLatestBlock> {
@@ -158,71 +159,36 @@ export async function GenLavaLatestProviderRewards(): Promise<ProviderRewardsDat
             };
         };
     }> = [];
-    const timestamp = null;
 
     for (const provider of providers) {
         try {
             const response = await MainnetGetEstimatedProviderRewardsNoAmountNoDenom(provider);
-            // logger.debug(`Provider ${provider} response:`, response);
-
-            const processed = await processTokenArrayAtTime(response.total || [], timestamp);
-            // logger.debug(`Processed rewards for ${provider}:`, processed);
-
-            // Check if there are any tokens with value
-            const hasTokens = processed.tokens.length > 0;
-            // logger.debug(`Provider ${provider} has tokens: ${hasTokens}, token count: ${processed.tokens.length}`);
-
-            if (hasTokens) {
-                // Get recommended block directly from response
-                const recommendedBlock = response.recommended_block?.toString() || "0";
-                // logger.debug(`Provider ${provider} recommended block:`, recommendedBlock);
-
+            const processed = await processTokenArrayAtTime(response.total || [], null);
+            if (processed.tokens.length > 0) {
                 providersData.push({
                     address: provider,
                     rewards_by_block: {
                         latest: {
                             info: processed.info || [],
                             total: {
-                                tokens: processed.tokens.map(t => ({
-                                    source_denom: t.denom,
-                                    resolved_amount: t.amount,
-                                    resolved_denom: t.denom,
-                                    display_denom: t.denom,
-                                    display_amount: t.amount,
-                                    value_usd: t.value_usd
-                                })),
+                                tokens: processed.tokens,
                                 total_usd: processed.total_usd
                             },
-                            recommended_block: recommendedBlock
+                            recommended_block: response.recommended_block?.toString() || "0"
                         }
                     }
                 });
-
-                // logger.debug(`Added provider to providersData:`, {
-                //     provider,
-                //     currentLength: providersData.length,
-                //     totalUsd: processed.total_usd,
-                //     tokenCount: processed.tokens.length,
-                //     recommendedBlock // Log the block number we're using
-                // });
-            } else {
-                logger.debug(`Skipping provider ${provider} - no rewards found`);
             }
         } catch (error) {
-            logger.error(`Error processing provider ${provider}:`, error);
+            throw new Error(`Failed to process provider ${provider}: ${error}`);
         }
     }
 
-    logger.debug(`Final providersData:`, {
-        providerCount: providersData.length,
-        firstFewProviders: providersData.slice(0, 3),
-        hasProviders: providersData.length > 0,
-        timestamp: now.toISOString().slice(0, 10).replace(/-/g, '_'),
-        total_providers: providers.length,
-        providers_with_rewards: providersData.length
-    });
+    if (providersData.length === 0) {
+        throw new Error('No provider data was processed successfully');
+    }
 
-    const coingeckoPrices = getCoingeckoPricesResolvedMap(timestamp);
+    const coingeckoPrices = getCoingeckoPricesResolvedMap(null);
 
     return {
         providers: providersData,
@@ -238,76 +204,8 @@ export async function GenLavaLatestProviderRewards(): Promise<ProviderRewardsDat
                 date: blockTime.toISOString().split('T')[0]
             },
             coingecko_prices: {
-                tokens: Object.entries(coingeckoPrices).map(([_, price]) => ({
-                    source_denom: price.source_denom,
-                    resolved_denom: price.resolved_denom,
-                    display_denom: price.display_denom,
-                    value_usd: `$${price.price}`
-                }))
+                tokens: Object.values(coingeckoPrices)
             }
         }
     };
-}
-
-export class MainnetGenLavaLatestProviderRewards {
-    public static async Process(data: any): Promise<ProcessedRewardsData> {
-        const processed: ProcessedRewardsData = {
-            rewards_by_block: {},
-            coingecko_prices: { tokens: [] },
-            date: new Date().toISOString().split('T')[0]
-        };
-
-        // Process coingecko prices
-        if (data.coingecko_prices?.tokens) {
-            processed.coingecko_prices.tokens = data.coingecko_prices.tokens.map((token: any) => ({
-                source_denom: token.source_denom,
-                resolved_denom: token.resolved_denom,
-                display_denom: token.display_denom,
-                price: parseFloat(token.value_usd.replace('$', ''))
-            }));
-        }
-
-        // Process rewards by block
-        for (const [block, blockData] of Object.entries<BlockData>(data.rewards_by_block)) {
-            processed.rewards_by_block[block] = {
-                info: [],
-                total: { tokens: [], total_usd: 0 }
-            };
-
-            // Process info items
-            if (blockData.info) {
-                processed.rewards_by_block[block].info = blockData.info.map((item: any) => ({
-                    source: item.source,
-                    amount: {
-                        tokens: item.amount.tokens.map((token: any) => ({
-                            source_denom: token.source_denom,
-                            resolved_denom: token.resolved_denom,
-                            display_denom: token.display_denom,
-                            display_amount: token.display_amount,
-                            resolved_amount: token.resolved_amount,
-                            value_usd: `$${parseFloat(token.value_usd.replace('$', '')).toFixed(2)}`
-                        })),
-                        total_usd: item.amount.total_usd
-                    }
-                }));
-            }
-
-            // Process total
-            if (blockData.total) {
-                processed.rewards_by_block[block].total = {
-                    tokens: blockData.total.tokens.map((token: any) => ({
-                        source_denom: token.source_denom,
-                        resolved_denom: token.resolved_denom,
-                        display_denom: token.display_denom,
-                        display_amount: token.display_amount,
-                        resolved_amount: token.resolved_amount,
-                        value_usd: `$${parseFloat(token.value_usd.replace('$', '')).toFixed(2)}`
-                    })),
-                    total_usd: blockData.total.total_usd
-                };
-            }
-        }
-
-        return processed;
-    }
 }

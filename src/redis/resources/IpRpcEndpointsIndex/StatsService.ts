@@ -42,7 +42,7 @@ export class StatsService {
     }
 
     public static async fetchAllStats(chainIds: string[]): Promise<Record<string, Record<StatsPeriod, StatsResponse>>> {
-        console.log(`[StatsService] Fetching stats for ${chainIds.length} chains`);
+        // console.log(`[StatsService] Fetching stats for ${chainIds.length} chains`);
         const results: Record<string, Record<StatsPeriod, StatsResponse>> = {};
         const periods: StatsPeriod[] = ['24h', '7d', '30d'];
 
@@ -55,27 +55,27 @@ export class StatsService {
                 const ttl = await RedisCache.getTTL(cacheKey);
                 const shouldRefetch = ttl && (this.CACHE_DURATION - ttl) >= this.REFETCH_INTERVAL;
 
-                console.log(`[StatsService] ${chainId}/${period}:`, {
-                    cached: cached?.total_requests > 0 ? '✅' : '❌',
-                    ttl: ttl || 'none',
-                    shouldRefetch: shouldRefetch ? '🔄' : '✋'
-                });
+                // console.log(`[StatsService] ${chainId}/${period}:`, {
+                //     cached: cached?.total_requests > 0 ? '✅' : '❌',
+                //     ttl: ttl || 'none',
+                //     shouldRefetch: shouldRefetch ? '🔄' : '✋'
+                // });
 
                 if (cached && cached.total_requests > 0 && !shouldRefetch) {
-                    console.log(`[StatsService] Using cache for ${chainId}/${period}: ${cached.total_requests} requests`);
+                    // console.log(`[StatsService] Using cache for ${chainId}/${period}: ${cached.total_requests} requests`);
                     results[chainId][period] = cached;
                     return;
                 }
 
                 const stats = await this.fetchStats(chainId, period);
                 if (stats.total_requests > 0) {
-                    console.log(`[StatsService] New data for ${chainId}/${period}: ${stats.total_requests} requests`);
+                    // console.log(`[StatsService] New data for ${chainId}/${period}: ${stats.total_requests} requests`);
                     await RedisCache.setDict(cacheKey, stats, this.CACHE_DURATION);
                     results[chainId][period] = stats;
                 } else {
                     const originalData = IpRpcEndpointsData.find(e => e.chainId === chainId);
                     const fallbackRequests = originalData?.requests[period] || 0;
-                    console.log(`[StatsService] Using fallback for ${chainId}/${period}: ${fallbackRequests} requests`);
+                    // console.log(`[StatsService] Using fallback for ${chainId}/${period}: ${fallbackRequests} requests`);
                     results[chainId][period] = {
                         ...this.getDefaultStats(),
                         total_requests: fallbackRequests
@@ -84,7 +84,7 @@ export class StatsService {
             }));
         }));
 
-        console.log('[StatsService] Fetch completed');
+        // console.log('[StatsService] Fetch completed');
         return results;
     }
 

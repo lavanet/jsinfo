@@ -36,75 +36,66 @@ export interface CoinGeckoPriceInfo {
 // Global price cache map
 const COINGECKO_PRICES_RESOLVED_MAP: Record<string, Record<string, CoinGeckoPriceInfo>> = {};
 
-export async function processTokenArrayAtTime(
-    tokens: TokenAmount[],
-    timestamp: number | null = null
-): Promise<ProcessedTokenArray> {
-    const processedItems: ProcessedToken[] = [];
-    let usdSum = 0;
+export async function processTokenArrayAtTime(items: any[], timestamp: number | null = null): Promise<ProcessedTokenArray> {
+    const processedItems: ProcessedInfoItem[] = [];
+    const processedTokens: ProcessedToken[] = [];
+    let totalUsd = 0;
 
     const key = timestamp === null ? "latest" : timestamp.toString();
     if (!COINGECKO_PRICES_RESOLVED_MAP[key]) {
         COINGECKO_PRICES_RESOLVED_MAP[key] = {};
     }
 
-    for (const token of tokens) {
+    for (const item of items) {
         try {
-            if (!token || !('amount' in token) || !('denom' in token)) {
-                logger.warn('[Token Error] Token missing required fields:', token);
-                continue;
-            }
-
-            const amount = parseFloat(token.amount.toString());
-            const sourceDenom = token.denom;
-
-            if (!sourceDenom) {
-                logger.warn('[Token Error] Token has no denom:', token);
-                continue;
-            }
-
-            const [baseAmount, baseDenom] = await ConvertToBaseDenom(amount.toString(), sourceDenom);
+            const tokenAmount = item.amount[0];
+            const [baseAmount, baseDenom] = await ConvertToBaseDenom(tokenAmount.amount, tokenAmount.denom);
             const usdValue = await GetUSDCValue(baseAmount, baseDenom);
+            const originalDenom = tokenAmount.denom.startsWith('ibc/') ?
+                await GetDenomTrace(tokenAmount.denom) :
+                tokenAmount.denom;
 
-            // Get the original denom from IBC trace
-            let originalDenom = sourceDenom;
-            if (sourceDenom.startsWith('ibc/')) {
-                originalDenom = await GetDenomTrace(sourceDenom);
-            }
-
-            const processed: ProcessedToken = {
-                source_denom: sourceDenom,
-                resolved_amount: amount.toString(),
+            const processedToken = {
+                source_denom: tokenAmount.denom,
+                resolved_amount: baseAmount,
                 resolved_denom: originalDenom,
                 display_denom: baseDenom,
-                display_amount: baseAmount,
-                value_usd: `$${parseFloat(usdValue)}`
+                display_amount: (parseFloat(baseAmount) / 1000000).toString(),
+                value_usd: `$${parseFloat(usdValue).toFixed(2)}`
             };
 
-            // Cache the price info with string values
+            processedTokens.push(processedToken);
+
+            // Cache the price info
             COINGECKO_PRICES_RESOLVED_MAP[key][baseDenom] = {
-                source_denom: sourceDenom,
+                source_denom: tokenAmount.denom,
                 resolved_denom: originalDenom,
                 display_denom: baseDenom,
-                value_usd: `$${parseFloat(usdValue)}`
+                value_usd: `$${parseFloat(usdValue).toFixed(2)}`
             };
 
-            processedItems.push(processed);
-            usdSum += parseFloat(usdValue);
-
-        } catch (error) {
-            logger.warn('[Token Error] Failed to process token:', {
-                token,
-                error: error instanceof Error ? error.message : error
+            processedItems.push({
+                source: item.source,
+                amount: {
+                    tokens: [processedToken],
+                    total_usd: parseFloat(usdValue)
+                }
             });
+            totalUsd += parseFloat(usdValue);
+        } catch (error) {
+            logger.error('Error processing token:', error);
             continue;
         }
     }
 
     return {
-        tokens: processedItems,
-        total_usd: usdSum,
-        info: []
+        tokens: processedTokens,
+        total_usd: totalUsd,
+        info: processedItems,
+        total: {
+            tokens: processedTokens,
+            total_usd: totalUsd
+        }
     };
 }
 

@@ -89,26 +89,6 @@ export interface ProviderRewardsData {
     };
 }
 
-interface BlockData {
-    info?: Array<{
-        source: string;
-        amount: {
-            tokens: Array<{
-                source_denom: string;
-                resolved_denom: string;
-                display_denom: string;
-                display_amount: string;
-                resolved_amount: string;
-                value_usd: string;
-            }>;
-            total_usd: number;
-        };
-    }>;
-    total?: {
-        tokens: TokenInfo[];
-        total_usd: number;
-    };
-}
 
 export interface ProcessedToken {
     denom: string;
@@ -146,6 +126,8 @@ export async function GenLavaLatestProviderRewards(): Promise<ProviderRewardsDat
     const latestBlock = await getMainnetLatestBlock();
     const blockTime = new Date(latestBlock.datetime);
     const providers = await getActiveProviders();
+    logger.info(`Processing ${providers.length} providers`);
+
     const providersData: Array<{
         address: string;
         rewards_by_block: {
@@ -163,22 +145,24 @@ export async function GenLavaLatestProviderRewards(): Promise<ProviderRewardsDat
     for (const provider of providers) {
         try {
             const response = await MainnetGetEstimatedProviderRewardsNoAmountNoDenom(provider);
-            const processed = await processTokenArrayAtTime(response.total || [], null);
-            if (processed.tokens.length > 0) {
-                providersData.push({
-                    address: provider,
-                    rewards_by_block: {
-                        latest: {
-                            info: processed.info || [],
-                            total: {
-                                tokens: processed.tokens,
-                                total_usd: processed.total_usd
-                            },
-                            recommended_block: response.recommended_block?.toString() || "0"
-                        }
+            logger.info(`Raw rewards for ${provider}:`, JSON.stringify(response, null, 2));
+
+            const processed = await processTokenArrayAtTime(response.info || [], null);
+            logger.info(`Processed rewards for ${provider}:`, JSON.stringify(processed, null, 2));
+
+            providersData.push({
+                address: provider,
+                rewards_by_block: {
+                    latest: {
+                        info: processed.info || [],
+                        total: {
+                            tokens: processed.tokens,
+                            total_usd: processed.total_usd
+                        },
+                        recommended_block: response.recommended_block?.toString() || "0"
                     }
-                });
-            }
+                }
+            });
         } catch (error) {
             throw new Error(`Failed to process provider ${provider}: ${error}`);
         }

@@ -1,9 +1,7 @@
 import { logger } from '@jsinfo/utils/logger';
 import { RedisResourceBase } from '@jsinfo/redis/classes/RedisResourceBase';
 import {
-    BlockMetadata,
     GenLavaLatestProviderRewards,
-    ProcessedInfoItem,
     ProviderRewardsData
 } from './MainnetGenLavaLatestProviderRewards';
 import * as fs from 'fs';
@@ -11,12 +9,6 @@ import * as path from 'path';
 
 export interface GetQueryParams {
     block?: string | number;
-}
-
-interface SummedTokenInfo {
-    amount: string;           // Total amount in base units (e.g. "182000000")
-    denom: string;           // Display denomination (e.g. "lava") 
-    value_usd: string;       // Total USD value (e.g. "$0.00")
 }
 
 export interface TokenInfo {
@@ -40,7 +32,7 @@ export interface GetResourceResponse {
 }
 
 class MainnetProviderEstimatedRewardsGetResource extends RedisResourceBase<GetResourceResponse, GetQueryParams> {
-    protected readonly redisKey = 'mainnet_provider_estimated_reward_get_v3';
+    protected readonly redisKey = 'mainnet_provider_estimated_reward_get_v5';
     protected readonly cacheExpirySeconds = 10 * 60; // 10 minutes
     private readonly DATA_DIR = path.join(__dirname, 'data');
 

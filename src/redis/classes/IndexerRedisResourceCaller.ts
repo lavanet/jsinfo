@@ -26,6 +26,7 @@ import { LockedTokenValuesResource } from '../resources/ajax/LockedTokenValuesRe
 import { LockedVestingTokensService } from '../resources/global/LockedVestingTokensResource';
 import { IpRpcEndpointsIndexService } from '../resources/IpRpcEndpointsIndex/IpRpcEndpointsResource';
 import { MainnetProviderEstimatedRewardsListService } from '../resources/MainnetProviderEstimatedRewards/MainnetProviderEstimatedRewardsListResource';
+import { IsMainnet } from '@jsinfo/utils/env';
 
 export class IndexerRedisResourceCaller {
     private static readonly REFRESH_INTERVAL = 60 * 1000; // 1 minute
@@ -270,10 +271,12 @@ export class IndexerRedisResourceCaller {
     }
 
     private static async refreshMainnetProviderEstimatedRewards(): Promise<void> {
-        await this.safeFetch('MainnetProviderEstimatedRewards',
-            () => MainnetProviderEstimatedRewardsListService.fetch(),
-            this.currentFetches
-        ).catch(e => logger.error('Failed to refresh mainnet provider estimated rewards:', e));
+        if (IsMainnet()) {
+            await this.safeFetch('MainnetProviderEstimatedRewards',
+                () => MainnetProviderEstimatedRewardsListService.fetch(),
+                this.currentFetches
+            ).catch(e => logger.error('Failed to refresh mainnet provider estimated rewards:', e));
+        }
     }
 }
 

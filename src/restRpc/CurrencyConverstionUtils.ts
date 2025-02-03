@@ -39,23 +39,30 @@ const DENOM_CONVERSIONS = {
     "uusdc": { baseDenom: "usdc", factor: 1_000_000 },                    // USD Coin (USDC)
 };
 
+export async function GetDenomTrace(denom: string): Promise<string> {
+    if (!denom.startsWith("ibc/")) {
+        return denom;
+    }
+
+    const cachedValue = await RedisCache.getDict(`denom-${denom}`);
+    if (cachedValue) {
+        return cachedValue.baseDenom;
+    }
+
+    const denomWithoutPrefix = denom.slice(4);
+    const denomTrace = await RpcOnDemandEndpointCache.GetDenomTrace(denomWithoutPrefix);
+    const baseDenom = denomTrace.denom_trace.base_denom;
+
+    await RedisCache.setDict(`denom-${denom}`, { baseDenom }, CACHE_DURATION.DENOM_TRACE);
+    return baseDenom;
+}
+
 export async function ConvertToBaseDenom(amount: string, denom: string): Promise<[string, string]> {
     let baseAmount = parseFloat(amount);
     let baseDenom = denom;
 
     if (baseDenom.startsWith("ibc/")) {
-
-        const cachedValue = await RedisCache.getDict(`denom-${denom}`);
-        if (cachedValue) {
-            baseDenom = cachedValue.baseDenom;
-        }
-
-        else {
-            const denomWithoutPrefix = denom.slice(4);
-            const denomTrace = await RpcOnDemandEndpointCache.GetDenomTrace(denomWithoutPrefix);
-            baseDenom = denomTrace.denom_trace.base_denom;
-            await RedisCache.setDict(`denom-${denom}`, { baseDenom }, CACHE_DURATION.DENOM_TRACE); // cache for 1 day
-        }
+        baseDenom = await GetDenomTrace(denom);
     }
 
     const originalBaseDenom = baseDenom;

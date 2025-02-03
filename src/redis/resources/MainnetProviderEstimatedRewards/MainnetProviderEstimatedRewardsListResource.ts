@@ -12,31 +12,48 @@ interface BlockMetadata {
 }
 
 interface AvailableBlock {
-    block_number: number;
+    block_number: number | "latest";  // Allow "latest" as a value
     metadata: BlockMetadata;
 }
 
 interface ListResponse {
-    blocks: AvailableBlock[];
-    specs: string[];
-    providers: string[];
+    data: {
+        blocks: AvailableBlock[];  // Use AvailableBlock interface instead of inline type
+        specs: string[];
+        providers: string[];
+    };
 }
 
 export interface ProviderRewardsResourceResponse {
     data: ListResponse;
 }
 
-class MainnetProviderEstimatedRewardsListResource extends RedisResourceBase<ProviderRewardsResourceResponse, {}> {
-    protected readonly redisKey = 'mainnet_provider_estimated_reward_list_v1';
-    protected readonly cacheExpirySeconds = 10 * 60; // 10 minutes
+export class MainnetProviderEstimatedRewardsListResource extends RedisResourceBase<ListResponse, {}> {
+    protected readonly redisKey = 'mainnet_provider_estimated_rewards_list_v5';
+    protected readonly cacheExpirySeconds = 300;
     private readonly DATA_DIR = path.join(__dirname, 'data');
 
     private async getAvailableBlocks(): Promise<AvailableBlock[]> {
         try {
+            // Get latest block data
+            const latestResponse = await MainnetProviderEstimatedRewardsGetService.fetch({ block: 'latest' });
+            const latestBlockInfo = latestResponse?.data?.metadata?.block_info;
+
+            // Get historical blocks
             const files = await fs.promises.readdir(this.DATA_DIR);
             const blockFiles = files.filter(f => f.startsWith('provider_rewards_block_') && f.endsWith('.json'));
 
             const blocks: AvailableBlock[] = [];
+
+            // Add latest block first
+            if (latestBlockInfo) {
+                blocks.push({
+                    block_number: "latest",  // Use "latest" instead of number
+                    metadata: latestBlockInfo
+                });
+            }
+
+            // Add historical blocks
             for (const file of blockFiles) {
                 const blockNumber = parseInt(file.replace('provider_rewards_block_', '').replace('.json', ''));
                 const data = await this.loadBlockData(blockNumber);
@@ -48,7 +65,11 @@ class MainnetProviderEstimatedRewardsListResource extends RedisResourceBase<Prov
                 }
             }
 
-            return blocks.sort((a, b) => b.block_number - a.block_number);
+            return blocks.sort((a, b) => {
+                if (a.block_number === "latest") return -1;
+                if (b.block_number === "latest") return 1;
+                return (b.block_number as number) - (a.block_number as number);
+            });
         } catch (error) {
             logger.error('Error getting available blocks:', error);
             return [];
@@ -60,75 +81,51 @@ class MainnetProviderEstimatedRewardsListResource extends RedisResourceBase<Prov
         const providers = new Set<string>();
 
         try {
-            logger.debug('Fetching latest data for specs and providers');
-            const response = await MainnetProviderEstimatedRewardsGetService.fetch({ block: 'latest' });
-            if (!response) throw new Error('Failed to fetch latest data');
-            const latestData = response.data;
+            // Get providers from latest data
+            const latestResponse = await MainnetProviderEstimatedRewardsGetService.fetch({ block: 'latest' });
+            if (!latestResponse) throw new Error('Failed to fetch latest data');
 
-            logger.debug('Latest data fetched:', {
-                totalProviders: latestData.providers.length,
-                hasMetadata: !!latestData.metadata,
-                blockInfo: latestData.metadata?.block_info
-            });
-
-            latestData.providers.forEach((provider, index) => {
-                logger.debug(`Processing provider ${index + 1}/${latestData.providers.length}:`, {
-                    address: provider.address,
-                    hasRewardsByBlock: !!provider.rewards_by_block,
-                    hasLatest: !!provider.rewards_by_block?.latest,
-                    infoLength: provider.rewards_by_block?.latest?.info?.length,
-                    firstInfoItem: provider.rewards_by_block?.latest?.info?.[0]
-                });
-
+            latestResponse.data.providers.forEach(provider => {
                 if (provider.address) {
                     providers.add(provider.address);
                 }
-
-                const blockData = provider.rewards_by_block?.latest;
-                if (blockData?.info) {
-                    blockData.info.forEach((info, infoIndex) => {
-                        logger.debug(`Processing info item ${infoIndex + 1}/${blockData.info.length}:`, {
-                            source: info?.source,
-                            hasAmount: !!info?.amount,
-                            tokens: info?.amount?.tokens?.length
-                        });
-
-                        if (info?.source) {
-                            const [prefix, spec] = info.source.split(': ');
-                            logger.debug('Extracted spec:', { prefix, spec, fullSource: info.source });
-                            if (spec) specs.add(spec);
-                        }
-                    });
-                }
             });
 
-            const result = {
+            // Get specs from all stored blocks
+            const files = await fs.promises.readdir(this.DATA_DIR);
+            const blockFiles = files.filter(f => f.startsWith('provider_rewards_block_') && f.endsWith('.json'));
+
+            for (const file of blockFiles) {
+                const blockNumber = parseInt(file.replace('provider_rewards_block_', '').replace('.json', ''));
+                const blockData = await this.loadBlockData(blockNumber);
+                if (!blockData) continue;
+
+                blockData.providers.forEach(provider => {
+                    const rewardsData = provider.rewards_by_block?.[blockNumber];
+                    if (rewardsData?.info) {
+                        rewardsData.info.forEach(info => {
+                            if (info?.source) {
+                                const spec = info.source.split(': ')[1];
+                                if (spec) {
+                                    specs.add(spec.toUpperCase());
+                                }
+                            }
+                        });
+                    }
+                });
+            }
+
+            return {
                 specs: Array.from(specs).sort(),
                 providers: Array.from(providers).sort()
             };
-
-            logger.debug('Final result:', {
-                uniqueSpecs: result.specs.length,
-                uniqueProviders: result.providers.length,
-                specs: result.specs,
-                firstFewProviders: result.providers.slice(0, 5)
-            });
-
-            return result;
         } catch (error) {
-            logger.error('Error getting specs and providers:', {
-                error,
-                stack: error instanceof Error ? error.stack : undefined,
-                errorType: error instanceof Error ? error.constructor.name : typeof error
-            });
-            return {
-                specs: [],
-                providers: []
-            };
+            logger.error('Error getting specs and providers:', error);
+            return { specs: [], providers: [] };
         }
     }
 
-    protected async fetchFromSource(): Promise<ProviderRewardsResourceResponse> {
+    protected async fetchFromSource(): Promise<ListResponse> {
         try {
             const [blocks, { specs, providers }] = await Promise.all([
                 this.getAvailableBlocks(),

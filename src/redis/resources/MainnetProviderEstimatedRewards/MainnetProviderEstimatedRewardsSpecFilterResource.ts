@@ -1,52 +1,35 @@
 import { logger } from '@jsinfo/utils/logger';
 import { RedisResourceBase } from '@jsinfo/redis/classes/RedisResourceBase';
-import { MainnetProviderEstimatedRewardsGetService } from './MainnetProviderEstimatedRewardsGetResource';
+import { MainnetProviderEstimatedRewardsGetService, CoinGeckoPriceInfo } from './MainnetProviderEstimatedRewardsGetResource';
+import { TokenInfo, BlockMetadata } from './MainnetGenLavaLatestProviderRewards';
 
 export interface SpecFilterResponse {
     data: {
         spec: string;
         total_rewards: {
-            tokens: Array<{
-                amount: string;
-                denom: string;
-                original_denom: string;
-                value_usd: string;
-            }>;
+            tokens: TokenInfo[];
             total_usd: number;
         };
         source_summaries: Array<{
             source: string;
             rewards: {
-                tokens: Array<{
-                    amount: string;
-                    denom: string;
-                    original_denom: string;
-                    value_usd: string;
-                }>;
+                tokens: TokenInfo[];
                 total_usd: number;
             };
         }>;
         top_providers: Array<{
             address: string;
             rewards: {
-                tokens: Array<{
-                    amount: string;
-                    denom: string;
-                    original_denom: string;
-                    value_usd: string;
-                }>;
+                tokens: TokenInfo[];
                 total_usd: number;
             };
         }>;
         metadata: {
             generated_at: string;
-            block_info: {
-                height: number;
-                time: string;
-                seconds_off: number;
-                date: string;
-            } | null;
-            coingecko_prices: Record<string, number>;
+            block_info: BlockMetadata | null;
+            coingecko_prices: {
+                tokens: CoinGeckoPriceInfo[];
+            };
         };
     };
 }
@@ -55,34 +38,32 @@ class MainnetProviderEstimatedRewardsSpecFilterResource extends RedisResourceBas
     protected readonly redisKey = 'mainnet_provider_estimated_reward_spec_filter_v3';
     protected readonly cacheExpirySeconds = 10 * 60;
 
-    private sumTokens(tokens: Array<{ amount: string; denom: string; original_denom: string; value_usd: string; }>) {
-        const sums: Record<string, { amount: number; denom: string; original_denom: string; value_usd: number; }> = {};
+    private sumTokens(tokens: TokenInfo[]) {
+        const sums: Record<string, TokenInfo> = {};
         let total_usd = 0;
 
         tokens.forEach(token => {
-            const amount = parseFloat(token.amount);
             const value_usd = parseFloat(token.value_usd.replace('$', ''));
+            const key = token.resolved_denom;
 
-            if (!sums[token.denom]) {
-                sums[token.denom] = {
-                    amount: 0,
-                    denom: token.denom,
-                    original_denom: token.original_denom,
-                    value_usd: 0
+            if (!sums[key]) {
+                sums[key] = {
+                    source_denom: token.source_denom,
+                    resolved_amount: '0',
+                    resolved_denom: token.resolved_denom,
+                    display_denom: token.display_denom,
+                    display_amount: '0',
+                    value_usd: '$0.00'
                 };
             }
-            sums[token.denom].amount += amount;
-            sums[token.denom].value_usd += value_usd;
+
+            sums[key].resolved_amount = (parseFloat(sums[key].resolved_amount) + parseFloat(token.resolved_amount)).toString();
+            sums[key].value_usd = `$${(parseFloat(sums[key].value_usd.replace('$', '')) + value_usd).toFixed(2)}`;
             total_usd += value_usd;
         });
 
         return {
-            tokens: Object.values(sums).map(t => ({
-                amount: t.amount.toString(),
-                denom: t.denom,
-                original_denom: t.original_denom,
-                value_usd: `$${t.value_usd.toFixed(2)}`
-            })),
+            tokens: Object.values(sums),
             total_usd
         };
     }
@@ -118,7 +99,7 @@ class MainnetProviderEstimatedRewardsSpecFilterResource extends RedisResourceBas
                     }
                     acc[normalizedSource].push(info.amount.tokens);
                     return acc;
-                }, {} as Record<string, Array<{ amount: string; denom: string; original_denom: string; value_usd: string; }[]>>)
+                }, {} as Record<string, Array<TokenInfo[]>>)
             ).map(([source, tokenArrays]) => ({
                 source,
                 rewards: this.sumTokens(tokenArrays.flat())

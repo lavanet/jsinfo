@@ -13,37 +13,30 @@ export interface GetQueryParams {
     block?: string | number;
 }
 
-interface ProviderRewardsDataWithDynamicBlock {
-    providers: Array<{
-        address: string;
-        rewards_by_block: {
-            [key: string]: {
-                info: ProcessedInfoItem[];
-                total: {
-                    tokens: Array<{
-                        amount: string;
-                        denom: string;
-                        original_denom: string;
-                        value_usd: string;
-                    }>;
-                    total_usd: number;
-                };
-                recommended_block: string;
-            };
-        };
-    }>;
-    timestamp: string;
-    total_providers: number;
-    providers_with_rewards: number;
-    metadata: {
-        generated_at: string;
-        block_info: BlockMetadata | null;
-        coingecko_prices: Record<string, number>;
-    };
+interface SummedTokenInfo {
+    amount: string;           // Total amount in base units (e.g. "182000000")
+    denom: string;           // Display denomination (e.g. "lava") 
+    value_usd: string;       // Total USD value (e.g. "$0.00")
+}
+
+export interface TokenInfo {
+    source_denom: string;     // e.g. "ulava"
+    resolved_amount: string;  // e.g. "182.0"
+    resolved_denom: string;   // e.g. "ulava"
+    display_denom: string;    // e.g. "lava"
+    display_amount: string;   // e.g. "0.000182"
+    value_usd: string;       // e.g. "$0.00"
+}
+
+export interface CoinGeckoPriceInfo {
+    source_denom: string;
+    resolved_denom: string;
+    display_denom: string;
+    value_usd: string;
 }
 
 export interface GetResourceResponse {
-    data: ProviderRewardsDataWithDynamicBlock;
+    data: ProviderRewardsData;
 }
 
 class MainnetProviderEstimatedRewardsGetResource extends RedisResourceBase<GetResourceResponse, GetQueryParams> {
@@ -77,7 +70,13 @@ class MainnetProviderEstimatedRewardsGetResource extends RedisResourceBase<GetRe
                 data = blockData;
             }
 
-            return { data };
+            // For non-latest blocks, return data exactly as it is in the JSON file
+            if (blockId !== 'latest') {
+                return { data: data };
+            }
+
+            // Only transform data for 'latest' block
+            return { data: data };
         } catch (error) {
             logger.error('Error fetching provider rewards data:', error);
             throw error;

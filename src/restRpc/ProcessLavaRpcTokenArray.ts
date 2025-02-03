@@ -1,5 +1,5 @@
 import { logger } from '@jsinfo/utils/logger';
-import { ConvertToBaseDenom, GetUSDCValue } from '@jsinfo/restRpc/CurrencyConverstionUtils';
+import { ConvertToBaseDenom, GetUSDCValue, GetDenomTrace } from '@jsinfo/restRpc/CurrencyConverstionUtils';
 import { ProcessedInfoItem } from '@jsinfo/redis/resources/MainnetProviderEstimatedRewards/MainnetGenLavaLatestProviderRewards';
 
 export interface TokenAmount {
@@ -8,13 +8,15 @@ export interface TokenAmount {
 }
 
 export interface ProcessedToken {
-    amount: string;
-    denom: string;
-    original_denom: string;
+    source_denom: string;
+    resolved_amount: string;
+    resolved_denom: string;
+    display_denom: string;
+    display_amount: string;
     value_usd: string;
 }
 
-interface ProcessedTokenArray {
+export interface ProcessedTokenArray {
     tokens: ProcessedToken[];
     total_usd: number;
     total?: {
@@ -25,23 +27,14 @@ interface ProcessedTokenArray {
     recommended_block?: string;
 }
 
-interface CoinGeckoPriceInfo {
+export interface CoinGeckoPriceInfo {
     source_denom: string;
     resolved_denom: string;
     display_denom: string;
-    price: number;
+    value_usd: string;
 }
-
 // Global price cache map
 const COINGECKO_PRICES_RESOLVED_MAP: Record<string, Record<string, CoinGeckoPriceInfo>> = {};
-
-export function getCoingeckoPricesResolvedMap(timestamp: number | null = null): Record<string, CoinGeckoPriceInfo> {
-    const key = timestamp === null ? "latest" : timestamp.toString();
-    if (!COINGECKO_PRICES_RESOLVED_MAP[key]) {
-        COINGECKO_PRICES_RESOLVED_MAP[key] = {};
-    }
-    return COINGECKO_PRICES_RESOLVED_MAP[key];
-}
 
 export async function processTokenArrayAtTime(
     tokens: TokenAmount[],
@@ -55,92 +48,57 @@ export async function processTokenArrayAtTime(
         COINGECKO_PRICES_RESOLVED_MAP[key] = {};
     }
 
-    if (!tokens || tokens.length === 0) {
-        return {
-            tokens: [],
-            total_usd: 0,
-            info: []
-        };
-    }
-
     for (const token of tokens) {
         try {
             if (!token || !('amount' in token) || !('denom' in token)) {
-                logger.error('ProcessTokenArray: Invalid token format:', {
-                    invalidToken: {
-                        value: token,
-                        type: typeof token,
-                        hasAmount: token && 'amount' in token,
-                        hasDenom: token && 'denom' in token
-                    },
-                    context: {
-                        allTokens: JSON.stringify(tokens, null, 2),
-                        processedCount: processedItems.length,
-                        remainingTokens: tokens.length - processedItems.length
-                    }
-                });
+                logger.warn('[Token Error] Token missing required fields:', token);
                 continue;
             }
 
-            const [baseAmount, baseDenom] = await ConvertToBaseDenom(token.amount.toString(), token.denom);
+            const amount = parseFloat(token.amount.toString());
+            const sourceDenom = token.denom;
+
+            if (!sourceDenom) {
+                logger.warn('[Token Error] Token has no denom:', token);
+                continue;
+            }
+
+            const [baseAmount, baseDenom] = await ConvertToBaseDenom(amount.toString(), sourceDenom);
             const usdValue = await GetUSDCValue(baseAmount, baseDenom);
 
+            // Get the original denom from IBC trace
+            let originalDenom = sourceDenom;
+            if (sourceDenom.startsWith('ibc/')) {
+                originalDenom = await GetDenomTrace(sourceDenom);
+            }
+
             const processed: ProcessedToken = {
-                amount: token.amount.toString(),
-                denom: baseDenom,
-                original_denom: token.denom,
-                value_usd: `$${parseFloat(usdValue).toFixed(2)}`
+                source_denom: sourceDenom,
+                resolved_amount: amount.toString(),
+                resolved_denom: originalDenom,
+                display_denom: baseDenom,
+                display_amount: baseAmount,
+                value_usd: `$${parseFloat(usdValue)}`
+            };
+
+            // Cache the price info with string values
+            COINGECKO_PRICES_RESOLVED_MAP[key][baseDenom] = {
+                source_denom: sourceDenom,
+                resolved_denom: originalDenom,
+                display_denom: baseDenom,
+                value_usd: `$${parseFloat(usdValue)}`
             };
 
             processedItems.push(processed);
             usdSum += parseFloat(usdValue);
 
-            const priceInfo: CoinGeckoPriceInfo = {
-                source_denom: token.denom,
-                resolved_denom: baseDenom,
-                display_denom: baseDenom,
-                price: parseFloat(usdValue)
-            };
-
-            // Cache the price info
-            COINGECKO_PRICES_RESOLVED_MAP[key][baseDenom] = priceInfo;
-
         } catch (error) {
-            logger.error('ProcessTokenArray: Token processing failed:', {
-                failedToken: {
-                    raw: token,
-                    stringified: JSON.stringify(token, null, 2),
-                    hasAmount: token && 'amount' in token,
-                    hasDenom: token && 'denom' in token,
-                    amountType: token?.amount ? typeof token.amount : 'undefined',
-                    denomType: token?.denom ? typeof token.denom : 'undefined'
-                },
-                processingState: {
-                    processedTokensCount: processedItems.length,
-                    totalTokensCount: tokens.length,
-                    processedTokens: processedItems,
-                    remainingTokens: tokens.slice(processedItems.length)
-                },
-                error: error instanceof Error ? {
-                    name: error.name,
-                    message: error.message,
-                    stack: error.stack,
-                    fullError: JSON.stringify(error, null, 2)
-                } : error,
-                context: {
-                    allTokens: JSON.stringify(tokens, null, 2),
-                    currentIndex: processedItems.length
-                }
+            logger.warn('[Token Error] Failed to process token:', {
+                token,
+                error: error instanceof Error ? error.message : error
             });
-            throw error;
+            continue;
         }
-    }
-
-    if (processedItems.length === 0) {
-        logger.error('ProcessTokenArray: No tokens were successfully processed:', {
-            inputTokens: JSON.stringify(tokens, null, 2),
-            totalAttempted: tokens.length
-        });
     }
 
     return {
@@ -148,5 +106,13 @@ export async function processTokenArrayAtTime(
         total_usd: usdSum,
         info: []
     };
+}
+
+export function getCoingeckoPricesResolvedMap(timestamp: number | null = null): Record<string, CoinGeckoPriceInfo> {
+    const key = timestamp === null ? "latest" : timestamp.toString();
+    if (!COINGECKO_PRICES_RESOLVED_MAP[key]) {
+        COINGECKO_PRICES_RESOLVED_MAP[key] = {};
+    }
+    return COINGECKO_PRICES_RESOLVED_MAP[key];
 }
 

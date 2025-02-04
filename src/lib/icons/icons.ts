@@ -40,7 +40,7 @@ export function GetIconForSpec(spec: string | null): string | undefined {
     // If not found, try chain-icons
     const chainIcon = chainDictionary[specLower];
     if (chainIcon) {
-        return `https://info.lavanet.xyz/${chainIcon.icon}.svg`;
+        return `https://info.lavanet.xyz${chainIcon.icon}`;
     }
 
     return undefined;

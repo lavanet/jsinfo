@@ -262,6 +262,16 @@
         "onChainId": "BASET"
       },
       {
+        "name": "Base Sepolia Testnet (BASES)",
+        "type": "Testnet",
+        "onChainId": "BASES"
+      },
+      {
+        "name": "Base Sepolia Testnet (BASEST)",
+        "type": "Testnet",
+        "onChainId": "BASEST"
+      },
+      {
         "name": "Base Mainnet (BASE)",
         "type": "Mainnet",
         "onChainId": "BASE"
@@ -335,6 +345,11 @@
         "name": "Filecoin Mainnet (FVM)",
         "type": "Mainnet",
         "onChainId": "FVM"
+      },
+      {
+        "name": "Filecoin Testnet (FVMTT)",
+        "type": "Testnet",
+        "onChainId": "FVMT"
       }
     ]
   },
@@ -372,6 +387,26 @@
         "name": "Arbitrum Sepolia Testnet (ARBS)",
         "type": "Testnet",
         "onChainId": "ARBS"
+      },
+      {
+        "name": "Arbitrum Sepolia Testnet (ARBS)",
+        "type": "Testnet",
+        "onChainId": "ARBITRUMS"
+      },
+      {
+        "name": "Arbitrum-Nova (ARBN)",
+        "type": "Mainnet",
+        "onChainId": "ARBITRUMN"
+      },
+      {
+        "name": "Arbitrum (ARB1)",
+        "type": "Mainnet",
+        "onChainId": "ARBITRUMN"
+      },
+      {
+        "name": "Arbitrum (ARB1)",
+        "type": "Mainnet",
+        "onChainId": "ARBITRUMN1"
       }
     ]
   },

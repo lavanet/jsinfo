@@ -89,10 +89,12 @@ export interface ProviderRewardsData {
     };
 }
 
-
 export interface ProcessedToken {
-    denom: string;
-    amount: string;
+    source_denom: string;
+    resolved_amount: string;
+    resolved_denom: string;
+    display_denom: string;
+    display_amount: string;
     value_usd: string;
 }
 
@@ -141,23 +143,22 @@ export async function GenLavaLatestProviderRewards(): Promise<ProviderRewardsDat
             };
         };
     }> = [];
-
     for (const provider of providers) {
         try {
             const response = await MainnetGetEstimatedProviderRewardsNoAmountNoDenom(provider);
-            logger.info(`Raw rewards for ${provider}:`, JSON.stringify(response, null, 2));
+            // logger.info(`Raw rewards for ${provider}:`, JSON.stringify(response, null, 2));
 
-            const processed = await processTokenArrayAtTime(response.info || [], null);
-            logger.info(`Processed rewards for ${provider}:`, JSON.stringify(processed, null, 2));
+            const processed = await processTokenArrayAtTime(response, null);
+            // logger.info(`Processed rewards for ${provider}:`, JSON.stringify(processed, null, 2));
 
             providersData.push({
                 address: provider,
                 rewards_by_block: {
                     latest: {
                         info: processed.info || [],
-                        total: {
-                            tokens: processed.tokens,
-                            total_usd: processed.total_usd
+                        total: processed.total || {
+                            tokens: [],
+                            total_usd: 0
                         },
                         recommended_block: response.recommended_block?.toString() || "0"
                     }

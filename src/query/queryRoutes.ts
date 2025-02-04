@@ -118,6 +118,7 @@ import {
     ListProviderAvatarsHandlerOpts,
     ProviderAvatarParams
 } from './handlers/ajax/providerAvatarHandler';
+import { IsMainnet } from '@jsinfo/utils/env';
 
 // -- Server status ajax --
 GetServerInstance().get('/latest', LatestRawHandlerOpts, LatestRawHandler);
@@ -266,7 +267,9 @@ GetServerInstance().get("/all_locked_values", AllLockedValuesHandlerOpts, AllLoc
 GetServerInstance().get('/lava_iprpc_endpoints', IpRpcEndpointsIndexHandlerOpts, IpRpcEndpointsIndexHandler);
 
 // lava_mainnet_provider_estimated_rewards
-GetServerInstance().get('/lava_mainnet_provider_estimated_rewards', MainnetProviderEstimatedRewardsHandlerOpts, MainnetProviderEstimatedRewardsHandler);
+if (IsMainnet()) {
+    GetServerInstance().get('/lava_mainnet_provider_estimated_rewards', MainnetProviderEstimatedRewardsHandlerOpts, MainnetProviderEstimatedRewardsHandler);
+}
 
 // -- Provider avatar ajax --
 GetServerInstance().get<ProviderAvatarParams>('/provider_avatar/:providerId', GetProviderAvatarHandlerOpts, GetProviderAvatarHandler);

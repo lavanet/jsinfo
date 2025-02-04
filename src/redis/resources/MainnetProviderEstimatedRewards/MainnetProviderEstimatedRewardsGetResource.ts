@@ -32,7 +32,7 @@ export interface GetResourceResponse {
 }
 
 class MainnetProviderEstimatedRewardsGetResource extends RedisResourceBase<GetResourceResponse, GetQueryParams> {
-    protected readonly redisKey = 'mainnet_provider_estimated_reward_get_v5';
+    protected readonly redisKey = 'mainnet_provider_estimated_reward_getnever_v20';
     protected readonly cacheExpirySeconds = 10 * 60; // 10 minutes
     private readonly DATA_DIR = path.join(__dirname, 'data');
 

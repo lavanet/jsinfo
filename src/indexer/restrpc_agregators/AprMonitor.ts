@@ -6,109 +6,13 @@ import { RpcPeriodicEndpointCache } from '@jsinfo/restRpc/lavaRpcPeriodicEndpoin
 import { EstimatedRewardsResponse, RpcOnDemandEndpointCache } from '@jsinfo/restRpc/lavaRpcOnDemandEndpointCache';
 import { ConvertToBaseDenom, GetUSDCValue } from '../../restRpc/CurrencyConverstionUtils';
 import { queryJsinfo } from '@jsinfo/utils/db';
-import { HashJson } from '@jsinfo/utils/fmt';
 import { sql } from 'drizzle-orm';
-import { IsTestnet } from '@jsinfo/utils/env';
 import { ActiveProvidersService } from '@jsinfo/redis/resources/index/ActiveProvidersResource';
+import Decimal from 'decimal.js';
+import { CalculateApr, CalculatePercentile, LAVA_RPC_BENCHMARK_AMOUNT, LAVA_RPC_BENCHMARK_DENOM, PERCENTILE, TEST_DENOMS } from './CalcualteApr';
 
-// Constants
-const LAVA_RPC_BENCHMARK_AMOUNT = 10000 * 1000000;
-const LAVA_RPC_BENCHMARK_DENOM = "ulava";
-const COINGEKO_API_BENCHMARK_AMOUNT = 10000;
-const COINGEKO_API_BENCHMARK_DENOM = "lava";
-
-const APR_MAX_ERROR = 10000;
-// we had values as 0.0020040648396455474
-// was ok for 0.0001 on mainnet
-const APR_MIN_WARM = IsTestnet() ? 1e-10 : 0.0000001;
-
-const PERCENTILE = 0.8;
-
-const TEST_DENOMS = ["ibc/E3FCBEDDBAC500B1BAB90395C7D1E4F33D9B9ECFE82A16ED7D7D141A0152323F"];
-
-export function CalculatePercentile(values: number[], rank: number, caller: string): number {
-  const dataLen = values.length;
-  if (dataLen === 0 || rank < 0.0 || rank > 1.0) {
-    logger.warn('Invalid data for percentile calculation. Returning 0.');
-    return 0;
-  }
-
-  if (values.length == 1) {
-    return values[0];
-  }
-
-  for (const value of values) {
-    numberStats_addNumber(caller + '::CalculatePercentile:ValuesInput', value);
-  }
-
-  // Sort values in ascending order
-  values.sort((a, b) => a - b);
-
-  // Calculate the position based on the rank
-  const position = Math.floor((dataLen - 1) * rank);
-  // logger.info('Calculated position for rank:', position, 'dataLen:', dataLen, 'rank:', rank);
-
-  if (dataLen % 2 === 0) {
-    // Interpolate between two middle values
-    const lower = values[position];
-    const upper = values[position + 1];
-    const result = lower + (upper - lower) * rank;
-    numberStats_addNumber(caller + '::CalculatePercentile:ValuesOutput', result);
-    return result;
-  } else {
-    const result = values[position];
-    numberStats_addNumber(caller + '::CalculatePercentile:ValuesOutput', result);
-    return result;
-  }
-}
-
-const numberStats: Map<string, number[]> = new Map();
-
-function numberStats_addNumber(number_name: string, number: number): void {
-  if (!numberStats.has(number_name)) {
-    numberStats.set(number_name, []);
-  }
-  numberStats.get(number_name)!.push(number);
-}
-
-function calculateMedian(numbers: number[]): number {
-  const sorted = [...numbers].sort((a, b) => a - b);
-  const mid = Math.floor(sorted.length / 2);
-  return sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
-}
-
-let numberStats_lastPrintTime = 0;
-const numberStats_printInterval = 60 * 1000; // 1 minute in milliseconds
-
-function numberStats_printStats(): void {
-  const currentTime = Date.now();
-  if (currentTime - numberStats_lastPrintTime < numberStats_printInterval) {
-    return;
-  }
-
-  numberStats.forEach((numbers, number_name) => {
-    const min = Math.min(...numbers);
-    const max = Math.max(...numbers);
-    const avg = numbers.reduce((sum, num) => sum + num, 0) / numbers.length;
-    const median = calculateMedian(numbers);
-
-    console.log(`Stats for ${number_name}: Min: ${min}, Max: ${max}, Avg: ${avg}, Median: ${median}`);
-  });
-
-  numberStats_lastPrintTime = currentTime;
-}
-
-interface AprPerProviderUpdateBatch {
-  type: string;
-  value: number;
-  provider: string;
-  estimatedRewards: EstimatedRewardsResponse;
-}
-
-class APRMonitorClass {
+export class APRMonitorClass {
   private intervalId: NodeJS.Timer | null = null;
-  private aprPerProviderUpdateBatch: AprPerProviderUpdateBatch[] = [];
-  private aprPerProviderUpdateTimer: any | null = null;
 
   public start(): void {
     logger.info('Starting APR Monitor...');
@@ -131,42 +35,6 @@ class APRMonitorClass {
     }
   }
 
-  private lastLogTime = 0;
-  private LOG_INTERVAL = 3 * 60 * 1000; // 3 minutes in milliseconds
-
-  // annual precentage rewards 
-  public async CalculateAPR(totalReward: number, caller: string): Promise<number> {
-    // this number is 932.82 on 04/12/24
-    const investedAmount = await GetUSDCValue(COINGEKO_API_BENCHMARK_AMOUNT.toString(), COINGEKO_API_BENCHMARK_DENOM);
-
-    const now = Date.now();
-    if (now - this.lastLogTime >= this.LOG_INTERVAL) {
-      logger.info(`[APR Monitor] CalculateAPR: usdc value for ${LAVA_RPC_BENCHMARK_AMOUNT} ${LAVA_RPC_BENCHMARK_DENOM} is ${investedAmount}`);
-      this.lastLogTime = now;
-    }
-
-    const rate = totalReward / parseFloat(investedAmount);
-
-    const apr = ((1 + rate) ** 12 - 1);
-
-    if (apr === Infinity || apr === -Infinity) {
-      logger.error(`AprMon: ${caller} - APR is Infinity or -Infinity. Returning 0. Total Reward: ${totalReward}, Invested Amount: ${investedAmount}, Rate: ${rate}, APR: ${apr}`);
-      return 0;
-    }
-
-    if (apr < APR_MIN_WARM) {
-      logger.warn(`AprMon: ${caller} - APR is too low. Total Reward: ${totalReward}, Invested Amount: ${investedAmount}, Rate: ${rate}, APR: ${apr}`);
-      return apr;
-    }
-
-    if (apr > APR_MAX_ERROR) {
-      logger.warn(`AprMon: ${caller} - APR is too high. Returning 0. Total Reward: ${totalReward}, Invested Amount: ${investedAmount}, Rate: ${rate}, APR: ${apr}`);
-      return 0;
-    }
-
-    return apr;
-  }
-
   private splitIntoChunks(entities: string[], numChunks: number = 3): string[][] {
     const chunkSize = Math.ceil(entities.length / numChunks);
     return Array.from(
@@ -177,13 +45,9 @@ class APRMonitorClass {
 
   private async enrichLavaAddresssWithUSDCRewards(
     lavaAddresses1: string[],
-    chunkIndex: number,
     getEstimatedRewards: (entity: string) => Promise<EstimatedRewardsResponse>,
-    totalEntities: number,
-    caller: string,
     progressCallback: (processed: number) => void
   ): Promise<Map<string, number>> {
-
     const lavaAddressesRewards = new Map<string, number>();
 
     for (const lavaAddress of lavaAddresses1) {
@@ -199,18 +63,16 @@ class APRMonitorClass {
           const usdcAmount = await GetUSDCValue(amount, denom);
           if (usdcAmount === "0") continue;
 
-          numberStats_addNumber(caller + '::enrichLavaAddresssWithUSDCRewards:RewardUsdcAmount', parseFloat(usdcAmount));
-          lavaAddressesRewards.set(lavaAddress, (lavaAddressesRewards.get(lavaAddress) || 0) + parseFloat(usdcAmount));
+          // Use Decimal for precise addition
+          const currentAmount = lavaAddressesRewards.get(lavaAddress) || 0;
+          const newAmount = new Decimal(currentAmount).plus(new Decimal(usdcAmount)).toNumber();
+          lavaAddressesRewards.set(lavaAddress, newAmount);
         }
 
-        progressCallback(1); // Increment processed count by 1
+        progressCallback(1);
       } catch (error) {
         logger.error(`Error processing entity ${lavaAddress}:`, error);
       }
-    }
-
-    for (const [lavaAddress, totalReward] of lavaAddressesRewards.entries()) {
-      numberStats_addNumber(caller + '::enrichLavaAddresssWithUSDCRewards:RewardUsdcAmount-Total', totalReward);
     }
 
     return lavaAddressesRewards;
@@ -220,7 +82,7 @@ class APRMonitorClass {
     const aprs = new Map<string, number>();
     for (const [lavaAddress, totalReward] of rewards.entries()) {
       if (totalReward === 0) continue;
-      const APR = await this.CalculateAPR(totalReward, caller + ":" + lavaAddress);
+      const APR = await CalculateApr(totalReward, caller + ":" + lavaAddress);
       if (APR === 0) continue;
       aprs.set(lavaAddress, APR);
     }
@@ -260,8 +122,12 @@ class APRMonitorClass {
       // Split and process in parallel
       const chunksOfLavaAddresses = this.splitIntoChunks(lavaAddresses, numThreads);
       const lavaAddressesRewards = await Promise.all(
-        chunksOfLavaAddresses.map((lavaAddresses, index) =>
-          this.enrichLavaAddresssWithUSDCRewards(lavaAddresses, index, getEstimatedRewards, totalAddresses, caller, updateProgress)
+        chunksOfLavaAddresses.map((lavaAddresses) =>
+          this.enrichLavaAddresssWithUSDCRewards(
+            lavaAddresses,
+            getEstimatedRewards,
+            updateProgress
+          )
         )
       );
 
@@ -269,7 +135,10 @@ class APRMonitorClass {
       const totalRewards = new Map<string, number>();
       lavaAddressesRewards.forEach(lavaAddressesRewardsItem => {
         lavaAddressesRewardsItem.forEach((usdcRewards, lavaAddress) => {
-          totalRewards.set(lavaAddress, (totalRewards.get(lavaAddress) || 0) + usdcRewards);
+          // Use Decimal for precise addition
+          const currentTotal = totalRewards.get(lavaAddress) || 0;
+          const newTotal = new Decimal(currentTotal).plus(new Decimal(usdcRewards)).toNumber();
+          totalRewards.set(lavaAddress, newTotal);
         });
       });
 
@@ -288,7 +157,6 @@ class APRMonitorClass {
       const totalTime = (Date.now() - startTime) / 1000;
       if (lavaAddresses.length > 2) {
         logger.info(`AprMon: ${caller} - Completed calculation. Total processed: ${processedCount}, Total time: ${totalTime}s, Result: ${result}`);
-        // numberStats_printStats();
       }
 
       return result;
@@ -370,72 +238,6 @@ class APRMonitorClass {
     }
   }
 
-  private async doAprPerProviderBatchUpdate(): Promise<void> {
-    logger.info('Processing APR per provider update batch...');
-    if (this.aprPerProviderUpdateBatch.length === 0) return;
-
-    const now = new Date();
-    const updates = this.aprPerProviderUpdateBatch.splice(0, this.aprPerProviderUpdateBatch.length); // Clear the batch
-
-    try {
-      await queryJsinfo(
-        async (db) => {
-          const result = await db.transaction(async (tx) => {
-            // Perform batch insert
-            await tx.insert(JsinfoSchema.aprPerProvider)
-              .values(updates.map(({ type, value, provider, estimatedRewards }) => ({
-                type,
-                value: value.toString(),
-                timestamp: now,
-                provider,
-                estimatedRewards,
-              })))
-              .onConflictDoUpdate({
-                target: [JsinfoSchema.aprPerProvider.provider, JsinfoSchema.aprPerProvider.type],
-                set: {
-                  value: sql`EXCLUDED.value`, // Use the new value
-                  timestamp: now,
-                  estimatedRewards: sql`EXCLUDED.estimated_rewards`,
-                } as any
-              });
-            return updates;
-          });
-          return result;
-        },
-        `APRMonitor::doAprPerProviderBatchUpdate:${HashJson(updates)}`
-      );
-
-      logger.info('Successfully updated batch for providers:', updates);
-    } catch (error) {
-      logger.error('Failed to update batch for providers:', error);
-      throw error;
-    }
-  }
-
-  private startAprPerProviderUpdateTimer(): void {
-    logger.info('Starting APR per provider update timer...');
-    if (this.aprPerProviderUpdateTimer) return; // Prevent multiple timers
-
-    this.aprPerProviderUpdateTimer = setInterval(() => {
-      logger.info('Processing APR per provider update batch...');
-      this.doAprPerProviderBatchUpdate().catch(console.error);
-    }, 60 * 1000); // 1 minute
-  }
-
-  private async saveAprToDbPerProvider(type: string, value: number, estimatedRewards: EstimatedRewardsResponse, provider: string): Promise<void> {
-    logger.info(`Adding to APR per provider update batch: type=${type}, value=${value}, provider=${provider}`);
-    this.aprPerProviderUpdateBatch.push({ type, value, provider, estimatedRewards }); // Add to the batch
-
-    if (this.aprPerProviderUpdateBatch.length === 1) {
-      this.startAprPerProviderUpdateTimer();
-    }
-
-    if (this.aprPerProviderUpdateBatch.length >= 100) {
-      logger.info('Processing APR per provider update batch immediately due to batch size limit.');
-      await this.doAprPerProviderBatchUpdate();
-    }
-  }
-
   public async ProcessAPR() {
     logger.info('Starting ProcessAPR...');
     const retry = async (fn: () => Promise<any>, retries: number = 3): Promise<any> => {
@@ -477,23 +279,7 @@ class APRMonitorClass {
           })
         );
 
-        // 2) Update APR for each provider concurrently
-        const updateRestakingAPR = async () => {
-          logger.info('Updating APR for each provider...');
-          for (const provider of providers) {
-            const estimatedRewards = await RpcOnDemandEndpointCache.GetEstimatedProviderRewards(provider, LAVA_RPC_BENCHMARK_AMOUNT, LAVA_RPC_BENCHMARK_DENOM);
-            const apr = await retry(() => this.calculateAPROnLavaAddresses(
-              () => Promise.resolve([provider]),
-              (provider) => Promise.resolve(estimatedRewards),
-              `Restaking APR for ${provider}`
-            ));
-            promises.push(this.saveAprToDbPerProvider('restaking', apr, estimatedRewards, provider));
-          }
-        };
-
-        promises.push(updateRestakingAPR());
-
-        // 3) Calculate Staking APR and update the database
+        // 2) Calculate Staking APR and update the database
         promises.push(
           retry(() => this.calculateAPROnLavaAddresses(
             () => RpcPeriodicEndpointCache.GetAllActiveValidatorsAddresses(),
@@ -524,4 +310,3 @@ class APRMonitorClass {
 }
 
 export const APRMonitor = new APRMonitorClass();
-

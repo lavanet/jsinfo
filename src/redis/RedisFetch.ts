@@ -6,12 +6,12 @@ export async function RedisFetch<T>(url: string, ttl: number = 1200): Promise<T>
     // Check if the data is in the cache
     const cachedData = await RedisCache.get("url:" + url);
     if (cachedData) {
-        logger.info(`Cache hit for URL: ${url}`); // Log cache hit
+        // logger.info(`Cache hit for URL: ${url}`); // Log cache hit
         return JSON.parse(cachedData) as T; // Return cached data
     }
 
     // If not in cache, fetch the data from the API
-    logger.info(`Fetching data from API for URL: ${url}`); // Log API fetch
+    // logger.info(`Fetching data from API for URL: ${url}`); // Log API fetch
     try {
         const response = await FetchRestData(url) as T; // Type assertion added
         if (!response) {

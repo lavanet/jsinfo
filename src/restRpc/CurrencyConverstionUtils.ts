@@ -5,6 +5,7 @@ import { CoinGekoCache } from '@jsinfo/restRpc/ext/CoinGeko/CoinGekoCache';
 import { RpcOnDemandEndpointCache } from '@jsinfo/restRpc/lavaRpcOnDemandEndpointCache';
 import { logger } from '@jsinfo/utils/logger';
 import { IsTestnet } from '@jsinfo/utils/env';
+import Decimal from 'decimal.js';
 
 const DEMON_LOWEST_LIMIT_WARNING = 1.e-20;
 const DEMON_HIGHEST_LIMIT_ERROR = IsTestnet() ? 10_000_000_000_000 : 100_000_000; // 100_000 was ok for mainnet as well
@@ -40,7 +41,7 @@ const DENOM_CONVERSIONS = {
 };
 
 export async function GetDenomTrace(denom: string): Promise<string> {
-    if (!denom.startsWith("ibc/")) {
+    if (!denom.toLowerCase().startsWith("ibc/")) {
         return denom;
     }
 
@@ -58,10 +59,10 @@ export async function GetDenomTrace(denom: string): Promise<string> {
 }
 
 export async function ConvertToBaseDenom(amount: string, denom: string): Promise<[string, string]> {
-    let baseAmount = parseFloat(amount);
+    let baseAmount = new Decimal(amount);
     let baseDenom = denom;
 
-    if (baseDenom.startsWith("ibc/")) {
+    if (baseDenom.toLowerCase().startsWith("ibc/")) {
         baseDenom = await GetDenomTrace(denom);
     }
 
@@ -70,17 +71,18 @@ export async function ConvertToBaseDenom(amount: string, denom: string): Promise
     if (baseDenom in DENOM_CONVERSIONS) {
         const { baseDenom: newBaseDenom, factor } = DENOM_CONVERSIONS[baseDenom];
         baseDenom = newBaseDenom;
-        baseAmount = baseAmount / factor;
+        baseAmount = baseAmount.dividedBy(new Decimal(factor));
     }
 
-    if (baseAmount < DEMON_LOWEST_LIMIT_WARNING) {
-        logger.warn(`ConvertToBaseDenom out of range (2small) values: amount = ${amount}, denom = ${denom}, baseAmount = ${baseAmount}, baseDenom = ${baseDenom}, originalBaseDenom = ${originalBaseDenom}`);
-        return [baseAmount.toString(), baseDenom];
+    const baseAmountNum = baseAmount.toNumber();
+    if (baseAmountNum < DEMON_LOWEST_LIMIT_WARNING) {
+        logger.warn(`ConvertToBaseDenom out of range (2small) values: amount = ${amount}, denom = ${denom}, baseAmount = ${baseAmountNum}, baseDenom = ${baseDenom}, originalBaseDenom = ${originalBaseDenom}`);
+        return [baseAmountNum.toString(), baseDenom];
     }
 
-    if (baseAmount > DEMON_HIGHEST_LIMIT_ERROR) {
-        logger.error(`ConvertToBaseDenom out of range (2big) values: amount = ${amount}, denom = ${denom}, baseAmount = ${baseAmount}, baseDenom = ${baseDenom}, originalBaseDenom = ${originalBaseDenom}`);
-        return ["0".toString(), baseDenom];
+    if (baseAmountNum > DEMON_HIGHEST_LIMIT_ERROR) {
+        logger.error(`ConvertToBaseDenom out of range (2big) values: amount = ${amount}, denom = ${denom}, baseAmount = ${baseAmountNum}, baseDenom = ${baseDenom}, originalBaseDenom = ${originalBaseDenom}`);
+        return ["0", baseDenom];
     }
 
     return [baseAmount.toString(), baseDenom];
@@ -93,16 +95,19 @@ export async function GetUSDCValue(amount: string, denom: string): Promise<strin
         return "0";
     }
 
-    const result = (parseFloat(amount) * usdcRate);
+    const decimalAmount = new Decimal(amount);
+    const decimalRate = new Decimal(usdcRate);
+    const result = decimalAmount.times(decimalRate);
+    const resultNum = result.toNumber();
 
-    if (result < DEMON_LOWEST_LIMIT_WARNING) {
-        logger.warn(`GetUSDCValue out of range (2small) values: amount = ${amount}, denom = ${denom}, usdcRate = ${usdcRate}, result = ${result}`);
+    if (resultNum < DEMON_LOWEST_LIMIT_WARNING) {
+        logger.warn(`GetUSDCValue out of range (2small) values: amount = ${amount}, denom = ${denom}, usdcRate = ${usdcRate}, result = ${resultNum}`);
         return result.toString();
     }
 
-    if (result > DEMON_HIGHEST_LIMIT_ERROR) {
-        logger.error(`GetUSDCValue out of range (2big) values: amount = ${amount}, denom = ${denom}, usdcRate = ${usdcRate}, result = ${result}`);
-        return "0".toString();
+    if (resultNum > DEMON_HIGHEST_LIMIT_ERROR) {
+        logger.error(`GetUSDCValue out of range (2big) values: amount = ${amount}, denom = ${denom}, usdcRate = ${usdcRate}, result = ${resultNum}`);
+        return "0";
     }
 
     return result.toString();

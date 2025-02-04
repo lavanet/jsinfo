@@ -1,5 +1,5 @@
 import { logger } from '@jsinfo/utils/logger';
-import { processTokenArrayAtTime, getCoingeckoPricesResolvedMap } from '@jsinfo/restRpc/ProcessLavaRpcTokenArray';
+import { ProcessTokenArrayAtTime, getCoingeckoPricesResolvedMap } from '@jsinfo/restRpc/ProcessLavaRpcTokenArray';
 import { MainnetGetEstimatedProviderRewardsNoAmountNoDenom } from '@jsinfo/restRpc/lavaRpcOnDemandEndpointCache';
 import { FetchRestData } from '@jsinfo/restRpc/fetch';
 
@@ -148,7 +148,7 @@ export async function GenLavaLatestProviderRewards(): Promise<ProviderRewardsDat
             const response = await MainnetGetEstimatedProviderRewardsNoAmountNoDenom(provider);
             // logger.info(`Raw rewards for ${provider}:`, JSON.stringify(response, null, 2));
 
-            const processed = await processTokenArrayAtTime(response, null);
+            const processed = await ProcessTokenArrayAtTime(response, null);
             // logger.info(`Processed rewards for ${provider}:`, JSON.stringify(processed, null, 2));
 
             providersData.push({

@@ -1,6 +1,7 @@
 import { RedisFetch } from '../../redis/RedisFetch';
 import { logger } from '@jsinfo/utils/logger';
 import { CoinGekoCache } from './CoinGeko/CoinGekoCache';
+import Decimal from 'decimal.js';
 
 // https://app.osmosis.zone/assets/LAVA
 // also called LAVA here, not lava-network
@@ -102,17 +103,17 @@ export async function OsmosisGetTotalLavaLockedValue(): Promise<OsmosisTVLResult
     try {
         const response = await RedisFetch(apiUrl);
         const pools: Pool[] = (response as any).result.data.json.items;
-        let totalLockedValue = 0;
+        let totalLockedValue = new Decimal(0);
         pools.forEach(pool => {
             const reserveCoins: ReserveCoin[] = pool.reserveCoins.map(coin => JSON.parse(coin));
             reserveCoins.forEach(coin => {
                 if (coin.currency.coinDenom.toLowerCase() === 'lava') {
-                    totalLockedValue += parseFloat(coin.amount);
+                    totalLockedValue = totalLockedValue.plus(new Decimal(coin.amount));
                 }
             });
         });
 
-        logger.info(`TLV-OSM: Total locked value in LAVA from first API: ${totalLockedValue}`);
+        logger.info(`TLV-OSM: Total locked value in LAVA from first API: ${totalLockedValue.toNumber()}`);
 
         const currentPrice = await CoinGekoCache.GetLavaUSDRate();
         if (currentPrice === 0 || isNaN(currentPrice)) {
@@ -123,11 +124,11 @@ export async function OsmosisGetTotalLavaLockedValue(): Promise<OsmosisTVLResult
             throw new Error(`OsmosisGetTotalLavaLockedValue: CoinGekoCache.GetDenomToUSDRate returned out of range value for lava: ${currentPrice}`);
         }
 
-        const usdValue = totalLockedValue * Number(currentPrice / 1000000);
+        const usdValue = totalLockedValue.toNumber() * Number(currentPrice / 1000000);
         logger.info(`TLV-OSM: Total locked USDC value from API: ${usdValue}`);
 
         return {
-            ulavaValue: totalLockedValue,
+            ulavaValue: totalLockedValue.toNumber(),
             usdValue: usdValue
         };
 

@@ -7,10 +7,15 @@ import { logger } from '@jsinfo/utils/logger';
 import GetIconForSpec from '@jsinfo/lib/icons/icons';
 import { ConvertToChainName } from '@jsinfo/lib/chain-mapping/chains';
 import { GetProviderAvatar } from '@jsinfo/restRpc/GetProviderAvatar';
+import Decimal from 'decimal.js';
 
 interface RewardToken {
-    denom: string;
-    amount: string;
+    source_denom: string;
+    resolved_amount: string;
+    resolved_denom: string;
+    display_denom: string;
+    display_amount: string;
+    value_usd: string;
 }
 
 interface ProviderPerformanceData extends Omit<AllAprProviderData, 'rewards'> {
@@ -26,12 +31,7 @@ interface ProviderPerformanceData extends Omit<AllAprProviderData, 'rewards'> {
     rewards_last_month: Array<{
         chain: string;
         spec: string;
-        tokens: Array<{
-            amount: string;
-            denom: string;
-            original_denom: string;
-            value_usd: string;
-        }>;
+        tokens: RewardToken[];
         total_usd: number;
         icon?: string;
     }>;
@@ -56,8 +56,12 @@ export const ProviderPerformanceHandlerOpts: RouteShorthandOptions = {
                             items: {
                                 type: 'object',
                                 properties: {
-                                    denom: { type: 'string' },
-                                    amount: { type: 'string' }
+                                    source_denom: { type: 'string' },
+                                    resolved_amount: { type: 'string' },
+                                    resolved_denom: { type: 'string' },
+                                    display_denom: { type: 'string' },
+                                    display_amount: { type: 'string' },
+                                    value_usd: { type: 'string' }
                                 }
                             }
                         },
@@ -73,9 +77,11 @@ export const ProviderPerformanceHandlerOpts: RouteShorthandOptions = {
                                         items: {
                                             type: 'object',
                                             properties: {
-                                                amount: { type: 'string' },
-                                                denom: { type: 'string' },
-                                                original_denom: { type: 'string' },
+                                                source_denom: { type: 'string' },
+                                                resolved_amount: { type: 'string' },
+                                                resolved_denom: { type: 'string' },
+                                                display_denom: { type: 'string' },
+                                                display_amount: { type: 'string' },
                                                 value_usd: { type: 'string' }
                                             }
                                         }
@@ -126,7 +132,7 @@ export const ProviderPerformanceHandlerOpts: RouteShorthandOptions = {
 function processRewardsBySpec(rewardsByBlock: any): Array<{ chain: string; spec: string; tokens: any[]; total_usd: number; icon?: string }> {
     if (!rewardsByBlock) return [];
 
-    const specRewards = new Map<string, { tokens: any[]; total_usd: number }>();
+    const specRewards = new Map<string, { tokens: any[]; total_usd: Decimal }>();
     const block = Object.keys(rewardsByBlock)[0];
     const info = rewardsByBlock[block]?.info || [];
 
@@ -135,20 +141,64 @@ function processRewardsBySpec(rewardsByBlock: any): Array<{ chain: string; spec:
         if (!spec) return;
 
         const key = spec;
-        const existing = specRewards.get(key) || { tokens: [], total_usd: 0 };
+        const existing = specRewards.get(key) || { tokens: [], total_usd: new Decimal(0) };
 
         // Sum up the tokens
         reward.amount.tokens.forEach((token: any) => {
-            const existingToken = existing.tokens.find(t => t.denom === token.denom);
+            const existingToken = existing.tokens.find(t => t.source_denom === token.source_denom);
             if (existingToken) {
-                existingToken.amount = (parseFloat(existingToken.amount) + parseFloat(token.amount)).toString();
-                existingToken.value_usd = `$${(parseFloat(existingToken.value_usd.slice(1)) + parseFloat(token.value_usd.slice(1))).toFixed(2)}`;
+                try {
+                    // Handle resolved amount addition
+                    const existingResolved = existingToken.resolved_amount || '0';
+                    const newResolved = token.resolved_amount || '0';
+                    const newResolvedAmount = new Decimal(existingResolved)
+                        .plus(new Decimal(newResolved))
+                        .toString();
+
+                    // Handle display amount addition
+                    const existingDisplay = existingToken.display_amount || '0';
+                    const newDisplay = token.display_amount || '0';
+                    const newDisplayAmount = new Decimal(existingDisplay)
+                        .plus(new Decimal(newDisplay))
+                        .toString();
+
+                    // Handle USD value addition
+                    const existingUsd = new Decimal(existingToken.value_usd?.slice(1) || '0');
+                    const newUsd = new Decimal(token.value_usd?.slice(1) || '0');
+                    const totalUsd = existingUsd.plus(newUsd);
+
+                    existingToken.resolved_amount = newResolvedAmount;
+                    existingToken.display_amount = newDisplayAmount;
+                    existingToken.value_usd = `$${totalUsd.toFixed(2)}`;
+                } catch (decimalError) {
+                    logger.warn('Error processing token values:', {
+                        error: decimalError,
+                        existingToken,
+                        newToken: token,
+                        context: 'processRewardsBySpec'
+                    });
+                    // Fallback to zero if there's an error
+                    existingToken.resolved_amount = '0';
+                    existingToken.display_amount = '0';
+                    existingToken.value_usd = '$0.00';
+                }
             } else {
                 existing.tokens.push({ ...token });
             }
         });
 
-        existing.total_usd += reward.amount.total_usd;
+        // Use Decimal for total_usd addition
+        try {
+            const rewardUsd = new Decimal(reward.amount.total_usd || 0);
+            existing.total_usd = existing.total_usd.plus(rewardUsd);
+        } catch (decimalError) {
+            logger.warn('Error processing total USD:', {
+                error: decimalError,
+                reward,
+                context: 'processRewardsBySpec_totalUsd'
+            });
+        }
+
         specRewards.set(key, existing);
     });
 
@@ -156,7 +206,7 @@ function processRewardsBySpec(rewardsByBlock: any): Array<{ chain: string; spec:
         chain: ConvertToChainName(spec),
         spec: spec.toUpperCase(),
         tokens: data.tokens,
-        total_usd: data.total_usd,
+        total_usd: data.total_usd.toNumber(),  // Convert back to number at the end
         icon: GetIconForSpec(spec)
     }));
 }
@@ -192,10 +242,47 @@ export async function ProviderPerformanceRawHandler(request: FastifyRequest, rep
             const result: ProviderPerformanceData = {
                 ...apr,
                 '30_days_cu_served': apr['30_days_cu_served'] || '',
-                rewards_10k_lava_delegation: Object.values(apr.rewards).map(reward => ({
-                    denom: reward.denom,
-                    amount: reward.amount
-                })),
+                rewards_10k_lava_delegation: Object.values(apr.rewards).map(reward => {
+                    try {
+                        // Safely handle the reward mapping with proper checks
+                        if (!reward?.amount?.tokens?.[0]) {
+                            // Return a default token structure if data is missing
+                            return {
+                                source_denom: reward?.denom || '',
+                                resolved_amount: '0',
+                                resolved_denom: reward?.denom || '',
+                                display_denom: reward?.denom || '',
+                                display_amount: '0',
+                                value_usd: '$0.00'
+                            };
+                        }
+
+                        const token = reward.amount.tokens[0];
+                        return {
+                            source_denom: reward.denom,
+                            resolved_amount: token.resolved_amount || '0',
+                            resolved_denom: reward.denom,
+                            display_denom: reward.denom,
+                            display_amount: token.display_amount || '0',
+                            value_usd: token.value_usd || '$0.00'
+                        };
+                    } catch (error) {
+                        logger.warn('Error processing reward token:', {
+                            error,
+                            reward,
+                            context: 'rewards_10k_lava_delegation_mapping'
+                        });
+                        // Return default values on error
+                        return {
+                            source_denom: reward?.denom || '',
+                            resolved_amount: '0',
+                            resolved_denom: reward?.denom || '',
+                            display_denom: reward?.denom || '',
+                            display_amount: '0',
+                            value_usd: '$0.00'
+                        };
+                    }
+                }),
                 rewards_last_month,
                 '30_days_relays_served': apr['30_days_relays_served'] || '',
                 specs: provider?.specs || [],
@@ -214,7 +301,36 @@ export async function ProviderPerformanceRawHandler(request: FastifyRequest, rep
         reply.header('Content-Type', 'application/json');
         return reply.send(JSONStringify(combinedData));
     } catch (error) {
-        logger.error('Error in ProviderPerformanceRawHandler:', error);
-        return reply.status(500).send({ error: 'Internal server error' });
+        const errorDetails = {
+            endpoint: 'ProviderPerformanceRawHandler',
+            timestamp: new Date().toISOString(),
+            errorType: typeof error,
+            errorName: (error as Error)?.name,
+            errorMessage: (error as Error)?.message,
+            errorStack: (error as Error)?.stack,
+            requestInfo: {
+                method: request.method,
+                url: request.url,
+                params: request.params,
+                query: request.query,
+                headers: {
+                    ...request.headers,
+                    // Exclude sensitive headers if any
+                    authorization: undefined
+                }
+            },
+            systemInfo: {
+                memoryUsage: process.memoryUsage(),
+                uptime: process.uptime(),
+                nodeVersion: process.version
+            }
+        };
+
+        logger.error('Provider Performance Handler - Critical Error:', errorDetails);
+        return reply.status(500).send({
+            error: 'Internal server error',
+            errorId: new Date().getTime(),
+            message: 'Failed to process provider performance data. Please try again later.'
+        });
     }
 }

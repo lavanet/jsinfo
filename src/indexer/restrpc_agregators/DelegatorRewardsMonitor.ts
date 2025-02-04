@@ -8,9 +8,9 @@ import { queryJsinfo } from '@jsinfo/utils/db';
 import { HashJson, JSONStringify } from '@jsinfo/utils/fmt';
 
 export interface ProcessedRewardAmount {
-    amount: number;
+    amount: string;
     denom: string;
-    usdcValue: number;
+    usdcValue: string;
     provider: string;
 }
 
@@ -123,12 +123,13 @@ class DelegatorRewardsMonitorClass {
                             const usdcAmount = await GetUSDCValue(amount, denom);
                             if (usdcAmount === "0") continue;
 
-                            processedRewards.push({
-                                amount: Number(amount),
+                            const processedReward: ProcessedRewardAmount = {
+                                amount: amount.toString(),
                                 denom,
-                                usdcValue: parseFloat(usdcAmount),
+                                usdcValue: usdcAmount,
                                 provider: reward.provider
-                            });
+                            };
+                            processedRewards.push(processedReward);
                         }
                     }
                 }
@@ -143,11 +144,24 @@ class DelegatorRewardsMonitorClass {
                     errorName: (error as Error)?.name,
                     errorMessage: (error as Error)?.message,
                     errorStack: (error as Error)?.stack,
-                    fullError: JSONStringify(error)
+                    fullError: JSONStringify(error),
+                    processingStage: 'delegator_rewards_processing',
+                    timestamp: new Date().toISOString(),
+                    context: {
+                        delegatorAddress: delegator,
+                        chunkSize: delegators.length,
+                        chunkIndex: chunkIndex,
+                        totalDelegators: totalDelegators,
+                        processedCount: processedCount
+                    },
+                    systemInfo: {
+                        memoryUsage: process.memoryUsage(),
+                        uptime: process.uptime()
+                    }
                 };
 
-                console.error('Full error details:', errorDetails);  // For immediate console debugging
-                logger.error(`DelegatorRewardsMonitor - Error processing delegator`, errorDetails);
+                console.error('DelegatorRewardsMonitor - Detailed error:', errorDetails);
+                logger.error(`DelegatorRewardsMonitor - Failed to process delegator rewards`, errorDetails);
             }
         }
     }

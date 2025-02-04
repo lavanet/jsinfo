@@ -1,6 +1,8 @@
 import { logger } from '@jsinfo/utils/logger';
 import { ConvertToBaseDenom, GetUSDCValue, GetDenomTrace } from '@jsinfo/restRpc/CurrencyConverstionUtils';
 import { ProcessedInfoItem } from '@jsinfo/redis/resources/MainnetProviderEstimatedRewards/MainnetGenLavaLatestProviderRewards';
+import Decimal from 'decimal.js';
+
 interface EstimatedRewardsResponse {
     info: {
         source: string;
@@ -45,7 +47,30 @@ export interface CoinGeckoPriceInfo {
 // Global price cache map
 const COINGECKO_PRICES_RESOLVED_MAP: Record<string, Record<string, CoinGeckoPriceInfo>> = {};
 
-export async function processTokenArrayAtTime(response: EstimatedRewardsResponse, timestamp: number | null = null): Promise<ProcessedTokenArray> {
+export function FormatTokenAmount(amount: string | number): string {
+    // Create a new Decimal instance
+    const decimal = new Decimal(amount);
+
+    // Convert to string with high precision
+    const str = decimal.toFixed(20);
+
+    // Split into whole and decimal parts
+    const [whole, fraction] = str.split('.');
+
+    // If no decimal part, return whole number
+    if (!fraction) return whole;
+
+    // Trim trailing zeros
+    const trimmedFraction = fraction.replace(/0+$/, '');
+
+    // If decimal part is empty after trimming zeros, return whole number
+    if (!trimmedFraction) return whole;
+
+    // If decimal part is significant (not just zeros), return with decimal
+    return `${whole}.${trimmedFraction}`;
+}
+
+export async function ProcessTokenArrayAtTime(response: EstimatedRewardsResponse, timestamp: number | null = null): Promise<ProcessedTokenArray> {
     const processedItems: ProcessedInfoItem[] = [];
     const processedTotalTokens: ProcessedToken[] = [];
     let totalUsd = 0;
@@ -56,35 +81,36 @@ export async function processTokenArrayAtTime(response: EstimatedRewardsResponse
             try {
                 const tokenAmount = item.amount[0]; // Back to array access
                 const [baseAmount, baseDenom] = await ConvertToBaseDenom(tokenAmount.amount, tokenAmount.denom);
-                const usdValue = await GetUSDCValue(baseAmount, baseDenom || tokenAmount.denom); // Fallback
+                const usdValue = await GetUSDCValue(baseAmount, baseDenom);
+
                 const originalDenom = (baseDenom && baseDenom.startsWith('ibc/')) ?
                     await GetDenomTrace(baseDenom) :
                     tokenAmount.denom;
 
                 const processedToken = {
                     source_denom: tokenAmount.denom,
-                    resolved_amount: Number(baseAmount).toFixed(20),
+                    resolved_amount: FormatTokenAmount(tokenAmount.amount),
                     resolved_denom: originalDenom,
-                    display_denom: baseDenom || tokenAmount.denom, // Fallback
-                    display_amount: baseAmount.toString(),
-                    value_usd: `$${parseFloat(usdValue).toFixed(20)}`
+                    display_denom: baseDenom,
+                    display_amount: FormatTokenAmount(baseAmount),
+                    value_usd: `$${FormatTokenAmount(usdValue)}`
                 };
 
                 processedItems.push({
                     source: item.source,
                     amount: {
                         tokens: [processedToken],
-                        total_usd: parseFloat(usdValue)
+                        total_usd: new Decimal(usdValue).toNumber()
                     }
                 });
-                totalUsd += parseFloat(usdValue);
+                totalUsd += new Decimal(usdValue).toNumber();
 
                 // Store in coingecko prices map
                 const prices = getCoingeckoPricesResolvedMap(timestamp);
                 prices[tokenAmount.denom] = {
                     source_denom: tokenAmount.denom,
                     resolved_denom: originalDenom,
-                    display_denom: baseDenom || tokenAmount.denom,
+                    display_denom: baseDenom,
                     value_usd: usdValue
                 };
             } catch (error) {
@@ -111,11 +137,11 @@ export async function processTokenArrayAtTime(response: EstimatedRewardsResponse
 
                 processedTotalTokens.push({
                     source_denom: total.denom,
-                    resolved_amount: Number(baseAmount).toFixed(20),
+                    resolved_amount: FormatTokenAmount(total.amount),
                     resolved_denom: originalDenom,
                     display_denom: baseDenom,
-                    display_amount: total.amount,
-                    value_usd: `$${parseFloat(usdValue).toFixed(20)}`
+                    display_amount: FormatTokenAmount(baseAmount),
+                    value_usd: `$${FormatTokenAmount(usdValue)}`
                 });
 
                 // Store total tokens in coingecko prices map too

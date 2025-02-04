@@ -6,7 +6,9 @@ import { ProviderMonikerService } from '@jsinfo/redis/resources/global/ProviderM
 import * as JsinfoProviderAgrSchema from '@jsinfo/schemas/jsinfoSchema/providerRelayPaymentsAgregation';
 import { EstimatedRewardsResponse } from '@jsinfo/restRpc/lavaRpcOnDemandEndpointCache';
 import { IsMeaningfulText } from '@jsinfo/utils/fmt';
-import { ConvertToBaseDenom } from '@jsinfo/restRpc/CurrencyConverstionUtils';
+import Decimal from 'decimal.js';
+import { logger } from '@jsinfo/utils/logger';
+import { CalculateProviderAprs, ProviderAprDetails, RewardAmount } from '@jsinfo/indexer/restrpc_agregators/CalcualteApr';
 
 export interface AllAprProviderData {
     address: string;
@@ -15,7 +17,7 @@ export interface AllAprProviderData {
     commission?: string | null;
     '30_days_cu_served'?: string | null;
     '30_days_relays_served'?: string | null;
-    rewards: EstimatedRewardsResponse;
+    rewards_10k_lava_delegation: RewardAmount[];
     relaySum?: number;
 }
 
@@ -24,24 +26,24 @@ function ValueOrDash(provider: string | undefined): string {
     return IsMeaningfulText("" + provider) ? String(provider) : '-';
 }
 
-function formatToPercent(value: number): string {
-    if (!IsMeaningfulText("" + value)) return '-'; // Return '-' if the value is not a number
-    return (value * 100).toFixed(4) + '%'; // Convert to percentage and format to one decimal place
-}
-
 // Helper function to safely format commission
 function formatCommissionPrecent(commission: any): string {
     if (!IsMeaningfulText(commission)) return '-';
-    let commission_float = parseFloat(commission);
-    if (commission_float === 0) return '0.0%';
-    return commission_float.toFixed(1) + "%";
+
+    try {
+        const commissionDecimal = new Decimal(commission);
+        if (commissionDecimal.isZero()) return '0.0%';
+        return `${commissionDecimal.toFixed(1)}%`;
+    } catch (error) {
+        return '-';
+    }
 }
 
 interface AddressAndApr {
     address: string;
     type: string;
-    apr: string; // or number, depending on your use case
-    rewards: EstimatedRewardsResponse; // Assuming this is already defined
+    apr: string;
+    rewards: EstimatedRewardsResponse;
 }
 
 interface ProviderCommission {
@@ -56,7 +58,7 @@ interface CuServed {
 }
 
 export class AllProviderAPRResource extends RedisResourceBase<AllAprProviderData[], {}> {
-    protected readonly redisKey = 'allProviderAPR';
+    protected readonly redisKey = 'allProviderAPR_v6';
     protected readonly cacheExpirySeconds = 300; // 5 minutes cache
 
     protected async fetchFromSource(): Promise<AllAprProviderData[]> {
@@ -66,30 +68,19 @@ export class AllProviderAPRResource extends RedisResourceBase<AllAprProviderData
             const cuServedDataMapByProviderId = this.mapCuServedData(cuServedData);
             const relayServedDataMapByProviderId = this.mapRelayServedData(cuServedData);
 
-            const { addressAndAprDataRestakingById, addressAndAprDataStackingById, addressAndAprDataRewardsById } =
-                await this.processAddressAndAprData(addressAndAprData);
-
-            this.calculateAverages(addressAndAprDataRestakingById);
-            this.calculateAverages(addressAndAprDataStackingById);
-
-            return this.constructProcessedData(addressAndAprDataRestakingById, addressAndAprDataStackingById,
-                providerCommissionsDataMapByProviderId, cuServedDataMapByProviderId, addressAndAprDataRewardsById, relayServedDataMapByProviderId);
+            return this.constructProcessedData(
+                addressAndAprData,
+                providerCommissionsDataMapByProviderId,
+                cuServedDataMapByProviderId,
+                relayServedDataMapByProviderId
+            );
         }, `ProviderAPRResource::fetchFromSource`);
 
         return result;
     }
 
-    private async fetchData(db: any): Promise<[AddressAndApr[], ProviderCommission[], CuServed[]]> {
-        const addressAndApr = db.select({
-            address: JsinfoSchema.aprPerProvider.provider,
-            type: JsinfoSchema.aprPerProvider.type,
-            apr: JsinfoSchema.aprPerProvider.value,
-            rewards: sql`${JsinfoSchema.aprPerProvider.estimatedRewards}`
-        }).from(JsinfoSchema.aprPerProvider)
-            .where(gt(JsinfoSchema.aprPerProvider.timestamp, sql<Date>`now() - interval '30 day'`))
-            .then(results => results.filter(row =>
-                !row.address.includes('valoper') && IsMeaningfulText(row.apr + "")
-            ));
+    private async fetchData(db: any): Promise<[Record<string, ProviderAprDetails>, ProviderCommission[], CuServed[]]> {
+        const addressAndApr = await CalculateProviderAprs();
 
         const providerCommissions = db.select({
             provider: JsinfoSchema.providerStakes.provider,
@@ -143,129 +134,35 @@ export class AllProviderAPRResource extends RedisResourceBase<AllAprProviderData
         return cuServedDataMapByProviderId;
     }
 
-    private async processAddressAndAprData(addressAndAprData: AddressAndApr[]): Promise<any> {
-        const addressAndAprDataRestakingById: Record<string, any> = {};
-        const addressAndAprDataStackingById: Record<string, any> = {};
-        const addressAndAprDataRewardsById: Record<string, any> = {};
-
-        for (const curr of addressAndAprData) {
-            if (IsMeaningfulText(curr.address) && curr.address !== null) {
-                const address = curr.address.toLowerCase().trim();
-
-                addressAndAprDataRewardsById[address] = curr.rewards;
-
-                if (typeof addressAndAprDataRewardsById[address] === 'string') {
-                    addressAndAprDataRewardsById[address] = JSON.parse(addressAndAprDataRewardsById[address]);
-                }
-
-                if (addressAndAprDataRewardsById[address]) {
-                    if (addressAndAprDataRewardsById[address].info.length == 0 &&
-                        addressAndAprDataRewardsById[address].total.length == 0) {
-                        addressAndAprDataRewardsById[address] = null;
-                    }
-                }
-
-                if (addressAndAprDataRewardsById[address]) {
-                    addressAndAprDataRewardsById[address].info = await this.processRewards(addressAndAprDataRewardsById[address].info);
-                    addressAndAprDataRewardsById[address].total = await this.processRewards(addressAndAprDataRewardsById[address].total, true);
-                }
-
-                if (addressAndAprDataRewardsById[address]) {
-                    if (addressAndAprDataRewardsById[address].total.length != 0) {
-                        delete addressAndAprDataRewardsById[address].info;
-                        addressAndAprDataRewardsById[address] = addressAndAprDataRewardsById[address].total;
-                    } else {
-                        delete addressAndAprDataRewardsById[address].total;
-                        addressAndAprDataRewardsById[address] = addressAndAprDataRewardsById[address].info;
-                    }
-                }
-
-                if (curr.type.toLowerCase().trim() === 'restaking') {
-                    if (!addressAndAprDataRestakingById[address]) {
-                        addressAndAprDataRestakingById[address] = [];
-                    }
-                    addressAndAprDataRestakingById[address].push(curr.apr);
-                } else if (curr.type.toLowerCase().trim() in ['stacking', 'staking']) {
-                    if (!addressAndAprDataStackingById[address]) {
-                        addressAndAprDataStackingById[address] = [];
-                    }
-                    addressAndAprDataStackingById[address].push(curr.apr);
-                }
-            }
-        }
-
-        return { addressAndAprDataRestakingById, addressAndAprDataStackingById, addressAndAprDataRewardsById };
-    }
-
-    private async processRewards(rewards: any[], isTotal: boolean = false): Promise<any[]> {
-        const processedRewards: any[] = []; // Array to hold processed rewards
-        for (const x of rewards) {
-            try {
-                const [amount, denom] = await ConvertToBaseDenom(isTotal ? x.amount + "" : x.amount.amount + "", isTotal ? x.denom + "" : x.amount.denom + "");
-                if (amount === "0") continue;
-
-                if (isTotal) {
-                    x.amount = amount;
-                    x.denom = denom;
-                    x.source = x?.source?.toLowerCase().trim();
-                } else {
-                    x.amount.amount = amount;
-                    x.amount.denom = denom;
-                    x.source = x?.source?.toLowerCase().trim();
-                }
-                processedRewards.push(x); // Add processed reward to the array
-            } catch (error) {
-                console.error('Error processing reward item:', x, error);
-                // Handle the error as needed (e.g., set default values or skip)
-            }
-        }
-        return processedRewards; // Return the processed rewards
-    }
-
-    private calculateAverages(dataMap: Record<string, any>): void {
-        for (const address of Object.keys(dataMap)) {
-            const total = dataMap[address].reduce((a, b) => a + b, 0);
-            const count = dataMap[address].length;
-            const average = count > 0 ? (total / count) : 0; // Calculate average or set to 0
-            dataMap[address] = formatToPercent(average); // Use the helper function to format the average
-        }
-    }
-
     private async constructProcessedData(
-        addressAndAprDataRestakingById: Record<string, any>,
-        addressAndAprDataStackingById: Record<string, any>,
+        addressAndAprData: Record<string, ProviderAprDetails>,
         providerCommissionsDataMapByProviderId: Record<string, string>,
         cuServedDataMapByProviderId: Record<string, number>,
-        addressAndAprDataRewardsById: Record<string, any>,
         relayServedDataMapByProviderId: Record<string, number>
     ): Promise<AllAprProviderData[]> {
         const processedAddressAndAprData: AllAprProviderData[] = [];
-        const entries = new Set<string>(Object.keys(addressAndAprDataRestakingById));
+        const entries = Object.keys(addressAndAprData);
+
+        logger.info(`Constructing data for ${entries.length} providers`);
 
         for (const address of entries) {
             const moniker = await ProviderMonikerService.GetMonikerForProvider(address);
+            const details = addressAndAprData[address];
+
             const ret: AllAprProviderData = {
                 address: address,
                 moniker: ValueOrDash(moniker),
-                apr: ValueOrDash(String(addressAndAprDataRestakingById[address])),
+                apr: details.apr,
                 commission: formatCommissionPrecent(providerCommissionsDataMapByProviderId[address]),
                 '30_days_cu_served': ValueOrDash(String(cuServedDataMapByProviderId[address])),
                 '30_days_relays_served': ValueOrDash(String(relayServedDataMapByProviderId[address])),
-                rewards: addressAndAprDataRewardsById[address] || "-",
+                rewards_10k_lava_delegation: details.rewards_10k_lava_delegation,
             };
+
             processedAddressAndAprData.push(ret);
         }
 
-        // Sort the processed data by APR in descending order
-        processedAddressAndAprData.sort((a, b) => {
-            const aprA = parseFloat(a.apr + "") || 0; // Convert APR to number, default to 0 if NaN
-            const aprB = parseFloat(b.apr + "") || 0; // Convert APR to number, default to 0 if NaN
-            if (aprA === 0 && aprB === 0) {
-                return String(a).localeCompare(String(b));
-            }
-            return aprB - aprA; // Sort in descending order
-        });
-
+        logger.info(`Processed ${processedAddressAndAprData.length} providers total`);
         return processedAddressAndAprData;
     }
 }

@@ -2,6 +2,7 @@ import { logger } from '@jsinfo/utils/logger';
 import { RedisResourceBase } from '@jsinfo/redis/classes/RedisResourceBase';
 import { MainnetProviderEstimatedRewardsGetService, CoinGeckoPriceInfo } from './MainnetProviderEstimatedRewardsGetResource';
 import { TokenInfo, BlockMetadata } from './MainnetGenLavaLatestProviderRewards';
+import Decimal from 'decimal.js';
 
 export interface SpecFilterResponse {
     data: {
@@ -40,10 +41,10 @@ class MainnetProviderEstimatedRewardsSpecFilterResource extends RedisResourceBas
 
     private sumTokens(tokens: TokenInfo[]) {
         const sums: Record<string, TokenInfo> = {};
-        let total_usd = 0;
+        let total_usd = new Decimal(0);
 
         tokens.forEach(token => {
-            const value_usd = parseFloat(token.value_usd.replace('$', ''));
+            const value_usd = new Decimal(token.value_usd.replace('$', ''));
             const key = token.resolved_denom;
 
             if (!sums[key]) {
@@ -57,14 +58,20 @@ class MainnetProviderEstimatedRewardsSpecFilterResource extends RedisResourceBas
                 };
             }
 
-            sums[key].resolved_amount = (parseFloat(sums[key].resolved_amount) + parseFloat(token.resolved_amount)).toString();
-            sums[key].value_usd = `$${(parseFloat(sums[key].value_usd.replace('$', '')) + value_usd).toFixed(2)}`;
-            total_usd += value_usd;
+            const newResolvedAmount = new Decimal(sums[key].resolved_amount)
+                .plus(new Decimal(token.resolved_amount));
+
+            const currentUsd = new Decimal(sums[key].value_usd.replace('$', ''));
+            const newUsd = currentUsd.plus(value_usd);
+
+            sums[key].resolved_amount = newResolvedAmount.toString();
+            sums[key].value_usd = `$${newUsd.toFixed(2)}`;
+            total_usd = total_usd.plus(value_usd);
         });
 
         return {
             tokens: Object.values(sums),
-            total_usd
+            total_usd: total_usd.toNumber()
         };
     }
 

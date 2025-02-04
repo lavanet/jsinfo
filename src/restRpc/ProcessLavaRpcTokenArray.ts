@@ -2,6 +2,7 @@ import { logger } from '@jsinfo/utils/logger';
 import { ConvertToBaseDenom, GetUSDCValue, GetDenomTrace } from '@jsinfo/restRpc/CurrencyConverstionUtils';
 import { ProcessedInfoItem } from '@jsinfo/redis/resources/MainnetProviderEstimatedRewards/MainnetGenLavaLatestProviderRewards';
 import Decimal from 'decimal.js';
+import { TEST_DENOMS } from '@jsinfo/indexer/restrpc_agregators/CalcualteApr';
 
 interface EstimatedRewardsResponse {
     info: {
@@ -79,6 +80,8 @@ export async function ProcessTokenArrayAtTime(response: EstimatedRewardsResponse
     if (response.info) {
         for (const item of response.info) {
             try {
+                if (TEST_DENOMS.includes(item.amount[0].denom)) continue;
+
                 const tokenAmount = item.amount[0]; // Back to array access
                 const [baseAmount, baseDenom] = await ConvertToBaseDenom(tokenAmount.amount, tokenAmount.denom);
                 const usdValue = await GetUSDCValue(baseAmount, baseDenom);
@@ -127,6 +130,7 @@ export async function ProcessTokenArrayAtTime(response: EstimatedRewardsResponse
 
     // Process total array
     if (response.total) {
+        let totalTokensUsd = new Decimal(0);
         for (const total of response.total) {
             try {
                 const [baseAmount, baseDenom] = await ConvertToBaseDenom(total.amount, total.denom);
@@ -134,6 +138,9 @@ export async function ProcessTokenArrayAtTime(response: EstimatedRewardsResponse
                 const originalDenom = total.denom.startsWith('ibc/') ?
                     await GetDenomTrace(total.denom) :
                     total.denom;
+
+                const usdDecimal = new Decimal(usdValue);
+                totalTokensUsd = totalTokensUsd.plus(usdDecimal);
 
                 processedTotalTokens.push({
                     source_denom: total.denom,
@@ -156,6 +163,7 @@ export async function ProcessTokenArrayAtTime(response: EstimatedRewardsResponse
                 logger.error('Error processing total token:', error);
             }
         }
+        totalUsd = totalTokensUsd.toNumber();
     }
 
     return {

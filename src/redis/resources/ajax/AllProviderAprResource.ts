@@ -58,7 +58,7 @@ interface CuServed {
 }
 
 export class AllProviderAPRResource extends RedisResourceBase<AllAprProviderData[], {}> {
-    protected readonly redisKey = 'allProviderAPR_v6';
+    protected readonly redisKey = 'allProviderAPR_v8';
     protected readonly cacheExpirySeconds = 300; // 5 minutes cache
 
     protected async fetchFromSource(): Promise<AllAprProviderData[]> {
@@ -101,11 +101,24 @@ export class AllProviderAPRResource extends RedisResourceBase<AllAprProviderData
     }
 
     private mapProviderCommissions(providerCommissionsData: any[]): Record<string, string> {
-        return Object.fromEntries(
+        // Add logging to debug
+        logger.info('Raw provider commissions:', providerCommissionsData);
+
+        const commissionMap = Object.fromEntries(
             providerCommissionsData
-                .filter(curr => IsMeaningfulText(curr.provider) && curr.provider !== null)
-                .map(curr => [curr.provider!.toLowerCase().trim(), formatCommissionPrecent(curr.commission)])
+                .filter(curr => IsMeaningfulText(curr.provider))
+                .map(curr => {
+                    const provider = curr.provider.toLowerCase().trim();
+                    const commission = formatCommissionPrecent(curr.commission);
+                    // Log each mapping
+                    logger.info(`Mapping commission for ${provider}: ${commission}`);
+                    return [provider, commission];
+                })
         );
+
+        // Log final map
+        logger.info('Final commission map:', commissionMap);
+        return commissionMap;
     }
 
     private mapCuServedData(cuServedData: CuServed[]): Record<string, number> {
@@ -146,6 +159,10 @@ export class AllProviderAPRResource extends RedisResourceBase<AllAprProviderData
         logger.info(`Constructing data for ${entries.length} providers`);
 
         for (const address of entries) {
+            const normalizedAddress = address.toLowerCase().trim();
+            const commission = providerCommissionsDataMapByProviderId[normalizedAddress];
+            logger.info(`Looking up commission for ${normalizedAddress}: ${commission}`);
+
             const moniker = await ProviderMonikerService.GetMonikerForProvider(address);
             const details = addressAndAprData[address];
 
@@ -153,9 +170,9 @@ export class AllProviderAPRResource extends RedisResourceBase<AllAprProviderData
                 address: address,
                 moniker: ValueOrDash(moniker),
                 apr: details.apr,
-                commission: formatCommissionPrecent(providerCommissionsDataMapByProviderId[address]),
-                '30_days_cu_served': ValueOrDash(String(cuServedDataMapByProviderId[address])),
-                '30_days_relays_served': ValueOrDash(String(relayServedDataMapByProviderId[address])),
+                commission: commission || '-', // Provide default if not found
+                '30_days_cu_served': ValueOrDash(String(cuServedDataMapByProviderId[normalizedAddress])),
+                '30_days_relays_served': ValueOrDash(String(relayServedDataMapByProviderId[normalizedAddress])),
                 rewards_10k_lava_delegation: details.rewards_10k_lava_delegation,
             };
 

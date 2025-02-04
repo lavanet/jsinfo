@@ -152,7 +152,6 @@ class DelegatorRewardsMonitorClass {
                         chunkSize: delegators.length,
                         chunkIndex: chunkIndex,
                         totalDelegators: totalDelegators,
-                        processedCount: processedCount
                     },
                     systemInfo: {
                         memoryUsage: process.memoryUsage(),

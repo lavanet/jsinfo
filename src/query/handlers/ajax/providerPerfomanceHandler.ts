@@ -241,48 +241,9 @@ export async function ProviderPerformanceRawHandler(request: FastifyRequest, rep
 
             const result: ProviderPerformanceData = {
                 ...apr,
+                commission: apr.commission || '',
                 '30_days_cu_served': apr['30_days_cu_served'] || '',
-                rewards_10k_lava_delegation: Object.values(apr.rewards).map(reward => {
-                    try {
-                        // Safely handle the reward mapping with proper checks
-                        if (!reward?.amount?.tokens?.[0]) {
-                            // Return a default token structure if data is missing
-                            return {
-                                source_denom: reward?.denom || '',
-                                resolved_amount: '0',
-                                resolved_denom: reward?.denom || '',
-                                display_denom: reward?.denom || '',
-                                display_amount: '0',
-                                value_usd: '$0.00'
-                            };
-                        }
-
-                        const token = reward.amount.tokens[0];
-                        return {
-                            source_denom: reward.denom,
-                            resolved_amount: token.resolved_amount || '0',
-                            resolved_denom: reward.denom,
-                            display_denom: reward.denom,
-                            display_amount: token.display_amount || '0',
-                            value_usd: token.value_usd || '$0.00'
-                        };
-                    } catch (error) {
-                        logger.warn('Error processing reward token:', {
-                            error,
-                            reward,
-                            context: 'rewards_10k_lava_delegation_mapping'
-                        });
-                        // Return default values on error
-                        return {
-                            source_denom: reward?.denom || '',
-                            resolved_amount: '0',
-                            resolved_denom: reward?.denom || '',
-                            display_denom: reward?.denom || '',
-                            display_amount: '0',
-                            value_usd: '$0.00'
-                        };
-                    }
-                }),
+                rewards_10k_lava_delegation: apr.rewards_10k_lava_delegation,
                 rewards_last_month,
                 '30_days_relays_served': apr['30_days_relays_served'] || '',
                 specs: provider?.specs || [],

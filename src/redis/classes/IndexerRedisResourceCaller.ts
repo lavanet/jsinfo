@@ -27,6 +27,7 @@ import { LockedVestingTokensService } from '../resources/global/LockedVestingTok
 import { IpRpcEndpointsIndexService } from '../resources/IpRpcEndpointsIndex/IpRpcEndpointsResource';
 import { MainnetProviderEstimatedRewardsListService } from '../resources/MainnetProviderEstimatedRewards/MainnetProviderEstimatedRewardsListResource';
 import { IsMainnet } from '@jsinfo/utils/env';
+import { MainnetValidatorsWithRewardsService } from '../resources/MainetValidatorWithRewards/MainnetValidatorsWithRewardsResource';
 
 export class IndexerRedisResourceCaller {
     private static readonly REFRESH_INTERVAL = 60 * 1000; // 1 minute
@@ -102,7 +103,7 @@ export class IndexerRedisResourceCaller {
                 this.refreshIndexResources(),
                 this.refreshGlobalResources(),
                 this.refreshIpRpcEndpoints(),
-                this.refreshMainnetProviderEstimatedRewards()
+                this.refreshMainnetOnlyResources()
             ]);
 
             const duration = Date.now() - startTime;
@@ -270,12 +271,16 @@ export class IndexerRedisResourceCaller {
         ).catch(e => logger.error('Failed to refresh ip rpc endpoints:', e));
     }
 
-    private static async refreshMainnetProviderEstimatedRewards(): Promise<void> {
+    private static async refreshMainnetOnlyResources(): Promise<void> {
         if (IsMainnet()) {
             await this.safeFetch('MainnetProviderEstimatedRewards',
                 () => MainnetProviderEstimatedRewardsListService.fetch(),
                 this.currentFetches
             ).catch(e => logger.error('Failed to refresh mainnet provider estimated rewards:', e));
+            await this.safeFetch('MainnetValidatorsAndRewards',
+                () => MainnetValidatorsWithRewardsService.fetch(),
+                this.currentFetches
+            ).catch(e => logger.error('Failed to refresh mainnet validators and rewards:', e));
         }
     }
 }

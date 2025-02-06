@@ -1,7 +1,7 @@
 import { logger } from '@jsinfo/utils/logger';
-import { ProcessTokenArrayAtTime, getCoingeckoPricesResolvedMap } from '@jsinfo/restRpc/ProcessLavaRpcTokenArray';
-import { MainnetGetEstimatedProviderRewardsNoAmountNoDenom } from '@jsinfo/restRpc/lavaRpcOnDemandEndpointCache';
-import { FetchRestData } from '@jsinfo/restRpc/fetch';
+import { ProcessTokenArrayAtTime, getCoingeckoPricesResolvedMap } from '@jsinfo/restRpc/MainnetProcessLavaRpcTokenArray';
+import { MainnetGetEstimatedProviderRewardsNoAmountNoDenom } from '@jsinfo/restRpc/MainnetLavaRpcEndpointCache';
+import { FetchRestData } from '@jsinfo/restRpc/RestFetch';
 
 const MAINNET_INFO_URL = 'https://jsinfo.mainnet.lavanet.xyz/latest';
 const MAINNET_ACTIVE_PROVIDERS_URL = 'https://jsinfo.mainnet.lavanet.xyz/active_providers';

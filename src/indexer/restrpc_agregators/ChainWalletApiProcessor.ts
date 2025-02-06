@@ -1,5 +1,5 @@
 import { keyValueStore } from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
-import { RpcPeriodicEndpointCache } from '@jsinfo/restRpc/lavaRpcPeriodicEndpointCache';
+import { RpcPeriodicEndpointCache } from '@jsinfo/restRpc/LavaRpcPeriodicEndpointCache';
 import { logger } from '@jsinfo/utils/logger';
 import { queryJsinfo } from '@jsinfo/utils/db';
 

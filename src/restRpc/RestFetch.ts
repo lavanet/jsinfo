@@ -30,6 +30,11 @@ async function doFetch<T>(
             });
 
             if (response.status !== 200) {
+                // Check for "does not exist" error
+                if (response.data?.code === 2 && (response.data?.message?.toLowerCase().includes('does not exist') || response.data?.message?.toLowerCase().includes('not found'))) {
+                    throw new EntryDoesNotExistException(response.data.message);
+                }
+
                 const retryConfig = HTTP_RETRY_CODES[response.status];
                 if (retryConfig) {
                     logger.warn(`${retryConfig.message} (${response.status}) for ${url}, waiting ${retryConfig.delay / 1000}s before retry`);
@@ -44,6 +49,7 @@ async function doFetch<T>(
 
             return response.data;
         } catch (error) {
+            if (error instanceof EntryDoesNotExistException) throw error;
             if (attempt === maxRetries - 1) throw error;
             attempt++;
             logger.error(`Error fetching data from ${url}:`, axios.isAxiosError(error) ? error.message : error);
@@ -51,6 +57,13 @@ async function doFetch<T>(
         }
     }
     throw new Error(`Max retries (${maxRetries}) exceeded for ${url}`);
+}
+
+export class EntryDoesNotExistException extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = 'EntryDoesNotExistException';
+    }
 }
 
 export async function FetchRestData<T>(

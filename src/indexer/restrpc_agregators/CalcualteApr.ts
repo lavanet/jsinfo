@@ -1,11 +1,10 @@
 import { ActiveProvidersService } from '@jsinfo/redis/resources/index/ActiveProvidersResource';
-import { ConvertToBaseDenom, GetUSDCValue } from '@jsinfo/restRpc/CurrencyConverstionUtils';
-import { EstimatedRewardsResponse, RpcOnDemandEndpointCache } from '@jsinfo/restRpc/lavaRpcOnDemandEndpointCache';
-import { RpcPeriodicEndpointCache } from '@jsinfo/restRpc/lavaRpcPeriodicEndpointCache';
+import { GetUSDCValue } from '@jsinfo/restRpc/CurrencyConverstionUtils';
+import { RpcOnDemandEndpointCache } from '@jsinfo/restRpc/LavaRpcOnDemandEndpointCache';
 import { IsTestnet } from '@jsinfo/utils/env';
 import { logger } from '@jsinfo/utils/logger';
 import Decimal from 'decimal.js';
-import { ProcessTokenArrayAtTime } from '@jsinfo/restRpc/ProcessLavaRpcTokenArray';
+import { ProcessTokenArrayAtTime } from '@jsinfo/restRpc/MainnetProcessLavaRpcTokenArray';
 import { IsMeaningfulText } from '@jsinfo/utils/fmt';
 
 // Constants

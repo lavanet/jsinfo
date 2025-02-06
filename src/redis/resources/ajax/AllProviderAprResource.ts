@@ -4,7 +4,7 @@ import { queryJsinfo } from '@jsinfo/utils/db';
 import { and, eq, gt, sql } from 'drizzle-orm';
 import { ProviderMonikerService } from '@jsinfo/redis/resources/global/ProviderMonikerSpecResource';
 import * as JsinfoProviderAgrSchema from '@jsinfo/schemas/jsinfoSchema/providerRelayPaymentsAgregation';
-import { EstimatedRewardsResponse } from '@jsinfo/restRpc/lavaRpcOnDemandEndpointCache';
+import { EstimatedRewardsResponse } from '@jsinfo/restRpc/LavaRpcOnDemandEndpointCache';
 import { IsMeaningfulText } from '@jsinfo/utils/fmt';
 import Decimal from 'decimal.js';
 import { logger } from '@jsinfo/utils/logger';

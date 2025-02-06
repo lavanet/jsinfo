@@ -3,6 +3,7 @@ import { ConvertToBaseDenom, GetUSDCValue, GetDenomTrace } from '@jsinfo/restRpc
 import { ProcessedInfoItem } from '@jsinfo/redis/resources/MainnetProviderEstimatedRewards/MainnetGenLavaLatestProviderRewards';
 import Decimal from 'decimal.js';
 import { TEST_DENOMS } from '@jsinfo/indexer/restrpc_agregators/CalcualteApr';
+import { IsMeaningfulText } from '@jsinfo/utils/fmt';
 
 interface EstimatedRewardsResponse {
     info: {
@@ -183,5 +184,60 @@ export function getCoingeckoPricesResolvedMap(timestamp: number | null = null): 
         COINGECKO_PRICES_RESOLVED_MAP[key] = {};
     }
     return COINGECKO_PRICES_RESOLVED_MAP[key];
+}
+
+export interface MinimalToken {
+    denom: string;
+    amount: string;
+}
+
+export interface ProcessedMinimalTokenArray {
+    tokens: ProcessedToken[];
+    total_usd: number;
+}
+
+export async function ProcessMinimalTokenArray(tokens: MinimalToken[]): Promise<ProcessedMinimalTokenArray> {
+    try {
+        const processedTokens: ProcessedToken[] = [];
+        let totalTokensUsd = new Decimal(0);
+
+        for (const token of tokens) {
+            try {
+                if (TEST_DENOMS.includes(token.denom)) continue;
+
+                const [baseAmount, baseDenom] = await ConvertToBaseDenom(token.amount, token.denom);
+                const usdValue = await GetUSDCValue(baseAmount, baseDenom);
+                const originalDenom = token.denom.startsWith('ibc/') ?
+                    await GetDenomTrace(token.denom) :
+                    token.denom;
+
+                const usdDecimal = new Decimal(usdValue);
+                totalTokensUsd = totalTokensUsd.plus(usdDecimal);
+
+                processedTokens.push({
+                    source_denom: token.denom,
+                    resolved_amount: FormatTokenAmount(token.amount),
+                    resolved_denom: originalDenom,
+                    display_denom: baseDenom,
+                    display_amount: FormatTokenAmount(baseAmount),
+                    value_usd: `$${FormatTokenAmount(usdValue)}`
+                });
+
+            } catch (error) {
+                logger.error('Error processing token:', { error, token });
+            }
+        }
+
+        return {
+            tokens: processedTokens,
+            total_usd: totalTokensUsd.toNumber()
+        };
+    } catch (error) {
+        logger.error('Failed to process minimal token array:', error);
+        return {
+            tokens: [],
+            total_usd: 0
+        };
+    }
 }
 

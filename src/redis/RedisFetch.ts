@@ -1,5 +1,5 @@
 import { RedisCache } from "@jsinfo/redis/classes/RedisCache";
-import { FetchRestData } from "../restRpc/fetch";
+import { FetchRestData } from "../restRpc/RestFetch";
 import { logger } from "@jsinfo/utils/logger";
 
 export async function RedisFetch<T>(url: string, ttl: number = 1200): Promise<T> {

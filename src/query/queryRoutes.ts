@@ -106,9 +106,9 @@ import { AllLockedValuesHandler, AllLockedValuesHandlerOpts } from './handlers/a
 // -- IpRpcEndpointsIndex --
 import { IpRpcEndpointsIndexHandler, IpRpcEndpointsIndexHandlerOpts } from './handlers/IpRpcEndpointsIndex/IpRpcEndpointsIndexHandler';
 
-// -- lava_mainnet_provider_estimated_rewards --
-import { MainnetProviderEstimatedRewardsHandler } from './handlers/MainnetProviderEstimatedRewards/MainnetProviderEstimatedRewardsHandler';
-import { MainnetProviderEstimatedRewardsHandlerOpts } from './handlers/MainnetProviderEstimatedRewards/MainnetProviderEstimatedRewardsHandler';
+// -- lava mainnet only handlers --
+import { MainnetProviderEstimatedRewardsHandler, MainnetProviderEstimatedRewardsHandlerOpts } from './handlers/MainnetOnlyHandlers/MainnetProviderEstimatedRewardsHandler';
+import { MainnetValidatorsAndRewardsHandler, MainnetValidatorsAndRewardsHandlerOpts } from './handlers/MainnetOnlyHandlers/MainnetValidatorsAndRewardsHandler';
 
 // -- Provider avatar ajax --
 import {
@@ -269,6 +269,7 @@ GetServerInstance().get('/lava_iprpc_endpoints', IpRpcEndpointsIndexHandlerOpts,
 // lava_mainnet_provider_estimated_rewards
 if (IsMainnet()) {
     GetServerInstance().get('/lava_mainnet_provider_estimated_rewards', MainnetProviderEstimatedRewardsHandlerOpts, MainnetProviderEstimatedRewardsHandler);
+    GetServerInstance().get('/lava_mainnet_validators_and_rewards', MainnetValidatorsAndRewardsHandlerOpts, MainnetValidatorsAndRewardsHandler);
 }
 
 // -- Provider avatar ajax --

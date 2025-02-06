@@ -1,4 +1,4 @@
-import { RpcPeriodicEndpointCache } from './lavaRpcPeriodicEndpointCache';
+import { RpcPeriodicEndpointCache } from './LavaRpcPeriodicEndpointCache';
 import { RedisFetch } from '@jsinfo/redis/RedisFetch';
 import { logger } from '@jsinfo/utils/logger';
 

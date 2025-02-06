@@ -1,6 +1,6 @@
 import { logger } from '@jsinfo/utils/logger';
-import { RpcPeriodicEndpointCache } from '@jsinfo/restRpc/lavaRpcPeriodicEndpointCache';
-import { RpcOnDemandEndpointCache } from '@jsinfo/restRpc/lavaRpcOnDemandEndpointCache';
+import { RpcPeriodicEndpointCache } from '@jsinfo/restRpc/LavaRpcPeriodicEndpointCache';
+import { RpcOnDemandEndpointCache } from '@jsinfo/restRpc/LavaRpcOnDemandEndpointCache';
 import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { ConvertToBaseDenom, GetUSDCValue } from "../../restRpc/CurrencyConverstionUtils";
 import { sql } from 'drizzle-orm';

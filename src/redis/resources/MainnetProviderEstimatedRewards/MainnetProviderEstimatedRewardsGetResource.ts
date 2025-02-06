@@ -12,12 +12,12 @@ export interface GetQueryParams {
 }
 
 export interface TokenInfo {
-    source_denom: string;     // e.g. "ulava"
-    resolved_amount: string;  // e.g. "182.0"
-    resolved_denom: string;   // e.g. "ulava"
-    display_denom: string;    // e.g. "lava"
-    display_amount: string;   // e.g. "0.000182"
-    value_usd: string;       // e.g. "$0.00"
+    source_denom: string;
+    resolved_amount: string;
+    resolved_denom: string;
+    display_denom: string;
+    display_amount: string;
+    value_usd: string;
 }
 
 export interface CoinGeckoPriceInfo {

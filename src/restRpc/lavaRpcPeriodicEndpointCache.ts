@@ -1,7 +1,7 @@
 // src/indexer/classes/RpcEndpointCahce.ts
 
 import { logger } from '@jsinfo/utils/logger';
-import { QueryLavaRPC } from '@jsinfo/restRpc/lavaRpc';
+import { QueryLavaRPC } from '@jsinfo/restRpc/LavaRpc';
 import { RedisCache } from '@jsinfo/redis/classes/RedisCache';
 import { TruncateError } from '@jsinfo/utils/fmt';
 import { IsMeaningfulText } from '@jsinfo/utils/fmt';

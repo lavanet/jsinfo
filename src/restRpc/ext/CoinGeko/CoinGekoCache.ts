@@ -1,7 +1,7 @@
 import { logger } from '@jsinfo/utils/logger';
 import { IsMeaningfulText, TruncateError } from '@jsinfo/utils/fmt';
 import { RedisCache } from '@jsinfo/redis/classes/RedisCache';
-import { FetchRestData } from '@jsinfo/restRpc/fetch';
+import { FetchRestData } from '@jsinfo/restRpc/RestFetch';
 import denomsData from "./CoinGekoDenomMap.json" assert { type: "json" };
 import { IsMainnet } from '@jsinfo/utils/env';
 const getCacheKey = (coinGeckodenom: string) => `coingecko-rate-${coinGeckodenom}`;

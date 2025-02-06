@@ -1,6 +1,6 @@
 import { RedisResourceBase } from '@jsinfo/redis/classes/RedisResourceBase';
 import { ProviderStakesAndDelegationResource } from '@jsinfo/redis/resources/global/ProviderStakesAndDelegationResource';
-import { Pool, RpcOnDemandEndpointCache } from '@jsinfo/restRpc/lavaRpcOnDemandEndpointCache';
+import { Pool, RpcOnDemandEndpointCache } from '@jsinfo/restRpc/LavaRpcOnDemandEndpointCache';
 import { GetSubscriptionList } from '@jsinfo/indexer/restrpc_agregators/SubscriptionListProcessor';
 import { OsmosisGetTotalLavaLockedValue } from '@jsinfo/restRpc/ext/osmosisapi';
 import { BaseGetTotalLockedValue } from '@jsinfo/restRpc/ext/base';
@@ -9,7 +9,7 @@ import { CoinGekoCache } from '@jsinfo/restRpc/ext/CoinGeko/CoinGekoCache';
 import { logger } from '@jsinfo/utils/logger';
 import { LockedVestingTokensService } from '../global/LockedVestingTokensResource';
 import { IsMeaningfulText } from '@jsinfo/utils/fmt';
-import { RpcPeriodicEndpointCache } from '@jsinfo/restRpc/lavaRpcPeriodicEndpointCache';
+import { RpcPeriodicEndpointCache } from '@jsinfo/restRpc/LavaRpcPeriodicEndpointCache';
 import { REWARD_POOL_NAMES_TO_CONSIDER_IN_TOTAL_TOKEN_VALUE_CALCULATIONS } from '@jsinfo/utils/consts';
 
 // Renamed interface

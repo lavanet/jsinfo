@@ -1,4 +1,4 @@
-import { RpcPeriodicEndpointCache } from "../../restRpc/lavaRpcPeriodicEndpointCache";
+import { RpcPeriodicEndpointCache } from "../../restRpc/LavaRpcPeriodicEndpointCache";
 import { keyValueStore } from "@jsinfo/schemas/jsinfoSchema/jsinfoSchema";
 import { logger } from "@jsinfo/utils/logger";
 import { eq } from "drizzle-orm";

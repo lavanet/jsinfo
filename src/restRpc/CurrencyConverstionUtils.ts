@@ -88,6 +88,11 @@ export async function ConvertToBaseDenom(amount: string, denom: string): Promise
     return [baseAmount.toString(), baseDenom];
 }
 
+export async function GetDenomToUSDRate(denom: string): Promise<string> {
+    const usdcRate = await CoinGekoCache.GetDenomToUSDRate(denom);
+    return usdcRate.toString();
+}
+
 export async function GetUSDCValue(amount: string, denom: string): Promise<string> {
     const usdcRate = await CoinGekoCache.GetDenomToUSDRate(denom);
     if (usdcRate === 0) {

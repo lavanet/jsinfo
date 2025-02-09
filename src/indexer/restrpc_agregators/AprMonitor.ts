@@ -15,11 +15,11 @@ export class APRMonitorClass {
   private intervalId: NodeJS.Timer | null = null;
 
   public start(): void {
-    logger.info('Starting APR Monitor...');
+    // logger.info('Starting APR Monitor...');
     if (this.intervalId) return; // Prevent multiple intervals
 
     this.intervalId = setInterval(() => {
-      logger.info('Processing APR...');
+      // logger.info('Processing APR...');
       this.ProcessAPR().catch(console.error);
     }, 5 * 60 * 1000); // 5 minutes
 

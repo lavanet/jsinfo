@@ -135,7 +135,7 @@ export async function CalculateProviderAprs(): Promise<Record<string, ProviderAp
                 recommended_block: estimatedRewards.recommended_block
             });
 
-            console.log("provider", provider, "processed", processed);
+            // console.log("provider", provider, "processed", processed);
 
             // Calculate total USD value from processed rewards
             const totalUsdValue = processed.total?.tokens.reduce((sum, token) => {

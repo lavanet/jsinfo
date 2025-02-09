@@ -209,10 +209,10 @@ async function main() {
         let healthyEndpoints = 0;
 
         for (const [chainId, chainData] of Object.entries(results)) {
-            console.log(`\nProcessing results for ${chainId}`);
+            // console.log(`\nProcessing results for ${chainId}`);
 
             for (const [protocol, endpoints] of Object.entries(chainData.endpoints)) {
-                console.log(`  Processing ${protocol} endpoints`);
+                // console.log(`  Processing ${protocol} endpoints`);
                 for (const endpoint of (endpoints as Array<any>)) {
                     totalEndpoints++;
                     if (endpoint.status === 'healthy') healthyEndpoints++;

@@ -28,6 +28,7 @@ import { IpRpcEndpointsIndexService } from '../resources/IpRpcEndpointsIndex/IpR
 import { MainnetProviderEstimatedRewardsListService } from '../resources/MainnetProviderEstimatedRewards/MainnetProviderEstimatedRewardsListResource';
 import { IsMainnet } from '@jsinfo/utils/env';
 import { MainnetValidatorsWithRewardsService } from '../resources/MainetValidatorWithRewards/MainnetValidatorsWithRewardsResource';
+import { ProviderPerformanceResource } from '../resources/ajax/ProviderPerformanceResource';
 
 export class IndexerRedisResourceCaller {
     private static readonly REFRESH_INTERVAL = 60 * 1000; // 1 minute
@@ -182,6 +183,11 @@ export class IndexerRedisResourceCaller {
             () => new ListProvidersResource().fetch(),
             this.currentFetches
         ).catch(e => logger.error('Failed to refresh providers list:', e));
+
+        await this.safeFetch('ProviderPerformance',
+            () => new ProviderPerformanceResource().fetch(),
+            this.currentFetches
+        ).catch(e => logger.error('Failed to refresh provider performance:', e));
     }
 
     private static async refreshIndexResources(): Promise<void> {

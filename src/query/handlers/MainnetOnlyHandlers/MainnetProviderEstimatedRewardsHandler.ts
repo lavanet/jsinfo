@@ -1,7 +1,7 @@
 import { FastifyRequest, FastifyReply, RouteShorthandOptions, RouteGenericInterface } from 'fastify';
-import { MainnetProviderEstimatedRewardsGetService } from '@jsinfo/redis/resources/MainnetProviderEstimatedRewards/MainnetProviderEstimatedRewardsGetResource';
-import { MainnetProviderEstimatedRewardsListService } from '@jsinfo/redis/resources/MainnetProviderEstimatedRewards/MainnetProviderEstimatedRewardsListResource';
-import { MainnetProviderEstimatedRewardsSpecFilterService } from '@jsinfo/redis/resources/MainnetProviderEstimatedRewards/MainnetProviderEstimatedRewardsSpecFilterResource';
+import { MainnetProviderEstimatedRewardsGetService } from '@jsinfo/redis/resources/Mainnet/ProviderEstimatedRewards/MainnetProviderEstimatedRewardsGetResource';
+import { MainnetProviderEstimatedRewardsListService } from '@jsinfo/redis/resources/Mainnet/ProviderEstimatedRewards/MainnetProviderEstimatedRewardsListResource';
+import { MainnetProviderEstimatedRewardsSpecFilterService } from '@jsinfo/redis/resources/Mainnet/ProviderEstimatedRewards/MainnetProviderEstimatedRewardsSpecFilterResource';
 import { JSONStringify } from '@jsinfo/utils/fmt';
 
 interface QueryParams {

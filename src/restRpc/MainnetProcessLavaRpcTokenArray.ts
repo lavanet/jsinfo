@@ -1,6 +1,6 @@
 import { logger } from '@jsinfo/utils/logger';
 import { ConvertToBaseDenom, GetUSDCValue, GetDenomTrace, GetDenomToUSDRate } from '@jsinfo/restRpc/CurrencyConverstionUtils';
-import { ProcessedInfoItem } from '@jsinfo/redis/resources/MainnetProviderEstimatedRewards/MainnetGenLavaLatestProviderRewards';
+import { ProcessedInfoItem } from '@jsinfo/redis/resources/Mainnet/ProviderEstimatedRewards/MainnetGenLavaLatestProviderRewards';
 import Decimal from 'decimal.js';
 import { TEST_DENOMS } from '@jsinfo/indexer/restrpc_agregators/CalcualteApr';
 import { IsMeaningfulText } from '@jsinfo/utils/fmt';
@@ -11,7 +11,7 @@ interface EstimatedRewardsResponse {
         amount: {
             denom: string;
             amount: string;
-        };  // Single object, not array
+        };
     }[];
     total: {
         denom: string;
@@ -46,89 +46,37 @@ export interface CoinGeckoPriceInfo {
     display_denom: string;
     value_usd: string;
 }
-// Global price cache map
+
 const COINGECKO_PRICES_RESOLVED_MAP: Record<string, Record<string, CoinGeckoPriceInfo>> = {};
 
 export function FormatTokenAmount(amount: string | number): string {
-    // Create a new Decimal instance
     const decimal = new Decimal(amount);
-
-    // Convert to string with high precision
     const str = decimal.toFixed(20);
-
-    // Split into whole and decimal parts
     const [whole, fraction] = str.split('.');
-
-    // If no decimal part, return whole number
     if (!fraction) return whole;
-
-    // Trim trailing zeros
     const trimmedFraction = fraction.replace(/0+$/, '');
-
-    // If decimal part is empty after trimming zeros, return whole number
     if (!trimmedFraction) return whole;
-
-    // If decimal part is significant (not just zeros), return with decimal
     return `${whole}.${trimmedFraction}`;
 }
 
 export async function ProcessTokenArrayAtTime(response: EstimatedRewardsResponse, timestamp: number | null = null): Promise<ProcessedTokenArray> {
-    // logger.info('Starting ProcessTokenArrayAtTime', {
-    //     hasInfo: !!response.info,
-    //     infoLength: response?.info?.length,
-    //     timestamp
-    // });
-
     const processedItems: ProcessedInfoItem[] = [];
     const processedTotalTokens: ProcessedToken[] = [];
     let totalUsd = 0;
 
-    // Process info array
     if (response.info) {
-        // logger.info(`Processing ${response.info.length} info items`);
-
         for (const item of response.info) {
-            // logger.info('Processing info item', {
-            //     source: item.source,
-            //     amount: item.amount
-            // });
-
             try {
                 if (TEST_DENOMS.includes(item.amount[0].denom)) {
-                    // logger.info('Skipping test denom', { denom: item.amount[0].denom });
                     continue;
                 }
 
                 const tokenAmount = item.amount[0];
-                // logger.info('Converting to base denom', {
-                //     amount: tokenAmount.amount,
-                //     denom: tokenAmount.denom
-                // });
-
                 const [baseAmount, baseDenom] = await ConvertToBaseDenom(tokenAmount.amount, tokenAmount.denom);
-                // logger.info('Converted to base denom', {
-                //     baseAmount,
-                //     baseDenom,
-                //     originalAmount: tokenAmount.amount,
-                //     originalDenom: tokenAmount.denom
-                // });
-
                 const usdValue = await GetUSDCValue(baseAmount, baseDenom);
-                // logger.info('Got USD value', {
-                //     usdValue,
-                //     baseAmount,
-                //     baseDenom
-                // });
-
                 const originalDenom = (baseDenom && baseDenom.startsWith('ibc/')) ?
                     await GetDenomTrace(baseDenom) :
                     tokenAmount.denom;
-
-                // logger.info('Resolved denom', {
-                //     originalDenom,
-                //     baseDenom,
-                //     tokenDenom: tokenAmount.denom
-                // });
 
                 const processedToken = {
                     source_denom: tokenAmount.denom,
@@ -138,7 +86,6 @@ export async function ProcessTokenArrayAtTime(response: EstimatedRewardsResponse
                     display_amount: FormatTokenAmount(baseAmount),
                     value_usd: `$${FormatTokenAmount(usdValue)}`
                 };
-                // logger.info('Created processed token', processedToken);
 
                 processedItems.push({
                     source: item.source,
@@ -148,12 +95,7 @@ export async function ProcessTokenArrayAtTime(response: EstimatedRewardsResponse
                     }
                 });
                 totalUsd += new Decimal(usdValue).toNumber();
-                // logger.info('Updated totals', {
-                //     itemTotalUsd: new Decimal(usdValue).toNumber(),
-                //     runningTotalUsd: totalUsd
-                // });
 
-                // Store in coingecko prices map
                 const prices = getCoingeckoPricesResolvedMap(timestamp);
                 prices[tokenAmount.denom] = {
                     source_denom: tokenAmount.denom,
@@ -161,10 +103,6 @@ export async function ProcessTokenArrayAtTime(response: EstimatedRewardsResponse
                     display_denom: baseDenom,
                     value_usd: await GetDenomToUSDRate(baseDenom)
                 };
-                // logger.info('Updated coingecko prices map', {
-                //     denom: tokenAmount.denom,
-                //     priceInfo: prices[tokenAmount.denom]
-                // });
 
             } catch (error) {
                 logger.error('Failed to process provider rewards info:', {
@@ -178,7 +116,6 @@ export async function ProcessTokenArrayAtTime(response: EstimatedRewardsResponse
         }
     }
 
-    // Process total array
     if (response.total) {
         let totalTokensUsd = new Decimal(0);
         for (const total of response.total) {
@@ -201,7 +138,6 @@ export async function ProcessTokenArrayAtTime(response: EstimatedRewardsResponse
                     value_usd: `$${FormatTokenAmount(usdValue)}`
                 });
 
-                // Store total tokens in coingecko prices map too
                 const prices = getCoingeckoPricesResolvedMap(timestamp);
                 prices[total.denom] = {
                     source_denom: total.denom,
@@ -252,7 +188,7 @@ export async function ProcessMinimalTokenArray(tokens: MinimalToken[]): Promise<
 
         for (const token of tokens) {
             try {
-                if (TEST_DENOMS.includes(token.denom)) continue;
+                if (TEST_DENOMS.includes(token.denom) || !IsMeaningfulText(token.denom)) continue;
 
                 const [baseAmount, baseDenom] = await ConvertToBaseDenom(token.amount, token.denom);
                 const usdValue = await GetUSDCValue(baseAmount, baseDenom);

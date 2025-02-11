@@ -37,7 +37,7 @@ export interface SpecFilterResponse {
 
 class MainnetProviderEstimatedRewardsSpecFilterResource extends RedisResourceBase<SpecFilterResponse, { spec: string; block?: string | number }> {
     protected readonly redisKey = 'mainnet_provider_estimated_reward_spec_filter_v3';
-    protected readonly cacheExpirySeconds = 10 * 60;
+    protected readonly cacheExpirySeconds = 7200 * 2; // 4 hours
 
     private sumTokens(tokens: TokenInfo[]) {
         const sums: Record<string, TokenInfo> = {};

@@ -1,7 +1,7 @@
 import { RedisResourceBase } from '@jsinfo/redis/classes/RedisResourceBase';
 import { AllProviderAPRResource } from '@jsinfo/redis/resources/ajax/AllProviderAprResource';
 import { ListProvidersResource } from '@jsinfo/redis/resources/ajax/ListProvidersResource';
-import { MainnetProviderEstimatedRewardsGetService } from '@jsinfo/redis/resources/MainnetProviderEstimatedRewards/MainnetProviderEstimatedRewardsGetResource';
+import { MainnetProviderEstimatedRewardsGetService } from '@jsinfo/redis/resources/Mainnet/ProviderEstimatedRewards/MainnetProviderEstimatedRewardsGetResource';
 import { GetProviderAvatar } from '@jsinfo/restRpc/GetProviderAvatar';
 import { ConvertToChainName } from '@jsinfo/lib/chain-mapping/chains';
 import GetIconForSpec from '@jsinfo/lib/icons/icons';

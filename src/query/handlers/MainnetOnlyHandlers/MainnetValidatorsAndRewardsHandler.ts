@@ -1,5 +1,5 @@
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { MainnetValidatorsWithRewardsService } from '@jsinfo/redis/resources/MainetValidatorWithRewards/MainnetValidatorsWithRewardsResource';
+import { MainnetValidatorsWithRewardsService } from '@jsinfo/redis/resources/Mainnet/ValidatorWithRewards/MainnetValidatorsWithRewardsResource';
 import { JSONStringify } from '@jsinfo/utils/fmt';
 
 export const MainnetValidatorsAndRewardsHandlerOpts: RouteShorthandOptions = {

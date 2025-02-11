@@ -8,7 +8,7 @@ export interface MainnetValidatorsWithRewardsResourceResponse {
 
 class MainnetValidatorsWithRewardsResource extends RedisResourceBase<MainnetValidatorsWithRewardsResourceResponse, {}> {
     protected readonly redisKey = 'mainnet_validators_with_rewards_v1';
-    protected readonly cacheExpirySeconds = 5 * 60; // 5 minutes
+    protected readonly cacheExpirySeconds = 7200 * 2; // 4 hours
 
     protected async fetchFromSource(): Promise<MainnetValidatorsWithRewardsResourceResponse> {
         try {

@@ -25,10 +25,11 @@ import { AllProviderAPRResource } from '../resources/ajax/AllProviderAprResource
 import { LockedTokenValuesResource } from '../resources/ajax/LockedTokenValuesResource';
 import { LockedVestingTokensService } from '../resources/global/LockedVestingTokensResource';
 import { IpRpcEndpointsIndexService } from '../resources/IpRpcEndpointsIndex/IpRpcEndpointsResource';
-import { MainnetProviderEstimatedRewardsListService } from '../resources/MainnetProviderEstimatedRewards/MainnetProviderEstimatedRewardsListResource';
+import { MainnetProviderEstimatedRewardsListService } from '../resources/Mainnet/ProviderEstimatedRewards/MainnetProviderEstimatedRewardsListResource';
 import { IsMainnet } from '@jsinfo/utils/env';
-import { MainnetValidatorsWithRewardsService } from '../resources/MainetValidatorWithRewards/MainnetValidatorsWithRewardsResource';
+import { MainnetValidatorsWithRewardsService } from '../resources/Mainnet/ValidatorWithRewards/MainnetValidatorsWithRewardsResource';
 import { ProviderPerformanceResource } from '../resources/ajax/ProviderPerformanceResource';
+import { ProviderClaimableRewardsService } from '../resources/Mainnet/ProviderClaimableRewards/MainnetProviderClaimableRewardsResource';
 
 export class IndexerRedisResourceCaller {
     private static readonly REFRESH_INTERVAL = 60 * 1000; // 1 minute
@@ -287,6 +288,10 @@ export class IndexerRedisResourceCaller {
                 () => MainnetValidatorsWithRewardsService.fetch(),
                 this.currentFetches
             ).catch(e => logger.error('Failed to refresh mainnet validators and rewards:', e));
+            await this.safeFetch('MainnetProviderClaimableRewards',
+                () => ProviderClaimableRewardsService.fetch(),
+                this.currentFetches
+            ).catch(e => logger.error('Failed to refresh mainnet provider claimable rewards:', e));
         }
     }
 }

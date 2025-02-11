@@ -30,7 +30,7 @@ export interface ProviderRewardsResourceResponse {
 
 export class MainnetProviderEstimatedRewardsListResource extends RedisResourceBase<ListResponse, {}> {
     protected readonly redisKey = 'mainnet_provider_estimated_rewards_list_v5';
-    protected readonly cacheExpirySeconds = 300;
+    protected readonly cacheExpirySeconds = 7200 * 2; // 4 hours
     private readonly DATA_DIR = path.join(__dirname, 'data');
 
     private async getAvailableBlocks(): Promise<AvailableBlock[]> {

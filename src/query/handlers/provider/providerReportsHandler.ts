@@ -211,8 +211,6 @@ class ProviderReportsData extends RequestHandlerBase<ProviderReportsResponse> {
             throw new Error(`Invalid sort key: ${trimmedSortKey}`);
         }
 
-        ;
-
         const sortColumn = keyToColumnMap[finalPagination.sortKey];
         const orderFunction = finalPagination.direction === 'ascending' ? asc : desc;
 

@@ -60,6 +60,7 @@ import { ProviderBlockReportsPaginatedHandlerOpts, ProviderBlockReportsPaginated
 import { ProviderHealthLatestPaginatedHandler, ProviderHealthLatestPaginatedHandlerOpts } from './handlers/provider/providerHealthLatestHandler';
 
 import { ProviderConsumerOptimizerMetricsHandler, ProviderConsumerOptimizerMetricsHandlerOpts, ProviderConsumerOptimizerMetricsQuery } from './handlers/provider/providerConsumerOptimizerMetricsHandler';
+import { ProviderConsumerOptimizerMetricsFullHandler, ProviderConsumerOptimizerMetricsFullHandlerOpts } from './handlers/provider/providerConsumerOptimizerMetricsFullHandler';
 
 // -- Events page ajax -- 
 import { EventsPaginatedHandler, EventsPaginatedHandlerOpts } from './handlers/events/eventsHandler';
@@ -277,3 +278,6 @@ if (IsMainnet()) {
 // -- Provider avatar ajax --
 GetServerInstance().get<ProviderAvatarParams>('/provider_avatar/:providerId', GetProviderAvatarHandlerOpts, GetProviderAvatarHandler);
 GetServerInstance().get('/provider_avatars', ListProviderAvatarsHandlerOpts, ListProviderAvatarsHandler);
+
+// -- New route for full metrics --
+GetServerInstance().get('/providerConsumerOptimizerMetricsFull/:addr', ProviderConsumerOptimizerMetricsFullHandlerOpts, ProviderConsumerOptimizerMetricsFullHandler);

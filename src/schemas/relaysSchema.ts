@@ -40,6 +40,7 @@ export const aggregatedConsumerOptimizerMetrics = pgTable('aggregated_consumer_o
   provider: text('provider'),
   consumer: text('consumer'),
   consumer_hostname: text('consumer_hostname'),
+  chain: text('chain'),
 
   metrics_count: integer('metrics_count').notNull(),
 
@@ -54,7 +55,13 @@ export const aggregatedConsumerOptimizerMetrics = pgTable('aggregated_consumer_o
   max_epoch: bigint('max_epoch', { mode: 'number' }),
   max_provider_stake: bigint('max_provider_stake', { mode: 'number' }),
 
-  chain: text('chain'),
+  // New fields
+  tier_sum: bigint('tier_sum', { mode: 'number' }),
+  tier_chance_0_sum: numeric('tier_chance_0_sum'),
+  tier_chance_1_sum: numeric('tier_chance_1_sum'),
+  tier_chance_2_sum: numeric('tier_chance_2_sum'),
+  tier_chance_3_sum: numeric('tier_chance_3_sum'),
+  tier_metrics_count: integer('tier_metrics_count')
 });
 
 export type AggregatedConsumerOptimizerMetrics = typeof aggregatedConsumerOptimizerMetrics.$inferSelect

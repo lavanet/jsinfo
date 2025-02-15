@@ -40,5 +40,7 @@ numberQueryConsts.forEach(key => {
 export const JSINFO_QUERY_MEMORY_DEBUG_MODE = GetEnvVar("JSINFO_QUERY_MEMORY_DEBUG_MODE", "false") == "true";
 export const JSINFO_QUERY_CLASS_MEMORY_DEBUG_MODE = GetEnvVar("JSINFO_QUERY_CLASS_MEMORY_DEBUG_MODE", "false") == "true";
 
+export const JSINFO_QUERY_CONSUMER_OPTIMIZER_METRICS_FULL_KEY = GetEnvVar("JSINFO_QUERY_CONSUMER_OPTIMIZER_METRICS_FULL_KEY", "omkey");
+
 
 

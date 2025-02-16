@@ -1,6 +1,6 @@
 // src/redis/resources/provider/consumerOptimizerMetrics.ts
 
-import { and, eq, gt, lt } from 'drizzle-orm';
+import { and, eq, gte, lte } from 'drizzle-orm';
 import { RedisResourceBase } from '@jsinfo/redis/classes/RedisResourceBase';
 import { IsMeaningfulText, JSONStringify } from '@jsinfo/utils/fmt';
 import { ProviderMonikerService } from '../global/ProviderMonikerSpecResource';
@@ -49,7 +49,7 @@ export interface ConsumerOptimizerMetricsFullResourceResponse {
 
 export class ConsumerOptimizerMetricsFullResource extends RedisResourceBase<ConsumerOptimizerMetricsFullResourceResponse, ConsumerOptimizerMetricsFullResourceFilterParams> {
     protected readonly redisKey = 'consumer_optimizer_metrics_full';
-    protected readonly cacheExpirySeconds = 300;
+    protected readonly cacheExpirySeconds = 1200; // 20 minutes
 
     protected async fetchFromSource(args: ConsumerOptimizerMetricsFullResourceFilterParams): Promise<ConsumerOptimizerMetricsFullResourceResponse> {
         const provider = args.provider;
@@ -93,6 +93,7 @@ export class ConsumerOptimizerMetricsFullResource extends RedisResourceBase<Cons
     }
 
     private async getAggregatedMetrics(provider: string, from: Date, to: Date): Promise<ConsumerOptimizerMetricsFullItem[]> {
+
         const metrics = await queryRelays(db =>
             db.select({
                 chain: aggregatedConsumerOptimizerMetrics.chain,
@@ -118,11 +119,17 @@ export class ConsumerOptimizerMetricsFullResource extends RedisResourceBase<Cons
                 .from(aggregatedConsumerOptimizerMetrics)
                 .where(and(
                     eq(aggregatedConsumerOptimizerMetrics.provider, provider),
-                    gt(aggregatedConsumerOptimizerMetrics.hourly_timestamp, from),
-                    lt(aggregatedConsumerOptimizerMetrics.hourly_timestamp, to)
+                    gte(aggregatedConsumerOptimizerMetrics.hourly_timestamp, from),
+                    lte(aggregatedConsumerOptimizerMetrics.hourly_timestamp, to)
                 ))
                 .orderBy(aggregatedConsumerOptimizerMetrics.hourly_timestamp)
             , `ConsumerOptimizerMetricsResource::getAggregatedMetrics_${provider}_${from}_${to}`);
+
+        // logger.info('Retrieved metrics:', {
+        //     count: metrics.length,
+        //     firstDate: metrics[0]?.hourly_timestamp,
+        //     lastDate: metrics[metrics.length - 1]?.hourly_timestamp
+        // });
 
         const validMetrics: ConsumerOptimizerMetricsFullItem[] = [];
 
@@ -137,13 +144,7 @@ export class ConsumerOptimizerMetricsFullResource extends RedisResourceBase<Cons
                 m.consumer === null ||
                 m.consumer_hostname === null ||
                 m.provider_stake === null ||
-                m.chain === null ||
-                m.tier_sum === null ||
-                m.tier_metrics_count === null ||
-                m.tier_chance_0_sum === null ||
-                m.tier_chance_1_sum === null ||
-                m.tier_chance_2_sum === null ||
-                m.tier_chance_3_sum === null) {
+                m.chain === null) {
                 logger.warn(`ConsumerOptimizerMetricsResource::getAggregatedMetrics_${provider}_${from}_${to} - Invalid metric(0): ${JSONStringify(m)}`);
                 continue;
             }
@@ -175,12 +176,17 @@ export class ConsumerOptimizerMetricsFullResource extends RedisResourceBase<Cons
                 node_error_rate: Number(m.node_error_rate_sum) / Number(m.metrics_count),
                 entry_index: Number(m.entry_index_sum) / Number(m.metrics_count),
                 epoch: Number(m.max_epoch),
-                tier_average: m.tier_metrics_count > 0 ? Number(m.tier_sum) / Number(m.tier_metrics_count) : 0,
+                tier_average: (m.tier_metrics_count ?? 0) > 0 && m.tier_sum != null ?
+                    Number(m.tier_sum) / Number(m.tier_metrics_count) : 0,
                 tier_chances: {
-                    tier0: m.tier_metrics_count > 0 ? Number(m.tier_chance_0_sum) / Number(m.tier_metrics_count) : 0,
-                    tier1: m.tier_metrics_count > 0 ? Number(m.tier_chance_1_sum) / Number(m.tier_metrics_count) : 0,
-                    tier2: m.tier_metrics_count > 0 ? Number(m.tier_chance_2_sum) / Number(m.tier_metrics_count) : 0,
-                    tier3: m.tier_metrics_count > 0 ? Number(m.tier_chance_3_sum) / Number(m.tier_metrics_count) : 0,
+                    tier0: (m.tier_metrics_count ?? 0) > 0 && m.tier_chance_0_sum != null ?
+                        Number(m.tier_chance_0_sum) / Number(m.tier_metrics_count) : 0,
+                    tier1: (m.tier_metrics_count ?? 0) > 0 && m.tier_chance_1_sum != null ?
+                        Number(m.tier_chance_1_sum) / Number(m.tier_metrics_count) : 0,
+                    tier2: (m.tier_metrics_count ?? 0) > 0 && m.tier_chance_2_sum != null ?
+                        Number(m.tier_chance_2_sum) / Number(m.tier_metrics_count) : 0,
+                    tier3: (m.tier_metrics_count ?? 0) > 0 && m.tier_chance_3_sum != null ?
+                        Number(m.tier_chance_3_sum) / Number(m.tier_metrics_count) : 0,
                 }
             });
         }

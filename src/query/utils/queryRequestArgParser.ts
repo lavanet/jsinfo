@@ -4,6 +4,8 @@ import { FastifyReply, FastifyRequest } from "fastify";
 import { WriteErrorToFastifyReply } from "./queryServerUtils";
 import { ProviderMonikerService } from '@jsinfo/redis/resources/global/ProviderMonikerSpecResource';
 import { SpecAndConsumerService } from '@jsinfo/redis/resources/global/SpecAndConsumerResource';
+import { parseISO, startOfDay, endOfDay } from 'date-fns';
+import { logger } from '@jsinfo/utils/logger';
 
 let GetAndValidateConsumerAddressFromRequest_cache = {};
 
@@ -133,4 +135,54 @@ export async function GetAndValidateSpecIdFromRequestWithAll(request: FastifyReq
     GetAndValidateSpecIdFromRequest_cache[upSpecId] = true;
 
     return upSpecId;
+}
+
+export interface DateRange {
+    from?: Date;
+    to?: Date;
+}
+
+export function GetDateRangeFromRequest(request: FastifyRequest): DateRange {
+    let from: Date | undefined;
+    let to: Date | undefined;
+
+    try {
+        // Support both f/t and from/to parameters
+        const fromStr = (request.query as any).f || (request.query as any).from;
+        const toStr = (request.query as any).t || (request.query as any).to;
+
+        if (fromStr) {
+            // Parse the date and set to start of day in UTC
+            const fromDate = new Date(fromStr);
+            from = new Date(Date.UTC(
+                fromDate.getUTCFullYear(),
+                fromDate.getUTCMonth(),
+                fromDate.getUTCDate(),
+                0, 0, 0, 0
+            ));
+        }
+        if (toStr) {
+            // Parse the date and set to end of day in UTC
+            const toDate = new Date(toStr);
+            to = new Date(Date.UTC(
+                toDate.getUTCFullYear(),
+                toDate.getUTCMonth(),
+                toDate.getUTCDate(),
+                23, 59, 59, 999
+            ));
+        }
+
+        // Swap dates if from is after to
+        if (from && to && from > to) {
+            [from, to] = [to, from];
+        }
+    } catch (error) {
+        logger.warn('Invalid date format in request', {
+            from: (request.query as any).f || (request.query as any).from,
+            to: (request.query as any).t || (request.query as any).to,
+            error
+        });
+    }
+
+    return { from, to };
 }

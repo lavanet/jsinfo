@@ -1,6 +1,6 @@
 // src/redis/resources/provider/consumerOptimizerMetrics.ts
 
-import { and, eq, gt, lt } from 'drizzle-orm';
+import { and, eq, gte, lte } from 'drizzle-orm';
 import { RedisResourceBase } from '@jsinfo/redis/classes/RedisResourceBase';
 import { IsMeaningfulText, JSONStringify } from '@jsinfo/utils/fmt';
 import { ProviderMonikerService } from '../global/ProviderMonikerSpecResource';
@@ -41,7 +41,7 @@ export interface ConsumerOptimizerMetricsResourceResponse {
 
 export class ConsumerOptimizerMetricsResource extends RedisResourceBase<ConsumerOptimizerMetricsResourceResponse, ConsumerOptimizerMetricsResourceFilterParams> {
     protected readonly redisKey = 'consumer_optimizer_metrics';
-    protected readonly cacheExpirySeconds = 300;
+    protected readonly cacheExpirySeconds = 1200; // 20 minutes
 
     protected async fetchFromSource(args: ConsumerOptimizerMetricsResourceFilterParams): Promise<ConsumerOptimizerMetricsResourceResponse> {
         const provider = args.provider;
@@ -85,6 +85,12 @@ export class ConsumerOptimizerMetricsResource extends RedisResourceBase<Consumer
     }
 
     private async getAggregatedMetrics(provider: string, from: Date, to: Date): Promise<ConsumerOptimizerMetricsItem[]> {
+        // logger.info('Fetching metrics with date range:', {
+        //     provider,
+        //     from: from.toISOString(),
+        //     to: to.toISOString()
+        // });
+
         const metrics = await queryRelays(db =>
             db.select({
                 chain: aggregatedConsumerOptimizerMetrics.chain,
@@ -104,8 +110,8 @@ export class ConsumerOptimizerMetricsResource extends RedisResourceBase<Consumer
                 .from(aggregatedConsumerOptimizerMetrics)
                 .where(and(
                     eq(aggregatedConsumerOptimizerMetrics.provider, provider),
-                    gt(aggregatedConsumerOptimizerMetrics.hourly_timestamp, from),
-                    lt(aggregatedConsumerOptimizerMetrics.hourly_timestamp, to)
+                    gte(aggregatedConsumerOptimizerMetrics.hourly_timestamp, from),
+                    lte(aggregatedConsumerOptimizerMetrics.hourly_timestamp, to)
                 ))
                 .orderBy(aggregatedConsumerOptimizerMetrics.hourly_timestamp)
             , `ConsumerOptimizerMetricsResource::getAggregatedMetrics_${provider}_${from}_${to}`);

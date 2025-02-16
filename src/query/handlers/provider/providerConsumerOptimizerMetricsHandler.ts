@@ -4,7 +4,7 @@ import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { ConsumerOptimizerMetricsService } from '@jsinfo/redis/resources/provider/consumerOptimizerMetrics';
 import { GetAndValidateProviderAddressFromRequest, GetDateRangeFromRequest } from '@jsinfo/query/utils/queryRequestArgParser';
 import { JSONStringify } from '@jsinfo/utils/fmt';
-import { getMetricsFilters, getPossibleValues, validateFilters, aggregateMetrics } from '@jsinfo/query/utils/queryOptimizerMetricsHandlerUtils';
+import { getMetricsFilters, getPossibleValues, validateFilters, aggregateMetrics, MetricsItem } from '@jsinfo/query/utils/queryOptimizerMetricsHandlerUtils';
 
 export const ProviderConsumerOptimizerMetricsHandlerOpts: RouteShorthandOptions = {
     schema: {
@@ -55,7 +55,7 @@ export async function ProviderConsumerOptimizerMetricsHandler(request: FastifyRe
     }
 
     const aggMetrics = aggregateMetrics(
-        data.metrics,
+        data.metrics as MetricsItem[],
         filters.is_consumer_all ? 'all' : filters.consumer!,
         filters.is_chain_id_all ? 'all' : filters.chain_id!,
         false // don't include tiers

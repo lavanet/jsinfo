@@ -1,9 +1,9 @@
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { GetAndValidateProviderAddressFromRequest, GetDateRangeFromRequest } from '@jsinfo/query/utils/queryRequestArgParser';
-import { ConsumerOptimizerMetricsFullService } from '@jsinfo/redis/resources/provider/consumerOptimizerMetricsFull';
+import { ConsumerOptimizerMetricsFullByProviderService } from '@jsinfo/redis/resources/provider/ProviderConsumerOptimizerMetricsFull';
 import { JSINFO_QUERY_CONSUMER_OPTIMIZER_METRICS_FULL_KEY } from '@jsinfo/query/queryConsts';
 import { logger } from '@jsinfo/utils/logger';
-import { getMetricsFilters, getPossibleValues, validateFilters, aggregateMetrics, filterMetricsByDateRange, filterMetricsByExactDates } from '@jsinfo/query/utils/queryOptimizerMetricsHandlerUtils';
+import { getMetricsFilters, getPossibleValues, validateFilters, aggregateMetrics, filterMetricsByDateRange, filterMetricsByExactDates, MetricsItem } from '@jsinfo/query/utils/queryProviderOptimizerMetricsHandlerUtils';
 import { JSONStringify } from '@jsinfo/utils/fmt';
 
 export const ProviderConsumerOptimizerMetricsFullHandlerOpts: RouteShorthandOptions = {
@@ -38,7 +38,7 @@ export async function ProviderConsumerOptimizerMetricsFullHandler(request: Fasti
     const { from, to } = GetDateRangeFromRequest(request);
     const filters = getMetricsFilters(request.query);
 
-    const data = await ConsumerOptimizerMetricsFullService.fetch({
+    const data = await ConsumerOptimizerMetricsFullByProviderService.fetch({
         provider,
         from,
         to
@@ -68,7 +68,7 @@ export async function ProviderConsumerOptimizerMetricsFullHandler(request: Fasti
     }
 
     const aggMetrics = aggregateMetrics(
-        filteredMetrics,
+        filteredMetrics as MetricsItem[],
         filters.is_consumer_all ? 'all' : filters.consumer!,
         filters.is_chain_id_all ? 'all' : filters.chain_id!,
         true // include tiers

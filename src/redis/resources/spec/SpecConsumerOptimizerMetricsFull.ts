@@ -3,30 +3,32 @@
 import { and, eq, gte, lte } from 'drizzle-orm';
 import { RedisResourceBase } from '@jsinfo/redis/classes/RedisResourceBase';
 import { IsMeaningfulText, JSONStringify } from '@jsinfo/utils/fmt';
-import { ProviderMonikerService } from '../global/ProviderMonikerSpecResource';
 import { queryRelays } from '@jsinfo/utils/db';
 import { aggregatedConsumerOptimizerMetrics } from '@jsinfo/schemas/relaysSchema';
 import { logger } from '@jsinfo/utils/logger';
+import { SpecAndConsumerService } from '../global/SpecAndConsumerResource';
+import { ProviderMonikerService } from '../global/ProviderMonikerSpecResource';
 
-export interface ConsumerOptimizerMetricsFullResourceFilterParams {
-    provider: string;
+export interface ConsumerOptimizerMetricsFullBySpecFilterParams {
+    spec: string;
     from?: Date;
     to?: Date;
 }
 
-export interface ConsumerOptimizerMetricsFullItem {
+export interface ConsumerOptimizerMetricsFullBySpecItem {
     hourly_timestamp: Date;
     consumer: string;
     consumer_hostname: string;
     metrics_count: number;
     provider_stake: number;
+    provider: string;
+    provider_moniker: string;
     latency_score: number;
     availability_score: number;
     sync_score: number;
     generic_score: number;
     node_error_rate: number;
     entry_index: number;
-    chain: string;
     epoch: number;
     tier_average: number;
     tier_chances: {
@@ -37,22 +39,22 @@ export interface ConsumerOptimizerMetricsFullItem {
     };
 }
 
-export interface ConsumerOptimizerMetricsFullResourceResponse {
+export interface ConsumerOptimizerMetricsFullBySpecResponse {
     filters: {
-        provider?: string;
+        spec?: string;
         from?: Date;
         to?: Date;
     };
-    metrics: ConsumerOptimizerMetricsFullItem[];
+    metrics: ConsumerOptimizerMetricsFullBySpecItem[];
     error?: string;
 }
 
-export class ConsumerOptimizerMetricsFullResource extends RedisResourceBase<ConsumerOptimizerMetricsFullResourceResponse, ConsumerOptimizerMetricsFullResourceFilterParams> {
-    protected readonly redisKey = 'consumer_optimizer_metrics_full';
+export class ConsumerOptimizerMetricsFullBySpecResource extends RedisResourceBase<ConsumerOptimizerMetricsFullBySpecResponse, ConsumerOptimizerMetricsFullBySpecFilterParams> {
+    protected readonly redisKey = 'consumer_optimizer_metrics_full_by_spec';
     protected readonly cacheExpirySeconds = 1200; // 20 minutes
 
-    protected async fetchFromSource(args: ConsumerOptimizerMetricsFullResourceFilterParams): Promise<ConsumerOptimizerMetricsFullResourceResponse> {
-        const provider = args.provider;
+    protected async fetchFromSource(args: ConsumerOptimizerMetricsFullBySpecFilterParams): Promise<ConsumerOptimizerMetricsFullBySpecResponse> {
+        const spec = args.spec;
 
         let to = args?.to || new Date();
         let from = args?.from || new Date(new Date().setMonth(new Date().getMonth() - 1));
@@ -67,24 +69,24 @@ export class ConsumerOptimizerMetricsFullResource extends RedisResourceBase<Cons
             [to, from] = [from, to];
         }
 
-        if (!provider || !IsMeaningfulText(provider)) {
+        if (!spec || !IsMeaningfulText(spec)) {
             return {
                 filters: { ...args, from, to },
                 metrics: [],
-                error: 'Invalid provider (empty)'
+                error: 'Invalid spec (empty)'
             };
         }
 
-        const isValidProvider = await ProviderMonikerService.IsValidProvider(provider);
-        if (!isValidProvider) {
+        const isValidSpec = await SpecAndConsumerService.IsValidSpec(spec);
+        if (!isValidSpec) {
             return {
                 filters: { ...args, from, to },
                 metrics: [],
-                error: 'Invalid provider (not found)'
+                error: 'Invalid spec (not found)'
             };
         }
 
-        const metrics = await this.getAggregatedMetrics(provider, from, to);
+        const metrics = await this.getAggregatedMetrics(spec, from, to);
 
         return {
             filters: { ...args, from, to },
@@ -92,11 +94,10 @@ export class ConsumerOptimizerMetricsFullResource extends RedisResourceBase<Cons
         };
     }
 
-    private async getAggregatedMetrics(provider: string, from: Date, to: Date): Promise<ConsumerOptimizerMetricsFullItem[]> {
-
+    private async getAggregatedMetrics(spec: string, from: Date, to: Date): Promise<ConsumerOptimizerMetricsFullBySpecItem[]> {
         const metrics = await queryRelays(db =>
             db.select({
-                chain: aggregatedConsumerOptimizerMetrics.chain,
+                provider: aggregatedConsumerOptimizerMetrics.provider,
                 hourly_timestamp: aggregatedConsumerOptimizerMetrics.hourly_timestamp,
                 consumer: aggregatedConsumerOptimizerMetrics.consumer,
                 consumer_hostname: aggregatedConsumerOptimizerMetrics.consumer_hostname,
@@ -118,23 +119,30 @@ export class ConsumerOptimizerMetricsFullResource extends RedisResourceBase<Cons
             })
                 .from(aggregatedConsumerOptimizerMetrics)
                 .where(and(
-                    eq(aggregatedConsumerOptimizerMetrics.provider, provider),
+                    eq(aggregatedConsumerOptimizerMetrics.chain, spec),
                     gte(aggregatedConsumerOptimizerMetrics.hourly_timestamp, from),
                     lte(aggregatedConsumerOptimizerMetrics.hourly_timestamp, to)
                 ))
                 .orderBy(aggregatedConsumerOptimizerMetrics.hourly_timestamp)
-            , `ConsumerOptimizerMetricsResource::getAggregatedMetrics_${provider}_${from}_${to}`);
+            , `ConsumerOptimizerMetricsFullBySpecResource::getAggregatedMetrics_${spec}_${from}_${to}`);
 
-        // logger.info('Retrieved metrics:', {
-        //     count: metrics.length,
-        //     firstDate: metrics[0]?.hourly_timestamp,
-        //     lastDate: metrics[metrics.length - 1]?.hourly_timestamp
-        // });
+        const validMetrics: ConsumerOptimizerMetricsFullBySpecItem[] = [];
 
-        const validMetrics: ConsumerOptimizerMetricsFullItem[] = [];
+        // Get provider monikers for each unique provider
+        const uniqueProviders = [...new Set(metrics.map(m => m.provider))];
+        const monikerMap = new Map<string, string>();
+
+        for (const provider of uniqueProviders) {
+            if (provider) {
+                const moniker = await ProviderMonikerService.GetMonikerForSpec(provider, spec);
+                monikerMap.set(provider, moniker || provider);
+            }
+        }
 
         for (const m of metrics) {
-            if (m.latency_score_sum === null ||
+            if (m.provider === null ||
+                m.provider_stake === null ||
+                m.latency_score_sum === null ||
                 m.availability_score_sum === null ||
                 m.sync_score_sum === null ||
                 m.generic_score_sum === null ||
@@ -142,10 +150,8 @@ export class ConsumerOptimizerMetricsFullResource extends RedisResourceBase<Cons
                 m.entry_index_sum === null ||
                 m.metrics_count === null ||
                 m.consumer === null ||
-                m.consumer_hostname === null ||
-                m.provider_stake === null ||
-                m.chain === null) {
-                logger.warn(`ConsumerOptimizerMetricsResource::getAggregatedMetrics_${provider}_${from}_${to} - Invalid metric(0): ${JSONStringify(m)}`);
+                m.consumer_hostname === null) {
+                logger.warn(`ConsumerOptimizerMetricsFullBySpecResource::getAggregatedMetrics_${spec}_${from}_${to} - Invalid metric(0): ${JSONStringify(m)}`);
                 continue;
             }
 
@@ -157,13 +163,14 @@ export class ConsumerOptimizerMetricsFullResource extends RedisResourceBase<Cons
                 !IsMeaningfulText(m.consumer) &&
                 !IsMeaningfulText(m.consumer_hostname) &&
                 !IsMeaningfulText(m.provider_stake + "") &&
-                !IsMeaningfulText(m.chain)) {
-                logger.warn(`ConsumerOptimizerMetricsResource::getAggregatedMetrics_${provider}_${from}_${to} - Invalid metric(1): ${JSONStringify(m)}`);
+                !IsMeaningfulText(m.provider)) {
+                logger.warn(`ConsumerOptimizerMetricsFullBySpecResource::getAggregatedMetrics_${spec}_${from}_${to} - Invalid metric(1): ${JSONStringify(m)}`);
                 continue;
             }
 
             validMetrics.push({
-                chain: m.chain,
+                provider: m.provider,
+                provider_moniker: monikerMap.get(m.provider) || m.provider,
                 hourly_timestamp: m.hourly_timestamp,
                 consumer: m.consumer,
                 consumer_hostname: m.consumer_hostname,
@@ -195,5 +202,5 @@ export class ConsumerOptimizerMetricsFullResource extends RedisResourceBase<Cons
     };
 }
 
-export const ConsumerOptimizerMetricsFullService = new ConsumerOptimizerMetricsFullResource();
+export const ConsumerOptimizerMetricsFullBySpecService = new ConsumerOptimizerMetricsFullBySpecResource();
 

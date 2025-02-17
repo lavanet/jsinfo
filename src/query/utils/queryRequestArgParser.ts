@@ -137,52 +137,45 @@ export async function GetAndValidateSpecIdFromRequestWithAll(request: FastifyReq
     return upSpecId;
 }
 
-export interface DateRange {
-    from?: Date;
-    to?: Date;
-}
-
-export function GetDateRangeFromRequest(request: FastifyRequest): DateRange {
-    let from: Date | undefined;
-    let to: Date | undefined;
+export function GetDateRangeFromRequest(request: FastifyRequest): { from: Date | undefined; to: Date | undefined } {
+    // Support both f/t and from/to parameters
+    const { f, t, from: fromAlt, to: toAlt } = request.query as any;
+    const fromStr = f || fromAlt;
+    const toStr = t || toAlt;
 
     try {
-        // Support both f/t and from/to parameters
-        const fromStr = (request.query as any).f || (request.query as any).from;
-        const toStr = (request.query as any).t || (request.query as any).to;
+        const from = fromStr ? new Date(fromStr) : undefined;
+        const to = toStr ? new Date(toStr) : undefined;
 
-        if (fromStr) {
-            // Parse the date and set to start of day in UTC
-            const fromDate = new Date(fromStr);
-            from = new Date(Date.UTC(
-                fromDate.getUTCFullYear(),
-                fromDate.getUTCMonth(),
-                fromDate.getUTCDate(),
-                0, 0, 0, 0
-            ));
+        // Validate dates are valid
+        if (from && isNaN(from.getTime())) {
+            logger.warn('Invalid from date', { from: fromStr });
+            return { from: undefined, to: undefined };
         }
-        if (toStr) {
-            // Parse the date and set to end of day in UTC
-            const toDate = new Date(toStr);
-            to = new Date(Date.UTC(
-                toDate.getUTCFullYear(),
-                toDate.getUTCMonth(),
-                toDate.getUTCDate(),
-                23, 59, 59, 999
-            ));
+        if (to && isNaN(to.getTime())) {
+            logger.warn('Invalid to date', { to: toStr });
+            return { from: undefined, to: undefined };
         }
 
-        // Swap dates if from is after to
-        if (from && to && from > to) {
-            [from, to] = [to, from];
+        // Add logging to debug date parsing
+        if (from || to) {
+            logger.debug('Parsed dates', {
+                fromStr,
+                toStr,
+                parsedFrom: from?.toISOString(),
+                parsedTo: to?.toISOString()
+            });
         }
+
+        return { from, to };
     } catch (error) {
         logger.warn('Invalid date format in request', {
-            from: (request.query as any).f || (request.query as any).from,
-            to: (request.query as any).t || (request.query as any).to,
+            f,
+            t,
+            fromAlt,
+            toAlt,
             error
         });
+        return { from: undefined, to: undefined };
     }
-
-    return { from, to };
 }

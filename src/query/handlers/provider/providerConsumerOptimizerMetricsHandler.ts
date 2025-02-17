@@ -1,10 +1,10 @@
 // src/query/handlers/provider/providerConsumerOptimizerMetricsHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { ConsumerOptimizerMetricsService } from '@jsinfo/redis/resources/provider/consumerOptimizerMetrics';
+import { ConsumerOptimizerMetricsByProviderService } from '@jsinfo/redis/resources/provider/ProviderConsumerOptimizerMetrics';
 import { GetAndValidateProviderAddressFromRequest, GetDateRangeFromRequest } from '@jsinfo/query/utils/queryRequestArgParser';
 import { JSONStringify } from '@jsinfo/utils/fmt';
-import { getMetricsFilters, getPossibleValues, validateFilters, aggregateMetrics, MetricsItem } from '@jsinfo/query/utils/queryOptimizerMetricsHandlerUtils';
+import { getMetricsFilters, getPossibleValues, validateFilters, aggregateMetrics, MetricsItem } from '@jsinfo/query/utils/queryProviderOptimizerMetricsHandlerUtils';
 
 export const ProviderConsumerOptimizerMetricsHandlerOpts: RouteShorthandOptions = {
     schema: {
@@ -36,7 +36,7 @@ export async function ProviderConsumerOptimizerMetricsHandler(request: FastifyRe
     const { from, to } = GetDateRangeFromRequest(request);
     const filters = getMetricsFilters(request.query);
 
-    const data = await ConsumerOptimizerMetricsService.fetch({
+    const data = await ConsumerOptimizerMetricsByProviderService.fetch({
         provider,
         from,
         to

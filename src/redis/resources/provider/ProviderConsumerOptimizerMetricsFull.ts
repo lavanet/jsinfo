@@ -8,13 +8,13 @@ import { queryRelays } from '@jsinfo/utils/db';
 import { aggregatedConsumerOptimizerMetrics } from '@jsinfo/schemas/relaysSchema';
 import { logger } from '@jsinfo/utils/logger';
 
-export interface ConsumerOptimizerMetricsResourceFilterParams {
+export interface ConsumerOptimizerMetricsFullByProviderFilterParams {
     provider: string;
     from?: Date;
     to?: Date;
 }
 
-export interface ConsumerOptimizerMetricsItem {
+export interface ConsumerOptimizerMetricsFullByProviderItem {
     hourly_timestamp: Date;
     consumer: string;
     consumer_hostname: string;
@@ -28,22 +28,30 @@ export interface ConsumerOptimizerMetricsItem {
     entry_index: number;
     chain: string;
     epoch: number;
+    tier_average: number;
+    tier_chances: {
+        tier0: number;
+        tier1: number;
+        tier2: number;
+        tier3: number;
+    };
 }
-export interface ConsumerOptimizerMetricsResourceResponse {
+
+export interface ConsumerOptimizerMetricsFullByProviderResponse {
     filters: {
         provider?: string;
         from?: Date;
         to?: Date;
     };
-    metrics: ConsumerOptimizerMetricsItem[];
+    metrics: ConsumerOptimizerMetricsFullByProviderItem[];
     error?: string;
 }
 
-export class ConsumerOptimizerMetricsResource extends RedisResourceBase<ConsumerOptimizerMetricsResourceResponse, ConsumerOptimizerMetricsResourceFilterParams> {
-    protected readonly redisKey = 'consumer_optimizer_metrics';
+export class ConsumerOptimizerMetricsFullByProviderResource extends RedisResourceBase<ConsumerOptimizerMetricsFullByProviderResponse, ConsumerOptimizerMetricsFullByProviderFilterParams> {
+    protected readonly redisKey = 'consumer_optimizer_metrics_full_by_provider';
     protected readonly cacheExpirySeconds = 1200; // 20 minutes
 
-    protected async fetchFromSource(args: ConsumerOptimizerMetricsResourceFilterParams): Promise<ConsumerOptimizerMetricsResourceResponse> {
+    protected async fetchFromSource(args: ConsumerOptimizerMetricsFullByProviderFilterParams): Promise<ConsumerOptimizerMetricsFullByProviderResponse> {
         const provider = args.provider;
 
         let to = args?.to || new Date();
@@ -84,12 +92,7 @@ export class ConsumerOptimizerMetricsResource extends RedisResourceBase<Consumer
         };
     }
 
-    private async getAggregatedMetrics(provider: string, from: Date, to: Date): Promise<ConsumerOptimizerMetricsItem[]> {
-        // logger.info('Fetching metrics with date range:', {
-        //     provider,
-        //     from: from.toISOString(),
-        //     to: to.toISOString()
-        // });
+    private async getAggregatedMetrics(provider: string, from: Date, to: Date): Promise<ConsumerOptimizerMetricsFullByProviderItem[]> {
 
         const metrics = await queryRelays(db =>
             db.select({
@@ -105,7 +108,13 @@ export class ConsumerOptimizerMetricsResource extends RedisResourceBase<Consumer
                 node_error_rate_sum: aggregatedConsumerOptimizerMetrics.node_error_rate_sum,
                 entry_index_sum: aggregatedConsumerOptimizerMetrics.entry_index_sum,
                 provider_stake: aggregatedConsumerOptimizerMetrics.max_provider_stake,
-                max_epoch: aggregatedConsumerOptimizerMetrics.max_epoch
+                max_epoch: aggregatedConsumerOptimizerMetrics.max_epoch,
+                tier_sum: aggregatedConsumerOptimizerMetrics.tier_sum,
+                tier_metrics_count: aggregatedConsumerOptimizerMetrics.tier_metrics_count,
+                tier_chance_0_sum: aggregatedConsumerOptimizerMetrics.tier_chance_0_sum,
+                tier_chance_1_sum: aggregatedConsumerOptimizerMetrics.tier_chance_1_sum,
+                tier_chance_2_sum: aggregatedConsumerOptimizerMetrics.tier_chance_2_sum,
+                tier_chance_3_sum: aggregatedConsumerOptimizerMetrics.tier_chance_3_sum,
             })
                 .from(aggregatedConsumerOptimizerMetrics)
                 .where(and(
@@ -114,9 +123,15 @@ export class ConsumerOptimizerMetricsResource extends RedisResourceBase<Consumer
                     lte(aggregatedConsumerOptimizerMetrics.hourly_timestamp, to)
                 ))
                 .orderBy(aggregatedConsumerOptimizerMetrics.hourly_timestamp)
-            , `ConsumerOptimizerMetricsResource::getAggregatedMetrics_${provider}_${from}_${to}`);
+            , `ConsumerOptimizerMetricsFullByProviderResource::getAggregatedMetrics_${provider}_${from}_${to}`);
 
-        const validMetrics: ConsumerOptimizerMetricsItem[] = [];
+        // logger.info('Retrieved metrics:', {
+        //     count: metrics.length,
+        //     firstDate: metrics[0]?.hourly_timestamp,
+        //     lastDate: metrics[metrics.length - 1]?.hourly_timestamp
+        // });
+
+        const validMetrics: ConsumerOptimizerMetricsFullByProviderItem[] = [];
 
         for (const m of metrics) {
             if (m.latency_score_sum === null ||
@@ -130,7 +145,7 @@ export class ConsumerOptimizerMetricsResource extends RedisResourceBase<Consumer
                 m.consumer_hostname === null ||
                 m.provider_stake === null ||
                 m.chain === null) {
-                logger.warn(`ConsumerOptimizerMetricsResource::getAggregatedMetrics_${provider}_${from}_${to} - Invalid metric(0): ${JSONStringify(m)}`);
+                logger.warn(`ConsumerOptimizerMetricsFullByProviderResource::getAggregatedMetrics_${provider}_${from}_${to} - Invalid metric(0): ${JSONStringify(m)}`);
                 continue;
             }
 
@@ -143,7 +158,7 @@ export class ConsumerOptimizerMetricsResource extends RedisResourceBase<Consumer
                 !IsMeaningfulText(m.consumer_hostname) &&
                 !IsMeaningfulText(m.provider_stake + "") &&
                 !IsMeaningfulText(m.chain)) {
-                logger.warn(`ConsumerOptimizerMetricsResource::getAggregatedMetrics_${provider}_${from}_${to} - Invalid metric(1): ${JSONStringify(m)}`);
+                logger.warn(`ConsumerOptimizerMetricsFullByProviderResource::getAggregatedMetrics_${provider}_${from}_${to} - Invalid metric(1): ${JSONStringify(m)}`);
                 continue;
             }
 
@@ -161,6 +176,18 @@ export class ConsumerOptimizerMetricsResource extends RedisResourceBase<Consumer
                 node_error_rate: Number(m.node_error_rate_sum) / Number(m.metrics_count),
                 entry_index: Number(m.entry_index_sum) / Number(m.metrics_count),
                 epoch: Number(m.max_epoch),
+                tier_average: (m.tier_metrics_count ?? 0) > 0 && m.tier_sum != null ?
+                    Number(m.tier_sum) / Number(m.tier_metrics_count) : 0,
+                tier_chances: {
+                    tier0: (m.tier_metrics_count ?? 0) > 0 && m.tier_chance_0_sum != null ?
+                        Number(m.tier_chance_0_sum) / Number(m.tier_metrics_count) : 0,
+                    tier1: (m.tier_metrics_count ?? 0) > 0 && m.tier_chance_1_sum != null ?
+                        Number(m.tier_chance_1_sum) / Number(m.tier_metrics_count) : 0,
+                    tier2: (m.tier_metrics_count ?? 0) > 0 && m.tier_chance_2_sum != null ?
+                        Number(m.tier_chance_2_sum) / Number(m.tier_metrics_count) : 0,
+                    tier3: (m.tier_metrics_count ?? 0) > 0 && m.tier_chance_3_sum != null ?
+                        Number(m.tier_chance_3_sum) / Number(m.tier_metrics_count) : 0,
+                }
             });
         }
 
@@ -168,5 +195,5 @@ export class ConsumerOptimizerMetricsResource extends RedisResourceBase<Consumer
     };
 }
 
-export const ConsumerOptimizerMetricsService = new ConsumerOptimizerMetricsResource();
+export const ConsumerOptimizerMetricsFullByProviderService = new ConsumerOptimizerMetricsFullByProviderResource();
 

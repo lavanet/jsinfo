@@ -1,7 +1,8 @@
 import { IsMeaningfulText } from '@jsinfo/utils/fmt';
 import { avg } from '@jsinfo/utils/math';
-import { startOfDay, endOfDay, isWithinInterval, isSameDay } from 'date-fns';
+import { startOfDay, endOfDay } from 'date-fns';
 import { logger } from '@jsinfo/utils/logger';
+import { TopProvidersBySpecService } from '@jsinfo/redis/resources/spec/TopProvidersBySpec';
 
 export interface MetricsFilters {
     consumer?: string;
@@ -21,6 +22,8 @@ export interface MetricsItem {
     node_error_rate: number;
     entry_index: number;
     provider_stake: number;
+    provider: string;
+    provider_moniker: string;
     epoch: number;
     tier_sum?: number | null;
     tier_metrics_count?: number;
@@ -302,4 +305,5 @@ export function filterMetricsByExactDates<T extends { hourly_timestamp: Date }>(
 ): T[] {
     if (!from && !to) return metrics;
     return metrics.filter(metric => isDateInRange(metric.hourly_timestamp, from, to));
-} 
+}
+

@@ -79,7 +79,6 @@ import { ConsumerEventsPaginatedHandlerOpts, ConsumerEventsPaginatedHandler, Con
 import { ConsumerConflictsHandler, ConsumerConflictsHandlerOpts } from './handlers/consumer/consumerConflictsHandler';
 
 // -- Spec page ajax --
-import { SpecChartsRawHandler, SpecChartsRawHandlerOpts } from './handlers/spec/specChartsHandler';
 import { SpecChartsV2RawHandler, SpecChartsV2RawHandlerOpts } from './handlers/spec/specChartsV2Handler';
 import { SpecStakesPaginatedHandler, SpecStakesPaginatedHandlerOpts } from './handlers/spec/specStakesHandler';
 import { SpecProviderHealthHandler, SpecProviderHealthHandlerOpts } from './handlers/spec/specProviderHealthHandler';
@@ -121,6 +120,10 @@ import {
     ProviderAvatarParams
 } from './handlers/ajax/providerAvatarHandler';
 import { IsMainnet } from '@jsinfo/utils/env';
+import { SpecConsumerOptimizerMetricsHandlerOpts } from './handlers/spec/specConsumerOptimizerMetricsHandler';
+import { SpecConsumerOptimizerMetricsHandler } from './handlers/spec/specConsumerOptimizerMetricsHandler';
+import { SpecConsumerOptimizerMetricsFullHandlerOpts } from './handlers/spec/specConsumerOptimizerMetricsFullHandler';
+import { SpecConsumerOptimizerMetricsFullHandler } from './handlers/spec/specConsumerOptimizerMetricsFullHandler';
 
 // -- Server status ajax --
 GetServerInstance().get('/latest', LatestRawHandlerOpts, LatestRawHandler);
@@ -209,6 +212,8 @@ GetServerInstance().get<{ Querystring: ProviderConsumerOptimizerMetricsQuery }>(
     ProviderConsumerOptimizerMetricsHandler
 );
 
+GetServerInstance().get('/providerConsumerOptimizerMetricsFull/:addr', ProviderConsumerOptimizerMetricsFullHandlerOpts, ProviderConsumerOptimizerMetricsFullHandler);
+
 // -- Consumer page ajax --
 RegisterRedisBackedHandler('/consumerV2/:addr', ConsumerV2CahcedHandlerOpts, ConsumerV2CahcedHandler);
 RegisterPaginationServerHandler('/consumerSubscriptions/:addr', ConsumerSubscriptionRawHandlerOpts, ConsumerSubscriptionPaginatedRawHandler, ConsumerSubscriptionItemCountPaginatiedHandler);
@@ -232,7 +237,6 @@ GetServerInstance().get('/eventsReportsCsv', EventsReportsCSVRawHandler);
 
 // -- Spec page ajax --
 GetServerInstance().get('/specStakes/:specId', SpecStakesPaginatedHandlerOpts, SpecStakesPaginatedHandler);
-GetServerInstance().get('/specCharts/:specId', SpecChartsRawHandlerOpts, SpecChartsRawHandler);
 GetServerInstance().get('/specChartsV2/:specId/:addr', SpecChartsV2RawHandlerOpts, SpecChartsV2RawHandler);
 RegisterRedisBackedHandler('/specCuRelayRewards/:specId', SpecCuRelayRewardsHandlerOpts, SpecCuRelayRewardsHandler);
 RegisterRedisBackedHandler('/specProviderCount/:specId', SpecProviderCountHandlerOpts, SpecProviderCountHandler);
@@ -240,7 +244,10 @@ RegisterRedisBackedHandler('/specEndpointHealth/:specId', SpecEndpointHealthHand
 RegisterRedisBackedHandler('/specCacheHitRate/:specId', SpecCacheHitRateHandlerOpts, SpecCacheHitRateHandler);
 RegisterRedisBackedHandler('/specProviderHealth/:specId/:addr', SpecProviderHealthHandlerOpts, SpecProviderHealthHandler, { cache_ttl: 10 });
 RegisterRedisBackedHandler('/specTrackedInfo/:specId', SpecTrackedInfoHandlerOpts, SpecTrackedInfoHandler, { cache_ttl: 10 });
+RegisterRedisBackedHandler('/specConsumerOptimizerMetrics/:specId', SpecConsumerOptimizerMetricsHandlerOpts, SpecConsumerOptimizerMetricsHandler, { cache_ttl: 10 });
+RegisterRedisBackedHandler('/specConsumerOptimizerMetricsFull/:specId', SpecConsumerOptimizerMetricsFullHandlerOpts, SpecConsumerOptimizerMetricsFullHandler, { cache_ttl: 10 });
 
+// -- Total Value Locked --
 const tvlRoutes = [
     '/total_value_locked',
     '/total_locked_value',
@@ -279,5 +286,3 @@ if (IsMainnet()) {
 GetServerInstance().get<ProviderAvatarParams>('/provider_avatar/:providerId', GetProviderAvatarHandlerOpts, GetProviderAvatarHandler);
 GetServerInstance().get('/provider_avatars', ListProviderAvatarsHandlerOpts, ListProviderAvatarsHandler);
 
-// -- New route for full metrics --
-GetServerInstance().get('/providerConsumerOptimizerMetricsFull/:addr', ProviderConsumerOptimizerMetricsFullHandlerOpts, ProviderConsumerOptimizerMetricsFullHandler);

@@ -1,7 +1,19 @@
 // ./src/query/server.ts
 
 // External libraries
-import Fastify, { FastifyBaseLogger, FastifyInstance, RouteShorthandOptions, FastifyRequest, FastifyReply } from 'fastify';
+import Fastify, {
+    FastifyBaseLogger,
+    FastifyInstance,
+    RouteShorthandOptions,
+    FastifyRequest,
+    FastifyReply,
+    RouteGenericInterface,
+    FastifySchema,
+    FastifyTypeProviderDefault
+} from 'fastify';
+import { IncomingMessage, ServerResponse } from 'http';
+import { RawServerDefault } from 'fastify/types/utils';
+import { ResolveFastifyReplyReturnType } from 'fastify/types/type-provider';
 import fastifyCors from '@fastify/cors';
 import pino from 'pino';
 
@@ -71,12 +83,15 @@ export function RegisterPaginationServerHandler(
     }
 }
 
-function handleRequestWithRedisCache(
-    handler: (request: FastifyRequest, reply: FastifyReply) => Promise<any>,
+function handleRequestWithRedisCache<T extends RouteGenericInterface>(
+    handler: (request: FastifyRequest<T>, reply: FastifyReply) => Promise<any>,
     cache_ttl?: number | null,
     is_text: boolean = false,
-): (request: FastifyRequest, reply: FastifyReply) => Promise<any> {
-    return async (request: FastifyRequest, reply: FastifyReply) => {
+): (
+    request: FastifyRequest<T>,
+    reply: FastifyReply
+) => Promise<ResolveFastifyReplyReturnType<FastifyTypeProviderDefault, FastifySchema, T>> {
+    return async function (request: FastifyRequest<T>, reply: FastifyReply) {
         const cacheKey = `url:${request.url.split('?')[0].substring(1)}`; // Use the path and query for the cache key
 
         const cachedResponse = await RedisCache.get(cacheKey);
@@ -105,15 +120,15 @@ function handleRequestWithRedisCache(
     };
 }
 
-export function RegisterRedisBackedHandler(
+export function RegisterRedisBackedHandler<T extends RouteGenericInterface>(
     path: string,
     opts: RouteShorthandOptions,
-    handler: (request: FastifyRequest, reply: FastifyReply) => Promise<any>,
+    handler: (request: FastifyRequest<T>, reply: FastifyReply) => Promise<any>,
     options: { cache_ttl?: number, is_text?: boolean } = {}
 ) {
     logger.info("Registering redis handler for path: " + path);
     opts = AddErrorResponseToFastifyServerOpts(opts);
-    server.get(path, opts, handleRequestWithRedisCache(handler, options?.cache_ttl, options?.is_text));
+    server.get<T>(path, opts, handleRequestWithRedisCache<T>(handler, options?.cache_ttl, options?.is_text) as any);
 }
 
 export function GetServerInstance() {

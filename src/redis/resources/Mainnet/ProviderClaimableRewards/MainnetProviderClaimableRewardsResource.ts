@@ -22,7 +22,7 @@ interface ProviderRewardData {
 
 export class MainnetProviderClaimableRewardsResource extends RedisResourceBase<ProviderRewardData, {}> {
     protected readonly redisKey = 'mainnet-provider-claimable-rewards';
-    protected readonly cacheExpirySeconds = 7200 * 2; // 4 hours
+    protected readonly cacheExpirySeconds = 7200 * 3; // 6 hours
 
     protected async fetchFromSource(): Promise<ProviderRewardData> {
         try {

@@ -59,7 +59,7 @@ interface CuServed {
 
 export class AllProviderAPRResource extends RedisResourceBase<AllAprProviderData[], {}> {
     protected readonly redisKey = 'allProviderAPR_v8';
-    protected readonly cacheExpirySeconds = 300; // 5 minutes cache
+    protected readonly cacheExpirySeconds = 7200 * 3; // 6 hours cache
 
     protected async fetchFromSource(): Promise<AllAprProviderData[]> {
         const result = await queryJsinfo(async (db) => {

@@ -52,16 +52,35 @@ interface ProviderPerformanceData {
     avatar?: string | null;
 }
 
+interface RewardInfo {
+    source: string;
+    amount: {
+        tokens: RewardToken[];
+        total_usd: number;
+    };
+}
+
+interface RewardBlockInfo {
+    info: RewardInfo[];
+    total: {
+        tokens: RewardToken[];
+        total_usd: number;
+    };
+    recommended_block: string;
+}
+
+const LATEST_DISTRIBUTED_BLOCK_HEIGHT = "2231220";
 export class ProviderPerformanceResource extends RedisResourceBase<ProviderPerformanceData[], {}> {
-    protected readonly redisKey = 'provider-performance';
-    protected readonly cacheExpirySeconds = 300; // 5 minutes cache
+    protected readonly redisKey = 'provider-performance-v5';
+    protected readonly cacheExpirySeconds = 7200 * 3; // 6 hours cache
 
     protected async fetchFromSource(): Promise<ProviderPerformanceData[]> {
         try {
+
             const [aprResource, providersResource, rewardsLastMonth] = await Promise.all([
                 new AllProviderAPRResource().fetch(),
                 new ListProvidersResource().fetch(),
-                MainnetProviderEstimatedRewardsGetService.fetch({ block: 2044223 })
+                MainnetProviderEstimatedRewardsGetService.fetch({ block: parseInt(LATEST_DISTRIBUTED_BLOCK_HEIGHT) })
             ]);
 
             if (!aprResource || !providersResource) {
@@ -74,7 +93,10 @@ export class ProviderPerformanceResource extends RedisResourceBase<ProviderPerfo
             );
 
             const rewardsMap = new Map(
-                (rewardsLastMonth?.data?.providers || []).map(p => [p.address, p.rewards_by_block])
+                (rewardsLastMonth?.data?.providers || []).map(p => [
+                    p.address,
+                    p.rewards_by_block[LATEST_DISTRIBUTED_BLOCK_HEIGHT]  // Extract the block data here
+                ])
             );
 
             // Process data
@@ -120,75 +142,41 @@ export class ProviderPerformanceResource extends RedisResourceBase<ProviderPerfo
         }
     }
 
-    private processRewardsBySpec(rewardsByBlock: any): Array<{
+    private processRewardsBySpec(rewardBlock: RewardBlockInfo | undefined): Array<{
         chain: string;
         spec: string;
         tokens: RewardToken[];
         total_usd: number;
         icon?: string;
     }> {
-        const specRewards = new Map<string, { tokens: RewardToken[]; total_usd: Decimal }>();
-
-        if (!rewardsByBlock?.info) {
+        if (!rewardBlock?.info) {
+            logger.warn('No rewards info found in block');
             return [];
         }
 
-        const { info } = rewardsByBlock;
+        const specRewards = new Map<string, { tokens: RewardToken[]; total_usd: Decimal }>();
 
-        info.forEach((reward: any) => {
-            const [type, spec] = reward.source.toLowerCase().split(': ');
+        // Process info array to group by spec
+        rewardBlock.info.forEach((reward: RewardInfo) => {
+            const [type, spec] = reward.source.split(': ');
             if (!spec) return;
 
-            const key = spec;
+            const key = spec.toLowerCase();
             const existing = specRewards.get(key) || { tokens: [], total_usd: new Decimal(0) };
 
-            reward.amount.tokens.forEach((token: any) => {
+            // Add tokens from this reward
+            reward.amount.tokens.forEach((token: RewardToken) => {
                 const existingToken = existing.tokens.find(t => t.source_denom === token.source_denom);
                 if (existingToken) {
-                    try {
-                        const existingResolved = existingToken.resolved_amount || '0';
-                        const newResolved = token.resolved_amount || '0';
-                        const newResolvedAmount = new Decimal(existingResolved)
-                            .plus(new Decimal(newResolved))
-                            .toString();
-
-                        const existingDisplay = existingToken.display_amount || '0';
-                        const newDisplay = token.display_amount || '0';
-                        const newDisplayAmount = new Decimal(existingDisplay)
-                            .plus(new Decimal(newDisplay))
-                            .toString();
-
-                        const existingUsd = new Decimal(existingToken.value_usd?.slice(1) || '0');
-                        const newUsd = new Decimal(token.value_usd?.slice(1) || '0');
-                        const totalUsd = existingUsd.plus(newUsd);
-
-                        existingToken.resolved_amount = newResolvedAmount;
-                        existingToken.display_amount = newDisplayAmount;
-                        existingToken.value_usd = `$${totalUsd.toFixed(2)}`;
-                    } catch (error) {
-                        logger.warn('Error processing token values:', {
-                            error,
-                            existingToken,
-                            newToken: token,
-                            context: 'processRewardsBySpec'
-                        });
-                    }
+                    existingToken.resolved_amount = token.resolved_amount;
+                    existingToken.display_amount = token.display_amount;
+                    existingToken.value_usd = token.value_usd;
                 } else {
                     existing.tokens.push({ ...token });
                 }
             });
 
-            try {
-                const rewardUsd = new Decimal(reward.amount.total_usd || 0);
-                existing.total_usd = existing.total_usd.plus(rewardUsd);
-            } catch (error) {
-                logger.warn('Error processing total USD:', {
-                    error,
-                    reward,
-                    context: 'processRewardsBySpec_totalUsd'
-                });
-            }
-
+            existing.total_usd = existing.total_usd.plus(new Decimal(reward.amount.total_usd));
             specRewards.set(key, existing);
         });
 

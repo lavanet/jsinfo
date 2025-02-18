@@ -69,17 +69,18 @@ interface RewardBlockInfo {
     recommended_block: string;
 }
 
+const LATEST_DISTRIBUTED_BLOCK_HEIGHT = "2231220";
 export class ProviderPerformanceResource extends RedisResourceBase<ProviderPerformanceData[], {}> {
     protected readonly redisKey = 'provider-performance-v5';
     protected readonly cacheExpirySeconds = 7200 * 3; // 6 hours cache
 
     protected async fetchFromSource(): Promise<ProviderPerformanceData[]> {
         try {
-            const BLOCK_HEIGHT = "2044223";
+
             const [aprResource, providersResource, rewardsLastMonth] = await Promise.all([
                 new AllProviderAPRResource().fetch(),
                 new ListProvidersResource().fetch(),
-                MainnetProviderEstimatedRewardsGetService.fetch({ block: parseInt(BLOCK_HEIGHT) })
+                MainnetProviderEstimatedRewardsGetService.fetch({ block: parseInt(LATEST_DISTRIBUTED_BLOCK_HEIGHT) })
             ]);
 
             if (!aprResource || !providersResource) {
@@ -94,7 +95,7 @@ export class ProviderPerformanceResource extends RedisResourceBase<ProviderPerfo
             const rewardsMap = new Map(
                 (rewardsLastMonth?.data?.providers || []).map(p => [
                     p.address,
-                    p.rewards_by_block[BLOCK_HEIGHT]  // Extract the block data here
+                    p.rewards_by_block[LATEST_DISTRIBUTED_BLOCK_HEIGHT]  // Extract the block data here
                 ])
             );
 

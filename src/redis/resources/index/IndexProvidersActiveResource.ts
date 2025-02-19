@@ -140,7 +140,6 @@ export class IndexProvidersActiveResource extends RedisResourceBase<IndexProvide
             }
 
             const defaultSortKey = "totalStake";
-
             let finalPagination: Pagination;
 
             if (pagination) {
@@ -152,11 +151,38 @@ export class IndexProvidersActiveResource extends RedisResourceBase<IndexProvide
             }
 
             // Ensure the sort key is valid or use the default
-            if (finalPagination.sortKey === null) {
+            if (!finalPagination.sortKey) {
                 finalPagination.sortKey = defaultSortKey;
             }
 
-            // Define the key-to-column mapping based on the schema provided
+            // If sorting by rewards, fetch all records and let the handler do the sorting
+            if (finalPagination.sortKey?.toLowerCase() === 'rewardsusd' ||
+                finalPagination.sortKey?.toLowerCase() === 'rewardsulava') {
+                const data = await queryJsinfo(
+                    async (db: PostgresJsDatabase) => db
+                        .select({
+                            provider: JsinfoSchema.providerStakes.provider,
+                            totalServices: sql<string>`CONCAT(SUM(CASE WHEN ${JsinfoSchema.providerStakes.status} = ${JsinfoSchema.LavaProviderStakeStatus.Active} THEN 1 ELSE 0 END), ' / ', COUNT(${JsinfoSchema.providerStakes.specId})) as totalServices`,
+                            totalStake: sql<bigint>`COALESCE(SUM( CAST(${JsinfoSchema.providerStakes.stake} AS BIGINT) + CAST(${JsinfoSchema.providerStakes.delegateTotal} AS BIGINT) ), 0) AS totalStake`,
+                            rewardSum: sql<number>`COALESCE((${rewardSumSubQuery}), 0) as rewardSum`,
+                        })
+                        .from(JsinfoSchema.providerStakes)
+                        .where(inArray(JsinfoSchema.providerStakes.provider, activeProviders))
+                        .groupBy(JsinfoSchema.providerStakes.provider),
+                    `IndexProvidersActiveResource_fetchPaginatedRecords_rewards_sort`
+                );
+
+                return Promise.all(data.map(async item => ({
+                    provider: item.provider || "",
+                    moniker: await ProviderMonikerService.GetMonikerForProvider(item.provider),
+                    monikerfull: await ProviderMonikerService.GetMonikerFullDescription(item.provider),
+                    rewardSum: item.rewardSum || 0,
+                    totalServices: item.totalServices,
+                    totalStake: item.totalStake.toString()
+                })));
+            }
+
+            // Original sorting logic for other fields
             const keyToColumnMap = {
                 provider: JsinfoSchema.providerStakes.provider,
                 moniker: sql`MAX(${JsinfoSchema.providerSpecMoniker.moniker})`,
@@ -165,10 +191,10 @@ export class IndexProvidersActiveResource extends RedisResourceBase<IndexProvide
                 totalStake: sql`totalStake`
             };
 
-            // Check if the sort key is in the map, throw an error if not
-            if (!Object.keys(keyToColumnMap).includes(finalPagination.sortKey)) {
-                const trimmedSortKey = finalPagination.sortKey.substring(0, 500);
-                throw new Error(`Invalid sort key: ${trimmedSortKey}`);
+            // Check if the sort key is in the map
+            if (!Object.keys(keyToColumnMap).includes(finalPagination.sortKey.toLowerCase())) {
+                logger.warn(`Invalid sort key: ${finalPagination.sortKey}, using default: ${defaultSortKey}`);
+                finalPagination.sortKey = defaultSortKey;
             }
 
             const sortColumn = keyToColumnMap[finalPagination.sortKey];
@@ -229,6 +255,9 @@ export class IndexProvidersActiveResource extends RedisResourceBase<IndexProvide
                 totalServices: item.totalServices,
                 totalStake: item.totalStake.toString()
             })));
+        } catch (error) {
+            logger.error('Error in fetchPaginatedRecords:', error);
+            throw error;
         } finally {
             console.timeEnd('redis/resources/index/IndexProvidersActiveResource.fetchPaginatedRecords');
         }

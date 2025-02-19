@@ -20,7 +20,7 @@ export interface IndexProviderActiveResponse {
     totalServices: string;
     totalStake: string;
     rewardsUSD?: string;
-    rewardsLAVA?: string;
+    rewardsULAVA?: string;
 }
 
 export interface IndexProvidersActiveResponse {
@@ -29,7 +29,7 @@ export interface IndexProvidersActiveResponse {
 
 interface ProviderData extends IndexProviderActiveResponse {
     rewardsUSD: string;
-    rewardsLAVA: string;
+    rewardsULAVA: string;
 }
 
 export const IndexProvidersActivePaginatedHandlerOpts: RouteShorthandOptions = {
@@ -50,7 +50,7 @@ export const IndexProvidersActivePaginatedHandlerOpts: RouteShorthandOptions = {
                                 totalServices: { type: 'string' },
                                 totalStake: { type: 'string' },
                                 rewardsUSD: { type: 'string' },
-                                rewardsLAVA: { type: 'string' },
+                                rewardsULAVA: { type: 'string' },
                             }
                         }
                     }
@@ -77,6 +77,9 @@ export async function IndexProvidersActivePaginatedHandler(
         const result = await resource.fetch({
             type: 'paginated',
             pagination
+        }).catch(error => {
+            logger.error('Error fetching from resource:', error);
+            return null;
         });
 
         if (!result?.data) {
@@ -90,9 +93,13 @@ export async function IndexProvidersActivePaginatedHandler(
 
         let rewardsResponse: GetResourceResponse | null = null;
         if (IsMainnet()) {
-            rewardsResponse = await MainnetProviderEstimatedRewardsGetService.fetch({
-                block: 'latest_distributed'
-            });
+            try {
+                rewardsResponse = await MainnetProviderEstimatedRewardsGetService.fetch({
+                    block: 'latest_distributed'
+                });
+            } catch (error) {
+                logger.error('Error fetching rewards data:', error);
+            }
         }
 
         if (rewardsResponse?.data) {
@@ -102,30 +109,80 @@ export async function IndexProvidersActivePaginatedHandler(
                 const providerData = rewardsResponse?.data.providers?.find(p => p.address === provider.provider);
                 logger.info(`Looking for provider ${provider.provider} - Found: ${!!providerData}`);
 
-                if (providerData?.rewards_by_block['2231220']?.total) {
-                    const total = providerData.rewards_by_block['2231220'].total;
+                const rewardsLastMonthBlock = rewardsResponse?.data?.metadata.block_info?.height;
+                if (!rewardsLastMonthBlock) {
+                    throw new Error('Failed to fetch rewards last month block');
+                }
+
+                if (providerData?.rewards_by_block[rewardsLastMonthBlock]?.total) {
+                    const total = providerData.rewards_by_block[rewardsLastMonthBlock].total;
                     provider.rewardsUSD = `$${total.total_usd.toFixed(2)}`;
                     const lavaToken = total.tokens.find(t => t.display_denom === 'lava');
-                    provider.rewardsLAVA = lavaToken ? lavaToken.display_amount : "-";
-                    logger.info(`Set rewards for ${provider.provider}: USD=${provider.rewardsUSD}, LAVA=${provider.rewardsLAVA}`);
+                    provider.rewardsULAVA = lavaToken ? lavaToken.resolved_amount : "-";
+                    logger.info(`Set rewards for ${provider.provider}: USD=${provider.rewardsUSD}, ULAVA=${provider.rewardsULAVA}`);
                 } else {
                     provider.rewardsUSD = "-";
-                    provider.rewardsLAVA = "-";
+                    provider.rewardsULAVA = "-";
                     logger.info(`No rewards found for ${provider.provider}`);
                 }
             });
+
+            // Handle sorting
+            const sortKey = pagination?.sortKey?.toLowerCase();
+            if (pagination && (sortKey === 'rewardsusd' || sortKey === 'rewardsulava')) {
+                logger.info(`Sorting by ${sortKey}`);
+
+                // Get all providers first before sorting
+                const allProviders = [...providers];
+
+                allProviders.sort((a, b) => {
+                    let aValue: number, bValue: number;
+
+                    if (sortKey === 'rewardsusd') {
+                        // Parse USD values, removing '$' and handling '-'
+                        aValue = a.rewardsUSD === '-' ? 0 : parseFloat(a.rewardsUSD.replace('$', ''));
+                        bValue = b.rewardsUSD === '-' ? 0 : parseFloat(b.rewardsUSD.replace('$', ''));
+                    } else {
+                        // Parse ULAVA values, handling '-'
+                        aValue = a.rewardsULAVA === '-' ? 0 : parseFloat(a.rewardsULAVA);
+                        bValue = b.rewardsULAVA === '-' ? 0 : parseFloat(b.rewardsULAVA);
+                    }
+
+                    // Handle NaN values
+                    if (isNaN(aValue)) aValue = 0;
+                    if (isNaN(bValue)) bValue = 0;
+
+                    logger.debug(`Comparing ${a.provider} (${aValue}) with ${b.provider} (${bValue})`);
+
+                    return pagination.direction === 'ascending'
+                        ? aValue - bValue
+                        : bValue - aValue;
+                });
+
+                // Apply pagination after sorting
+                if (pagination.page && pagination.count) {
+                    const startIdx = (pagination.page - 1) * pagination.count;
+                    const endIdx = startIdx + pagination.count;
+                    // Replace providers array with sorted and paginated results
+                    providers.length = 0;
+                    providers.push(...allProviders.slice(startIdx, endIdx));
+                }
+            }
         } else {
             logger.warn('No rewards response data available');
             providers.forEach(p => {
                 p.rewardsUSD = "-data not available-";
-                p.rewardsLAVA = "-data not available-";
+                p.rewardsULAVA = "-data not available-";
             });
         }
 
         return { data: providers };
     } catch (error) {
         logger.error('Error in IndexProvidersActivePaginatedHandler:', error);
-        WriteErrorToFastifyReply(reply, 'Internal server error');
+        if (!reply.sent) {
+            reply.status(500);
+            reply.send({ error: 'Internal server error' });
+        }
         return null;
     }
 }

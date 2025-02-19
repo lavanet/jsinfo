@@ -6,6 +6,31 @@ import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { ParsePaginationFromRequest } from '@jsinfo/query/utils/queryPagination';
 import { GetDataLength } from '@jsinfo/utils/fmt';
 import { IndexProvidersActiveResource, IndexProvidersActiveResourceResponse } from '@jsinfo/redis/resources/index/IndexProvidersActiveResource';
+import { MainnetProviderEstimatedRewardsGetService } from '@jsinfo/redis/resources/Mainnet/ProviderEstimatedRewards/MainnetProviderEstimatedRewardsGetResource';
+import { IsMainnet } from '@jsinfo/utils/env';
+import { logger } from '@jsinfo/utils/logger';
+import { WriteErrorToFastifyReply } from '@jsinfo/query/utils/queryServerUtils';
+import { GetResourceResponse } from '@jsinfo/redis/resources/Mainnet/ProviderEstimatedRewards/MainnetProviderEstimatedRewardsGetResource';
+
+export interface IndexProviderActiveResponse {
+    provider: string;
+    moniker: string;
+    monikerfull: string;
+    rewardSum: string;
+    totalServices: string;
+    totalStake: string;
+    rewardsUSD?: string;
+    rewardsLAVA?: string;
+}
+
+export interface IndexProvidersActiveResponse {
+    data: IndexProviderActiveResponse[];
+}
+
+interface ProviderData extends IndexProviderActiveResponse {
+    rewardsUSD: string;
+    rewardsLAVA: string;
+}
 
 export const IndexProvidersActivePaginatedHandlerOpts: RouteShorthandOptions = {
     schema: {
@@ -21,9 +46,11 @@ export const IndexProvidersActivePaginatedHandlerOpts: RouteShorthandOptions = {
                                 provider: { type: 'string' },
                                 moniker: { type: 'string' },
                                 monikerfull: { type: 'string' },
-                                rewardSum: { type: ['number', 'null', 'string'] },
+                                rewardSum: { type: 'string' },
                                 totalServices: { type: 'string' },
-                                totalStake: { type: ['string', 'null'] }
+                                totalStake: { type: 'string' },
+                                rewardsUSD: { type: 'string' },
+                                rewardsLAVA: { type: 'string' },
                             }
                         }
                     }
@@ -39,36 +66,67 @@ export const IndexProvidersActivePaginatedHandlerOpts: RouteShorthandOptions = {
     }
 }
 
-export async function IndexProvidersActivePaginatedHandler(request: FastifyRequest, reply: FastifyReply): Promise<IndexProvidersActiveResourceResponse> {
-    console.time('handlers/index/indexProvidersActiveHandler.IndexProvidersActivePaginatedHandler.total');
-
+export async function IndexProvidersActivePaginatedHandler(
+    request: FastifyRequest,
+    reply: FastifyReply
+): Promise<IndexProvidersActiveResponse | null> {
     try {
-        console.time('handlers/index/indexProvidersActiveHandler.resource_instantiation');
         const resource = new IndexProvidersActiveResource();
-        console.timeEnd('handlers/index/indexProvidersActiveHandler.resource_instantiation');
-
-        console.time('handlers/index/indexProvidersActiveHandler.pagination_parsing');
         const pagination = ParsePaginationFromRequest(request) ?? undefined;
-        console.timeEnd('handlers/index/indexProvidersActiveHandler.pagination_parsing');
 
-        console.time('handlers/index/indexProvidersActiveHandler.fetch');
         const result = await resource.fetch({
             type: 'paginated',
             pagination
         });
-        console.timeEnd('handlers/index/indexProvidersActiveHandler.fetch');
 
-        if (!result || !result.data) {
-            console.time('handlers/index/indexProvidersActiveHandler.error_response');
+        if (!result?.data) {
             reply.status(400);
             reply.send({ error: 'Failed to fetch active providers data' });
-            console.timeEnd('handlers/index/indexProvidersActiveHandler.error_response');
-            return reply;
+            return null;
         }
 
-        return result;
-    } finally {
-        console.timeEnd('handlers/index/indexProvidersActiveHandler.IndexProvidersActivePaginatedHandler.total');
+        // Cast the data array to allow adding rewards fields
+        const providers = result.data as unknown as ProviderData[];
+
+        let rewardsResponse: GetResourceResponse | null = null;
+        if (IsMainnet()) {
+            rewardsResponse = await MainnetProviderEstimatedRewardsGetService.fetch({
+                block: 'latest_distributed'
+            });
+        }
+
+        if (rewardsResponse?.data) {
+            logger.info('Processing rewards data...');
+
+            providers.forEach(provider => {
+                const providerData = rewardsResponse?.data.providers?.find(p => p.address === provider.provider);
+                logger.info(`Looking for provider ${provider.provider} - Found: ${!!providerData}`);
+
+                if (providerData?.rewards_by_block['2231220']?.total) {
+                    const total = providerData.rewards_by_block['2231220'].total;
+                    provider.rewardsUSD = `$${total.total_usd.toFixed(2)}`;
+                    const lavaToken = total.tokens.find(t => t.display_denom === 'lava');
+                    provider.rewardsLAVA = lavaToken ? lavaToken.display_amount : "-";
+                    logger.info(`Set rewards for ${provider.provider}: USD=${provider.rewardsUSD}, LAVA=${provider.rewardsLAVA}`);
+                } else {
+                    provider.rewardsUSD = "-";
+                    provider.rewardsLAVA = "-";
+                    logger.info(`No rewards found for ${provider.provider}`);
+                }
+            });
+        } else {
+            logger.warn('No rewards response data available');
+            providers.forEach(p => {
+                p.rewardsUSD = "-data not available-";
+                p.rewardsLAVA = "-data not available-";
+            });
+        }
+
+        return { data: providers };
+    } catch (error) {
+        logger.error('Error in IndexProvidersActivePaginatedHandler:', error);
+        WriteErrorToFastifyReply(reply, 'Internal server error');
+        return null;
     }
 }
 

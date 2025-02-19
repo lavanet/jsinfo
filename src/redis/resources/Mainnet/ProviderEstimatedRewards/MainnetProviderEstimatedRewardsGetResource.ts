@@ -8,7 +8,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 export interface GetQueryParams {
-    block?: string | number;
+    block?: string | number | 'latest_distributed' | 'latest';
 }
 
 export interface TokenInfo {
@@ -51,24 +51,42 @@ class MainnetProviderEstimatedRewardsGetResource extends RedisResourceBase<GetRe
         try {
             const blockId = params?.block || 'latest';
 
+            if (blockId === 'latest_distributed') {
+                const files = await fs.promises.readdir(this.DATA_DIR);
+                let latestBlock = 0;
+
+                for (const file of files) {
+                    if (file.startsWith('provider_rewards_block_') && file.endsWith('.json')) {
+                        const blockNum = parseInt(file.replace('provider_rewards_block_', '').replace('.json', ''));
+                        if (blockNum > latestBlock) {
+                            latestBlock = blockNum;
+                        }
+                    }
+                }
+
+                if (latestBlock > 0) {
+                    const blockData = await this.loadBlockData(latestBlock);
+                    if (!blockData) {
+                        throw new Error(`No data found for latest distributed block ${latestBlock}`);
+                    }
+                    return { data: blockData };
+                }
+                throw new Error('No distributed rewards data found');
+            }
+
             let data: ProviderRewardsData;
             if (blockId === 'latest') {
                 data = await GenLavaLatestProviderRewards();
-            } else {
-                const blockData = await this.loadBlockData(Number(blockId));
-                if (!blockData) {
-                    throw new Error(`No data found for block ${blockId}`);
-                }
-                data = blockData;
+                return { data };
+
+            }
+            const blockData = await this.loadBlockData(Number(blockId));
+            if (!blockData) {
+                throw new Error(`No data found for block ${blockId}`);
             }
 
-            // For non-latest blocks, return data exactly as it is in the JSON file
-            if (blockId !== 'latest') {
-                return { data: data };
-            }
+            return { data: blockData };
 
-            // Only transform data for 'latest' block
-            return { data: data };
         } catch (error) {
             logger.error('Error fetching provider rewards data:', error);
             throw error;

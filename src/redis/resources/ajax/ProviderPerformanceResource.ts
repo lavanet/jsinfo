@@ -69,7 +69,6 @@ interface RewardBlockInfo {
     recommended_block: string;
 }
 
-const LATEST_DISTRIBUTED_BLOCK_HEIGHT = "2231220";
 export class ProviderPerformanceResource extends RedisResourceBase<ProviderPerformanceData[], {}> {
     protected readonly redisKey = 'provider-performance-v5';
     protected readonly cacheExpirySeconds = 7200 * 3; // 6 hours cache
@@ -80,7 +79,7 @@ export class ProviderPerformanceResource extends RedisResourceBase<ProviderPerfo
             const [aprResource, providersResource, rewardsLastMonth] = await Promise.all([
                 new AllProviderAPRResource().fetch(),
                 new ListProvidersResource().fetch(),
-                MainnetProviderEstimatedRewardsGetService.fetch({ block: parseInt(LATEST_DISTRIBUTED_BLOCK_HEIGHT) })
+                MainnetProviderEstimatedRewardsGetService.fetch({ block: 'latest_distributed' })
             ]);
 
             if (!aprResource || !providersResource) {
@@ -92,10 +91,15 @@ export class ProviderPerformanceResource extends RedisResourceBase<ProviderPerfo
                 providersResource.providers.map(p => [p.provider, p])
             );
 
+            const rewardsLastMonthBlock = rewardsLastMonth?.data?.metadata.block_info?.height;
+            if (!rewardsLastMonthBlock) {
+                throw new Error('Failed to fetch rewards last month block');
+            }
+
             const rewardsMap = new Map(
                 (rewardsLastMonth?.data?.providers || []).map(p => [
                     p.address,
-                    p.rewards_by_block[LATEST_DISTRIBUTED_BLOCK_HEIGHT]  // Extract the block data here
+                    p.rewards_by_block[rewardsLastMonthBlock]  // Extract the block data here
                 ])
             );
 

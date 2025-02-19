@@ -98,8 +98,6 @@ const CACHE_KEYS = {
     SPEC_TRACKED_INFO: (chainId: string) => `spec_tracked_info:${chainId}`,
     VALIDATOR_DISTRIBUTION_INFO: (validator: string) =>
         `validator_distribution_info:${validator}`,
-    MAINNET_PROVIDER_REWARDS_NO_AMOUNT_NO_DENOM: (provider: string) =>
-        `mainnet_provider_rewards_no_amount_no_denom:${provider}`,
 } as const;
 
 class RpcOnDemandEndpointCacheClass {
@@ -190,7 +188,6 @@ class RpcOnDemandEndpointCacheClass {
             } catch (error) {
                 logger.error(`Error fetching estimated provider rewards for ${provider}`, { error: TruncateError(error) });
                 return { info: [], total: [], recommended_block: "0" };
-
             }
             if (!rewards) {
                 return { info: [], total: [], recommended_block: "0" };

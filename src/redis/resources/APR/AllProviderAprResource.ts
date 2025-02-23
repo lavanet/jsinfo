@@ -100,7 +100,7 @@ export class AllProviderAprFullResource extends RedisResourceBase<AllAprProvider
                     const provider = curr.provider.toLowerCase().trim();
                     const commission = formatCommissionPrecent(curr.commission);
                     // Log each mapping
-                    logger.info(`Mapping commission for ${provider}: ${commission}`);
+                    // logger.info(`Mapping commission for ${provider}: ${commission}`);
                     return [provider, commission];
                 })
         );

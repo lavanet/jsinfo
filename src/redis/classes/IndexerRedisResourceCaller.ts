@@ -1,7 +1,7 @@
 import { logger } from '@jsinfo/utils/logger';
 
 // Ajax Resources
-import { AprResource } from '../resources/ajax/AprResource';
+import { AprFullResource, AprFullService } from '../resources/APR/AprFullResource';
 import { AutoCompleteResource } from '../resources/ajax/AutoCompleteResource';
 import { ChainWalletResource } from '../resources/ajax/ChainWalletResource';
 import { SupplyResource } from '../resources/ajax/SupplyResource';
@@ -21,7 +21,7 @@ import { ProviderStakesAndDelegationResource } from '../resources/global/Provide
 import { IndexTopChainsResource } from '../resources/index/IndexTopChainsResource';
 import { IndexTotalCuResource } from '../resources/index/IndexTotalCuResource';
 import { ActiveProvidersService } from '../resources/index/ActiveProvidersResource';
-import { AllProviderAPRResource } from '../resources/ajax/AllProviderAprResource';
+import { AllProviderAprFullResource } from '../resources/APR/AllProviderAprResource';
 import { LockedTokenValuesResource } from '../resources/ajax/LockedTokenValuesResource';
 import { LockedVestingTokensService } from '../resources/global/LockedVestingTokensResource';
 import { IpRpcEndpointsIndexService } from '../resources/IpRpcEndpointsIndex/IpRpcEndpointsResource';
@@ -141,7 +141,7 @@ export class IndexerRedisResourceCaller {
 
     private static async refreshAjaxResources(): Promise<void> {
         await this.safeFetch('AllProviderAPR',
-            () => new AllProviderAPRResource().fetch(),
+            () => new AllProviderAprFullResource().fetch(),
             this.currentFetches
         ).catch(e => logger.error('Failed to refresh all provider APR:', e));
 
@@ -170,8 +170,8 @@ export class IndexerRedisResourceCaller {
             this.currentFetches
         ).catch(e => logger.error('Failed to refresh restakers:', e));
 
-        await this.safeFetch('APR',
-            () => new AprResource().fetch(),
+        await this.safeFetch('AprFull',
+            () => AprFullService.fetch(),
             this.currentFetches
         ).catch(e => logger.error('Failed to refresh APR data:', e));
 

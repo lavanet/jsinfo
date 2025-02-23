@@ -4,11 +4,11 @@ import { logger } from '@jsinfo/utils/logger';
 import { QueryLavaMainnetRPC } from '@jsinfo/restRpc/MainnetLavaRpc';
 import { RedisCache } from '@jsinfo/redis/classes/RedisCache';
 import { IsMeaningfulText, TruncateError } from '@jsinfo/utils/fmt';
-import { ProcessTokenArrayAtTime } from '@jsinfo/restRpc/MainnetProcessLavaRpcTokenArray';
+import { ProcessTokenArrayAtTime } from '@jsinfo/redis/resources/APR/ProcessLavaRpcTokenArray';
 import { FetchRestData } from '@jsinfo/restRpc/RestFetch';
 import { EstimatedRewardsResponse } from './LavaRpcOnDemandEndpointCache';
-import { ProcessedTokenArray } from './MainnetProcessLavaRpcTokenArray';
-import { ProcessMinimalTokenArray, ProcessedMinimalTokenArray } from '@jsinfo/restRpc/MainnetProcessLavaRpcTokenArray';
+import { ProcessedTokenArray } from '../redis/resources/APR/ProcessLavaRpcTokenArray';
+import { ProcessMinimalTokenArray, ProcessedMinimalTokenArray } from '@jsinfo/redis/resources/APR/ProcessLavaRpcTokenArray';
 import { EntryDoesNotExistException } from './RestFetch';
 
 const CACHE_KEYS = {
@@ -19,8 +19,6 @@ const CACHE_KEYS = {
         `mainnet_validator_rewards:${validator}`,
     MAINNET_VALIDATOR_OUTSTANDING_REWARDS: (validator: string) =>
         `mainnet_validator_outstanding_rewards:${validator}`,
-    // MAINNET_VALIDATOR_COMMISSION: (validator: string) =>
-    //     `mainnet_validator_commission:${validator}`,
     MAINNET_VALIDATOR_DELEGATIONS: (validator: string) =>
         `mainnet_validator_delegations:${validator}`,
     MAINNET_VALIDATOR_UNBONDING: (validator: string) =>

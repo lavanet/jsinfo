@@ -334,20 +334,20 @@ export const keyValueStore = pgTable('key_value_store', {
 export type KeyValueStore = typeof keyValueStore.$inferSelect;
 export type InsertKeyValueStore = typeof keyValueStore.$inferInsert;
 
-export const apr = pgTable('apr', {
-  key: text('key').notNull().primaryKey(),
-  value: real('value').notNull(),
-  timestamp: timestamp('timestamp', { mode: "date" }).defaultNow().notNull(),
-}, (table) => {
-  return {
-    aprIdx: index("aprIdx").on(
-      table.key,
-    )
-  };
-});
+// export const apr = pgTable('apr', {
+//   key: text('key').notNull().primaryKey(),
+//   value: real('value').notNull(),
+//   timestamp: timestamp('timestamp', { mode: "date" }).defaultNow().notNull(),
+// }, (table) => {
+//   return {
+//     aprIdx: index("aprIdx").on(
+//       table.key,
+//     )
+//   };
+// });
 
-export type Apr = typeof apr.$inferSelect;
-export type InsertApr = typeof apr.$inferInsert;
+// export type Apr = typeof apr.$inferSelect;
+// export type InsertApr = typeof apr.$inferInsert;
 
 // Add new table for delegator rewards
 export const delegatorRewards = pgTable('delegator_rewards', {
@@ -388,16 +388,16 @@ export type InsertSpecTrackedInfo = typeof specTrackedInfo.$inferInsert;
 // export type AprPerProvider = typeof aprPerProvider.$inferSelect;
 // export type InsertAprPerProvider = typeof aprPerProvider.$inferInsert;
 
-export const aprFullInfo = pgTable('apr_full_info', {
-  address: text('address').notNull(),
-  value: text('value').notNull(),
-  timestamp: timestamp('timestamp').notNull(),
-  type: text('type').notNull(),
-}, (table) => {
-  return {
-    appidx: primaryKey({ columns: [table.address, table.type] }),
-  };
-});
+// export const aprFullInfo = pgTable('apr_full_info', {
+//   address: text('address').notNull(),
+//   value: text('value').notNull(),
+//   timestamp: timestamp('timestamp').notNull(),
+//   type: text('type').notNull(),
+// }, (table) => {
+//   return {
+//     appidx: primaryKey({ columns: [table.address, table.type] }),
+//   };
+// });
 
-export type AprFullInfo = typeof aprFullInfo.$inferSelect;
-export type InsertAprFullInfo = typeof aprFullInfo.$inferInsert;
+// export type AprFullInfo = typeof aprFullInfo.$inferSelect;
+// export type InsertAprFullInfo = typeof aprFullInfo.$inferInsert;

@@ -3,7 +3,6 @@
 import { logger } from '@jsinfo/utils/logger';
 
 // Monitors
-import { APRMonitor } from "./restrpc_agregators/AprMonitor";
 import { DelegatorRewardsMonitor } from "./restrpc_agregators/DelegatorRewardsMonitor";
 import { SpecTrackedInfoMonitor } from "./restrpc_agregators/SpecTrackedInfoMonitor";
 
@@ -14,17 +13,14 @@ import { ProcessChainWalletApi } from "./restrpc_agregators/ChainWalletApiProces
 import { ProcessChainSpecs } from "./restrpc_agregators/ChainSpecProcessor";
 
 // Redis Resource Manager
-
 import { AggConsumerRelayPayments } from '@jsinfo/indexer/agregators/consumerRelayPayments/aggConsumerRelayPayments';
 import { AggProviderRelayPayments } from '@jsinfo/indexer/agregators/providerRelayPayments/aggProviderRelayPayments';
-
 import { IndexerRedisResourceCaller } from "@jsinfo/redis/classes/IndexerRedisResourceCaller";
 
 // Supply Processor
 import { SyncBlockchainEntities } from './blockchainEntities/blockchainEntitiesSync';
 import { FillUpBlocks } from '@jsinfo/indexer/indexerFillupBlocks';
 import { JSINFO_INDEXER_GRACEFULL_EXIT_AFTER_X_HOURS } from './indexerConsts';
-// import { ConsumerOptimizerMetricsAgregator_Aggregate } from './agregators/ConsumerOptimizerMetricsAgregator';
 
 export class IndexerThreadManagerClass {
     private isRunning = false;
@@ -81,12 +77,10 @@ export class IndexerThreadManagerClass {
 
         // Start all monitors in parallel
         await Promise.all([
-            APRMonitor.start(),
             DelegatorRewardsMonitor.start(),
             SpecTrackedInfoMonitor.start(),
             IndexerRedisResourceCaller.startIndexing(),
             this.startFillUpBlocksMonitor(),
-            // ConsumerOptimizerMetricsAgregator_Aggregate()
         ]);
     }
 

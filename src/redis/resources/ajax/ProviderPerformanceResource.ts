@@ -1,5 +1,5 @@
 import { RedisResourceBase } from '@jsinfo/redis/classes/RedisResourceBase';
-import { AllProviderAPRResource } from '@jsinfo/redis/resources/ajax/AllProviderAprResource';
+import { AllProviderAprFullResource } from '@jsinfo/redis/resources/APR/AllProviderAprResource';
 import { ListProvidersResource } from '@jsinfo/redis/resources/ajax/ListProvidersResource';
 import { MainnetProviderEstimatedRewardsGetService } from '@jsinfo/redis/resources/Mainnet/ProviderEstimatedRewards/MainnetProviderEstimatedRewardsGetResource';
 import { GetProviderAvatar } from '@jsinfo/restRpc/GetProviderAvatar';
@@ -76,13 +76,13 @@ export class ProviderPerformanceResource extends RedisResourceBase<ProviderPerfo
     protected async fetchFromSource(): Promise<ProviderPerformanceData[]> {
         try {
 
-            const [aprResource, providersResource, rewardsLastMonth] = await Promise.all([
-                new AllProviderAPRResource().fetch(),
+            const [AprFullResource, providersResource, rewardsLastMonth] = await Promise.all([
+                new AllProviderAprFullResource().fetch(),
                 new ListProvidersResource().fetch(),
                 MainnetProviderEstimatedRewardsGetService.fetch({ block: 'latest_distributed' })
             ]);
 
-            if (!aprResource || !providersResource) {
+            if (!AprFullResource || !providersResource) {
                 throw new Error('Failed to fetch provider data');
             }
 
@@ -96,15 +96,16 @@ export class ProviderPerformanceResource extends RedisResourceBase<ProviderPerfo
                 throw new Error('Failed to fetch rewards last month block');
             }
 
-            const rewardsMap = new Map(
+
+            const rewardsMap = new Map<string, RewardBlockInfo>(
                 (rewardsLastMonth?.data?.providers || []).map(p => [
                     p.address,
-                    p.rewards_by_block[rewardsLastMonthBlock]  // Extract the block data here
+                    p.rewards_by_block[rewardsLastMonthBlock]
                 ])
             );
 
             // Process data
-            const combinedData = await Promise.all(aprResource.map(async apr => {
+            const combinedData = await Promise.all(AprFullResource.map(async apr => {
                 const provider = providersMap.get(apr.address);
                 const rewards_last_month = this.processRewardsBySpec(rewardsMap.get(apr.address));
                 const avatar = await GetProviderAvatar(apr.address);

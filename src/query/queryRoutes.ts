@@ -13,9 +13,9 @@ import { SupplyRawHandlerOpts, TotalSupplyRawHandler, CirculatingSupplyRawHandle
 import { SupplyHistoryHandlerOpts, supplyHistoryHandler } from './handlers/ajax/supplyHistoryHandler';
 
 // -- Server apr ajax --
-import { APRRawHandlerOpts, APRRawHandler } from './handlers/ajax/aprHandler';
-import { APRFullHandler, APRFullHandlerOpts } from './handlers/ajax/aprFullHandler';
-import { ProviderPerformanceHandlerOpts, ProviderPerformanceRawHandler } from './handlers/ajax/providerPerfomanceHandler';
+import { APRRawHandlerOpts, APRRawHandler } from './handlers/apr/aprHandler';
+import { APRFullHandler, APRFullHandlerOpts } from './handlers/apr/aprFullHandler';
+import { ProviderPerformanceHandlerOpts, ProviderPerformanceRawHandler } from './handlers/apr/providerPerfomanceHandler';
 
 // -- list all providers and monikers endpoint ---
 import { ListProvidersRawHandlerOpts, ListProvidersRawHandler } from './handlers/ajax/listProvidersHandler';
@@ -125,6 +125,8 @@ import { SpecConsumerOptimizerMetricsHandler } from './handlers/spec/specConsume
 import { SpecConsumerOptimizerMetricsFullHandlerOpts } from './handlers/spec/specConsumerOptimizerMetricsFullHandler';
 import { SpecConsumerOptimizerMetricsFullHandler } from './handlers/spec/specConsumerOptimizerMetricsFullHandler';
 
+import { GetAprWeightedHistoryHandler } from './handlers/apr/aprWeightedHandler';
+
 // -- Server status ajax --
 GetServerInstance().get('/latest', LatestRawHandlerOpts, LatestRawHandler);
 GetServerInstance().get('/islatest', IsLatestRawHandlerOpts, IsLatestRawHandler);
@@ -144,11 +146,10 @@ GetServerInstance().get('/lava_chain_restakers', ChainWalletApiHandlerOpts, Lava
 
 // -- Server APR ajax --
 GetServerInstance().get('/apr', APRRawHandlerOpts, APRRawHandler);
-GetServerInstance().get('/apr_full', APRFullHandlerOpts, APRFullHandler);
-
-// -- providers_performance --
-GetServerInstance().get('/providers_performance', ProviderPerformanceHandlerOpts, ProviderPerformanceRawHandler);
+GetServerInstance().get('/apr_full', APRFullHandlerOpts, APRFullHandler);// APR Weighted Routes
+GetServerInstance().get('/apr_weighted', GetAprWeightedHistoryHandler);
 GetServerInstance().get('/all_providers_apr', ProviderPerformanceHandlerOpts, ProviderPerformanceRawHandler);
+GetServerInstance().get('/providers_performance', ProviderPerformanceHandlerOpts, ProviderPerformanceRawHandler);
 
 // -- list all providers and monikers endpoint ---
 GetServerInstance().get('/listProviders', ListProvidersRawHandlerOpts, ListProvidersRawHandler);
@@ -285,4 +286,7 @@ if (IsMainnet()) {
 // -- Provider avatar ajax --
 GetServerInstance().get<ProviderAvatarParams>('/provider_avatar/:providerId', GetProviderAvatarHandlerOpts, GetProviderAvatarHandler);
 GetServerInstance().get('/provider_avatars', ListProviderAvatarsHandlerOpts, ListProviderAvatarsHandler);
+
+
+
 

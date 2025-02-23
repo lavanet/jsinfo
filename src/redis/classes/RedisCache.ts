@@ -319,6 +319,42 @@ class RedisCacheClass {
         }
         return undefined;
     }
+
+    async getKeysByPrefix(prefix: string): Promise<string[]> {
+        if (!this.clients.length) {
+            return [];
+        }
+
+        const fullPrefix = this.keyPrefix + prefix;
+
+        try {
+            for (const client of this.clients) {
+                if (!client) continue;
+                try {
+                    const keys = await client.keys(fullPrefix + '*');
+                    return keys.map(key => key.replace(this.keyPrefix, ''));
+                } catch (clientError) {
+                    logger.error('Redis KEYS operation failed for client', {
+                        error: clientError as Error,
+                        prefix,
+                        operation: 'KEYS',
+                        client: MaskPassword(client.options?.url || '')
+                    });
+                }
+            }
+
+            // If no client succeeded, try to reconnect
+            await this.reconnect();
+            return [];
+        } catch (error) {
+            logger.error('Redis KEYS operation failed', {
+                error: error as Error,
+                prefix,
+                operation: 'KEYS'
+            });
+            return [];
+        }
+    }
 }
 
 export const RedisCache = new RedisCacheClass("jsinfo-");

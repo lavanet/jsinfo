@@ -1,14 +1,13 @@
 import { RedisResourceBase } from '@jsinfo/redis/classes/RedisResourceBase';
 import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { queryJsinfo } from '@jsinfo/utils/db';
-import { and, eq, gt, sql } from 'drizzle-orm';
+import { eq, gt, sql } from 'drizzle-orm';
 import { ProviderMonikerService } from '@jsinfo/redis/resources/global/ProviderMonikerSpecResource';
 import * as JsinfoProviderAgrSchema from '@jsinfo/schemas/jsinfoSchema/providerRelayPaymentsAgregation';
-import { EstimatedRewardsResponse } from '@jsinfo/restRpc/LavaRpcOnDemandEndpointCache';
 import { IsMeaningfulText } from '@jsinfo/utils/fmt';
 import Decimal from 'decimal.js';
 import { logger } from '@jsinfo/utils/logger';
-import { CalculateProviderAprs, ProviderAprDetails, RewardAmount } from '@jsinfo/indexer/restrpc_agregators/CalcualteApr';
+import { CalculateProviderAprs, ProviderAprDetails, RewardAmount } from '@jsinfo/redis/resources/APR/AprService';
 
 export interface AllAprProviderData {
     address: string;
@@ -39,25 +38,18 @@ function formatCommissionPrecent(commission: any): string {
     }
 }
 
-interface AddressAndApr {
-    address: string;
-    type: string;
-    apr: string;
-    rewards: EstimatedRewardsResponse;
-}
-
 interface ProviderCommission {
     provider: string;
-    commission: number; // Assuming commission is a number
+    commission: number;
 }
 
 interface CuServed {
     provider: string;
-    cuSum: number; // Assuming cuSum is a number
-    relaySum: number; // Assuming relaySum is a number
+    cuSum: number;
+    relaySum: number;
 }
 
-export class AllProviderAPRResource extends RedisResourceBase<AllAprProviderData[], {}> {
+export class AllProviderAprFullResource extends RedisResourceBase<AllAprProviderData[], {}> {
     protected readonly redisKey = 'allProviderAPR_v8';
     protected readonly cacheExpirySeconds = 7200 * 3; // 6 hours cache
 
@@ -74,7 +66,7 @@ export class AllProviderAPRResource extends RedisResourceBase<AllAprProviderData
                 cuServedDataMapByProviderId,
                 relayServedDataMapByProviderId
             );
-        }, `ProviderAPRResource::fetchFromSource`);
+        }, `ProviderAprFullResource::fetchFromSource`);
 
         return result;
     }
@@ -101,9 +93,6 @@ export class AllProviderAPRResource extends RedisResourceBase<AllAprProviderData
     }
 
     private mapProviderCommissions(providerCommissionsData: any[]): Record<string, string> {
-        // Add logging to debug
-        logger.info('Raw provider commissions:', providerCommissionsData);
-
         const commissionMap = Object.fromEntries(
             providerCommissionsData
                 .filter(curr => IsMeaningfulText(curr.provider))
@@ -116,8 +105,6 @@ export class AllProviderAPRResource extends RedisResourceBase<AllAprProviderData
                 })
         );
 
-        // Log final map
-        logger.info('Final commission map:', commissionMap);
         return commissionMap;
     }
 

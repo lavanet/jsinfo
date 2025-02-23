@@ -1,17 +1,36 @@
 import { logger } from '@jsinfo/utils/logger';
 import { ConvertToBaseDenom, GetUSDCValue, GetDenomTrace, GetDenomToUSDRate } from '@jsinfo/restRpc/CurrencyConverstionUtils';
-import { ProcessedInfoItem } from '@jsinfo/redis/resources/Mainnet/ProviderEstimatedRewards/MainnetGenLavaLatestProviderRewards';
 import Decimal from 'decimal.js';
-import { TEST_DENOMS } from '@jsinfo/indexer/restrpc_agregators/CalcualteApr';
+import { TEST_DENOMS } from '@jsinfo/redis/resources/APR/AprCalcualtor';
 import { IsMeaningfulText } from '@jsinfo/utils/fmt';
 
-interface EstimatedRewardsResponse {
+export interface ProcessedToken {
+    source_denom: string;
+    resolved_amount: string;
+    resolved_denom: string;
+    display_denom: string;
+    display_amount: string;
+    value_usd: string;
+}
+
+export interface ProcessedTokenWithSource {
+    source: string;
+    amount: {
+        tokens: ProcessedToken[];
+        total_usd: number;
+    };
+}
+
+export interface EstimatedRewardsResponse {
     info: {
         source: string;
         amount: {
             denom: string;
             amount: string;
-        };
+        } | Array<{
+            denom: string;
+            amount: string;
+        }>;
     }[];
     total: {
         denom: string;
@@ -36,7 +55,7 @@ export interface ProcessedTokenArray {
         tokens: ProcessedToken[];
         total_usd: number;
     };
-    info?: ProcessedInfoItem[];
+    info?: ProcessedTokenWithSource[];
     recommended_block?: string;
 }
 
@@ -60,50 +79,55 @@ export function FormatTokenAmount(amount: string | number): string {
 }
 
 export async function ProcessTokenArrayAtTime(response: EstimatedRewardsResponse, timestamp: number | null = null): Promise<ProcessedTokenArray> {
-    const processedItems: ProcessedInfoItem[] = [];
+    const processedItems: ProcessedTokenWithSource[] = [];
     const processedTotalTokens: ProcessedToken[] = [];
     let totalUsd = 0;
 
     if (response.info) {
         for (const item of response.info) {
             try {
-                if (TEST_DENOMS.includes(item.amount[0].denom)) {
+                const amounts = Array.isArray(item.amount) ? item.amount : [item.amount];
+                if (!amounts || amounts.length === 0) {
                     continue;
                 }
 
-                const tokenAmount = item.amount[0];
-                const [baseAmount, baseDenom] = await ConvertToBaseDenom(tokenAmount.amount, tokenAmount.denom);
-                const usdValue = await GetUSDCValue(baseAmount, baseDenom);
-                const originalDenom = (baseDenom && baseDenom.startsWith('ibc/')) ?
-                    await GetDenomTrace(baseDenom) :
-                    tokenAmount.denom;
-
-                const processedToken = {
-                    source_denom: tokenAmount.denom,
-                    resolved_amount: FormatTokenAmount(tokenAmount.amount),
-                    resolved_denom: originalDenom,
-                    display_denom: baseDenom,
-                    display_amount: FormatTokenAmount(baseAmount),
-                    value_usd: `$${FormatTokenAmount(usdValue)}`
-                };
-
-                processedItems.push({
-                    source: item.source,
-                    amount: {
-                        tokens: [processedToken],
-                        total_usd: new Decimal(usdValue).toNumber()
+                for (const tokenAmount of amounts) {
+                    if (TEST_DENOMS.includes(tokenAmount.denom)) {
+                        continue;
                     }
-                });
-                totalUsd += new Decimal(usdValue).toNumber();
 
-                const prices = getCoingeckoPricesResolvedMap(timestamp);
-                prices[tokenAmount.denom] = {
-                    source_denom: tokenAmount.denom,
-                    resolved_denom: originalDenom,
-                    display_denom: baseDenom,
-                    value_usd: await GetDenomToUSDRate(baseDenom)
-                };
+                    const [baseAmount, baseDenom] = await ConvertToBaseDenom(tokenAmount.amount, tokenAmount.denom);
+                    const usdValue = await GetUSDCValue(baseAmount, baseDenom);
+                    const originalDenom = (baseDenom && baseDenom.startsWith('ibc/')) ?
+                        await GetDenomTrace(baseDenom) :
+                        tokenAmount.denom;
 
+                    const processedToken = {
+                        source_denom: tokenAmount.denom,
+                        resolved_amount: FormatTokenAmount(tokenAmount.amount),
+                        resolved_denom: originalDenom,
+                        display_denom: baseDenom,
+                        display_amount: FormatTokenAmount(baseAmount),
+                        value_usd: `$${FormatTokenAmount(usdValue)}`
+                    };
+
+                    processedItems.push({
+                        source: item.source,
+                        amount: {
+                            tokens: [processedToken],
+                            total_usd: new Decimal(usdValue).toNumber()
+                        }
+                    });
+                    totalUsd += new Decimal(usdValue).toNumber();
+
+                    const prices = getCoingeckoPricesResolvedMap(timestamp);
+                    prices[tokenAmount.denom] = {
+                        source_denom: tokenAmount.denom,
+                        resolved_denom: originalDenom,
+                        display_denom: baseDenom,
+                        value_usd: await GetDenomToUSDRate(baseDenom)
+                    };
+                }
             } catch (error) {
                 logger.error('Failed to process provider rewards info:', {
                     error: error instanceof Error ? error.message : error,

@@ -1,10 +1,10 @@
-// src/query/handlers/ajax/aprHandler.ts
+// src/query/handlers/ajax/aprFullInfoHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { AprResource } from '@jsinfo/redis/resources/ajax/AprResource';
+import { AprFullService } from '@jsinfo/redis/resources/APR/AprFullResource';
 import { JSONStringify } from '@jsinfo/utils/fmt';
 
-export const APRRawHandlerOpts: RouteShorthandOptions = {
+export const APRFullHandlerOpts: RouteShorthandOptions = {
     schema: {
         response: {
             200: {
@@ -22,14 +22,13 @@ export const APRRawHandlerOpts: RouteShorthandOptions = {
     }
 }
 
-export async function APRRawHandler(request: FastifyRequest, reply: FastifyReply) {
-    const resource = new AprResource();
-    const data = await resource.fetch();
+export async function APRFullHandler(request: FastifyRequest, reply: FastifyReply) {
+    const data = await AprFullService.fetch();
     if (!data) {
         reply.status(400);
-        reply.send({ error: 'Failed to fetch APR data' });
+        reply.send({ error: 'Failed to fetch APR full info data' });
         return reply;
     }
     reply.header('Content-Type', 'application/json');
-    return JSONStringify(data);
+    return reply.send(JSONStringify(data.full));
 }

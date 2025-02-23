@@ -1,11 +1,13 @@
 import { logger } from '@jsinfo/utils/logger';
-import { ProcessTokenArrayAtTime, getCoingeckoPricesResolvedMap } from '@jsinfo/restRpc/MainnetProcessLavaRpcTokenArray';
+import { ProcessTokenArrayAtTime, ProcessedTokenWithSource, getCoingeckoPricesResolvedMap } from '@jsinfo/redis/resources/APR/ProcessLavaRpcTokenArray';
 import { MainnetGetEstimatedProviderRewardsNoAmountNoDenom } from '@jsinfo/restRpc/MainnetLavaRpcEndpointCache';
 import { FetchRestData } from '@jsinfo/restRpc/RestFetch';
+import { ProcessedToken } from '@jsinfo/redis/resources/APR/ProcessLavaRpcTokenArray';
 
 const MAINNET_INFO_URL = 'https://jsinfo.mainnet.lavanet.xyz/latest';
 const MAINNET_ACTIVE_PROVIDERS_URL = 'https://jsinfo.mainnet.lavanet.xyz/active_providers';
 const FETCH_TIMEOUT = 120000; // 120 seconds
+
 
 export interface MainnetLatestBlock {
     height: number;
@@ -16,29 +18,12 @@ export interface MainnetActiveProvidersResponse {
     providers: string[];
 }
 
-export interface TokenInfo {
-    source_denom: string;
-    resolved_amount: string;
-    resolved_denom: string;
-    display_denom: string;
-    display_amount: string;
-    value_usd: string;
-}
-
-export interface ProcessedInfoItem {
-    source: string;
-    amount: {
-        tokens: TokenInfo[];
-        total_usd: number;
-    };
-}
-
 export interface ProcessedRewardsData {
     rewards_by_block: {
         [block: string]: {
-            info: ProcessedInfoItem[];
+            info: ProcessedToken[];
             total: {
-                tokens: TokenInfo[];
+                tokens: ProcessedToken[];
                 total_usd: number;
             };
         };
@@ -68,9 +53,9 @@ export interface ProviderRewardsData {
         address: string;
         rewards_by_block: {
             latest: {
-                info: ProcessedInfoItem[];
+                info: ProcessedTokenWithSource[];
                 total: {
-                    tokens: TokenInfo[];
+                    tokens: ProcessedToken[];
                     total_usd: number;
                 };
                 recommended_block: string;
@@ -87,15 +72,6 @@ export interface ProviderRewardsData {
             tokens: CoinGeckoPriceInfo[];
         };
     };
-}
-
-export interface ProcessedToken {
-    source_denom: string;
-    resolved_amount: string;
-    resolved_denom: string;
-    display_denom: string;
-    display_amount: string;
-    value_usd: string;
 }
 
 async function getMainnetLatestBlock(): Promise<MainnetLatestBlock> {
@@ -134,9 +110,9 @@ export async function GenLavaLatestProviderRewards(): Promise<ProviderRewardsDat
         address: string;
         rewards_by_block: {
             latest: {
-                info: ProcessedInfoItem[];
+                info: ProcessedTokenWithSource[];
                 total: {
-                    tokens: TokenInfo[];
+                    tokens: ProcessedToken[];
                     total_usd: number;
                 };
                 recommended_block: string;
@@ -146,10 +122,8 @@ export async function GenLavaLatestProviderRewards(): Promise<ProviderRewardsDat
     for (const provider of providers) {
         try {
             const response = await MainnetGetEstimatedProviderRewardsNoAmountNoDenom(provider);
-            // logger.info(`Raw rewards for ${provider}:`, JSON.stringify(response, null, 2));
 
             const processed = await ProcessTokenArrayAtTime(response, null);
-            // logger.info(`Processed rewards for ${provider}:`, JSON.stringify(processed, null, 2));
 
             providersData.push({
                 address: provider,

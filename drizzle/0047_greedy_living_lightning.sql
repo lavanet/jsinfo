@@ -1,0 +1,1 @@
+-- DROP TABLE "apr_full_info";

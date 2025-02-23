@@ -1,7 +1,7 @@
 import { logger } from '@jsinfo/utils/logger';
 import { RedisResourceBase } from '@jsinfo/redis/classes/RedisResourceBase';
-import { MainnetProviderEstimatedRewardsGetService, CoinGeckoPriceInfo } from './MainnetProviderEstimatedRewardsGetResource';
-import { TokenInfo, BlockMetadata } from './MainnetGenLavaLatestProviderRewards';
+import { MainnetProviderEstimatedRewardsGetService, CoinGeckoPriceInfo, TokenInfo } from '@jsinfo/redis/resources/Mainnet/ProviderEstimatedRewards/MainnetProviderEstimatedRewardsGetResource';
+import { BlockMetadata } from '@jsinfo/redis/resources/Mainnet/ProviderEstimatedRewards/MainnetGenLavaLatestProviderRewards';
 import Decimal from 'decimal.js';
 
 export interface SpecFilterResponse {

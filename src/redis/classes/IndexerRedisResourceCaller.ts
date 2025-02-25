@@ -33,6 +33,7 @@ import { IsMainnet } from '@jsinfo/utils/env';
 import { MainnetValidatorsWithRewardsService } from '../resources/Mainnet/ValidatorWithRewards/MainnetValidatorsWithRewardsResource';
 import { ProviderPerformanceResource } from '../resources/ajax/ProviderPerformanceResource';
 import { ProviderClaimableRewardsService } from '../resources/Mainnet/ProviderClaimableRewards/MainnetProviderClaimableRewardsResource';
+import { ProvidersReputationScoresService } from '../resources/ProviderConsumerOptimizerMetrics/ProvidersReputationScores';
 
 export class IndexerRedisResourceCaller {
     private static readonly REFRESH_INTERVAL = 60 * 1000; // 1 minute
@@ -186,8 +187,6 @@ export class IndexerRedisResourceCaller {
             this.currentFetches
         ).catch(e => logger.error('Failed to refresh restakers:', e));
 
-
-
         await this.safeFetch('AutoComplete',
             () => new AutoCompleteResource().fetch(),
             this.currentFetches
@@ -202,6 +201,11 @@ export class IndexerRedisResourceCaller {
             () => new ProviderPerformanceResource().fetch(),
             this.currentFetches
         ).catch(e => logger.error('Failed to refresh provider performance:', e));
+
+        await this.safeFetch('ProvidersReputationScores',
+            () => ProvidersReputationScoresService.fetch(),
+            this.currentFetches
+        ).catch(e => logger.error('Failed to refresh providers reputation scores:', e));
     }
 
     private static async refreshIndexResources(): Promise<void> {

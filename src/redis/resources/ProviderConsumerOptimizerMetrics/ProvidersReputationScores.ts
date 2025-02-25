@@ -31,7 +31,8 @@ interface ProviderReputationScore {
     details: {
         confidenceReached: boolean;
         chainsAnalyzed: number;
-        daysWithData: number;
+        totalDaysWithDataInAllChains: number;
+        totalDaysWithDataInAllChainsUsedInScore: number;
         rawScore: number;
         breakdown: {
             [chain: string]: {
@@ -50,7 +51,7 @@ interface ProviderReputationScore {
     };
 }
 export class ProvidersReputationScoresResource extends RedisResourceBase<ProviderReputationScore[], {}> {
-    protected redisKey = 'providers_reputation_scores_v2';
+    protected redisKey = 'providers_reputation_scores_v4';
     protected cacheExpirySeconds = 3600; // 1 hour
 
     protected async fetchFromSource(): Promise<ProviderReputationScore[]> {
@@ -131,24 +132,35 @@ export class ProvidersReputationScoresResource extends RedisResourceBase<Provide
     }
 
     private calculateReputationScores(providerScores: ProviderScores[]): ProviderReputationScore[] {
+        const MIN_CONFIDENCE_DAYS = 3;
+        const MIN_METRICS_PER_DAY = 50;
+        const EXPECTED_DAYS = 7;  // We analyze 7 days
+
         const rawScores = providerScores.map(providerData => {
             let totalWeightedScore = new Decimal(0);
             let totalWeight = new Decimal(0);
             let totalMetrics = 0;
             let chainsAnalyzed = 0;
-            let totalDaysWithData = 0;
+            let totalDaysWithDataInAllChains = 0;
+            let totalDaysWithDataInAllChainsUsedInScore = 0;
             let hasAnyConfidentChain = false;
+
+            const totalChains = Object.keys(providerData.chainScores).length;
+            let minDailyScore = Number.MAX_VALUE;
+            let maxDailyScore = 0;
 
             const breakdown: Record<string, any> = {};
 
             Object.entries(providerData.chainScores).forEach(([chain, chainScores]) => {
-                // Check confidence criteria
                 const daysWithData = chainScores.length;
-                const hasEnoughMetrics = chainScores.every(score => score.metrics_count > 50);
-                const meetsConfidence = daysWithData >= 3 && hasEnoughMetrics;
+                totalDaysWithDataInAllChains += daysWithData;
+
+                const hasEnoughMetrics = chainScores.every(score => score.metrics_count >= MIN_METRICS_PER_DAY);
+                const meetsConfidence = daysWithData >= MIN_CONFIDENCE_DAYS && hasEnoughMetrics;
 
                 if (meetsConfidence) {
                     hasAnyConfidentChain = true;
+                    totalDaysWithDataInAllChainsUsedInScore += daysWithData;
                 }
 
                 // Sort scores by date, newest first
@@ -161,6 +173,11 @@ export class ProvidersReputationScoresResource extends RedisResourceBase<Provide
                 const dailyScores: any[] = [];
 
                 sortedScores.forEach((score, index) => {
+                    if (score.score > 0) {
+                        minDailyScore = Math.min(minDailyScore, score.score);
+                        maxDailyScore = Math.max(maxDailyScore, score.score);
+                    }
+
                     const weight = index < WEIGHTS.length ? WEIGHTS[index] : 0;
 
                     dailyScores.push({
@@ -180,12 +197,15 @@ export class ProvidersReputationScoresResource extends RedisResourceBase<Provide
                     }
                 });
 
+                // Enhanced breakdown with additional statistics
                 breakdown[chain] = {
                     daysWithData,
                     totalMetrics: chainScores.reduce((sum, s) => sum + s.metrics_count, 0),
                     averageScore: chainTotalWeight.isZero() ? 0 :
                         chainTotalScore.dividedBy(chainTotalWeight).toNumber(),
                     meetsConfidence,
+                    originalAverageScore: dailyScores.length > 0 ?
+                        dailyScores.reduce((sum, s) => sum + s.score, 0) / dailyScores.length : 0,
                     dailyScores
                 };
 
@@ -194,9 +214,10 @@ export class ProvidersReputationScoresResource extends RedisResourceBase<Provide
                     totalWeight = totalWeight.plus(chainTotalWeight);
                     totalMetrics += chainTotalMetrics;
                     chainsAnalyzed++;
-                    totalDaysWithData += daysWithData;
                 }
             });
+
+            const dayCoverage = totalDaysWithDataInAllChainsUsedInScore / (chainsAnalyzed * EXPECTED_DAYS);
 
             const rawScore = totalWeight.isZero() ? 0 :
                 totalWeightedScore.dividedBy(totalWeight).toNumber();
@@ -206,9 +227,18 @@ export class ProvidersReputationScoresResource extends RedisResourceBase<Provide
                 rawScore: hasAnyConfidentChain ? rawScore : 0,
                 totalMetrics,
                 chainsAnalyzed,
-                totalDaysWithData,
+                totalDaysWithDataInAllChains,
+                totalDaysWithDataInAllChainsUsedInScore,
                 confidenceScore: hasAnyConfidentChain,
-                breakdown
+                breakdown,
+                statistics: {
+                    totalChains,
+                    chainsWithConfidence: chainsAnalyzed,
+                    minDailyScore: minDailyScore === Number.MAX_VALUE ? 0 : minDailyScore,
+                    maxDailyScore,
+                    scoreRange: maxDailyScore - (minDailyScore === Number.MAX_VALUE ? 0 : minDailyScore),
+                    dayCoverage: Math.min(1, dayCoverage)
+                }
             };
         });
 
@@ -220,29 +250,40 @@ export class ProvidersReputationScoresResource extends RedisResourceBase<Provide
                 reputationScore: 0,
                 totalMetrics: s.totalMetrics,
                 details: {
-                    confidenceReached: s.confidenceScore,
+                    confidenceReached: false,
                     chainsAnalyzed: s.chainsAnalyzed,
-                    daysWithData: s.totalDaysWithData,
+                    totalDaysWithDataInAllChains: s.totalDaysWithDataInAllChains,
+                    totalDaysWithDataInAllChainsUsedInScore: s.totalDaysWithDataInAllChainsUsedInScore,
                     rawScore: 0,
-                    breakdown: s.breakdown
+                    breakdown: s.breakdown,
+                    statistics: s.statistics
                 }
             }));
         }
 
+        // Calculate normalization with protection against outliers
         const minScore = Math.min(...validScores.map(s => s.rawScore));
         const maxScore = Math.max(...validScores.map(s => s.rawScore));
+        const scoreRange = maxScore - minScore;
 
         return rawScores.map(score => ({
             provider: score.provider,
             reputationScore: score.rawScore === 0 ? 0 :
-                0.5 + (1.5 * (score.rawScore - minScore) / (maxScore - minScore)),
+                0.5 + (1.5 * (score.rawScore - minScore) / (scoreRange > 0 ? scoreRange : 1)),
             totalMetrics: score.totalMetrics,
             details: {
-                confidenceReached: score.confidenceScore,
+                confidenceReached: score.confidenceScore && score.rawScore > 0,
                 chainsAnalyzed: score.chainsAnalyzed,
-                daysWithData: score.totalDaysWithData,
+                totalDaysWithDataInAllChains: score.totalDaysWithDataInAllChains,
+                totalDaysWithDataInAllChainsUsedInScore: score.totalDaysWithDataInAllChainsUsedInScore,
                 rawScore: score.rawScore,
-                breakdown: score.breakdown
+                breakdown: score.breakdown,
+                normalization: {
+                    minScoreInSystem: minScore,
+                    maxScoreInSystem: maxScore,
+                    scoreRange: scoreRange
+                },
+                statistics: score.statistics
             }
         }));
     }

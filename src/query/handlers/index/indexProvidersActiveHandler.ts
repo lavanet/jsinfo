@@ -5,11 +5,10 @@
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { ParsePaginationFromRequest } from '@jsinfo/query/utils/queryPagination';
 import { GetDataLength } from '@jsinfo/utils/fmt';
-import { IndexProvidersActiveResource, IndexProvidersActiveResourceResponse } from '@jsinfo/redis/resources/index/IndexProvidersActiveResource';
+import { IndexProvidersActiveResource } from '@jsinfo/redis/resources/index/IndexProvidersActiveResource';
 import { MainnetProviderEstimatedRewardsGetService } from '@jsinfo/redis/resources/Mainnet/ProviderEstimatedRewards/MainnetProviderEstimatedRewardsGetResource';
 import { IsMainnet } from '@jsinfo/utils/env';
 import { logger } from '@jsinfo/utils/logger';
-import { WriteErrorToFastifyReply } from '@jsinfo/query/utils/queryServerUtils';
 import { GetResourceResponse } from '@jsinfo/redis/resources/Mainnet/ProviderEstimatedRewards/MainnetProviderEstimatedRewardsGetResource';
 
 export interface IndexProviderActiveResponse {

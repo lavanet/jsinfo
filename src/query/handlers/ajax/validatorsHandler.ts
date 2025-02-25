@@ -19,6 +19,7 @@ export const ValidatorsPaginatedHandlerOpts: RouteShorthandOptions = {
                                 moniker: { type: 'string' },
                                 jailed: { type: 'boolean' },
                                 tokens: { type: 'string' },
+                                status: { type: 'string' },
                                 commission: {
                                     type: 'object',
                                     properties: {

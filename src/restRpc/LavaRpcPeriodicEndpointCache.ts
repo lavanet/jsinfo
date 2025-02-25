@@ -76,6 +76,7 @@ export type Validator = {
     };
     jailed: boolean;
     status: ValidatorStatus;
+    displayStatus: ValidatorStatusDisplay;
     tokens: string;
     delegator_shares: string;
     description: {
@@ -392,7 +393,12 @@ class RpcPeriodicEndpointCacheClass {
             if (!Array.isArray(validators) || !validators[0]?.operator_address) {
                 throw new Error('Invalid validator data structure');
             }
-            return validators;
+
+            // Add displayStatus to each validator
+            return validators.map(v => ({
+                ...v,
+                displayStatus: this.VALIDATOR_STATUS_MAP[v.status]
+            }));
         } catch (error) {
             logger.warn('Failed to parse cached validators, fetching directly', { error: TruncateError(error) });
             await this.fetchAndCacheValidators();

@@ -1,13 +1,12 @@
 import { logger } from '@jsinfo/utils/logger';
 import { ProcessTokenArrayAtTime, ProcessedTokenWithSource, getCoingeckoPricesResolvedMap } from '@jsinfo/redis/resources/APR/ProcessLavaRpcTokenArray';
-import { MainnetGetEstimatedProviderRewardsNoAmountNoDenom } from '@jsinfo/restRpc/MainnetLavaRpcEndpointCache';
+import { MainnetGetEstimatedProviderRewardsNoAmountNoDenom } from '@jsinfo/restRpc/Mainnet/MainnetEstimatedProviderRewardsRpc';
 import { FetchRestData } from '@jsinfo/restRpc/RestFetch';
 import { ProcessedToken } from '@jsinfo/redis/resources/APR/ProcessLavaRpcTokenArray';
 
 const MAINNET_INFO_URL = 'https://jsinfo.mainnet.lavanet.xyz/latest';
 const MAINNET_ACTIVE_PROVIDERS_URL = 'https://jsinfo.mainnet.lavanet.xyz/active_providers';
 const FETCH_TIMEOUT = 120000; // 120 seconds
-
 
 export interface MainnetLatestBlock {
     height: number;

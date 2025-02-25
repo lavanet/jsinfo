@@ -1,10 +1,10 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { logger } from '@jsinfo/utils/logger';
-import { AprWeighted } from '@jsinfo/redis/resources/APR/AprWeighted';
+import { AprWeightedHistoryService } from '@jsinfo/redis/resources/APR/AprWeightedHistoryResource';
 
 export async function GetAprWeightedHistoryHandler(request: FastifyRequest, reply: FastifyReply) {
     try {
-        const histories = await AprWeighted.GetAllAprHistories();
+        const histories = await AprWeightedHistoryService.fetch();
         reply.send({
             data: histories
         });

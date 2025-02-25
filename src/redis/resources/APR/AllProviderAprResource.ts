@@ -99,8 +99,6 @@ export class AllProviderAprFullResource extends RedisResourceBase<AllAprProvider
                 .map(curr => {
                     const provider = curr.provider.toLowerCase().trim();
                     const commission = formatCommissionPrecent(curr.commission);
-                    // Log each mapping
-                    // logger.info(`Mapping commission for ${provider}: ${commission}`);
                     return [provider, commission];
                 })
         );
@@ -156,8 +154,8 @@ export class AllProviderAprFullResource extends RedisResourceBase<AllAprProvider
             const ret: AllAprProviderData = {
                 address: address,
                 moniker: ValueOrDash(moniker),
-                apr: details.apr,
-                commission: commission || '-', // Provide default if not found
+                apr: details.apr || '-',
+                commission: commission || '-',
                 '30_days_cu_served': ValueOrDash(String(cuServedDataMapByProviderId[normalizedAddress])),
                 '30_days_relays_served': ValueOrDash(String(relayServedDataMapByProviderId[normalizedAddress])),
                 rewards_10k_lava_delegation: details.rewards_10k_lava_delegation,

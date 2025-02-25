@@ -1,7 +1,11 @@
 import { logger } from '@jsinfo/utils/logger';
 
+// APR Resources
+import { AprFullService } from '../resources/APR/AprFullResource';
+import { AprWeightedHistoryService } from '../resources/APR/AprWeightedHistoryResource';
+import { AllProviderAprFullResource } from '../resources/APR/AllProviderAprResource';
+
 // Ajax Resources
-import { AprFullResource, AprFullService } from '../resources/APR/AprFullResource';
 import { AutoCompleteResource } from '../resources/ajax/AutoCompleteResource';
 import { ChainWalletResource } from '../resources/ajax/ChainWalletResource';
 import { SupplyResource } from '../resources/ajax/SupplyResource';
@@ -21,7 +25,6 @@ import { ProviderStakesAndDelegationResource } from '../resources/global/Provide
 import { IndexTopChainsResource } from '../resources/index/IndexTopChainsResource';
 import { IndexTotalCuResource } from '../resources/index/IndexTotalCuResource';
 import { ActiveProvidersService } from '../resources/index/ActiveProvidersResource';
-import { AllProviderAprFullResource } from '../resources/APR/AllProviderAprResource';
 import { LockedTokenValuesResource } from '../resources/ajax/LockedTokenValuesResource';
 import { LockedVestingTokensService } from '../resources/global/LockedVestingTokensResource';
 import { IpRpcEndpointsIndexService } from '../resources/IpRpcEndpointsIndex/IpRpcEndpointsResource';
@@ -101,6 +104,7 @@ export class IndexerRedisResourceCaller {
         try {
             // These main groups still run in parallel for overall performance
             await Promise.all([
+                this.refreshAprResources(),
                 this.refreshAjaxResources(),
                 this.refreshIndexResources(),
                 this.refreshGlobalResources(),
@@ -139,12 +143,24 @@ export class IndexerRedisResourceCaller {
 
     private static currentFetches = new Map<string, Promise<any>>();
 
-    private static async refreshAjaxResources(): Promise<void> {
+    private static async refreshAprResources(): Promise<void> {
         await this.safeFetch('AllProviderAPR',
             () => new AllProviderAprFullResource().fetch(),
             this.currentFetches
         ).catch(e => logger.error('Failed to refresh all provider APR:', e));
 
+        await this.safeFetch('AprFull',
+            () => AprFullService.fetch(),
+            this.currentFetches
+        ).catch(e => logger.error('Failed to refresh APR data:', e));
+
+        await this.safeFetch('AprWeightedHistory',
+            () => AprWeightedHistoryService.fetch(),
+            this.currentFetches
+        ).catch(e => logger.error('Failed to refresh APR weighted history:', e));
+    }
+
+    private static async refreshAjaxResources(): Promise<void> {
         await this.safeFetch('TotalValueLocked',
             () => new LockedTokenValuesResource().fetch(),
             this.currentFetches
@@ -170,10 +186,7 @@ export class IndexerRedisResourceCaller {
             this.currentFetches
         ).catch(e => logger.error('Failed to refresh restakers:', e));
 
-        await this.safeFetch('AprFull',
-            () => AprFullService.fetch(),
-            this.currentFetches
-        ).catch(e => logger.error('Failed to refresh APR data:', e));
+
 
         await this.safeFetch('AutoComplete',
             () => new AutoCompleteResource().fetch(),

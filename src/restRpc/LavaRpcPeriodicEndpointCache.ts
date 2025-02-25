@@ -56,38 +56,52 @@ interface ProviderMetadataResponse {
     MetaData: ProviderMetadata[];
 }
 
+type ValidatorStatus =
+    | 'BOND_STATUS_BONDED'
+    | 'BOND_STATUS_UNBONDING'
+    | 'BOND_STATUS_UNBONDED'
+    | 'BOND_STATUS_UNSPECIFIED';
+
+type ValidatorStatusDisplay =
+    | 'Active'
+    | 'Leaving'
+    | 'Inactive'
+    | 'Unknown';
+
+export type Validator = {
+    operator_address: string;
+    consensus_pubkey: {
+        "@type": string;
+        [key: string]: string;
+    };
+    jailed: boolean;
+    status: ValidatorStatus;
+    tokens: string;
+    delegator_shares: string;
+    description: {
+        moniker: string;
+        identity: string;
+        website: string;
+        security_contact: string;
+        details: string;
+    };
+    unbonding_height: string;
+    unbonding_time: string;
+    commission: {
+        commission_rates: {
+            rate: string;
+            max_rate: string;
+            max_change_rate: string;
+        };
+        update_time: string;
+    };
+    min_self_delegation: string;
+    unbonding_on_hold_ref_count: string;
+    unbonding_ids: string[];
+};
+
 interface AllValidatorsResponse {
-    validators: {
-        operator_address: string;
-        consensus_pubkey: {
-            "@type": string;
-            [key: string]: string;
-        };
-        jailed: boolean;
-        status: string;
-        tokens: string;
-        delegator_shares: string;
-        description: {
-            moniker: string;
-            identity: string;
-            website: string;
-            security_contact: string;
-            details: string;
-        };
-        unbonding_height: string;
-        unbonding_time: string;
-        commission: {
-            commission_rates: {
-                rate: string;
-                max_rate: string;
-                max_change_rate: string;
-            };
-            update_time: string;
-        };
-        min_self_delegation: string;
-        unbonding_on_hold_ref_count: string;
-        unbonding_ids: string[];
-    }[];
+    validators: Validator[];
     pagination: {
         next_key: string;
         total: string;
@@ -110,6 +124,13 @@ const CACHE_VALIDITY_PERIOD = 600; // 10 minutes in seconds
 class RpcPeriodicEndpointCacheClass {
     private cacheRefreshInterval = 20 * 60; // 20 minutes
     private refreshPromise: Promise<void> | null = null;
+
+    private readonly VALIDATOR_STATUS_MAP: Record<ValidatorStatus, ValidatorStatusDisplay> = {
+        'BOND_STATUS_BONDED': 'Active',
+        'BOND_STATUS_UNBONDING': 'Leaving',
+        'BOND_STATUS_UNBONDED': 'Inactive',
+        'BOND_STATUS_UNSPECIFIED': 'Unknown'
+    } as const;
 
     constructor() {
         this.refreshCache();
@@ -353,15 +374,21 @@ class RpcPeriodicEndpointCacheClass {
         return (await this.GetAllValidators()).map(v => v.operator_address);
     }
 
-    public async GetAllActiveValidatorsAddresses(): Promise<string[]> {
-        return (await this.GetAllValidators()).filter(v => v.jailed === true).map(v => v.operator_address);
+    public async GetAllActiveValidators(): Promise<Validator[]> {
+        const allValidators = await this.GetAllValidators();
+        return allValidators.filter(v => v.status === 'BOND_STATUS_BONDED');
     }
 
-    private async getValidatorsFromJson(validatorsJson: string | null): Promise<AllValidatorsResponse['validators']> {
+    public async GetAllActiveValidatorsAddresses(): Promise<string[]> {
+        const allActiveValidators = await this.GetAllActiveValidators();
+        return allActiveValidators.map(v => v.operator_address);
+    }
+
+    private async getValidatorsFromJson(validatorsJson: string | null): Promise<Validator[]> {
         if (!validatorsJson) return [];
         try {
-            const validators = JSON.parse(validatorsJson) as AllValidatorsResponse['validators'];
-            // Basic validation check - ensure it's an array and has expected properties
+            const validators = JSON.parse(validatorsJson) as Validator[];
+            // Basic validation check
             if (!Array.isArray(validators) || !validators[0]?.operator_address) {
                 throw new Error('Invalid validator data structure');
             }
@@ -374,7 +401,7 @@ class RpcPeriodicEndpointCacheClass {
         }
     }
 
-    public async GetAllValidators(): Promise<AllValidatorsResponse['validators']> {
+    public async GetAllValidators(): Promise<Validator[]> {
         const validatorsJson = await RedisCache.get(REDIS_KEYS.ALL_VALIDATORS);
         if (!validatorsJson) {
             await this.refreshCache();

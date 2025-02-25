@@ -1,4 +1,4 @@
-import { FetchRestData } from "./RestFetch";
+import { FetchRestData } from "../RestFetch";
 
 export const LAVA_RPC_MAINNET_URL = "https://lava.rest.lava.build/"
 

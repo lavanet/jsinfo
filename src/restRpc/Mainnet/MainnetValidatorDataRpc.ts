@@ -1,19 +1,16 @@
 // src/indexer/classes/RpcEndpointCahce.ts
 
 import { logger } from '@jsinfo/utils/logger';
-import { QueryLavaMainnetRPC } from '@jsinfo/restRpc/MainnetLavaRpc';
+import { QueryLavaMainnetRPC } from '@jsinfo/restRpc/Mainnet/MainnetLavaRpc';
 import { RedisCache } from '@jsinfo/redis/classes/RedisCache';
-import { IsMeaningfulText, TruncateError } from '@jsinfo/utils/fmt';
 import { ProcessTokenArrayAtTime } from '@jsinfo/redis/resources/APR/ProcessLavaRpcTokenArray';
-import { FetchRestData } from '@jsinfo/restRpc/RestFetch';
-import { EstimatedRewardsResponse } from './LavaRpcOnDemandEndpointCache';
-import { ProcessedTokenArray } from '../redis/resources/APR/ProcessLavaRpcTokenArray';
+import { ProcessedTokenArray } from '../../redis/resources/APR/ProcessLavaRpcTokenArray';
 import { ProcessMinimalTokenArray, ProcessedMinimalTokenArray } from '@jsinfo/redis/resources/APR/ProcessLavaRpcTokenArray';
-import { EntryDoesNotExistException } from './RestFetch';
+import { EntryDoesNotExistException } from '../RestFetch';
+import { RpcPeriodicEndpointCache } from '../LavaRpcPeriodicEndpointCache';
+import { AprWeighted } from '@jsinfo/redis/resources/APR/AprWeighted';
 
 const CACHE_KEYS = {
-    MAINNET_PROVIDER_REWARDS_NO_AMOUNT_NO_DENOM: (provider: string) =>
-        `mainnet_provider_rewards_no_amount_no_denom:${provider}`,
     MAINNET_VALIDATORS: 'mainnet_validators_v1',
     MAINNET_VALIDATOR_REWARDS: (validator: string) =>
         `mainnet_validator_rewards:${validator}`,
@@ -57,12 +54,6 @@ interface ValidatorOutstandingRewardsResponse {
     };
 }
 
-// interface ValidatorCommissionResponse {
-//     commission: {
-//         commission: RewardAmount[];
-//     };
-// }
-
 export interface EstimatedValidatorDistributionRewardsResponse {
     info: Array<{
         source: string;
@@ -78,12 +69,13 @@ export interface EstimatedValidatorDistributionRewardsResponse {
 }
 
 // Update Validator interface with proper processed types
-interface Validator {
+export interface Validator {
     address: string;
     moniker: string;
     jailed: boolean;
     tokens: string;
     commission: ValidatorCommission;
+    apr?: number | null;
     distribution?: {
         self_bond_rewards: ProcessedMinimalTokenArray;
         commission: ProcessedMinimalTokenArray;
@@ -156,9 +148,19 @@ export async function GetMainnetValidatorsWithRewards(): Promise<ValidatorsWithR
 
     if (!validatorsData) {
         try {
-            logger.info('Fetching validators data from API');
-            validatorsData = await FetchRestData<ValidatorsWithRewardsResponse>('https://jsinfo.mainnet.lavanet.xyz/validators');
-            logger.info(`Found ${validatorsData.validators.length} validators`);
+            const validators = await RpcPeriodicEndpointCache.GetAllActiveValidators();
+
+            validatorsData = {
+                height: 0,
+                datetime: Date.now(),
+                validators: validators.map(v => ({
+                    address: v.operator_address,
+                    moniker: v.description.moniker,
+                    jailed: v.jailed,
+                    tokens: v.tokens,
+                    commission: v.commission
+                }))
+            };
 
             for (const validator of validatorsData.validators) {
                 try {
@@ -185,11 +187,16 @@ async function processValidatorRewards(validator: Validator) {
     const [rewards, outstandingRewards, estimatedRewards, delegations, unbonding] = await Promise.all([
         GetValidatorRewards(validator.address),
         GetValidatorOutstandingRewards(validator.address),
-        // GetValidatorCommission(validator.address),
         GetValidatorEstimatedRewards(validator.address),
         GetValidatorDelegations(validator.address),
         GetValidatorUnbonding(validator.address)
     ]);
+
+    // Get weighted APR
+    validator.apr = await AprWeighted.GetWeightedApr({
+        source: 'validator',
+        address: validator.address
+    });
 
     // Process distribution rewards
     if (rewards) {
@@ -255,29 +262,6 @@ async function GetValidatorOutstandingRewards(validatorAddress: string): Promise
     return rewards;
 }
 
-// // https://lava.rest.lava.build/cosmos/distribution/v1beta1/validators/lava%40valoper1q9xyutm3888xarak5zy8x95qkqhzece4cwxgqc/commission
-// // Update GetValidator functions with proper types
-// async function GetValidatorCommission(validatorAddress: string): Promise<ValidatorCommissionResponse | null> {
-//     const cacheKey = CACHE_KEYS.MAINNET_VALIDATOR_COMMISSION(validatorAddress);
-//     let commission = await RedisCache.getDict(cacheKey) as ValidatorCommissionResponse;
-
-//     if (!commission) {
-//         try {
-//             commission = await QueryLavaMainnetRPC<ValidatorCommissionResponse>(
-//                 `/cosmos/distribution/v1beta1/validators/${validatorAddress}/commission`
-//             );
-//             await RedisCache.setDict(cacheKey, commission, 5 * 60);
-//         } catch (error) {
-//             if (error instanceof EntryDoesNotExistException) {
-//                 return null;
-//             }
-//             throw error;
-//         }
-//     }
-
-//     return commission;
-// }
-
 // https://lava.rest.lava.build/lavanet/lava/subscription/estimated_validator_rewards/lava%40valoper1q9xyutm3888xarak5zy8x95qkqhzece4cwxgqc/
 async function GetValidatorEstimatedRewards(validatorAddress: string): Promise<EstimatedValidatorDistributionRewardsResponse> {
     const cacheKey = CACHE_KEYS.MAINNET_VALIDATOR_ESTIMATED_REWARDS(validatorAddress);
@@ -332,27 +316,4 @@ async function GetValidatorUnbonding(validatorAddress: string): Promise<Unbondin
     }
 
     return unbonding;
-}
-
-// Keep existing functions
-export async function MainnetGetEstimatedProviderRewardsNoAmountNoDenom(provider: string): Promise<EstimatedRewardsResponse> {
-    if (!IsMeaningfulText(provider)) {
-        throw new Error(`Invalid provider: ${provider}`);
-    }
-
-    const cacheKey = CACHE_KEYS.MAINNET_PROVIDER_REWARDS_NO_AMOUNT_NO_DENOM(provider);
-    let rewards = await RedisCache.getDict(cacheKey) as EstimatedRewardsResponse;
-
-    if (!rewards) {
-        try {
-            const response = await QueryLavaMainnetRPC<EstimatedRewardsResponse>(`/lavanet/lava/subscription/estimated_provider_rewards/${provider}/`);
-            rewards = response;
-            RedisCache.setDict(cacheKey, response, 30 * 60);
-        } catch (error) {
-            logger.error(`Error fetching estimated provider rewards for ${provider}`, { error: TruncateError(error) });
-            return { info: [], total: [], recommended_block: "0" };
-        }
-    }
-
-    return rewards || { info: [], total: [], recommended_block: "0" };
 }

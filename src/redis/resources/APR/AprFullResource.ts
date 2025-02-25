@@ -21,31 +21,38 @@ export class AprFullResource extends RedisResourceBase<AprData, {}> {
 
     protected async fetchFromSource(): Promise<AprData> {
         try {
-            // Get provider and validator APRs using the new calculation functions
             const [providerAprs, validatorAprs] = await Promise.all([
                 CalculateProviderAprs(),
                 CalculateValidatorAprs()
             ]);
 
+            const filteredProviderAprs = Object.fromEntries(
+                Object.entries(providerAprs).filter(([_, value]) => Number(value.apr_full_num) > 0)
+            );
+
+            const filteredValidatorAprs = Object.fromEntries(
+                Object.entries(validatorAprs).filter(([_, value]) => Number(value.apr_full_num) > 0)
+            );
+
             return {
                 percentile: {
                     restaking_apr_percentile: CalculatePercentile(
-                        Object.values(providerAprs).map(d => Number(d.apr_full_num)),
+                        Object.values(filteredProviderAprs).map(d => Number(d.apr_full_num)),
                         PERCENTILE,
                         'Restaking APR'
                     ),
                     staking_apr_percentile: CalculatePercentile(
-                        Object.values(validatorAprs).map(v => Number(v.apr_full_num)),
+                        Object.values(filteredValidatorAprs).map(v => Number(v.apr_full_num)),
                         PERCENTILE,
                         'Staking APR'
                     )
                 },
                 full: {
                     "Staking APR": Object.fromEntries(
-                        Object.entries(validatorAprs).map(([key, value]) => [key, value.apr_full_num])
+                        Object.entries(filteredValidatorAprs).map(([key, value]) => [key, value.apr_full_num])
                     ),
                     "Restaking APR": Object.fromEntries(
-                        Object.entries(providerAprs).map(([key, value]) => [key, value.apr_full_num])
+                        Object.entries(filteredProviderAprs).map(([key, value]) => [key, value.apr_full_num])
                     )
                 }
             };

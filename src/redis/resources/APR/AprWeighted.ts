@@ -1,4 +1,4 @@
-import { RedisCache } from '../../classes/RedisCache';
+import { RedisCache } from '@jsinfo/redis/classes/RedisCache';
 import { logger } from '@jsinfo/utils/logger';
 import Decimal from 'decimal.js';
 
@@ -6,8 +6,7 @@ const WEIGHTS = [0.4, 0.25, 0.15, 0.1, 0.05, 0.03, 0.02];
 const DAYS_TO_KEEP = 7;
 const REDIS_EXPIRY = 30 * 24 * 60 * 60; // 30 days
 
-// Type for storing APR data
-interface StoredAprRecord {
+export interface StoredAprRecord {
     date: string;      // Format: "YYYY/MM/DD"
     aprSum: number;
     count: number;
@@ -15,21 +14,21 @@ interface StoredAprRecord {
     address: string;
 }
 
-// Type for returning APR data
-interface ReturnedAprRecord {
+export interface ReturnedAprRecord {
     date: string;
     apr: number;
     source: 'validator' | 'provider';
     address: string;
 }
 
-interface AprHistoryEntry {
+export interface AprHistoryEntry {
     records: StoredAprRecord[];
     lastUpdated: string;
 }
 
+// Static utility class for APR operations
 export class AprWeighted {
-    private static readonly KEY_PREFIX = 'apr_history:';
+    public static readonly KEY_PREFIX = 'apr_history:';
 
     private static getRedisKey(source: string, address: string): string {
         return `${this.KEY_PREFIX}${source}:${address}`;
@@ -50,6 +49,8 @@ export class AprWeighted {
         const { apr, source, address } = params;
         const redisKey = this.getRedisKey(source, address);
         const today = this.formatDate(new Date());
+
+        if (apr === 0) return;
 
         try {
             const historyStr = await RedisCache.get(redisKey);
@@ -83,33 +84,6 @@ export class AprWeighted {
         }
     }
 
-    static async GetAllAprHistories(): Promise<ReturnedAprRecord[]> {
-        try {
-            const keys = await RedisCache.getKeysByPrefix(this.KEY_PREFIX);
-            const allHistories: ReturnedAprRecord[] = [];
-
-            for (const key of keys) {
-                const historyStr = await RedisCache.get(key);
-                if (!historyStr) continue;
-
-                const history: AprHistoryEntry = JSON.parse(historyStr);
-                const records = history.records.map(record => ({
-                    date: record.date,
-                    apr: record.aprSum / record.count,
-                    source: record.source,
-                    address: record.address
-                }));
-
-                allHistories.push(...records);
-            }
-
-            return allHistories.sort((a, b) => b.date.localeCompare(a.date));
-        } catch (error) {
-            logger.error('Failed to get all APR histories:', error);
-            return [];
-        }
-    }
-
     static async GetWeightedApr(params: {
         source: 'validator' | 'provider',
         address: string
@@ -119,22 +93,15 @@ export class AprWeighted {
 
         try {
             const historyStr = await RedisCache.get(redisKey);
-            if (!historyStr) {
-                return null;
-            }
+            if (!historyStr) return null;
 
             const history: AprHistoryEntry = JSON.parse(historyStr);
-            const records = history.records;
+            if (history.records.length === 0) return null;
 
-            if (records.length === 0) {
-                return null;
-            }
-
-            // Calculate weighted average using daily averages
             let weightedSum = new Decimal(0);
             let weightSum = new Decimal(0);
 
-            records.forEach((record, index) => {
+            history.records.forEach((record, index) => {
                 if (index < WEIGHTS.length) {
                     const dailyAverage = record.aprSum / record.count;
                     weightedSum = weightedSum.plus(new Decimal(dailyAverage).times(WEIGHTS[index]));
@@ -143,10 +110,10 @@ export class AprWeighted {
             });
 
             return weightSum.isZero() ? null : weightedSum.dividedBy(weightSum).toNumber();
-
         } catch (error) {
             logger.error(`Failed to get weighted APR for ${source}:${address}:`, error);
             return null;
         }
     }
 }
+

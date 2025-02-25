@@ -34,7 +34,7 @@ export function formatToPercent(value: number): string {
 }
 
 export async function CalculateValidatorAprs(): Promise<Record<string, ValidatorAprDetails>> {
-    const validators = await RpcPeriodicEndpointCache.GetAllActiveValidatorsAddresses();
+    const validators = await RpcPeriodicEndpointCache.GetAllValidatorsAddresses();
     if (!validators) {
         logger.error('No validators found');
         return {};

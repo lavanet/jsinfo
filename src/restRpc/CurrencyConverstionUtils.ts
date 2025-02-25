@@ -105,11 +105,6 @@ export async function GetUSDCValue(amount: string, denom: string): Promise<strin
     const result = decimalAmount.times(decimalRate);
     const resultNum = result.toNumber();
 
-    // if (resultNum < DEMON_LOWEST_LIMIT_WARNING) {
-    //     logger.warn(`GetUSDCValue out of range (2small) values: amount = ${amount}, denom = ${denom}, usdcRate = ${usdcRate}, result = ${resultNum}`);
-    //     return result.toString();
-    // }
-
     if (resultNum > DEMON_HIGHEST_LIMIT_ERROR) {
         logger.error(`GetUSDCValue out of range (2big) values: amount = ${amount}, denom = ${denom}, usdcRate = ${usdcRate}, result = ${resultNum}`);
         return "0";

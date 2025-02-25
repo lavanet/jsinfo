@@ -12,15 +12,27 @@ import { logger } from '@jsinfo/utils/logger';
 import { ProvidersReputationScoresService } from '@jsinfo/redis/resources/ProviderConsumerOptimizerMetrics/ProvidersReputationScores';
 import { MainnetProviderEstimatedRewardsGetService } from '@jsinfo/redis/resources/Mainnet/ProviderEstimatedRewards/MainnetProviderEstimatedRewardsGetResource';
 import { IsMainnet } from '@jsinfo/utils/env';
+import { GetProviderAvatar } from '@jsinfo/restRpc/GetProviderAvatar';
 
 export interface IndexProviderActive {
     provider: string;
     moniker: string;
     monikerfull?: string;
+    avatarUrl?: string | null;  // Add avatar URL
     activeServices: number;
     totalServices: number;
-    totalStake: string; // Human-readable formatted stake
-    rawTotalStake: bigint; // Raw stake value for sorting
+    activeStake: string;       // Formatted stake for active services
+    activeStakeRaw: bigint;    // Raw stake value for active services
+    activeDelegate: string;    // Formatted delegate for active services
+    activeDelegateRaw: bigint; // Raw delegate value for active services
+    activeDelegateAndStakeTotal: string;     // Total of active stake and delegate
+    activeDelegateAndStakeTotalRaw: bigint;  // Raw active total for sorting
+    activeAndInactiveStake: string;          // Formatted stake (active + inactive)
+    activeAndInactiveStakeRaw: bigint;       // Raw stake value for sorting
+    activeAndInactiveDelegateStake: string;  // Formatted delegate (active + inactive)
+    activeAndInactiveDelegateStakeRaw: bigint; // Raw total delegate value
+    activeAndInactiveStakeTotal: string;     // Total of all stake and delegate combined
+    activeAndInactiveStakeTotalRaw: bigint;  // Raw total for sorting
     reputationScore: number | null;
     rank: number | null;
     formattedReputationScore?: string;
@@ -32,8 +44,10 @@ interface ProviderData {
     provider: string | null;
     activeServices: number;
     totalServices: number;
-    stake: bigint;
-    delegateTotal: bigint;
+    activeStake: bigint;
+    activeDelegate: bigint;
+    activeAndInactiveStake: bigint;
+    activeAndInactiveDelegate: bigint;
 }
 
 // Helper function to format stake values
@@ -49,7 +63,7 @@ function formatStakeValue(stake: bigint): string {
 }
 
 export class IndexProvidersActiveResource extends RedisResourceBase<IndexProviderActive[], {}> {
-    protected redisKey = 'index_providers_active_v4';
+    protected redisKey = 'index_providers_active_v8';
     protected cacheExpirySeconds = 3600; // 1 hour
 
     protected async fetchFromSource(): Promise<IndexProviderActive[]> {
@@ -129,14 +143,21 @@ export class IndexProvidersActiveResource extends RedisResourceBase<IndexProvide
                 return [];
             }
 
+            // Query directly from the database with all relevant fields
             const data = await queryJsinfo<ProviderData[]>(
                 async (db: PostgresJsDatabase) => db
                     .select({
                         provider: JsinfoSchema.providerStakes.provider,
                         activeServices: sql<number>`SUM(CASE WHEN ${JsinfoSchema.providerStakes.status} = ${JsinfoSchema.LavaProviderStakeStatus.Active} THEN 1 ELSE 0 END)`,
                         totalServices: sql<number>`COUNT(${JsinfoSchema.providerStakes.specId})`,
-                        stake: sql<bigint>`COALESCE(SUM(CAST(${JsinfoSchema.providerStakes.stake} AS BIGINT)), 0)`,
-                        delegateTotal: sql<bigint>`COALESCE(SUM(CAST(${JsinfoSchema.providerStakes.delegateTotal} AS BIGINT)), 0)`
+                        // Stake for active services only
+                        activeStake: sql<bigint>`COALESCE(SUM(CASE WHEN ${JsinfoSchema.providerStakes.status} = ${JsinfoSchema.LavaProviderStakeStatus.Active} THEN CAST(${JsinfoSchema.providerStakes.stake} AS BIGINT) ELSE 0 END), 0)`,
+                        // Delegate for active services only
+                        activeDelegate: sql<bigint>`COALESCE(SUM(CASE WHEN ${JsinfoSchema.providerStakes.status} = ${JsinfoSchema.LavaProviderStakeStatus.Active} THEN CAST(${JsinfoSchema.providerStakes.delegateTotal} AS BIGINT) ELSE 0 END), 0)`,
+                        // Total stake (active + inactive)
+                        activeAndInactiveStake: sql<bigint>`COALESCE(SUM(CAST(${JsinfoSchema.providerStakes.stake} AS BIGINT)), 0)`,
+                        // Total delegate (active + inactive)
+                        activeAndInactiveDelegate: sql<bigint>`COALESCE(SUM(CAST(${JsinfoSchema.providerStakes.delegateTotal} AS BIGINT)), 0)`
                     })
                     .from(JsinfoSchema.providerStakes)
                     .where(inArray(JsinfoSchema.providerStakes.provider, activeProviders))
@@ -144,18 +165,44 @@ export class IndexProvidersActiveResource extends RedisResourceBase<IndexProvide
                 `IndexProvidersActiveResource_fetchAllBaseProviderData`
             );
 
+            // Map the raw data to the interface with minimal transformation
             return Promise.all(data.map(async item => {
-                // Calculate total stake here
-                const totalStake = item.stake + item.delegateTotal;
+                // Calculate combined totals properly with BigInt
+                const activeStakeValue = BigInt(item.activeStake);
+                const activeDelegateValue = BigInt(item.activeDelegate);
+
+                // Active services total (stake + delegate)
+                const activeDelegateAndStakeTotal = activeStakeValue + activeDelegateValue;
+
+                // Total stake and delegate values for all services
+                const combinedActiveAndInactiveStake = BigInt(item.activeAndInactiveStake);
+                const combinedActiveAndInactiveDelegate = BigInt(item.activeAndInactiveDelegate);
+
+                // Grand total of all stake and delegate values
+                const activeAndInactiveStakeTotal = combinedActiveAndInactiveStake + combinedActiveAndInactiveDelegate;
+
+                // Get avatar URL
+                const avatarUrl = await GetProviderAvatar(item.provider || "");
 
                 return {
                     provider: item.provider || "",
                     moniker: await ProviderMonikerService.GetMonikerForProvider(item.provider || ""),
                     monikerfull: await ProviderMonikerService.GetMonikerFullDescription(item.provider || ""),
+                    avatarUrl: avatarUrl,
                     activeServices: item.activeServices || 0,
                     totalServices: item.totalServices || 0,
-                    rawTotalStake: totalStake, // Store raw value for sorting
-                    totalStake: formatStakeValue(totalStake), // Store formatted value for display
+                    activeStakeRaw: activeStakeValue,
+                    activeStake: formatStakeValue(activeStakeValue),
+                    activeDelegateRaw: activeDelegateValue,
+                    activeDelegate: formatStakeValue(activeDelegateValue),
+                    activeDelegateAndStakeTotalRaw: activeDelegateAndStakeTotal,
+                    activeDelegateAndStakeTotal: formatStakeValue(activeDelegateAndStakeTotal),
+                    activeAndInactiveStakeRaw: combinedActiveAndInactiveStake,
+                    activeAndInactiveStake: formatStakeValue(combinedActiveAndInactiveStake),
+                    activeAndInactiveDelegateStakeRaw: combinedActiveAndInactiveDelegate,
+                    activeAndInactiveDelegateStake: formatStakeValue(combinedActiveAndInactiveDelegate),
+                    activeAndInactiveStakeTotalRaw: activeAndInactiveStakeTotal,
+                    activeAndInactiveStakeTotal: formatStakeValue(activeAndInactiveStakeTotal),
                     reputationScore: null,  // Will be filled in later
                     rank: null  // Will be filled in later
                 };
@@ -231,7 +278,12 @@ export class IndexProvidersActiveResource extends RedisResourceBase<IndexProvide
             { key: "rank", name: "Rank" },
             { key: "activeServices", name: "Active Services" },
             { key: "totalServices", name: "Total Services" },
-            { key: "totalStake", name: "Total Stake" }
+            { key: "activeStake", name: "Active Stake" },
+            { key: "activeDelegate", name: "Active Delegate" },
+            { key: "activeDelegateAndStakeTotal", name: "Active Delegate + Stake Total" },
+            { key: "activeAndInactiveStake", name: "All Services Stake" },
+            { key: "activeAndInactiveDelegateStake", name: "All Services Delegate" },
+            { key: "activeAndInactiveStakeTotal", name: "Grand Total (All Stake + Delegate)" }
         ];
 
         // Add rewards columns only if on mainnet

@@ -51,6 +51,7 @@ export async function ValidatorsPaginatedHandler(request: FastifyRequest, reply:
         moniker: validator.description.moniker,
         jailed: validator.jailed,
         tokens: validator.tokens,
+        status: validator.status,
         commission: {
             commission_rates: {
                 rate: Number(validator.commission.commission_rates.rate).toString(),

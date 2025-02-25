@@ -31,25 +31,61 @@ export interface IndexProvidersActiveQuerystring {
 
 // Helper function to parse values for sorting with support for different field types
 function parseValueForSorting(item: any, sortBy: string): number {
+    // Special handling for reputation score - use the numeric field directly
+    if (sortBy === 'formattedReputationScore' && 'reputationScore' in item) {
+        // If reputationScore is null, it will appear as "-" in the UI
+        if (item.reputationScore === null) {
+            return -Infinity; // Place at the very end when sorting in descending order
+        }
+        return item.reputationScore;
+    }
+
     // Handle missing properties gracefully
     if (!item || !(sortBy in item)) {
-        return Number.MAX_VALUE;
+        return -Infinity; // For descending sort, this will be last
     }
 
     const value = item[sortBy];
 
     // Handle null/undefined
     if (value === null || value === undefined) {
-        return Number.MAX_VALUE;
+        return -Infinity;
     }
 
-    // For stake values, use rawTotalStake if sorting by totalStake
-    if (sortBy === 'totalStake' && 'rawTotalStake' in item && item.rawTotalStake !== undefined) {
-        return Number(item.rawTotalStake);
+    // Check for dash/minus sign alone, which indicates no value
+    if (value === '-' || value === '') {
+        return -Infinity;
+    }
+
+    // For raw numeric fields, check for the equivalent raw field
+    const rawFieldMap: { [key: string]: string } = {
+        'totalStake': 'totalStakeRaw',
+        'activeStake': 'activeStakeRaw',
+        'activeDelegate': 'activeDelegateRaw',
+        'activeDelegateAndStakeTotal': 'activeDelegateAndStakeTotalRaw',
+        'activeAndInactiveStake': 'activeAndInactiveStakeRaw',
+        'activeAndInactiveDelegateStake': 'activeAndInactiveDelegateStakeRaw',
+        'activeAndInactiveStakeTotal': 'activeAndInactiveStakeTotalRaw'
+    };
+
+    // If we're sorting by a field that has a raw counterpart, use the raw value
+    if (sortBy in rawFieldMap && rawFieldMap[sortBy] in item) {
+        const rawValue = item[rawFieldMap[sortBy]];
+
+        // If raw value is 0, put it at the end
+        if (rawValue === 0 || rawValue === '0' || rawValue === BigInt(0)) {
+            return -Infinity;
+        }
+
+        return Number(rawValue);
     }
 
     // For numeric values
     if (typeof value === 'number') {
+        // Put zeros at the end
+        if (value === 0) {
+            return -Infinity;
+        }
         return value;
     }
 
@@ -61,11 +97,34 @@ function parseValueForSorting(item: any, sortBy: string): number {
             .replace(/ulava/gi, '')
             .trim();
 
+        // Check if the result is just "0" or "0.00"
+        if (cleaned === '0' || cleaned === '0.00' || cleaned === '0.0') {
+            return -Infinity;
+        }
+
         const num = parseFloat(cleaned);
-        return isNaN(num) ? Number.MAX_VALUE : num;
+        return isNaN(num) ? -Infinity : num;
     }
 
-    return Number.MAX_VALUE;
+    return -Infinity;
+}
+
+// Helper function to map URL parameter names to actual field names
+function mapSortFieldName(fieldName: string): string {
+    // Map of URL parameter names to actual field names
+    const fieldMap: { [key: string]: string } = {
+        'stake': 'activeAndInactiveStakeTotal',        // Map "stake" to the combined total field
+        'activeStake': 'activeStake',
+        'services': 'activeServices',                  // Map "services" to activeServices
+        'totalServices': 'totalServices',
+        'reputation': 'reputationScore',
+        'formattedReputation': 'formattedReputationScore',
+        'rank': 'rank',
+        'moniker': 'moniker',
+        'provider': 'moniker'
+    };
+
+    return fieldMap[fieldName] || fieldName;
 }
 
 export const IndexProvidersActivePaginatedHandlerOpts: RouteShorthandOptions = {
@@ -115,6 +174,9 @@ export async function IndexProvidersActivePaginatedHandler(
             sortDirection = request.query.sortDirection || 'asc';
         }
 
+        // Map the sort field name to the actual field name
+        sortBy = mapSortFieldName(sortBy);
+
         const allProviders = await IndexProvidersActiveService.fetch();
 
         if (!allProviders || allProviders.length === 0) {
@@ -123,7 +185,19 @@ export async function IndexProvidersActivePaginatedHandler(
 
         // Sort providers with improved value parsing
         const sortedProviders = [...allProviders].sort((a, b) => {
-            // Special handling for different field types
+            // Special case for rank field specifically
+            if (sortBy === 'rank') {
+                // Special handling for rank field, which should never be null now
+                const rankA = a.rank !== null ? a.rank : 999999;
+                const rankB = b.rank !== null ? b.rank : 999999;
+
+                // Apply direction
+                return sortDirection === 'asc'
+                    ? rankA - rankB
+                    : rankB - rankA;
+            }
+
+            // For regular fields
             const valueA = parseValueForSorting(a, sortBy);
             const valueB = parseValueForSorting(b, sortBy);
 

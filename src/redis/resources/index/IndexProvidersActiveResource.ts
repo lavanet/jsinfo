@@ -18,23 +18,23 @@ export interface IndexProviderActive {
     provider: string;
     moniker: string;
     monikerfull?: string;
-    avatarUrl?: string | null;  // Add avatar URL
+    avatarUrl?: string | null;
     activeServices: number;
     totalServices: number;
-    activeStake: string;       // Formatted stake for active services
-    activeStakeRaw: bigint;    // Raw stake value for active services
-    activeDelegate: string;    // Formatted delegate for active services
-    activeDelegateRaw: bigint; // Raw delegate value for active services
-    activeDelegateAndStakeTotal: string;     // Total of active stake and delegate
-    activeDelegateAndStakeTotalRaw: bigint;  // Raw active total for sorting
-    activeAndInactiveStake: string;          // Formatted stake (active + inactive)
-    activeAndInactiveStakeRaw: bigint;       // Raw stake value for sorting
-    activeAndInactiveDelegateStake: string;  // Formatted delegate (active + inactive)
-    activeAndInactiveDelegateStakeRaw: bigint; // Raw total delegate value
-    activeAndInactiveStakeTotal: string;     // Total of all stake and delegate combined
-    activeAndInactiveStakeTotalRaw: bigint;  // Raw total for sorting
+    activeStake: string;
+    activeStakeRaw: bigint;
+    activeDelegate: string;
+    activeDelegateRaw: bigint;
+    activeDelegateAndStakeTotal: string;
+    activeDelegateAndStakeTotalRaw: bigint;
+    activeAndInactiveStake: string;
+    activeAndInactiveStakeRaw: bigint;
+    activeAndInactiveDelegateStake: string;
+    activeAndInactiveDelegateStakeRaw: bigint;
+    activeAndInactiveStakeTotal: string;
+    activeAndInactiveStakeTotalRaw: bigint;
     reputationScore: number | null;
-    rank: number | null;
+    rank: number;
     formattedReputationScore?: string;
     rewardsUSD?: string;
     rewardsULAVA?: string;
@@ -63,7 +63,7 @@ function formatStakeValue(stake: bigint): string {
 }
 
 export class IndexProvidersActiveResource extends RedisResourceBase<IndexProviderActive[], {}> {
-    protected redisKey = 'index_providers_active_v8';
+    protected redisKey = 'index_providers_active_v10';
     protected cacheExpirySeconds = 3600; // 1 hour
 
     protected async fetchFromSource(): Promise<IndexProviderActive[]> {
@@ -92,21 +92,22 @@ export class IndexProvidersActiveResource extends RedisResourceBase<IndexProvide
             });
 
             // Create a map of ranks
-            const rankMap = new Map<string, number | null>();
+            const rankMap = new Map<string, number>();
             let currentRank = 1;
             let lastScore = -1;
 
             sortedProviders.forEach((provider, index) => {
                 const score = reputationMap.get(provider.provider) || 0;
-                if (score === 0) {
-                    rankMap.set(provider.provider, null);
-                } else {
-                    if (score !== lastScore) {
-                        currentRank = index + 1;
-                        lastScore = score;
-                    }
-                    rankMap.set(provider.provider, currentRank);
+
+                // Always assign a rank, even if score is 0/null
+                // This ensures entries without scores still get sorted properly
+                if (score !== lastScore) {
+                    currentRank = index + 1;
+                    lastScore = score;
                 }
+
+                // Always set a numeric rank value
+                rankMap.set(provider.provider, currentRank);
             });
 
             // Add mainnet rewards data if applicable
@@ -118,11 +119,14 @@ export class IndexProvidersActiveResource extends RedisResourceBase<IndexProvide
             // Combine all data with formatted values
             return providersWithRewards.map(provider => {
                 const repScore = reputationMap.get(provider.provider) || null;
-                const rank = rankMap.get(provider.provider) || null;
+                // Always assign a rank value, even if not in rankMap
+                const rank = rankMap.get(provider.provider) || 999999;
 
+                // Create a new object with the correct values
                 return {
                     ...provider,
                     reputationScore: repScore,
+                    // Explicitly set rank to ensure it's never null
                     rank: rank,
                     formattedReputationScore: repScore === null ? '-' : repScore.toFixed(3)
                 };
@@ -204,7 +208,7 @@ export class IndexProvidersActiveResource extends RedisResourceBase<IndexProvide
                     activeAndInactiveStakeTotalRaw: activeAndInactiveStakeTotal,
                     activeAndInactiveStakeTotal: formatStakeValue(activeAndInactiveStakeTotal),
                     reputationScore: null,  // Will be filled in later
-                    rank: null  // Will be filled in later
+                    rank: 999999  // Use 999999 instead of null as default
                 };
             }));
         } catch (error) {

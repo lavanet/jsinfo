@@ -34,7 +34,15 @@ import { IndexLatestBlockHandlerOpts, IndexLatestBlockHandler } from './handlers
 import { IndexTopChainsHandlerOpts, IndexTopChainsHandler } from './handlers/index/indexTopChainsHandler';
 import { IndexTotalCuHandlerOpts, IndexTotalCuHandler } from './handlers/index/indexTotalCuHandler';
 import { IndexStakesHandlerOpts, IndexStakesHandler } from './handlers/index/indexStakesHandler';
-import { IndexProvidersActivePaginatedHandler, IndexProvidersActivePaginatedHandlerOpts, IndexProvidersActiveItemCountPaginatiedHandler, IndexProvidersActiveCSVRawHandler, IndexProvidersActiveCSVRawHandlerOpts, IndexProvidersActiveItemCountPaginatiedHandlerOpts } from './handlers/index/indexProvidersActiveHandler';
+import {
+    IndexProvidersActivePaginatedHandler,
+    IndexProvidersActivePaginatedHandlerOpts,
+    IndexProvidersActiveItemCountPaginatiedHandler,
+    IndexProvidersActiveCSVRawHandler,
+    IndexProvidersActiveCSVRawHandlerOpts,
+    IndexProvidersActiveItemCountPaginatiedHandlerOpts,
+    IndexProvidersActiveQuerystring
+} from './handlers/index/indexProvidersActiveHandler';
 import { IndexChartsQuerystring, IndexChartsV3RawHandler, IndexChartsV3RawHandlerOpts } from './handlers/index/indexChartsV3Handler';
 
 // -- Provider page ajax --
@@ -167,9 +175,21 @@ GetServerInstance().get('/indexLatestBlock', IndexLatestBlockHandlerOpts, IndexL
 GetServerInstance().get('/indexTopChains', IndexTopChainsHandlerOpts, IndexTopChainsHandler);
 GetServerInstance().get('/indexTotalCu', IndexTotalCuHandlerOpts, IndexTotalCuHandler);
 GetServerInstance().get('/indexStakesHandler', IndexStakesHandlerOpts, IndexStakesHandler);
-GetServerInstance().get('/indexProvidersActive', IndexProvidersActivePaginatedHandlerOpts, IndexProvidersActivePaginatedHandler);
-GetServerInstance().get('/item-count/indexProvidersActive', IndexProvidersActiveItemCountPaginatiedHandlerOpts, IndexProvidersActiveItemCountPaginatiedHandler);
-GetServerInstance().get('/indexProvidersActiveCsv', IndexProvidersActiveCSVRawHandlerOpts, IndexProvidersActiveCSVRawHandler);
+GetServerInstance().get<{ Querystring: IndexProvidersActiveQuerystring }>(
+    '/indexProvidersActive',
+    IndexProvidersActivePaginatedHandlerOpts,
+    IndexProvidersActivePaginatedHandler
+);
+GetServerInstance().get(
+    '/item-count/indexProvidersActive',
+    IndexProvidersActiveItemCountPaginatiedHandlerOpts,
+    IndexProvidersActiveItemCountPaginatiedHandler
+);
+GetServerInstance().get(
+    '/indexProvidersActiveCsv',
+    IndexProvidersActiveCSVRawHandlerOpts,
+    IndexProvidersActiveCSVRawHandler
+);
 GetServerInstance().get<{ Querystring: IndexChartsQuerystring }>('/indexChartsV3', IndexChartsV3RawHandlerOpts, IndexChartsV3RawHandler);
 
 // -- Provider page ajax --
@@ -278,10 +298,10 @@ if (IsMainnet()) {
 GetServerInstance().get<ProviderAvatarParams>('/provider_avatar/:providerId', GetProviderAvatarHandlerOpts, GetProviderAvatarHandler);
 GetServerInstance().get('/provider_avatars', ListProviderAvatarsHandlerOpts, ListProviderAvatarsHandler);
 
+// -- Providers Reputation Scores --
+
 // Import the handler
 import { ProvidersReputationScoresHandler, ProvidersReputationScoresHandlerOpts } from './handlers/ajax/providersReputationScoresHandler';
-
-// Add the route (place this with other provider-related routes)
 GetServerInstance().get('/providers_reputation_scores', ProvidersReputationScoresHandlerOpts, ProvidersReputationScoresHandler);
 
 

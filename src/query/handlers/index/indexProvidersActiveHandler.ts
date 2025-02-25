@@ -1,21 +1,15 @@
 // src/query/handlers/indexProvidersActiveHandler.ts
 
-// curl http://localhost:8081/indexProviders | jq
-
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { ParsePaginationFromRequest } from '@jsinfo/query/utils/queryPagination';
-import { GetDataLength } from '@jsinfo/utils/fmt';
 import { IndexProvidersActiveResource } from '@jsinfo/redis/resources/index/IndexProvidersActiveResource';
-import { MainnetProviderEstimatedRewardsGetService } from '@jsinfo/redis/resources/Mainnet/ProviderEstimatedRewards/MainnetProviderEstimatedRewardsGetResource';
-import { IsMainnet } from '@jsinfo/utils/env';
 import { logger } from '@jsinfo/utils/logger';
-import { GetResourceResponse } from '@jsinfo/redis/resources/Mainnet/ProviderEstimatedRewards/MainnetProviderEstimatedRewardsGetResource';
+import { IndexProvidersActiveService } from '@jsinfo/redis/resources/index/IndexProvidersActiveResource';
+import { JSONStringify } from '@jsinfo/utils/fmt';
 
 export interface IndexProviderActiveResponse {
     provider: string;
     moniker: string;
     monikerfull: string;
-    rewardSum: string;
     totalServices: string;
     totalStake: string;
     rewardsUSD?: string;
@@ -26,163 +20,139 @@ export interface IndexProvidersActiveResponse {
     data: IndexProviderActiveResponse[];
 }
 
-interface ProviderData extends IndexProviderActiveResponse {
-    rewardsUSD: string;
-    rewardsULAVA: string;
+// Export the interface so it can be used in queryRoutes.ts
+export interface IndexProvidersActiveQuerystring {
+    page?: number;
+    limit?: number;
+    sortBy?: string;
+    sortDirection?: 'asc' | 'desc';
+    pagination?: string;
+}
+
+// Helper function to parse values for sorting with support for different field types
+function parseValueForSorting(item: any, sortBy: string): number {
+    // Handle missing properties gracefully
+    if (!item || !(sortBy in item)) {
+        return Number.MAX_VALUE;
+    }
+
+    const value = item[sortBy];
+
+    // Handle null/undefined
+    if (value === null || value === undefined) {
+        return Number.MAX_VALUE;
+    }
+
+    // For stake values, use rawTotalStake if sorting by totalStake
+    if (sortBy === 'totalStake' && 'rawTotalStake' in item && item.rawTotalStake !== undefined) {
+        return Number(item.rawTotalStake);
+    }
+
+    // For numeric values
+    if (typeof value === 'number') {
+        return value;
+    }
+
+    // For string values that might contain numbers with formatting
+    if (typeof value === 'string') {
+        // Remove currency symbols, "lava", and commas
+        const cleaned = value.replace(/[$,]/g, '')
+            .replace(/lava/gi, '')
+            .replace(/ulava/gi, '')
+            .trim();
+
+        const num = parseFloat(cleaned);
+        return isNaN(num) ? Number.MAX_VALUE : num;
+    }
+
+    return Number.MAX_VALUE;
 }
 
 export const IndexProvidersActivePaginatedHandlerOpts: RouteShorthandOptions = {
     schema: {
+        querystring: {
+            type: 'object',
+            properties: {
+                page: { type: 'number' },
+                limit: { type: 'number' },
+                sortBy: { type: 'string' },
+                sortDirection: { type: 'string', enum: ['asc', 'desc'] },
+                pagination: { type: 'string' }
+            }
+        },
         response: {
             200: {
-                type: 'object',
-                properties: {
-                    data: {
-                        type: 'array',
-                        items: {
-                            type: 'object',
-                            properties: {
-                                provider: { type: 'string' },
-                                moniker: { type: 'string' },
-                                monikerfull: { type: 'string' },
-                                rewardSum: { type: 'string' },
-                                totalServices: { type: 'string' },
-                                totalStake: { type: 'string' },
-                                rewardsUSD: { type: 'string' },
-                                rewardsULAVA: { type: 'string' },
-                            }
-                        }
-                    }
-                }
-            },
-            400: {
-                type: 'object',
-                properties: {
-                    error: { type: 'string' }
-                }
+                type: 'string'
             }
         }
     }
-}
+};
 
 export async function IndexProvidersActivePaginatedHandler(
-    request: FastifyRequest,
+    request: FastifyRequest<{
+        Querystring: IndexProvidersActiveQuerystring
+    }>,
     reply: FastifyReply
-): Promise<IndexProvidersActiveResponse | null> {
+) {
     try {
-        const resource = new IndexProvidersActiveResource();
-        const pagination = ParsePaginationFromRequest(request) ?? undefined;
+        // Handle pagination string format (e.g., "rank,a,1,20")
+        let page = 1;
+        let limit = 10;
+        let sortBy = 'rank';
+        let sortDirection = 'asc';
 
-        const result = await resource.fetch({
-            type: 'paginated',
-            pagination
-        }).catch(error => {
-            logger.error('Error fetching from resource:', error);
-            return null;
+        if (request.query.pagination) {
+            const parts = request.query.pagination.split(',');
+            if (parts.length >= 1) sortBy = parts[0] || sortBy;
+            if (parts.length >= 2) sortDirection = (parts[1] === 'a' || parts[1] === 'asc') ? 'asc' : 'desc';
+            if (parts.length >= 3) page = parseInt(parts[2]) || page;
+            if (parts.length >= 4) limit = parseInt(parts[3]) || limit;
+        } else {
+            // If no pagination string, use individual parameters
+            page = parseInt(request.query.page as any) || 1;
+            limit = parseInt(request.query.limit as any) || 10;
+            sortBy = request.query.sortBy || 'rank';
+            sortDirection = request.query.sortDirection || 'asc';
+        }
+
+        const allProviders = await IndexProvidersActiveService.fetch();
+
+        if (!allProviders || allProviders.length === 0) {
+            return reply.status(404).send({ error: 'No active providers found' });
+        }
+
+        // Sort providers with improved value parsing
+        const sortedProviders = [...allProviders].sort((a, b) => {
+            // Special handling for different field types
+            const valueA = parseValueForSorting(a, sortBy);
+            const valueB = parseValueForSorting(b, sortBy);
+
+            // Apply direction
+            return sortDirection === 'asc'
+                ? valueA - valueB
+                : valueB - valueA;
         });
 
-        if (!result?.data) {
-            reply.status(400);
-            reply.send({ error: 'Failed to fetch active providers data' });
-            return null;
-        }
+        // Calculate pagination
+        const startIndex = (page - 1) * limit;
+        const endIndex = startIndex + limit;
+        const paginatedProviders = sortedProviders.slice(startIndex, endIndex);
 
-        // Cast the data array to allow adding rewards fields
-        const providers = result.data as unknown as ProviderData[];
-
-        let rewardsResponse: GetResourceResponse | null = null;
-        if (IsMainnet()) {
-            try {
-                rewardsResponse = await MainnetProviderEstimatedRewardsGetService.fetch({
-                    block: 'latest_distributed'
-                });
-            } catch (error) {
-                logger.error('Error fetching rewards data:', error);
+        const response = {
+            data: paginatedProviders,
+            pagination: {
+                total: allProviders.length,
+                page,
+                limit,
+                pages: Math.ceil(allProviders.length / limit)
             }
-        }
+        };
 
-        if (rewardsResponse?.data) {
-            logger.info('Processing rewards data...');
-
-            providers.forEach(provider => {
-                const providerData = rewardsResponse?.data.providers?.find(p => p.address === provider.provider);
-                logger.info(`Looking for provider ${provider.provider} - Found: ${!!providerData}`);
-
-                const rewardsLastMonthBlock = rewardsResponse?.data?.metadata.block_info?.height;
-                if (!rewardsLastMonthBlock) {
-                    throw new Error('Failed to fetch rewards last month block');
-                }
-
-                if (providerData?.rewards_by_block[rewardsLastMonthBlock]?.total) {
-                    const total = providerData.rewards_by_block[rewardsLastMonthBlock].total;
-                    provider.rewardsUSD = `$${total.total_usd.toFixed(2)}`;
-                    const lavaToken = total.tokens.find(t => t.display_denom === 'lava');
-                    provider.rewardsULAVA = lavaToken ? lavaToken.resolved_amount : "-";
-                    logger.info(`Set rewards for ${provider.provider}: USD=${provider.rewardsUSD}, ULAVA=${provider.rewardsULAVA}`);
-                } else {
-                    provider.rewardsUSD = "-";
-                    provider.rewardsULAVA = "-";
-                    logger.info(`No rewards found for ${provider.provider}`);
-                }
-            });
-
-            // Handle sorting
-            const sortKey = pagination?.sortKey?.toLowerCase();
-            if (pagination && (sortKey === 'rewardsusd' || sortKey === 'rewardsulava')) {
-                logger.info(`Sorting by ${sortKey}`);
-
-                // Get all providers first before sorting
-                const allProviders = [...providers];
-
-                allProviders.sort((a, b) => {
-                    let aValue: number, bValue: number;
-
-                    if (sortKey === 'rewardsusd') {
-                        // Parse USD values, removing '$' and handling '-'
-                        aValue = a.rewardsUSD === '-' ? 0 : parseFloat(a.rewardsUSD.replace('$', ''));
-                        bValue = b.rewardsUSD === '-' ? 0 : parseFloat(b.rewardsUSD.replace('$', ''));
-                    } else {
-                        // Parse ULAVA values, handling '-'
-                        aValue = a.rewardsULAVA === '-' ? 0 : parseFloat(a.rewardsULAVA);
-                        bValue = b.rewardsULAVA === '-' ? 0 : parseFloat(b.rewardsULAVA);
-                    }
-
-                    // Handle NaN values
-                    if (isNaN(aValue)) aValue = 0;
-                    if (isNaN(bValue)) bValue = 0;
-
-                    logger.debug(`Comparing ${a.provider} (${aValue}) with ${b.provider} (${bValue})`);
-
-                    return pagination.direction === 'ascending'
-                        ? aValue - bValue
-                        : bValue - aValue;
-                });
-
-                // Apply pagination after sorting
-                if (pagination.page && pagination.count) {
-                    const startIdx = (pagination.page - 1) * pagination.count;
-                    const endIdx = startIdx + pagination.count;
-                    // Replace providers array with sorted and paginated results
-                    providers.length = 0;
-                    providers.push(...allProviders.slice(startIdx, endIdx));
-                }
-            }
-        } else {
-            logger.warn('No rewards response data available');
-            providers.forEach(p => {
-                p.rewardsUSD = "-data not available-";
-                p.rewardsULAVA = "-data not available-";
-            });
-        }
-
-        return { data: providers };
+        reply.header('Content-Type', 'application/json');
+        return JSONStringify(response);
     } catch (error) {
         logger.error('Error in IndexProvidersActivePaginatedHandler:', error);
-        if (!reply.sent) {
-            reply.status(500);
-            reply.send({ error: 'Internal server error' });
-        }
-        return null;
+        return reply.status(500).send({ error: 'Internal server error' });
     }
 }
 
@@ -205,16 +175,22 @@ export const IndexProvidersActiveItemCountPaginatiedHandlerOpts: RouteShorthandO
     }
 }
 
-export async function IndexProvidersActiveItemCountPaginatiedHandler(request: FastifyRequest, reply: FastifyReply): Promise<{ itemCount: number }> {
-    const resource = new IndexProvidersActiveResource();
-    const result = await resource.fetch({ type: 'count' });
-    if (!result || (typeof result.count !== 'number' && typeof result.count !== 'string')) {
+export async function IndexProvidersActiveItemCountPaginatiedHandler(
+    request: FastifyRequest,
+    reply: FastifyReply
+): Promise<{ itemCount: number }> {
+    try {
+        const providers = await IndexProvidersActiveService.fetch();
+        if (!providers) {
+            throw new Error("Failed to fetch providers");
+        }
+        return { itemCount: providers.length };
+    } catch (error) {
+        logger.error('Error fetching active providers count:', error);
         reply.status(400);
         reply.send({ error: 'Failed to fetch active providers count' });
         return reply;
     }
-    const count = typeof result.count === 'string' ? parseInt(result.count, 10) : result.count;
-    return { itemCount: count };
 }
 
 export const IndexProvidersActiveCSVRawHandlerOpts: RouteShorthandOptions = {
@@ -234,29 +210,30 @@ export const IndexProvidersActiveCSVRawHandlerOpts: RouteShorthandOptions = {
 }
 
 export async function IndexProvidersActiveCSVRawHandler(request: FastifyRequest, reply: FastifyReply) {
-    const resource = new IndexProvidersActiveResource();
-    const result = await resource.fetch({ type: 'all' });
-    if (!result) {
-        reply.status(400);
-        reply.send({ error: 'Failed to fetch active providers data' });
+    try {
+        const providers = await IndexProvidersActiveService.fetch();
+
+        if (!providers || providers.length === 0) {
+            reply.status(400);
+            reply.send({ error: 'Data is unavailable now' });
+            return reply;
+        }
+
+        const csv = await new IndexProvidersActiveResource().ConvertRecordsToCsv(providers);
+        if (!csv) {
+            reply.status(400);
+            reply.send({ error: 'Data is not available in CSV format' });
+            return reply;
+        }
+
+        reply.header('Content-Type', 'text/csv');
+        reply.header('Content-Disposition', `attachment; filename="LavaActiveProviders.csv"`);
+        return csv;
+    } catch (error) {
+        logger.error('Error generating CSV:', error);
+        reply.status(500);
+        reply.send({ error: 'Failed to generate CSV' });
         return reply;
     }
-
-    if (!result.data || GetDataLength(result.data) === 0) {
-        reply.status(400);
-        reply.send({ error: 'Data is unavailable now' });
-        return reply;
-    }
-
-    const csv = await resource.ConvertRecordsToCsv(result.data);
-    if (!csv) {
-        reply.status(400);
-        reply.send({ error: 'Data is not available in CSV format' });
-        return reply;
-    }
-
-    reply.header('Content-Type', 'text/csv');
-    reply.header('Content-Disposition', `attachment; filename="LavaActiveProviders.csv"`);
-    return csv;
 }
 

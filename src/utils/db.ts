@@ -251,12 +251,6 @@ class DbConnectionPoolClass {
         const conn = await this.createConnection();
         this.connections.push(conn);
 
-        // logger.info('Created new connection for query', {
-        //     connectionId: conn.id,
-        //     totalConnections: this.connections.length,
-        //     queryKey: queryKey
-        // });
-
         conn.inUse = true;
         return conn;
     }

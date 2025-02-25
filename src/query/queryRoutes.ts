@@ -278,6 +278,12 @@ if (IsMainnet()) {
 GetServerInstance().get<ProviderAvatarParams>('/provider_avatar/:providerId', GetProviderAvatarHandlerOpts, GetProviderAvatarHandler);
 GetServerInstance().get('/provider_avatars', ListProviderAvatarsHandlerOpts, ListProviderAvatarsHandler);
 
+// Import the handler
+import { ProvidersReputationScoresHandler, ProvidersReputationScoresHandlerOpts } from './handlers/ajax/providersReputationScoresHandler';
+
+// Add the route (place this with other provider-related routes)
+GetServerInstance().get('/providers_reputation_scores', ProvidersReputationScoresHandlerOpts, ProvidersReputationScoresHandler);
+
 
 
 

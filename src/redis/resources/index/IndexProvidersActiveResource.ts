@@ -43,7 +43,7 @@ export interface IndexProvidersActiveQueryParams {
 
 export class IndexProvidersActiveResource extends RedisResourceBase<IndexProvidersActiveResourceResponse, IndexProvidersActiveQueryParams> {
     protected readonly redisKey = 'index:providers:active';
-    protected readonly cacheExpirySeconds = 600; // 10 minutes cache
+    protected readonly cacheExpirySeconds = 1200; // 20 minutes cache
 
     protected async getActiveProviderAddresses(): Promise<string[]> {
         const result = await ActiveProvidersService.fetch();

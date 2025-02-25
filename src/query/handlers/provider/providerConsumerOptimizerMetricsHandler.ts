@@ -1,7 +1,7 @@
 // src/query/handlers/provider/providerConsumerOptimizerMetricsHandler.ts
 
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { ConsumerOptimizerMetricsByProviderService } from '@jsinfo/redis/resources/provider/ProviderConsumerOptimizerMetrics';
+import { ConsumerOptimizerMetricsByProviderService } from '@jsinfo/redis/resources/ProviderConsumerOptimizerMetrics/ProviderConsumerOptimizerMetrics';
 import { GetAndValidateProviderAddressFromRequest, GetDateRangeFromRequest } from '@jsinfo/query/utils/queryRequestArgParser';
 import { JSONStringify } from '@jsinfo/utils/fmt';
 import { getMetricsFilters, getPossibleValues, validateFilters, aggregateMetrics, MetricsItem } from '@jsinfo/query/utils/queryProviderOptimizerMetricsHandlerUtils';

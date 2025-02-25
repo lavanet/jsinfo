@@ -1,6 +1,6 @@
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import { GetAndValidateProviderAddressFromRequest, GetDateRangeFromRequest } from '@jsinfo/query/utils/queryRequestArgParser';
-import { ConsumerOptimizerMetricsFullByProviderService } from '@jsinfo/redis/resources/provider/ProviderConsumerOptimizerMetricsFull';
+import { ConsumerOptimizerMetricsFullByProviderService } from '@jsinfo/redis/resources/ProviderConsumerOptimizerMetrics/ProviderConsumerOptimizerMetricsFull';
 import { JSINFO_QUERY_CONSUMER_OPTIMIZER_METRICS_FULL_KEY } from '@jsinfo/query/queryConsts';
 import { logger } from '@jsinfo/utils/logger';
 import { getMetricsFilters, getPossibleValues, validateFilters, aggregateMetrics, filterMetricsByDateRange, filterMetricsByExactDates, MetricsItem } from '@jsinfo/query/utils/queryProviderOptimizerMetricsHandlerUtils';

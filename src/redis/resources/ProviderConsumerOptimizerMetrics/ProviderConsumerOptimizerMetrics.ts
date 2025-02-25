@@ -86,12 +86,6 @@ export class ConsumerOptimizerMetricsByProviderResource extends RedisResourceBas
     }
 
     private async getAggregatedMetrics(provider: string, from: Date, to: Date): Promise<ConsumerOptimizerMetricsByProviderItem[]> {
-        // logger.info('Fetching metrics with date range:', {
-        //     provider,
-        //     from: from.toISOString(),
-        //     to: to.toISOString()
-        // });
-
         const metrics = await queryRelays(db =>
             db.select({
                 chain: aggregatedConsumerOptimizerMetrics.chain,

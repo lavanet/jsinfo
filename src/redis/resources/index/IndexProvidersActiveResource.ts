@@ -16,6 +16,7 @@ import { ActiveProvidersService } from './ActiveProvidersResource';
 import { queryJsinfo } from '@jsinfo/utils/db';
 import { JSONStringify } from '@jsinfo/utils/fmt';
 import { logger } from '@jsinfo/utils/logger';
+
 const rewardSumSubQuery = sql`SELECT SUM(arp_sub.rewardSum) FROM(SELECT arp."provider", SUM(arp."rewardsum") AS rewardSum FROM ${JsinfoProviderAgrSchema.aggAllTimeRelayPayments} arp GROUP BY arp."provider") arp_sub WHERE arp_sub."provider" = ${JsinfoSchema.providerStakes.provider}`;
 
 export interface IndexProvidersActiveResponse {
@@ -42,7 +43,7 @@ export interface IndexProvidersActiveQueryParams {
 
 export class IndexProvidersActiveResource extends RedisResourceBase<IndexProvidersActiveResourceResponse, IndexProvidersActiveQueryParams> {
     protected readonly redisKey = 'index:providers:active';
-    protected readonly cacheExpirySeconds = 600; // 10 minutes cache
+    protected readonly cacheExpirySeconds = 1200; // 20 minutes cache
 
     protected async getActiveProviderAddresses(): Promise<string[]> {
         const result = await ActiveProvidersService.fetch();

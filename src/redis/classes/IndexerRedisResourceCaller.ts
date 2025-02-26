@@ -25,6 +25,7 @@ import { ProviderStakesAndDelegationResource } from '../resources/global/Provide
 import { IndexTopChainsResource } from '../resources/index/IndexTopChainsResource';
 import { IndexTotalCuResource } from '../resources/index/IndexTotalCuResource';
 import { ActiveProvidersService } from '../resources/index/ActiveProvidersResource';
+import { IndexProvidersActiveV2Service } from '../resources/index/IndexProvidersActiveV2Resource';
 import { LockedTokenValuesResource } from '../resources/ajax/LockedTokenValuesResource';
 import { LockedVestingTokensService } from '../resources/global/LockedVestingTokensResource';
 import { IpRpcEndpointsIndexService } from '../resources/IpRpcEndpointsIndex/IpRpcEndpointsResource';
@@ -247,7 +248,10 @@ export class IndexerRedisResourceCaller {
             () => ActiveProvidersService.fetch(),
             this.currentFetches
         ).catch(e => logger.error('Failed to refresh active providers:', e));
-
+        await this.safeFetch('ActiveProvidersV2',
+            () => IndexProvidersActiveV2Service.fetch(),
+            this.currentFetches
+        ).catch(e => logger.error('Failed to refresh active providers v2:', e));
         await this.safeFetch('ProvidersCount',
             () => new IndexProvidersResource().fetch({ type: 'count' }),
             this.currentFetches

@@ -311,4 +311,3 @@ export class IndexProvidersActiveResource extends RedisResourceBase<IndexProvide
         return csv;
     }
 }
-

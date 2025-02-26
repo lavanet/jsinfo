@@ -259,4 +259,3 @@ export async function IndexProvidersActiveCSVRawHandler(request: FastifyRequest,
     reply.header('Content-Disposition', `attachment; filename="LavaActiveProviders.csv"`);
     return csv;
 }
-

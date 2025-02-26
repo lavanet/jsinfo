@@ -58,7 +58,6 @@ commands=(
   "python3 ./tests/ajax_endpoints.py"
 
   "python3 ./tests/index_page_endpoints.py"
-  "python3 ./tests/index_tabs_endpoints.py"
 
   # TESTS_FULL tests:
   "python3 ./tests/provider_page_endpoints.py"

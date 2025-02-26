@@ -1,316 +1,309 @@
 // src/query/handlers/indexProvidersActiveHandler.ts
 
+// curl http://localhost:8081/indexProviders | jq
+
 import { RedisResourceBase } from '@jsinfo/redis/classes/RedisResourceBase';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { sql, inArray } from "drizzle-orm";
+import { sql, desc, eq, asc, inArray } from "drizzle-orm";
 import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
+import * as JsinfoProviderAgrSchema from '@jsinfo/schemas/jsinfoSchema/providerRelayPaymentsAgregation';
+import { Pagination } from '@jsinfo/query/utils/queryPagination';
+import { JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE } from '@jsinfo/query/queryConsts';
 import { ProviderMonikerService } from '@jsinfo/redis/resources/global/ProviderMonikerSpecResource';
 import { CSVEscape } from '@jsinfo/utils/fmt';
+import { ParsePaginationFromString } from '@jsinfo/query/utils/queryPagination';
 import { ActiveProvidersService } from './ActiveProvidersResource';
 import { queryJsinfo } from '@jsinfo/utils/db';
+import { JSONStringify } from '@jsinfo/utils/fmt';
 import { logger } from '@jsinfo/utils/logger';
-import { ProvidersReputationScoresService } from '@jsinfo/redis/resources/ProviderConsumerOptimizerMetrics/ProvidersReputationScores';
-import { MainnetProviderEstimatedRewardsGetService } from '@jsinfo/redis/resources/Mainnet/ProviderEstimatedRewards/MainnetProviderEstimatedRewardsGetResource';
-import { IsMainnet } from '@jsinfo/utils/env';
-import { GetProviderAvatar } from '@jsinfo/restRpc/GetProviderAvatar';
 
-export interface IndexProviderActive {
+const rewardSumSubQuery = sql`SELECT SUM(arp_sub.rewardSum) FROM(SELECT arp."provider", SUM(arp."rewardsum") AS rewardSum FROM ${JsinfoProviderAgrSchema.aggAllTimeRelayPayments} arp GROUP BY arp."provider") arp_sub WHERE arp_sub."provider" = ${JsinfoSchema.providerStakes.provider}`;
+
+export interface IndexProvidersActiveResponse {
     provider: string;
     moniker: string;
-    monikerfull?: string;
-    avatarUrl?: string | null;
-    activeServices: number;
-    totalServices: number;
-    activeStake: string;
-    activeStakeRaw: bigint;
-    activeDelegate: string;
-    activeDelegateRaw: bigint;
-    activeDelegateAndStakeTotal: string;
-    activeDelegateAndStakeTotalRaw: bigint;
-    activeAndInactiveStake: string;
-    activeAndInactiveStakeRaw: bigint;
-    activeAndInactiveDelegateStake: string;
-    activeAndInactiveDelegateStakeRaw: bigint;
-    activeAndInactiveStakeTotal: string;
-    activeAndInactiveStakeTotalRaw: bigint;
-    reputationScore: number | null;
-    rank: number;
-    formattedReputationScore?: string;
-    rewardsUSD?: string;
-    rewardsULAVA?: string;
+    monikerfull: string;
+    rewardSum: number;
+    totalServices: string;
+    totalStake: string;
 }
 
-interface ProviderData {
-    provider: string | null;
-    activeServices: number;
-    totalServices: number;
-    activeStake: bigint;
-    activeDelegate: bigint;
-    activeAndInactiveStake: bigint;
-    activeAndInactiveDelegate: bigint;
+export interface IndexProvidersActiveResourceResponse {
+    type: IndexProvidersActiveQueryType;
+    data?: IndexProvidersActiveResponse[];
+    count?: number;
 }
 
-// Helper function to format stake values
-function formatStakeValue(stake: bigint): string {
-    // Convert to LAVA (1 LAVA = 1,000,000 ulava)
-    const lavaValue = Number(stake) / 1000000;
+export type IndexProvidersActiveQueryType = 'all' | 'count' | 'paginated';
 
-    // Format with commas and LAVA suffix
-    return lavaValue.toLocaleString('en-US', {
-        maximumFractionDigits: 2,
-        minimumFractionDigits: 2
-    }) + ' LAVA';
+export interface IndexProvidersActiveQueryParams {
+    type?: IndexProvidersActiveQueryType;
+    pagination?: Pagination | null;
 }
 
-export class IndexProvidersActiveResource extends RedisResourceBase<IndexProviderActive[], {}> {
-    protected redisKey = 'index_providers_active_v10';
-    protected cacheExpirySeconds = 3600; // 1 hour
+export class IndexProvidersActiveResource extends RedisResourceBase<IndexProvidersActiveResourceResponse, IndexProvidersActiveQueryParams> {
+    protected readonly redisKey = 'index:providers:active';
+    protected readonly cacheExpirySeconds = 1200; // 20 minutes cache
 
-    protected async fetchFromSource(): Promise<IndexProviderActive[]> {
+    protected async getActiveProviderAddresses(): Promise<string[]> {
+        const result = await ActiveProvidersService.fetch();
+        if (!result) {
+            throw new Error("No active providers found");
+        }
+        return result;
+    }
+
+    protected getDefaultParams(): IndexProvidersActiveQueryParams {
+        return {
+            type: 'paginated',
+            pagination: null
+        };
+    }
+
+    protected async fetchFromSource(params?: IndexProvidersActiveQueryParams): Promise<IndexProvidersActiveResourceResponse> {
+        console.time('redis/resources/index/IndexProvidersActiveResource.fetchFromSource');
         try {
-            // Fetch base provider data with all the original fields
-            const baseProviders = await this.fetchAllBaseProviderData();
+            const queryParams = params || this.getDefaultParams();
+            const queryType = queryParams.type || 'paginated';
 
-            // Fetch reputation scores
-            const reputationScores = await ProvidersReputationScoresService.fetch();
-
-            // Create a map of reputation scores for quick lookup
-            const reputationMap = new Map<string, number>();
-            if (reputationScores) {
-                reputationScores.forEach(score => {
-                    if (score && score.provider) {
-                        reputationMap.set(score.provider, score.reputationScore);
-                    }
-                });
+            switch (queryType) {
+                case 'all':
+                    return {
+                        type: 'all',
+                        data: await this.fetchAllRecords()
+                    };
+                case 'paginated':
+                    return {
+                        type: 'paginated',
+                        data: await this.fetchPaginatedRecords(queryParams.pagination || null)
+                    };
+                case 'count':
+                    return {
+                        type: 'count',
+                        count: await this.fetchRecordCountFromDb()
+                    };
+                default:
+                    throw new Error(`Unsupported query type: ${queryType}`);
             }
-
-            // Sort providers by reputation score to determine ranks
-            const sortedProviders = [...baseProviders].sort((a, b) => {
-                const scoreA = reputationMap.get(a.provider) || 0;
-                const scoreB = reputationMap.get(b.provider) || 0;
-                return scoreB - scoreA;
-            });
-
-            // Create a map of ranks
-            const rankMap = new Map<string, number>();
-            let currentRank = 1;
-            let lastScore = -1;
-
-            sortedProviders.forEach((provider, index) => {
-                const score = reputationMap.get(provider.provider) || 0;
-
-                // Always assign a rank, even if score is 0/null
-                // This ensures entries without scores still get sorted properly
-                if (score !== lastScore) {
-                    currentRank = index + 1;
-                    lastScore = score;
-                }
-
-                // Always set a numeric rank value
-                rankMap.set(provider.provider, currentRank);
-            });
-
-            // Add mainnet rewards data if applicable
-            let providersWithRewards = baseProviders;
-            if (IsMainnet()) {
-                providersWithRewards = await this.addRewardsData(baseProviders);
-            }
-
-            // Combine all data with formatted values
-            return providersWithRewards.map(provider => {
-                const repScore = reputationMap.get(provider.provider) || null;
-                // Always assign a rank value, even if not in rankMap
-                const rank = rankMap.get(provider.provider) || 999999;
-
-                // Create a new object with the correct values
-                return {
-                    ...provider,
-                    reputationScore: repScore,
-                    // Explicitly set rank to ensure it's never null
-                    rank: rank,
-                    formattedReputationScore: repScore === null ? '-' : repScore.toFixed(3)
-                };
-            });
-
-        } catch (error) {
-            logger.error('Error fetching active providers:', error);
-            return [];
+        } finally {
+            console.timeEnd('redis/resources/index/IndexProvidersActiveResource.fetchFromSource');
         }
     }
 
-    // This method fetches all the original provider data
-    private async fetchAllBaseProviderData(): Promise<IndexProviderActive[]> {
-        try {
-            const activeProviders = await ActiveProvidersService.fetch();
 
-            if (!activeProviders || activeProviders.length === 0) {
+    protected async fetchAllRecords(): Promise<IndexProvidersActiveResponse[]> {
+        console.time('redis/resources/index/IndexProvidersActiveResource.fetchAllRecords');
+        try {
+            let activeProviders = await this.getActiveProviderAddresses();
+
+            if (activeProviders.length === 0) {
+                logger.warn("No active providers found");
                 return [];
             }
 
-            // Query directly from the database with all relevant fields
-            const data = await queryJsinfo<ProviderData[]>(
+            const res = await queryJsinfo(
+                async (db: PostgresJsDatabase) => db.select({
+                    provider: JsinfoSchema.providerStakes.provider,
+                    totalServices: sql<string>`CONCAT(SUM(CASE WHEN ${JsinfoSchema.providerStakes.status} = ${JsinfoSchema.LavaProviderStakeStatus.Active} THEN 1 ELSE 0 END), ' / ', COUNT(${JsinfoSchema.providerStakes.specId})) as totalServices`,
+                    totalStake: sql<bigint>`COALESCE(SUM( CAST(${JsinfoSchema.providerStakes.stake} AS BIGINT) + (CAST(${JsinfoSchema.providerStakes.delegateTotal} AS BIGINT) )), 0) AS totalStake`,
+                    rewardSum: sql<number>`COALESCE((${rewardSumSubQuery}), 0) as rewardSum`,
+                })
+                    .from(JsinfoSchema.providerStakes)
+                    .where(inArray(JsinfoSchema.providerStakes.provider, activeProviders))
+                    .groupBy(JsinfoSchema.providerStakes.provider)
+                    .orderBy(sql`rewardSum DESC`),
+                'IndexProvidersActiveResource_fetchAllRecords'
+            );
+
+            const providersDetails: IndexProvidersActiveResponse[] = await Promise.all(res.map(async provider => ({
+                provider: provider.provider || "",
+                moniker: await ProviderMonikerService.GetMonikerForProvider(provider.provider),
+                monikerfull: await ProviderMonikerService.GetMonikerFullDescription(provider.provider),
+                rewardSum: provider.rewardSum,
+                totalServices: provider.totalServices || "",
+                totalStake: provider.totalStake.toString(),
+            })));
+
+            return providersDetails;
+        } finally {
+            console.timeEnd('redis/resources/index/IndexProvidersActiveResource.fetchAllRecords');
+        }
+    }
+
+    protected async fetchPaginatedRecords(pagination: Pagination | null): Promise<IndexProvidersActiveResponse[]> {
+        console.time('redis/resources/index/IndexProvidersActiveResource.fetchPaginatedRecords');
+        try {
+            let activeProviders = await this.getActiveProviderAddresses();
+
+            if (activeProviders.length === 0) {
+                logger.warn("No active providers found");
+                return [];
+            }
+
+            const defaultSortKey = "totalStake";
+            let finalPagination: Pagination;
+
+            if (pagination) {
+                finalPagination = pagination;
+            } else {
+                finalPagination = ParsePaginationFromString(
+                    `${defaultSortKey},descending,1,${JSINFO_QUERY_DEFAULT_ITEMS_PER_PAGE}`
+                );
+            }
+
+            // Ensure the sort key is valid or use the default
+            if (!finalPagination.sortKey) {
+                finalPagination.sortKey = defaultSortKey;
+            }
+
+            // If sorting by rewards, fetch all records and let the handler do the sorting
+            if (finalPagination.sortKey?.toLowerCase() === 'rewardsusd' ||
+                finalPagination.sortKey?.toLowerCase() === 'rewardsulava') {
+                const data = await queryJsinfo(
+                    async (db: PostgresJsDatabase) => db
+                        .select({
+                            provider: JsinfoSchema.providerStakes.provider,
+                            totalServices: sql<string>`CONCAT(SUM(CASE WHEN ${JsinfoSchema.providerStakes.status} = ${JsinfoSchema.LavaProviderStakeStatus.Active} THEN 1 ELSE 0 END), ' / ', COUNT(${JsinfoSchema.providerStakes.specId})) as totalServices`,
+                            totalStake: sql<bigint>`COALESCE(SUM( CAST(${JsinfoSchema.providerStakes.stake} AS BIGINT) + CAST(${JsinfoSchema.providerStakes.delegateTotal} AS BIGINT) ), 0) AS totalStake`,
+                            rewardSum: sql<number>`COALESCE((${rewardSumSubQuery}), 0) as rewardSum`,
+                        })
+                        .from(JsinfoSchema.providerStakes)
+                        .where(inArray(JsinfoSchema.providerStakes.provider, activeProviders))
+                        .groupBy(JsinfoSchema.providerStakes.provider),
+                    `IndexProvidersActiveResource_fetchPaginatedRecords_rewards_sort`
+                );
+
+                return Promise.all(data.map(async item => ({
+                    provider: item.provider || "",
+                    moniker: await ProviderMonikerService.GetMonikerForProvider(item.provider),
+                    monikerfull: await ProviderMonikerService.GetMonikerFullDescription(item.provider),
+                    rewardSum: item.rewardSum || 0,
+                    totalServices: item.totalServices,
+                    totalStake: item.totalStake.toString()
+                })));
+            }
+
+            // Original sorting logic for other fields
+            const keyToColumnMap = {
+                provider: JsinfoSchema.providerStakes.provider,
+                moniker: sql`MAX(${JsinfoSchema.providerSpecMoniker.moniker})`,
+                rewardSum: sql`rewardSum`,
+                totalServices: sql`totalServices`,
+                totalStake: sql`totalStake`
+            };
+
+            // Check if the sort key is in the map
+            if (!Object.keys(keyToColumnMap).includes(finalPagination.sortKey.toLowerCase())) {
+                logger.warn(`Invalid sort key: ${finalPagination.sortKey}, using default: ${defaultSortKey}`);
+                finalPagination.sortKey = defaultSortKey;
+            }
+
+            const sortColumn = keyToColumnMap[finalPagination.sortKey];
+            const orderFunction = finalPagination.direction === 'ascending' ? asc : desc;
+
+            if (sortColumn === keyToColumnMap["moniker"]) {
+                const data = await queryJsinfo(
+                    async (db: PostgresJsDatabase) => db.select({
+                        provider: JsinfoSchema.providerStakes.provider,
+                        moniker: sql`MAX(${JsinfoSchema.providerSpecMoniker.moniker}) as moniker`,
+                        totalServices: sql<string>`CONCAT(SUM(CASE WHEN ${JsinfoSchema.providerStakes.status} = ${JsinfoSchema.LavaProviderStakeStatus.Active} THEN 1 ELSE 0 END), ' / ', COUNT(${JsinfoSchema.providerStakes.specId})) as totalServices`,
+                        totalStake: sql<bigint>`COALESCE(SUM( CAST(${JsinfoSchema.providerStakes.stake} AS BIGINT) + CAST(${JsinfoSchema.providerStakes.delegateTotal} AS BIGINT) ), 0) AS totalStake`,
+                        rewardSum: sql<number>`COALESCE((${rewardSumSubQuery}), 0) as rewardSum`,
+                    })
+                        .from(JsinfoSchema.providerStakes)
+                        .leftJoin(JsinfoSchema.providerSpecMoniker, eq(JsinfoSchema.providerStakes.provider, JsinfoSchema.providerSpecMoniker.provider))
+                        .where(inArray(JsinfoSchema.providerStakes.provider, activeProviders))
+                        .groupBy(JsinfoSchema.providerStakes.provider)
+                        .orderBy(orderFunction(sortColumn))
+                        .offset((finalPagination.page - 1) * finalPagination.count)
+                        .limit(finalPagination.count),
+                    `IndexProvidersActiveResource_fetchPaginatedRecords_moniker_${finalPagination.sortKey}_${finalPagination.direction}_${finalPagination.page}_${finalPagination.count}`
+                );
+
+
+                return Promise.all(data.map(async item => ({
+                    provider: item.provider || "",
+                    moniker: await ProviderMonikerService.GetMonikerForProvider(item.provider),
+                    monikerfull: await ProviderMonikerService.GetMonikerFullDescription(item.provider),
+                    rewardSum: item.rewardSum || 0,
+                    totalServices: item.totalServices,
+                    totalStake: item.totalStake.toString()
+                })));
+            }
+
+            const data = await queryJsinfo(
                 async (db: PostgresJsDatabase) => db
                     .select({
                         provider: JsinfoSchema.providerStakes.provider,
-                        activeServices: sql<number>`SUM(CASE WHEN ${JsinfoSchema.providerStakes.status} = ${JsinfoSchema.LavaProviderStakeStatus.Active} THEN 1 ELSE 0 END)`,
-                        totalServices: sql<number>`COUNT(${JsinfoSchema.providerStakes.specId})`,
-                        // Stake for active services only
-                        activeStake: sql<bigint>`COALESCE(SUM(CASE WHEN ${JsinfoSchema.providerStakes.status} = ${JsinfoSchema.LavaProviderStakeStatus.Active} THEN CAST(${JsinfoSchema.providerStakes.stake} AS BIGINT) ELSE 0 END), 0)`,
-                        // Delegate for active services only
-                        activeDelegate: sql<bigint>`COALESCE(SUM(CASE WHEN ${JsinfoSchema.providerStakes.status} = ${JsinfoSchema.LavaProviderStakeStatus.Active} THEN CAST(${JsinfoSchema.providerStakes.delegateTotal} AS BIGINT) ELSE 0 END), 0)`,
-                        // Total stake (active + inactive)
-                        activeAndInactiveStake: sql<bigint>`COALESCE(SUM(CAST(${JsinfoSchema.providerStakes.stake} AS BIGINT)), 0)`,
-                        // Total delegate (active + inactive)
-                        activeAndInactiveDelegate: sql<bigint>`COALESCE(SUM(CAST(${JsinfoSchema.providerStakes.delegateTotal} AS BIGINT)), 0)`
+                        totalServices: sql<string>`CONCAT(SUM(CASE WHEN ${JsinfoSchema.providerStakes.status} = ${JsinfoSchema.LavaProviderStakeStatus.Active} THEN 1 ELSE 0 END), ' / ', COUNT(${JsinfoSchema.providerStakes.specId})) as totalServices`,
+                        totalStake: sql<bigint>`COALESCE(SUM( CAST(${JsinfoSchema.providerStakes.stake} AS BIGINT) + CAST(${JsinfoSchema.providerStakes.delegateTotal} AS BIGINT) ), 0) AS totalStake`,
+                        rewardSum: sql<number>`COALESCE((${rewardSumSubQuery}), 0) as rewardSum`,
                     })
                     .from(JsinfoSchema.providerStakes)
                     .where(inArray(JsinfoSchema.providerStakes.provider, activeProviders))
-                    .groupBy(JsinfoSchema.providerStakes.provider),
-                `IndexProvidersActiveResource_fetchAllBaseProviderData`
+                    .groupBy(JsinfoSchema.providerStakes.provider)
+                    .orderBy(orderFunction(sortColumn))
+                    .offset((finalPagination.page - 1) * finalPagination.count)
+                    .limit(finalPagination.count),
+                `IndexProvidersActiveResource_fetchPaginatedRecords_${finalPagination.sortKey}_${finalPagination.direction}_${finalPagination.page}_${finalPagination.count}`
             );
 
-            // Map the raw data to the interface with minimal transformation
-            return Promise.all(data.map(async item => {
-                // Calculate combined totals properly with BigInt
-                const activeStakeValue = BigInt(item.activeStake);
-                const activeDelegateValue = BigInt(item.activeDelegate);
-
-                // Active services total (stake + delegate)
-                const activeDelegateAndStakeTotal = activeStakeValue + activeDelegateValue;
-
-                // Total stake and delegate values for all services
-                const combinedActiveAndInactiveStake = BigInt(item.activeAndInactiveStake);
-                const combinedActiveAndInactiveDelegate = BigInt(item.activeAndInactiveDelegate);
-
-                // Grand total of all stake and delegate values
-                const activeAndInactiveStakeTotal = combinedActiveAndInactiveStake + combinedActiveAndInactiveDelegate;
-
-                // Get avatar URL
-                const avatarUrl = await GetProviderAvatar(item.provider || "");
-
-                return {
-                    provider: item.provider || "",
-                    moniker: await ProviderMonikerService.GetMonikerForProvider(item.provider || ""),
-                    monikerfull: await ProviderMonikerService.GetMonikerFullDescription(item.provider || ""),
-                    avatarUrl: avatarUrl,
-                    activeServices: item.activeServices || 0,
-                    totalServices: item.totalServices || 0,
-                    activeStakeRaw: activeStakeValue,
-                    activeStake: formatStakeValue(activeStakeValue),
-                    activeDelegateRaw: activeDelegateValue,
-                    activeDelegate: formatStakeValue(activeDelegateValue),
-                    activeDelegateAndStakeTotalRaw: activeDelegateAndStakeTotal,
-                    activeDelegateAndStakeTotal: formatStakeValue(activeDelegateAndStakeTotal),
-                    activeAndInactiveStakeRaw: combinedActiveAndInactiveStake,
-                    activeAndInactiveStake: formatStakeValue(combinedActiveAndInactiveStake),
-                    activeAndInactiveDelegateStakeRaw: combinedActiveAndInactiveDelegate,
-                    activeAndInactiveDelegateStake: formatStakeValue(combinedActiveAndInactiveDelegate),
-                    activeAndInactiveStakeTotalRaw: activeAndInactiveStakeTotal,
-                    activeAndInactiveStakeTotal: formatStakeValue(activeAndInactiveStakeTotal),
-                    reputationScore: null,  // Will be filled in later
-                    rank: 999999  // Use 999999 instead of null as default
-                };
-            }));
+            return Promise.all(data.map(async item => ({
+                provider: item.provider || "",
+                moniker: await ProviderMonikerService.GetMonikerForProvider(item.provider),
+                monikerfull: await ProviderMonikerService.GetMonikerFullDescription(item.provider),
+                rewardSum: item.rewardSum || 0,
+                totalServices: item.totalServices,
+                totalStake: item.totalStake.toString()
+            })));
         } catch (error) {
-            logger.error('Error in fetchAllBaseProviderData:', error);
-            return [];
+            logger.error('Error in fetchPaginatedRecords:', error);
+            throw error;
+        } finally {
+            console.timeEnd('redis/resources/index/IndexProvidersActiveResource.fetchPaginatedRecords');
         }
     }
 
-    // Add rewards data from MainnetProviderEstimatedRewardsGetService
-    private async addRewardsData(providers: IndexProviderActive[]): Promise<IndexProviderActive[]> {
+    protected async fetchRecordCountFromDb(): Promise<number> {
+        console.time('redis/resources/index/IndexProvidersActiveResource.fetchRecordCountFromDb');
         try {
-            const rewardsResponse = await MainnetProviderEstimatedRewardsGetService.fetch({
-                block: 'latest_distributed'
-            });
+            let activeProviders = await this.getActiveProviderAddresses();
 
-            if (!rewardsResponse?.data) {
-                logger.warn('No rewards response data available');
-                return providers.map(p => ({
-                    ...p,
-                    rewardsUSD: "-data not available-",
-                    rewardsULAVA: "-data not available-"
-                }));
+            if (activeProviders.length === 0) {
+                logger.warn("No active providers found");
+                return 0;
             }
 
-            return providers.map(provider => {
-                const providerData = rewardsResponse.data.providers?.find(p => p.address === provider.provider);
+            const res = await queryJsinfo(
+                async (db: PostgresJsDatabase) => db.select({
+                    count: sql<number>`COUNT(DISTINCT ${JsinfoSchema.providerStakes.provider})`,
+                })
+                    .from(JsinfoSchema.providerStakes)
+                    .where(inArray(JsinfoSchema.providerStakes.provider, activeProviders)),
+                `IndexProvidersActiveResource_fetchRecordCountFromDb_${JSONStringify(activeProviders)}`
+            );
 
-                const rewardsLastMonthBlock = rewardsResponse.data.metadata.block_info?.height;
-                if (!rewardsLastMonthBlock) {
-                    return {
-                        ...provider,
-                        rewardsUSD: "-",
-                        rewardsULAVA: "-"
-                    };
-                }
-
-                if (providerData?.rewards_by_block[rewardsLastMonthBlock]?.total) {
-                    const total = providerData.rewards_by_block[rewardsLastMonthBlock].total;
-                    const rewardsUSD = `$${total.total_usd.toFixed(2)}`;
-                    const lavaToken = total.tokens.find(t => t.display_denom === 'lava');
-                    const rewardsULAVA = lavaToken ? lavaToken.resolved_amount : "-";
-
-                    return {
-                        ...provider,
-                        rewardsUSD,
-                        rewardsULAVA
-                    };
-                } else {
-                    return {
-                        ...provider,
-                        rewardsUSD: "-",
-                        rewardsULAVA: "-"
-                    };
-                }
-            });
-        } catch (error) {
-            logger.error('Error fetching rewards data:', error);
-            return providers.map(p => ({
-                ...p,
-                rewardsUSD: "-error-",
-                rewardsULAVA: "-error-"
-            }));
+            return res[0].count || 0;
+        } finally {
+            console.timeEnd('redis/resources/index/IndexProvidersActiveResource.fetchRecordCountFromDb');
         }
     }
 
-    public async ConvertRecordsToCsv(data: IndexProviderActive[]): Promise<string> {
+    public async ConvertRecordsToCsv(data: IndexProvidersActiveResponse[]): Promise<string> {
         const columns = [
             { key: "moniker", name: "Moniker" },
             { key: "provider", name: "Provider Address" },
-            { key: "formattedReputationScore", name: "Reputation Score" },
-            { key: "rank", name: "Rank" },
-            { key: "activeServices", name: "Active Services" },
-            { key: "totalServices", name: "Total Services" },
-            { key: "activeStake", name: "Active Stake" },
-            { key: "activeDelegate", name: "Active Delegate" },
-            { key: "activeDelegateAndStakeTotal", name: "Active Delegate + Stake Total" },
-            { key: "activeAndInactiveStake", name: "All Services Stake" },
-            { key: "activeAndInactiveDelegateStake", name: "All Services Delegate" },
-            { key: "activeAndInactiveStakeTotal", name: "Grand Total (All Stake + Delegate)" }
+            { key: "rewardSum", name: "Total Rewards" },
+            { key: "totalServices", name: "Total Services", },
+            { key: "totalStake", name: "Total Stake" },
         ];
-
-        // Add rewards columns only if on mainnet
-        if (IsMainnet()) {
-            columns.push(
-                { key: "rewardsUSD", name: "Monthly Rewards (USD)" },
-                { key: "rewardsULAVA", name: "Monthly Rewards (ULAVA)" }
-            );
-        }
 
         let csv = columns.map(column => CSVEscape(column.name)).join(',') + '\n';
 
-        data.forEach((item: IndexProviderActive) => {
+        data.forEach((item: any) => {
             csv += columns.map(column => {
                 const keys = column.key.split('.');
-                let value = keys.reduce((obj: any, key: string) =>
-                    (obj && obj[key] !== undefined) ? obj[key] : '', item);
-
-                // Format rank for CSV
-                if (column.key === 'rank' && value !== '') {
-                    value = value === null ? '-' : value;
-                }
-
+                const value = keys.reduce((obj, key) => (obj && obj[key] !== undefined) ? obj[key] : '', item);
                 return CSVEscape(String(value));
             }).join(',') + '\n';
         });
@@ -318,6 +311,3 @@ export class IndexProvidersActiveResource extends RedisResourceBase<IndexProvide
         return csv;
     }
 }
-
-export const IndexProvidersActiveService = new IndexProvidersActiveResource();
-

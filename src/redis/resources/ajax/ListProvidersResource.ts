@@ -3,7 +3,7 @@ import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { ProviderMonikerService } from '@jsinfo/redis/resources/global/ProviderMonikerSpecResource';
 import { desc, inArray } from 'drizzle-orm';
 import { queryJsinfo } from '@jsinfo/utils/db';
-import GetIconForSpec from '@jsinfo/lib/icons/icons';
+import GetIconForSpec from '@jsinfo/lib/icons/ChainIcons';
 import { ConvertToChainName } from '@jsinfo/lib/chain-mapping/chains';
 
 export interface ProviderEntry {

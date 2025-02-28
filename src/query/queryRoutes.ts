@@ -98,6 +98,17 @@ import { MainnetClaimableRewardsHandler, MainnetClaimableRewardsHandlerOpts } fr
 // Utility
 import { AutoCompleteLinksV2PaginatedHandler, AutoCompleteLinksV2PaginatedHandlerOpts } from './handlers/ajax/autoCompleteLinksV2Handler';
 
+// Add specStakesV2Handler routes
+import { SpecStakesV2Handler, SpecStakesV2HandlerOpts } from './handlers/spec/specStakesV2Handler';
+
+// Import the provider stakes V2 handlers at the top with your other imports
+import {
+    ProviderStakesV2Handler,
+    ProviderStakesV2HandlerOpts,
+    ProviderStakesV2CSVRawHandler,
+    ProviderStakesV2CSVRawHandlerOpts
+} from './handlers/provider/providerStakesV2Handler';
+
 // =============================================================================
 // ROUTE REGISTRATION - Grouped by functionality
 // =============================================================================
@@ -273,6 +284,9 @@ RegisterRedisBackedHandler('/specTrackedInfo/:specId', SpecTrackedInfoHandlerOpt
 RegisterRedisBackedHandler('/specConsumerOptimizerMetrics/:specId', SpecConsumerOptimizerMetricsHandlerOpts, SpecConsumerOptimizerMetricsHandler, { cache_ttl: 10 });
 RegisterRedisBackedHandler('/specConsumerOptimizerMetricsFull/:specId', SpecConsumerOptimizerMetricsFullHandlerOpts, SpecConsumerOptimizerMetricsFullHandler, { cache_ttl: 10 });
 
+// Add specStakesV2Handler routes
+GetServerInstance().get('/specStakesV2/:specId', SpecStakesV2HandlerOpts, SpecStakesV2Handler);
+
 // -----------------------------------------------------------------------------
 // Total Value Locked Routes
 // -----------------------------------------------------------------------------
@@ -313,3 +327,7 @@ if (IsMainnet()) {
     GetServerInstance().get('/lava_mainnet_validators_and_rewards', MainnetValidatorsAndRewardsHandlerOpts, MainnetValidatorsAndRewardsHandler);
     GetServerInstance().get('/lava_mainnet_provider_claimable_rewards', MainnetClaimableRewardsHandlerOpts, MainnetClaimableRewardsHandler);
 }
+
+// Add route registrations for the new handlers
+GetServerInstance().get('/providerStakesV2/:addr', ProviderStakesV2HandlerOpts, ProviderStakesV2Handler);
+GetServerInstance().get('/providerStakesV2Csv/:addr', ProviderStakesV2CSVRawHandlerOpts, ProviderStakesV2CSVRawHandler);

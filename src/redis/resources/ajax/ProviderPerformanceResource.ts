@@ -4,7 +4,7 @@ import { ListProvidersResource } from '@jsinfo/redis/resources/ajax/ListProvider
 import { MainnetProviderEstimatedRewardsGetService } from '@jsinfo/redis/resources/Mainnet/ProviderEstimatedRewards/MainnetProviderEstimatedRewardsGetResource';
 import { GetProviderAvatar } from '@jsinfo/restRpc/GetProviderAvatar';
 import { ConvertToChainName } from '@jsinfo/lib/chain-mapping/chains';
-import GetIconForSpec from '@jsinfo/lib/icons/icons';
+import GetIconForSpec from '@jsinfo/lib/icons/ChainIcons';
 import { logger } from '@jsinfo/utils/logger';
 import Decimal from 'decimal.js';
 

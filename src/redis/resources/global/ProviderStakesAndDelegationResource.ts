@@ -479,40 +479,51 @@ export class ProviderStakesAndDelegationResource extends RedisResourceBase<Provi
             ), 'ProviderStakesAndDelegationResource::fetch30DayMetrics');
     }
 
-    // Add this utility function to properly format health messages
-    private formatHealthMessage(messageStr: string): string {
+    // Improve health message formatting based on providerHealthLatestHandler
+    private formatHealthMessage(data: string | null): string {
+        if (!data) return "";
+
         try {
-            // Try to parse the JSON message
-            const data = JSON.parse(messageStr);
+            const parsedData = JSON.parse(data);
 
-            // Format the parsed data
-            let formattedMessage = '';
+            // Case 1: If there's a direct message field
+            if (parsedData.message) {
+                return parsedData.message;
+            }
 
-            if (data.block) {
-                formattedMessage += `Block: ${data.block}`;
+            // Case 2: If it's jail data
+            if (parsedData.jail_end_time && parsedData.jails) {
+                const date = new Date(parsedData.jail_end_time);
+                // Skip bad data (1970 dates)
+                if (date.getFullYear() === 1970) return "";
 
-                // Add others info if different from block
-                if (data.others && data.others !== data.block) {
-                    formattedMessage += `, Others: ${data.others}`;
+                const formattedDate = date.toISOString().replace('T', ' ').substring(0, 19);
+                return `End Time: ${formattedDate}, Jails: ${parsedData.jails}`;
+            }
+
+            // Case 3: Block data (most common for NEAR)
+            if (parsedData.block && parsedData.others) {
+                let finalMessage = `Block: ${parsedData.block}`;
+
+                // Only add others if different from block
+                if (parsedData.others !== parsedData.block) {
+                    finalMessage += `, Others: ${parsedData.others}`;
                 }
+
+                // Add latency if available
+                if (parsedData.latency) {
+                    const latencyMs = Math.round(parsedData.latency / 1000000);
+                    finalMessage += `, Latency: ${latencyMs}ms`;
+                }
+
+                return finalMessage;
             }
 
-            // Add latency in milliseconds if available
-            if (data.latency) {
-                const latencyMs = Math.round(data.latency / 1000000);
-                formattedMessage += `, Latency: ${latencyMs}ms`;
-            }
-
-            // If we have a valid message, return it
-            if (formattedMessage) {
-                return formattedMessage;
-            }
-
-            // Fallback to the original message for other formats
-            return messageStr;
+            // Default: return JSON string representation
+            return JSON.stringify(parsedData);
         } catch (e) {
-            // If parsing fails, return the original message
-            return messageStr;
+            // If parsing fails, return the original data
+            return data;
         }
     }
 
@@ -556,42 +567,71 @@ export class ProviderStakesAndDelegationResource extends RedisResourceBase<Provi
         return rewardsMap;
     }
 
-    // Fix the interface_type issue in the processHealthData function
+    // Fix the processHealthData function to better handle region data
     private processHealthData(healthData: any[]): Record<string, Record<string, HealthData | string>> {
         const healthDataResult: Record<string, Record<string, HealthData | string>> = {};
+
+        // Known regions
+        const knownRegions = new Set(['EU', 'US', 'ASIA']);
+
+        // Group records by provider and spec
+        const groupedRecords: Record<string, Record<string, any[]>> = {};
 
         for (const record of healthData) {
             if (!record.provider || !record.spec) continue;
 
-            if (!healthDataResult[record.provider]) {
-                healthDataResult[record.provider] = {};
+            if (!groupedRecords[record.provider]) {
+                groupedRecords[record.provider] = {};
             }
 
-            // Check if we already processed this provider & spec
-            if (healthDataResult[record.provider][record.spec] &&
-                typeof healthDataResult[record.provider][record.spec] !== 'string') {
-                continue;
+            if (!groupedRecords[record.provider][record.spec]) {
+                groupedRecords[record.provider][record.spec] = [];
             }
 
-            // Get the interface type - fix for null/undefined issues
-            const interfaceType = record.interface_type || 'jsonrpc';
+            groupedRecords[record.provider][record.spec].push(record);
+        }
 
-            // Process health info
-            const healthInfo: HealthData = {
-                overallStatus: record.status?.toLowerCase() || 'unknown',
-                interfaces: [interfaceType], // Use the safe interfaceType value
-                lastTimestamp: record.timestamp?.toISOString() || new Date().toISOString(),
-                interfaceDetails: {
-                    [interfaceType]: { // Use the safe interfaceType as key
-                        status: record.status?.toLowerCase() || 'unknown',
-                        message: this.formatHealthMessage(record.message || ''),
-                        timestamp: record.timestamp?.toISOString() || new Date().toISOString(),
-                        region: record.region || 'Unknown'
+        // Process each provider and spec
+        for (const provider in groupedRecords) {
+            if (!healthDataResult[provider]) {
+                healthDataResult[provider] = {};
+            }
+
+            for (const spec in groupedRecords[provider]) {
+                const records = groupedRecords[provider][spec];
+
+                // Get the most recent record for determining overall status
+                records.sort((a, b) =>
+                    b.timestamp.getTime() - a.timestamp.getTime()
+                );
+
+                const mostRecentRecord = records[0];
+
+                // Get interface type safely
+                const interfaceType = mostRecentRecord.interface_type || 'jsonrpc';
+
+                // Normalize region
+                const region = knownRegions.has(mostRecentRecord.region)
+                    ? mostRecentRecord.region
+                    : mostRecentRecord.geolocation || 'Unknown';
+
+                // Create health data object
+                const healthInfo: HealthData = {
+                    overallStatus: mostRecentRecord.status?.toLowerCase() || 'unknown',
+                    interfaces: [interfaceType],
+                    lastTimestamp: mostRecentRecord.timestamp?.toISOString(),
+                    interfaceDetails: {
+                        [interfaceType]: {
+                            status: mostRecentRecord.status?.toLowerCase() || 'unknown',
+                            message: this.formatHealthMessage(mostRecentRecord.message || mostRecentRecord.data),
+                            timestamp: mostRecentRecord.timestamp?.toISOString(),
+                            region: region
+                        }
                     }
-                }
-            };
+                };
 
-            healthDataResult[record.provider][record.spec] = healthInfo;
+                healthDataResult[provider][spec] = healthInfo;
+            }
         }
 
         return healthDataResult;

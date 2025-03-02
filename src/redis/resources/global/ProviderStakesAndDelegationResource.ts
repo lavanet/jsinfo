@@ -194,7 +194,7 @@ interface EstimatedRewardsData {
 }
 
 export class ProviderStakesAndDelegationResource extends RedisResourceBase<ProviderStakesAndDelegationData, {}> {
-    protected readonly redisKey = 'ProviderStakesAndDelegationResource_v8';
+    protected readonly redisKey = 'ProviderStakesAndDelegationResource_v9';
     protected readonly cacheExpirySeconds = 600; // 10 minutes cache
 
     // Main fetch method
@@ -288,17 +288,40 @@ export class ProviderStakesAndDelegationResource extends RedisResourceBase<Provi
                     .map(item => [`${item.provider}:${item.specId}`, item as UsageMetrics30Days])
             );
 
-            // Map rewards data - THIS IS THE CRUCIAL FIX
+            // Fix rewards data mapping to properly parse the API response structure
             const rewardsMap = new Map<string, RewardsData>();
             if (rewardsData && rewardsData.data && rewardsData.data.providers) {
+                logger.info(`Processing rewards data for ${rewardsData.data.providers.length} providers`);
+
                 for (const provider of rewardsData.data.providers) {
-                    if (provider.address && provider.latest_reward) {
-                        rewardsMap.set(provider.address, {
-                            lava: provider.latest_reward.lava || "0",
-                            usd: provider.latest_reward.usd || "0"
-                        });
+                    try {
+                        if (provider.address && provider.rewards_by_block) {
+                            // Get the first block key (there should only be one)
+                            const blockKeys = Object.keys(provider.rewards_by_block);
+                            if (blockKeys.length > 0) {
+                                const blockData = provider.rewards_by_block[blockKeys[0]];
+
+                                if (blockData && blockData.total) {
+                                    // Extract lava token
+                                    const lavaToken = blockData.total.tokens.find(
+                                        token => token.display_denom === 'lava'
+                                    );
+
+                                    rewardsMap.set(provider.address, {
+                                        lava: lavaToken ? lavaToken.display_amount : "0",
+                                        usd: blockData.total.total_usd ?
+                                            `$${blockData.total.total_usd.toFixed(2)}` : "$0.00"
+                                    });
+
+                                    logger.debug(`Processed rewards for ${provider.address}: ${lavaToken?.display_amount || '0'} LAVA ($${blockData.total.total_usd?.toFixed(2) || '0.00'})`);
+                                }
+                            }
+                        }
+                    } catch (error) {
+                        logger.error(`Error processing rewards for provider ${provider.address}:`, error);
                     }
                 }
+
                 logger.info(`Created rewardsMap with ${rewardsMap.size} providers`);
             }
 
@@ -490,60 +513,60 @@ export class ProviderStakesAndDelegationResource extends RedisResourceBase<Provi
             ), 'ProviderStakesAndDelegationResource::fetch30DayMetrics');
     }
 
-    // Fixed fetchProviderHealth method
-    private async fetchProviderHealth(providerAddresses: string[] = []): Promise<ProviderHealthData> {
-        const fourHoursAgo = new Date(Date.now() - 4 * 60 * 60 * 1000);
-
-        try {
-            // Use proper SQL construction to avoid type mismatch
-            const healthResults = await queryJsinfo(db => {
-                let query = db.select()
-                    .from(JsinfoSchema.providerHealth)
-                    .where(gte(JsinfoSchema.providerHealth.timestamp, fourHoursAgo));
-
-                // Apply provider filter only if we have providers
-                if (providerAddresses.length > 0) {
-                    query = query.where(inArray(JsinfoSchema.providerHealth.provider, providerAddresses));
-                }
-
-                return query.orderBy(desc(JsinfoSchema.providerHealth.timestamp));
-            }, 'ProviderStakesAndDelegationResource::fetchProviderHealth');
-
-            // Rest of the method remains the same
-            const healthData: ProviderHealthData = {};
-
-            for (const record of healthResults) {
-                if (record.provider && record.spec) {
-                    if (!healthData[record.provider]) {
-                        healthData[record.provider] = {};
-                    }
-
-                    // Create HealthData object from record
-                    const healthInfo: HealthData = {
-                        overallStatus: record.status || 'unknown',
-                        interfaces: record.interface ? [record.interface] : [],
-                        lastTimestamp: record.timestamp.toISOString(),
-                        interfaceDetails: {}
-                    };
-
-                    if (record.interface) {
-                        healthInfo.interfaceDetails[record.interface] = {
-                            status: record.status || 'unknown',
-                            message: record.data || '',
-                            timestamp: record.timestamp.toISOString(),
-                            region: record.geolocation || 'unknown'
-                        };
-                    }
-
-                    healthData[record.provider][record.spec] = healthInfo;
-                }
-            }
-
-            return healthData;
-        } catch (error) {
-            logger.error("Error fetching provider health:", error);
-            return {}; // Return empty object on error
+    // Fix the provider health query to be more efficient
+    private async fetchProviderHealth(providerAddresses: string[] = []): Promise<Record<string, Record<string, HealthData | string>>> {
+        // If no providers, return empty result immediately
+        if (providerAddresses.length === 0) {
+            logger.info("No providers to fetch health data for, returning empty result");
+            return {};
         }
+
+        const fourHoursAgo = new Date();
+        fourHoursAgo.setHours(fourHoursAgo.getHours() - 4);
+
+        // Only run the query when we have providers to check
+        const healthData = await queryJsinfo(db => db.select()
+            .from(JsinfoSchema.providerHealth)
+            .where(
+                and(
+                    gte(JsinfoSchema.providerHealth.timestamp, fourHoursAgo),
+                    inArray(JsinfoSchema.providerHealth.provider, providerAddresses)
+                )
+            )
+            .orderBy(desc(JsinfoSchema.providerHealth.timestamp)),
+            'ProviderStakesAndDelegationResource::fetchProviderHealth');
+
+        // Process the health data...
+        const healthDataResult: Record<string, Record<string, HealthData | string>> = {};
+
+        for (const record of healthData) {
+            if (record.provider && record.spec) {
+                if (!healthDataResult[record.provider]) {
+                    healthDataResult[record.provider] = {};
+                }
+
+                // Create HealthData object from record
+                const healthInfo: HealthData = {
+                    overallStatus: record.status || 'unknown',
+                    interfaces: record.interface ? [record.interface] : [],
+                    lastTimestamp: record.timestamp.toISOString(),
+                    interfaceDetails: {}
+                };
+
+                if (record.interface) {
+                    healthInfo.interfaceDetails[record.interface] = {
+                        status: record.status || 'unknown',
+                        message: record.data || '',
+                        timestamp: record.timestamp.toISOString(),
+                        region: record.geolocation || 'unknown'
+                    };
+                }
+
+                healthDataResult[record.provider][record.spec] = healthInfo;
+            }
+        }
+
+        return healthDataResult;
     }
 
     // Process basic stakes data
@@ -597,9 +620,12 @@ export class ProviderStakesAndDelegationResource extends RedisResourceBase<Provi
                 relaySum30Days: 0
             };
 
-            // Get moniker data
+            // Get moniker data with debug logging
             const moniker = await ProviderMonikerService.GetMonikerForProvider(item.provider);
+            logger.debug(`Retrieved moniker for ${item.provider}: ${moniker || 'empty'}`);
+
             const monikerfull = await ProviderMonikerService.GetMonikerFullDescription(item.provider);
+            logger.debug(`Retrieved monikerfull for ${item.provider}: ${monikerfull || 'empty'}`);
 
             // Convert spec ID to chain name and get icon
             const chainName = ConvertToChainName(item.specId || '');

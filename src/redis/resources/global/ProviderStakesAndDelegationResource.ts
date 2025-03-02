@@ -194,7 +194,7 @@ interface EstimatedRewardsData {
 }
 
 export class ProviderStakesAndDelegationResource extends RedisResourceBase<ProviderStakesAndDelegationData, {}> {
-    protected readonly redisKey = 'ProviderStakesAndDelegationResource_v9';
+    protected readonly redisKey = 'ProviderStakesAndDelegationResource_v10';
     protected readonly cacheExpirySeconds = 600; // 10 minutes cache
 
     // Main fetch method
@@ -288,42 +288,8 @@ export class ProviderStakesAndDelegationResource extends RedisResourceBase<Provi
                     .map(item => [`${item.provider}:${item.specId}`, item as UsageMetrics30Days])
             );
 
-            // Fix rewards data mapping to properly parse the API response structure
-            const rewardsMap = new Map<string, RewardsData>();
-            if (rewardsData && rewardsData.data && rewardsData.data.providers) {
-                logger.info(`Processing rewards data for ${rewardsData.data.providers.length} providers`);
-
-                for (const provider of rewardsData.data.providers) {
-                    try {
-                        if (provider.address && provider.rewards_by_block) {
-                            // Get the first block key (there should only be one)
-                            const blockKeys = Object.keys(provider.rewards_by_block);
-                            if (blockKeys.length > 0) {
-                                const blockData = provider.rewards_by_block[blockKeys[0]];
-
-                                if (blockData && blockData.total) {
-                                    // Extract lava token
-                                    const lavaToken = blockData.total.tokens.find(
-                                        token => token.display_denom === 'lava'
-                                    );
-
-                                    rewardsMap.set(provider.address, {
-                                        lava: lavaToken ? lavaToken.display_amount : "0",
-                                        usd: blockData.total.total_usd ?
-                                            `$${blockData.total.total_usd.toFixed(2)}` : "$0.00"
-                                    });
-
-                                    logger.debug(`Processed rewards for ${provider.address}: ${lavaToken?.display_amount || '0'} LAVA ($${blockData.total.total_usd?.toFixed(2) || '0.00'})`);
-                                }
-                            }
-                        }
-                    } catch (error) {
-                        logger.error(`Error processing rewards for provider ${provider.address}:`, error);
-                    }
-                }
-
-                logger.info(`Created rewardsMap with ${rewardsMap.size} providers`);
-            }
+            // Process rewards data
+            const rewardsMap = this.processRewardsData(rewardsData);
 
             // Process the basic stakes data
             const { stakeSum, delegationSum, providerStakes } = this.processBasicStakesData(stakesRes);
@@ -513,7 +479,125 @@ export class ProviderStakesAndDelegationResource extends RedisResourceBase<Provi
             ), 'ProviderStakesAndDelegationResource::fetch30DayMetrics');
     }
 
-    // Fix the provider health query to be more efficient
+    // Add this utility function to properly format health messages
+    private formatHealthMessage(messageStr: string): string {
+        try {
+            // Try to parse the JSON message
+            const data = JSON.parse(messageStr);
+
+            // Format the parsed data
+            let formattedMessage = '';
+
+            if (data.block) {
+                formattedMessage += `Block: ${data.block}`;
+
+                // Add others info if different from block
+                if (data.others && data.others !== data.block) {
+                    formattedMessage += `, Others: ${data.others}`;
+                }
+            }
+
+            // Add latency in milliseconds if available
+            if (data.latency) {
+                const latencyMs = Math.round(data.latency / 1000000);
+                formattedMessage += `, Latency: ${latencyMs}ms`;
+            }
+
+            // If we have a valid message, return it
+            if (formattedMessage) {
+                return formattedMessage;
+            }
+
+            // Fallback to the original message for other formats
+            return messageStr;
+        } catch (e) {
+            // If parsing fails, return the original message
+            return messageStr;
+        }
+    }
+
+    // Extract rewards processing to its own function
+    private processRewardsData(rewardsData: GetResourceResponse | null): Map<string, RewardsData> {
+        const rewardsMap = new Map<string, RewardsData>();
+
+        if (!rewardsData?.data?.providers) {
+            return rewardsMap;
+        }
+
+        logger.info(`Processing rewards data for ${rewardsData.data.providers.length} providers`);
+
+        for (const provider of rewardsData.data.providers) {
+            try {
+                if (!provider.address || !provider.rewards_by_block) continue;
+
+                // Get the first block key (there should only be one)
+                const blockKeys = Object.keys(provider.rewards_by_block);
+                if (blockKeys.length === 0) continue;
+
+                const blockData = provider.rewards_by_block[blockKeys[0]];
+                if (!blockData?.total) continue;
+
+                // Extract lava token
+                const lavaToken = blockData.total.tokens.find(
+                    token => token.display_denom === 'lava'
+                );
+
+                rewardsMap.set(provider.address, {
+                    lava: lavaToken ? lavaToken.display_amount : "0",
+                    usd: blockData.total.total_usd ?
+                        `$${blockData.total.total_usd.toFixed(2)}` : "$0.00"
+                });
+            } catch (error) {
+                logger.error(`Error processing rewards for provider ${provider.address}:`, error);
+            }
+        }
+
+        logger.info(`Created rewardsMap with ${rewardsMap.size} providers`);
+        return rewardsMap;
+    }
+
+    // Fix the interface_type issue in the processHealthData function
+    private processHealthData(healthData: any[]): Record<string, Record<string, HealthData | string>> {
+        const healthDataResult: Record<string, Record<string, HealthData | string>> = {};
+
+        for (const record of healthData) {
+            if (!record.provider || !record.spec) continue;
+
+            if (!healthDataResult[record.provider]) {
+                healthDataResult[record.provider] = {};
+            }
+
+            // Check if we already processed this provider & spec
+            if (healthDataResult[record.provider][record.spec] &&
+                typeof healthDataResult[record.provider][record.spec] !== 'string') {
+                continue;
+            }
+
+            // Get the interface type - fix for null/undefined issues
+            const interfaceType = record.interface_type || 'jsonrpc';
+
+            // Process health info
+            const healthInfo: HealthData = {
+                overallStatus: record.status?.toLowerCase() || 'unknown',
+                interfaces: [interfaceType], // Use the safe interfaceType value
+                lastTimestamp: record.timestamp?.toISOString() || new Date().toISOString(),
+                interfaceDetails: {
+                    [interfaceType]: { // Use the safe interfaceType as key
+                        status: record.status?.toLowerCase() || 'unknown',
+                        message: this.formatHealthMessage(record.message || ''),
+                        timestamp: record.timestamp?.toISOString() || new Date().toISOString(),
+                        region: record.region || 'Unknown'
+                    }
+                }
+            };
+
+            healthDataResult[record.provider][record.spec] = healthInfo;
+        }
+
+        return healthDataResult;
+    }
+
+    // Then update the fetchProviderHealth method to use this function:
     private async fetchProviderHealth(providerAddresses: string[] = []): Promise<Record<string, Record<string, HealthData | string>>> {
         // If no providers, return empty result immediately
         if (providerAddresses.length === 0) {
@@ -536,37 +620,7 @@ export class ProviderStakesAndDelegationResource extends RedisResourceBase<Provi
             .orderBy(desc(JsinfoSchema.providerHealth.timestamp)),
             'ProviderStakesAndDelegationResource::fetchProviderHealth');
 
-        // Process the health data...
-        const healthDataResult: Record<string, Record<string, HealthData | string>> = {};
-
-        for (const record of healthData) {
-            if (record.provider && record.spec) {
-                if (!healthDataResult[record.provider]) {
-                    healthDataResult[record.provider] = {};
-                }
-
-                // Create HealthData object from record
-                const healthInfo: HealthData = {
-                    overallStatus: record.status || 'unknown',
-                    interfaces: record.interface ? [record.interface] : [],
-                    lastTimestamp: record.timestamp.toISOString(),
-                    interfaceDetails: {}
-                };
-
-                if (record.interface) {
-                    healthInfo.interfaceDetails[record.interface] = {
-                        status: record.status || 'unknown',
-                        message: record.data || '',
-                        timestamp: record.timestamp.toISOString(),
-                        region: record.geolocation || 'unknown'
-                    };
-                }
-
-                healthDataResult[record.provider][record.spec] = healthInfo;
-            }
-        }
-
-        return healthDataResult;
+        return this.processHealthData(healthData);
     }
 
     // Process basic stakes data

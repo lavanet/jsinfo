@@ -13,7 +13,7 @@ import { ProviderMonikerService } from '@jsinfo/redis/resources/global/ProviderM
 import { GetAllProviderAvatars } from '@jsinfo/restRpc/GetProviderAvatar';
 import { IsMainnet } from '@jsinfo/utils/env';
 import { GetResourceResponse, MainnetProviderEstimatedRewardsGetService } from '@jsinfo/redis/resources/Mainnet/ProviderEstimatedRewards/MainnetProviderEstimatedRewardsGetResource';
-import { ActiveProvidersService } from '@jsinfo/redis/resources/active/ActiveProvidersResource';
+import { ActiveProvidersService } from '@jsinfo/redis/resources/index/ActiveProvidersResource';
 
 // Helper function to map status codes to readable strings
 function getStatusString(statusCode: number | null): string {
@@ -202,25 +202,49 @@ export class ProviderStakesAndDelegationResource extends RedisResourceBase<Provi
         try {
             logger.info("Fetching provider stakes and delegation data from source");
 
-            // Fetch active providers first
-            const activeProviders = await ActiveProvidersService.fetch();
+            let providerAddresses: string[] = [];
+            try {
+                const activeProviders = await ActiveProvidersService.fetch();
+                logger.info(`ActiveProvidersService returned ${activeProviders?.length || 0} providers`);
 
-            // Extract provider addresses
-            const providerAddresses = activeProviders && activeProviders.length > 0
-                ? activeProviders.map(p => p.provider).filter(p => !!p) as string[]
-                : [];
+                if (activeProviders && activeProviders.length > 0) {
+                    providerAddresses = activeProviders;
+                    logger.info(`First 5 provider addresses: ${providerAddresses.slice(0, 5).join(', ')}`);
+                }
 
-            if (providerAddresses.length === 0) {
-                logger.warn("No active providers found, fetching all providers");
+                // If we have no providers, retry once after a delay
+                if (providerAddresses.length === 0) {
+                    logger.warn("No providers found, waiting 5 seconds to retry...");
+                    await new Promise(resolve => setTimeout(resolve, 5000));
+                    const retryProviders = await ActiveProvidersService.fetch();
+                    if (retryProviders && retryProviders.length > 0) {
+                        providerAddresses = retryProviders;
+                        logger.info(`After retry, found ${providerAddresses.length} providers`);
+                    }
+                }
+
+                logger.info(`Fetching data for ${providerAddresses.length} providers`);
+            } catch (error) {
+                logger.error("Error fetching active providers:", error);
             }
 
-            // Fetch rewards data outside the Promise.all for clarity
+            // Fetch rewards data
             let rewardsData: GetResourceResponse | null = null;
             if (IsMainnet()) {
-                rewardsData = await MainnetProviderEstimatedRewardsGetService.fetch({ block: 'latest_distributed' });
+                try {
+                    logger.info("Fetching MainnetProviderEstimatedRewardsGetService data...");
+                    const startTime = Date.now();
+                    rewardsData = await MainnetProviderEstimatedRewardsGetService.fetch({ block: 'latest_distributed' });
+                    logger.info(`Fetched rewards data in ${Date.now() - startTime}ms for ${rewardsData?.data?.providers?.length || 0} providers`);
+                } catch (error) {
+                    logger.error("Error fetching rewards data:", error);
+                }
             }
 
-            // Then use these addresses in all the queries
+            // Additional debug logs
+            logger.info(`Starting Promise.all for various data fetches`);
+
+            const startTime = Date.now();
             const [
                 stakesRes,
                 stakesByStatusRes,
@@ -238,14 +262,21 @@ export class ProviderStakesAndDelegationResource extends RedisResourceBase<Provi
                 this.fetchProviderHealth(providerAddresses),
                 GetAllProviderAvatars()
             ]);
+            logger.info(`Promise.all completed in ${Date.now() - startTime}ms`);
 
-            // Convert map to object using a more direct approach
-            const avatars: Record<string, string> = {};
-            avatarMap.forEach((value, key) => {
-                avatars[key] = value;
-            });
+            // Log results from each data fetch
+            logger.info(`Data fetch results: 
+                stakesRes: ${stakesRes?.length || 0} items
+                stakesByStatusRes: ${stakesByStatusRes?.length || 0} items
+                detailedStakesRes: ${detailedStakesRes?.length || 0} items
+                aggRes90Days: ${aggRes90Days?.length || 0} items
+                aggRes30Days: ${aggRes30Days?.length || 0} items
+                healthData: ${Object.keys(providerHealthData || {}).length} providers
+                avatars: ${avatarMap?.size || 0} entries
+                rewardsData: ${rewardsData?.data?.providers?.length || 0} items
+            `);
 
-            // Add type assertions for the metrics maps
+            // Create usage metrics maps
             const aggRes90DaysMap = new Map<string, UsageMetrics90Days>(
                 aggRes90Days
                     .filter(item => item.provider !== null && item.specId !== null)
@@ -257,10 +288,38 @@ export class ProviderStakesAndDelegationResource extends RedisResourceBase<Provi
                     .map(item => [`${item.provider}:${item.specId}`, item as UsageMetrics30Days])
             );
 
+            // Map rewards data - THIS IS THE CRUCIAL FIX
+            const rewardsMap = new Map<string, RewardsData>();
+            if (rewardsData && rewardsData.data && rewardsData.data.providers) {
+                for (const provider of rewardsData.data.providers) {
+                    if (provider.address && provider.latest_reward) {
+                        rewardsMap.set(provider.address, {
+                            lava: provider.latest_reward.lava || "0",
+                            usd: provider.latest_reward.usd || "0"
+                        });
+                    }
+                }
+                logger.info(`Created rewardsMap with ${rewardsMap.size} providers`);
+            }
+
             // Process the basic stakes data
             const { stakeSum, delegationSum, providerStakes } = this.processBasicStakesData(stakesRes);
+            logger.info(`Processed basic stakes: stakeSum=${stakeSum}, delegationSum=${delegationSum}, providers=${Object.keys(providerStakes).length}`);
 
-            // Pass the health data to the detailed stakes processing
+            // Handle case with no data
+            if (!stakesRes || stakesRes.length === 0) {
+                logger.warn(`No stake data found, returning empty response`);
+                return this.createEmptyResponse();
+            }
+
+            // Convert map to object using a more direct approach
+            const avatars: Record<string, string> = {};
+            avatarMap.forEach((value, key) => {
+                avatars[key] = value;
+            });
+
+            // Pass the health data and rewards map to the detailed stakes processing
+            const detailedProcessingStart = Date.now();
             const { detailedProviderStakes, detailedSpecStakes } =
                 await this.processDetailedStakes(
                     detailedStakesRes,
@@ -268,19 +327,15 @@ export class ProviderStakesAndDelegationResource extends RedisResourceBase<Provi
                     aggRes30DaysMap,
                     providerHealthData,
                     avatars,
-                    rewardsData != null ? rewardsData.data : null
+                    rewardsMap // Pass rewardsMap to processDetailedStakes
                 );
+            logger.info(`processDetailedStakes completed in ${Date.now() - detailedProcessingStart}ms`);
 
-            // Generate summary 
+            // Generate summary
             const summary = this.createSummary(stakeSum, delegationSum, stakesByStatusRes);
 
-            // Handle case with no data
-            if (!stakesRes || stakesRes.length === 0) {
-                return this.createEmptyResponse();
-            }
-
             // Return complete data
-            return {
+            const result = {
                 stakeSum: stakeSum.toString(),
                 delegationSum: delegationSum.toString(),
                 stakeTotalSum: (stakeSum + delegationSum).toString(),
@@ -290,36 +345,56 @@ export class ProviderStakesAndDelegationResource extends RedisResourceBase<Provi
                 detailedSpecStakes
             };
 
+            logger.info(`Successfully built result with ${Object.keys(detailedProviderStakes || {}).length} providers and ${Object.keys(detailedSpecStakes || {}).length} specs`);
+            return result;
         } catch (error) {
             logger.error("Error fetching provider stakes and delegation:", error);
+            // Log the error stack trace for better debugging
+            if (error instanceof Error) {
+                logger.error(`Error stack: ${error.stack}`);
+            }
             return this.createEmptyResponse();
         }
     }
 
     // Fetch basic stakes data for backward compatibility
-    private async fetchBasicStakesData(providerAddresses: string[] = []): Promise<DetailedStakesResult[]> {
-        if (providerAddresses.length > 0) {
-            return []
-        }
+    private async fetchBasicStakesData(providerAddresses: string[]): Promise<DetailedStakesResult[]> {
+        logger.info(`fetchBasicStakesData called with ${providerAddresses.length} providers`);
 
         return await queryJsinfo(async (db) => {
-            return await db.select({
-                stake: JsinfoSchema.providerStakes.stake,
-                delegateTotal: JsinfoSchema.providerStakes.delegateTotal,
-                delegateCommission: JsinfoSchema.providerStakes.delegateCommission,
-                appliedHeight: JsinfoSchema.providerStakes.appliedHeight,
-                geolocation: JsinfoSchema.providerStakes.geolocation,
-                addons: JsinfoSchema.providerStakes.addons,
-                extensions: JsinfoSchema.providerStakes.extensions,
-                status: JsinfoSchema.providerStakes.status,
-                provider: JsinfoSchema.providerStakes.provider,
-                specId: JsinfoSchema.providerStakes.specId,
-                blockId: JsinfoSchema.providerStakes.blockId,
-                totalStake: sql<bigint>`(${JsinfoSchema.providerStakes.stake} + ${JsinfoSchema.providerStakes.delegateTotal}) as totalStake`,
-            })
-                .from(JsinfoSchema.providerStakes)
-                .where(inArray(JsinfoSchema.providerStakes.provider, providerAddresses))
-                .orderBy(desc(JsinfoSchema.providerStakes.stake));
+            try {
+                const query = db.select({
+                    stake: JsinfoSchema.providerStakes.stake,
+                    delegateTotal: JsinfoSchema.providerStakes.delegateTotal,
+                    delegateCommission: JsinfoSchema.providerStakes.delegateCommission,
+                    appliedHeight: JsinfoSchema.providerStakes.appliedHeight,
+                    geolocation: JsinfoSchema.providerStakes.geolocation,
+                    addons: JsinfoSchema.providerStakes.addons,
+                    extensions: JsinfoSchema.providerStakes.extensions,
+                    status: JsinfoSchema.providerStakes.status,
+                    provider: JsinfoSchema.providerStakes.provider,
+                    specId: JsinfoSchema.providerStakes.specId,
+                    blockId: JsinfoSchema.providerStakes.blockId,
+                    totalStake: sql<bigint>`(${JsinfoSchema.providerStakes.stake} + ${JsinfoSchema.providerStakes.delegateTotal}) as totalStake`,
+                })
+                    .from(JsinfoSchema.providerStakes);
+
+                // Only apply filter if we have addresses
+                if (providerAddresses.length > 0) {
+                    query.where(inArray(JsinfoSchema.providerStakes.provider, providerAddresses));
+                    logger.info(`Applied provider filter to stakes query`);
+                } else {
+                    logger.info(`No provider filter applied to stakes query`);
+                }
+
+                const results = await query.orderBy(desc(JsinfoSchema.providerStakes.stake));
+                logger.info(`fetchBasicStakesData returned ${results.length} results`);
+
+                return results;
+            } catch (error) {
+                logger.error(`Error in fetchBasicStakesData: ${error}`);
+                return [];
+            }
         }, 'ProviderStakesAndDelegationResource::fetchBasicStakesData');
     }
 
@@ -369,15 +444,9 @@ export class ProviderStakesAndDelegationResource extends RedisResourceBase<Provi
         );
     }
 
-    // Simplified fetch90DayMetrics using proper Drizzle ORM syntax
+    // Fix fetch90DayMetrics method
     private async fetch90DayMetrics(providerAddresses: string[] = []): Promise<UsageMetrics90Days[]> {
-        // Early return if no providers to check
-        if (providerAddresses.length === 0) {
-            return [];
-        }
-
-        const ninetyDaysAgo = new Date();
-        ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+        if (providerAddresses.length === 0) return [];
 
         return await queryJsinfo(db => db.select({
             provider: JsinfoProviderAgrSchema.aggDailyRelayPayments.provider,
@@ -388,7 +457,7 @@ export class ProviderStakesAndDelegationResource extends RedisResourceBase<Provi
             .from(JsinfoProviderAgrSchema.aggDailyRelayPayments)
             .where(
                 and(
-                    gt(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday, ninetyDaysAgo),
+                    sql`${JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday} > now() - interval '90 day'`,
                     inArray(JsinfoProviderAgrSchema.aggDailyRelayPayments.provider, providerAddresses)
                 )
             )
@@ -398,15 +467,9 @@ export class ProviderStakesAndDelegationResource extends RedisResourceBase<Provi
             ), 'ProviderStakesAndDelegationResource::fetch90DayMetrics');
     }
 
-    // Simplified fetch30DayMetrics using proper Drizzle ORM syntax
+    // Fix the fetch30DayMetrics method
     private async fetch30DayMetrics(providerAddresses: string[] = []): Promise<UsageMetrics30Days[]> {
-        // Early return if no providers to check
-        if (providerAddresses.length === 0) {
-            return [];
-        }
-
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        if (providerAddresses.length === 0) return [];
 
         return await queryJsinfo(db => db.select({
             provider: JsinfoProviderAgrSchema.aggDailyRelayPayments.provider,
@@ -417,7 +480,7 @@ export class ProviderStakesAndDelegationResource extends RedisResourceBase<Provi
             .from(JsinfoProviderAgrSchema.aggDailyRelayPayments)
             .where(
                 and(
-                    gt(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday, thirtyDaysAgo),
+                    sql`${JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday} > now() - interval '30 day'`,
                     inArray(JsinfoProviderAgrSchema.aggDailyRelayPayments.provider, providerAddresses)
                 )
             )
@@ -427,51 +490,60 @@ export class ProviderStakesAndDelegationResource extends RedisResourceBase<Provi
             ), 'ProviderStakesAndDelegationResource::fetch30DayMetrics');
     }
 
-    // Update the fetchProviderHealth method to simplify the data structure
+    // Fixed fetchProviderHealth method
     private async fetchProviderHealth(providerAddresses: string[] = []): Promise<ProviderHealthData> {
         const fourHoursAgo = new Date(Date.now() - 4 * 60 * 60 * 1000);
 
-        const healthResults = await queryJsinfo(db => db.select()
-            .from(JsinfoSchema.providerHealth)
-            .where(
-                sql`${JsinfoSchema.providerHealth.timestamp} >= ${fourHoursAgo} AND 
-                    ${JsinfoSchema.providerHealth.provider} IN (${providerAddresses.length > 0 ? providerAddresses : sql`SELECT provider FROM provider_stakes`})`
-            )
-            .orderBy(desc(JsinfoSchema.providerHealth.timestamp)),
-            'ProviderStakesAndDelegationResource::fetchProviderHealth'
-        );
+        try {
+            // Use proper SQL construction to avoid type mismatch
+            const healthResults = await queryJsinfo(db => {
+                let query = db.select()
+                    .from(JsinfoSchema.providerHealth)
+                    .where(gte(JsinfoSchema.providerHealth.timestamp, fourHoursAgo));
 
-        // Transform raw results into the expected structure
-        const healthData: ProviderHealthData = {};
-
-        for (const record of healthResults) {
-            if (record.provider && record.spec) {
-                if (!healthData[record.provider]) {
-                    healthData[record.provider] = {};
+                // Apply provider filter only if we have providers
+                if (providerAddresses.length > 0) {
+                    query = query.where(inArray(JsinfoSchema.providerHealth.provider, providerAddresses));
                 }
 
-                // Create HealthData object from record
-                const healthInfo: HealthData = {
-                    overallStatus: record.status || 'unknown',
-                    interfaces: record.interface ? [record.interface] : [],
-                    lastTimestamp: record.timestamp.toISOString(),
-                    interfaceDetails: {}
-                };
+                return query.orderBy(desc(JsinfoSchema.providerHealth.timestamp));
+            }, 'ProviderStakesAndDelegationResource::fetchProviderHealth');
 
-                if (record.interface) {
-                    healthInfo.interfaceDetails[record.interface] = {
-                        status: record.status || 'unknown',
-                        message: record.data || '',
-                        timestamp: record.timestamp.toISOString(),
-                        region: record.geolocation || 'unknown'
+            // Rest of the method remains the same
+            const healthData: ProviderHealthData = {};
+
+            for (const record of healthResults) {
+                if (record.provider && record.spec) {
+                    if (!healthData[record.provider]) {
+                        healthData[record.provider] = {};
+                    }
+
+                    // Create HealthData object from record
+                    const healthInfo: HealthData = {
+                        overallStatus: record.status || 'unknown',
+                        interfaces: record.interface ? [record.interface] : [],
+                        lastTimestamp: record.timestamp.toISOString(),
+                        interfaceDetails: {}
                     };
+
+                    if (record.interface) {
+                        healthInfo.interfaceDetails[record.interface] = {
+                            status: record.status || 'unknown',
+                            message: record.data || '',
+                            timestamp: record.timestamp.toISOString(),
+                            region: record.geolocation || 'unknown'
+                        };
+                    }
+
+                    healthData[record.provider][record.spec] = healthInfo;
                 }
-
-                healthData[record.provider][record.spec] = healthInfo;
             }
-        }
 
-        return healthData;
+            return healthData;
+        } catch (error) {
+            logger.error("Error fetching provider health:", error);
+            return {}; // Return empty object on error
+        }
     }
 
     // Process basic stakes data
@@ -502,44 +574,10 @@ export class ProviderStakesAndDelegationResource extends RedisResourceBase<Provi
         aggRes30DaysMap: Map<string, UsageMetrics30Days>,
         providerHealthMap: Record<string, Record<string, HealthData | string>>,
         avatars: Record<string, string>,
-        rewardsData: EstimatedRewardsData | null
+        rewardsMap: Map<string, RewardsData>
     ): Promise<{ detailedProviderStakes: Record<string, DetailedStakeInfo[]>; detailedSpecStakes: Record<string, DetailedStakeInfo[]> }> {
         const detailedProviderStakes: Record<string, DetailedStakeInfo[]> = {};
         const detailedSpecStakes: Record<string, DetailedStakeInfo[]> = {};
-
-        // Create a map for quick rewards lookups if data exists
-        const rewardsMap = new Map<string, RewardsData>();
-        if (rewardsData && rewardsData.data && rewardsData.data.providers) {
-            rewardsData.data.providers.forEach((provider) => {
-                if (provider.address && provider.rewards_by_block) {
-                    // Get the first block (there's typically only one)
-                    const blockKey = Object.keys(provider.rewards_by_block)[0];
-                    if (blockKey && provider.rewards_by_block[blockKey]?.total) {
-                        const totalRewards = provider.rewards_by_block[blockKey].total;
-
-                        // Extract LAVA amount
-                        const lavaToken = totalRewards.tokens.find(
-                            token => token.display_denom === 'lava'
-                        );
-
-                        // Create rewards data
-                        rewardsMap.set(provider.address, {
-                            lava: lavaToken ? lavaToken.display_amount : "0",
-                            usd: totalRewards.total_usd ? `$${totalRewards.total_usd.toFixed(2)}` : "$0.00"
-                        });
-                    }
-                }
-            });
-        }
-
-        // For non-mainnet environments
-        if (!IsMainnet()) {
-            // Set a dummy reward for non-mainnet
-            rewardsMap.set("example_provider", {
-                lava: "not-mainnet",
-                usd: "not-mainnet"
-            });
-        }
 
         for (const item of detailedStakesRes) {
             if (!item.provider || !IsMeaningfulText(item.provider) || !item.specId) continue;

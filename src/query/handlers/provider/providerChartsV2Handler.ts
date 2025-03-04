@@ -3,10 +3,10 @@
 import { FastifyReply, FastifyRequest, RouteShorthandOptions } from 'fastify';
 
 import * as JsinfoProviderAgrSchema from '@jsinfo/schemas/jsinfoSchema/providerRelayPaymentsAgregation';
-import { sql, gt, and, lt, desc, eq } from "drizzle-orm";
+import { sql, gt, and, lt, desc, eq, lte, gte } from "drizzle-orm";
 import { DateToISOString } from '@jsinfo/utils/date';
 import { RequestHandlerBase } from '@jsinfo/query/classes/RequestHandlerBase';
-import { GetAndValidateProviderAddressFromRequest, GetAndValidateSpecIdFromRequestWithAll } from '@jsinfo/query/utils/queryRequestArgParser';
+import { GetAndValidateProviderAddressFromRequest, GetAndValidateSpecIdFromRequestWithAll, GetDateRangeFromRequest } from '@jsinfo/query/utils/queryRequestArgParser';
 import { PgColumn } from 'drizzle-orm/pg-core';
 import { logger } from '@jsinfo/utils/logger';
 import { RedisCache } from '@jsinfo/redis/classes/RedisCache';
@@ -77,7 +77,7 @@ class ProviderChartsV2Data extends RequestHandlerBase<ProviderChartsV2Response> 
     }
 
     private async getAllAvailableSpecs(): Promise<string[]> {
-        const cacheKey = `provider-specs-chart-v2:${this.provider}`;
+        const cacheKey = `provider-specs-chart-all-specs:${this.provider}`;
 
         try {
             const cachedSpecs = await RedisCache.getArray(cacheKey);
@@ -86,9 +86,18 @@ class ProviderChartsV2Data extends RequestHandlerBase<ProviderChartsV2Response> 
                 return cachedSpecs;
             }
 
+            // Create date range for the last 3 months
+            const threeMonthsAgo = new Date();
+            threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+
             const query = queryJsinfo(db => db.select({ specId: JsinfoProviderAgrSchema.aggDailyRelayPayments.specId })
                 .from(JsinfoProviderAgrSchema.aggDailyRelayPayments)
-                .where(eq(JsinfoProviderAgrSchema.aggDailyRelayPayments.provider, this.provider))
+                .where(
+                    and(
+                        eq(JsinfoProviderAgrSchema.aggDailyRelayPayments.provider, this.provider),
+                        gte(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday, sql<string>`${threeMonthsAgo.toISOString()}`),
+                    )
+                )
                 .groupBy(JsinfoProviderAgrSchema.aggDailyRelayPayments.specId),
                 `ProviderChartsV2Data::getAllAvailableSpecs_${this.provider}`
             );
@@ -115,8 +124,8 @@ class ProviderChartsV2Data extends RequestHandlerBase<ProviderChartsV2Response> 
 
             let conditions = and(
                 eq(JsinfoProviderAgrSchema.aggDailyRelayPayments.provider, this.provider),
-                gt(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday, sql<Date>`${from}`),
-                lt(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday, sql<Date>`${to}`)
+                gte(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday, sql<string>`${from.toISOString()}`),
+                lte(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday, sql<string>`${to.toISOString()}`)
             );
 
             if (this.chain !== 'all') {

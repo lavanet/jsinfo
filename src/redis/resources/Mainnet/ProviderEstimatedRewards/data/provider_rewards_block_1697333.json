@@ -258,14 +258,14 @@
                 "tokens": [
                   {
                     "source_denom": "ibc/078EAF11288A47609FD894070CA8A1BFCEBD9E08745EA7030F95D7ADEE2E22CA",
-                    "resolved_amount": "1.7269211364561061e+22",
+                    "resolved_amount": "1.7269211364531766e+22",
                     "resolved_denom": "aevmos",
                     "display_denom": "evmos",
-                    "display_amount": "17269.211364561063",
+                    "display_amount": "17269.211364531766",
                     "value_usd": "$360.65"
                   }
                 ],
-                "total_usd": 360.6458161617676
+                "total_usd": 360.6458161611558
               }
             },
             {
@@ -321,10 +321,10 @@
             "tokens": [
               {
                 "source_denom": "ibc/078EAF11288A47609FD894070CA8A1BFCEBD9E08745EA7030F95D7ADEE2E22CA",
-                "resolved_amount": "1.7269211364561061e+22",
+                "resolved_amount": "1.7269211364531766e+22",
                 "resolved_denom": "aevmos",
                 "display_denom": "evmos",
-                "display_amount": "17269.211364561063",
+                "display_amount": "17269.211364531766",
                 "value_usd": "$360.65"
               },
               {
@@ -344,7 +344,7 @@
                 "value_usd": "$693.32"
               }
             ],
-            "total_usd": 1906.0085477848017
+            "total_usd": 1906.0085477841901
           },
           "recommended_block": "1697332"
         }
@@ -441,14 +441,14 @@
                 "tokens": [
                   {
                     "source_denom": "ibc/078EAF11288A47609FD894070CA8A1BFCEBD9E08745EA7030F95D7ADEE2E22CA",
-                    "resolved_amount": "1.1475033379008176e+21",
+                    "resolved_amount": "1.1475033378786382e+21",
                     "resolved_denom": "aevmos",
                     "display_denom": "evmos",
-                    "display_amount": "1147.5033379008175",
+                    "display_amount": "1147.5033378786381",
                     "value_usd": "$23.96"
                   }
                 ],
-                "total_usd": 23.96416773813178
+                "total_usd": 23.964167737668593
               }
             },
             {
@@ -536,10 +536,10 @@
             "tokens": [
               {
                 "source_denom": "ibc/078EAF11288A47609FD894070CA8A1BFCEBD9E08745EA7030F95D7ADEE2E22CA",
-                "resolved_amount": "1.1475033379008176e+21",
+                "resolved_amount": "1.1475033378786382e+21",
                 "resolved_denom": "aevmos",
                 "display_denom": "evmos",
-                "display_amount": "1147.5033379008175",
+                "display_amount": "1147.5033378786381",
                 "value_usd": "$23.96"
               },
               {
@@ -567,7 +567,7 @@
                 "value_usd": "$28.92"
               }
             ],
-            "total_usd": 139.88611368898043
+            "total_usd": 139.88611368851724
           },
           "recommended_block": "1697332"
         }
@@ -1202,6 +1202,141 @@
       }
     },
     {
+      "address": "lava@1hxtq2839nddsp7rw3rk9f7dnkvkqlezr5g3u89",
+      "rewards_by_block": {
+        "1697333": {
+          "info": [
+            {
+              "source": "Boost: COSMOSHUB",
+              "amount": {
+                "tokens": [
+                  {
+                    "source_denom": "ulava",
+                    "resolved_amount": "5987883.0",
+                    "resolved_denom": "ulava",
+                    "display_denom": "lava",
+                    "display_amount": "5.987883",
+                    "value_usd": "$0.45"
+                  }
+                ],
+                "total_usd": 0.446024409974971
+              }
+            },
+            {
+              "source": "Boost: EVMOS",
+              "amount": {
+                "tokens": [
+                  {
+                    "source_denom": "ulava",
+                    "resolved_amount": "853571196.0",
+                    "resolved_denom": "ulava",
+                    "display_denom": "lava",
+                    "display_amount": "853.571196",
+                    "value_usd": "$63.58"
+                  }
+                ],
+                "total_usd": 63.58066599957453
+              }
+            },
+            {
+              "source": "Pools: COSMOSHUB",
+              "amount": {
+                "tokens": [
+                  {
+                    "source_denom": "ibc/C09A0FFBA11313A32D42A58D820190E71E9D0D5AB3E841C0391EB9A623E07F4B",
+                    "resolved_amount": "3023295.0",
+                    "resolved_denom": "uatom",
+                    "display_denom": "atom",
+                    "display_amount": "3.023295",
+                    "value_usd": "$18.45"
+                  }
+                ],
+                "total_usd": 18.452169340922527
+              }
+            },
+            {
+              "source": "Pools: EVMOS",
+              "amount": {
+                "tokens": [
+                  {
+                    "source_denom": "ibc/078EAF11288A47609FD894070CA8A1BFCEBD9E08745EA7030F95D7ADEE2E22CA",
+                    "resolved_amount": "2.556982128733794e+21",
+                    "resolved_denom": "aevmos",
+                    "display_denom": "evmos",
+                    "display_amount": "2556.982128733794",
+                    "value_usd": "$53.40"
+                  }
+                ],
+                "total_usd": 53.39936417830115
+              }
+            },
+            {
+              "source": "Subscription: COSMOSHUB",
+              "amount": {
+                "tokens": [
+                  {
+                    "source_denom": "ulava",
+                    "resolved_amount": "837985.0",
+                    "resolved_denom": "ulava",
+                    "display_denom": "lava",
+                    "display_amount": "0.837985",
+                    "value_usd": "$0.06"
+                  }
+                ],
+                "total_usd": 0.062419684084153965
+              }
+            },
+            {
+              "source": "Subscription: EVMOS",
+              "amount": {
+                "tokens": [
+                  {
+                    "source_denom": "ulava",
+                    "resolved_amount": "40548789.0",
+                    "resolved_denom": "ulava",
+                    "display_denom": "lava",
+                    "display_amount": "40.548789",
+                    "value_usd": "$3.02"
+                  }
+                ],
+                "total_usd": 3.0203912950411014
+              }
+            }
+          ],
+          "total": {
+            "tokens": [
+              {
+                "source_denom": "ibc/078EAF11288A47609FD894070CA8A1BFCEBD9E08745EA7030F95D7ADEE2E22CA",
+                "resolved_amount": "2.556982128733794e+21",
+                "resolved_denom": "aevmos",
+                "display_denom": "evmos",
+                "display_amount": "2556.982128733794",
+                "value_usd": "$53.40"
+              },
+              {
+                "source_denom": "ibc/C09A0FFBA11313A32D42A58D820190E71E9D0D5AB3E841C0391EB9A623E07F4B",
+                "resolved_amount": "3023295.0",
+                "resolved_denom": "uatom",
+                "display_denom": "atom",
+                "display_amount": "3.023295",
+                "value_usd": "$18.45"
+              },
+              {
+                "source_denom": "ulava",
+                "resolved_amount": "900945853.0",
+                "resolved_denom": "ulava",
+                "display_denom": "lava",
+                "display_amount": "900.945853",
+                "value_usd": "$67.11"
+              }
+            ],
+            "total_usd": 138.96103490789844
+          },
+          "recommended_block": "1697332"
+        }
+      }
+    },
+    {
       "address": "lava@13lsmw6g4m5c7e55uua5apz7syuk7qvse5g4z33",
       "rewards_by_block": {
         "1697333": {
@@ -1356,14 +1491,14 @@
                 "tokens": [
                   {
                     "source_denom": "ibc/078EAF11288A47609FD894070CA8A1BFCEBD9E08745EA7030F95D7ADEE2E22CA",
-                    "resolved_amount": "1.1560309081225048e+21",
+                    "resolved_amount": "1.1560309081170624e+21",
                     "resolved_denom": "aevmos",
                     "display_denom": "evmos",
-                    "display_amount": "1156.0309081225048",
+                    "display_amount": "1156.0309081170624",
                     "value_usd": "$24.14"
                   }
                 ],
-                "total_usd": 24.142255344887722
+                "total_usd": 24.142255344774064
               }
             },
             {
@@ -1372,14 +1507,14 @@
                 "tokens": [
                   {
                     "source_denom": "ibc/078EAF11288A47609FD894070CA8A1BFCEBD9E08745EA7030F95D7ADEE2E22CA",
-                    "resolved_amount": "3.3894021013524736e+21",
+                    "resolved_amount": "3.3894021013365174e+21",
                     "resolved_denom": "aevmos",
                     "display_denom": "evmos",
-                    "display_amount": "3389.4021013524734",
+                    "display_amount": "3389.4021013365173",
                     "value_usd": "$70.78"
                   }
                 ],
-                "total_usd": 70.78341108564817
+                "total_usd": 70.78341108531495
               }
             },
             {
@@ -1531,10 +1666,10 @@
             "tokens": [
               {
                 "source_denom": "ibc/078EAF11288A47609FD894070CA8A1BFCEBD9E08745EA7030F95D7ADEE2E22CA",
-                "resolved_amount": "4.545433009474978e+21",
+                "resolved_amount": "4.54543300945358e+21",
                 "resolved_denom": "aevmos",
                 "display_denom": "evmos",
-                "display_amount": "4545.4330094749785",
+                "display_amount": "4545.43300945358",
                 "value_usd": "$94.93"
               },
               {
@@ -1562,7 +1697,7 @@
                 "value_usd": "$44.46"
               }
             ],
-            "total_usd": 810.5228807463345
+            "total_usd": 810.5228807458876
           },
           "recommended_block": "1697332"
         }
@@ -1723,14 +1858,14 @@
                 "tokens": [
                   {
                     "source_denom": "ibc/078EAF11288A47609FD894070CA8A1BFCEBD9E08745EA7030F95D7ADEE2E22CA",
-                    "resolved_amount": "2.0403154977267625e+22",
+                    "resolved_amount": "2.0403154977451323e+22",
                     "resolved_denom": "aevmos",
                     "display_denom": "evmos",
-                    "display_amount": "20403.154977267626",
+                    "display_amount": "20403.154977451322",
                     "value_usd": "$426.09"
                   }
                 ],
-                "total_usd": 426.0942971693567
+                "total_usd": 426.094297173193
               }
             },
             {
@@ -1739,14 +1874,14 @@
                 "tokens": [
                   {
                     "source_denom": "ibc/078EAF11288A47609FD894070CA8A1BFCEBD9E08745EA7030F95D7ADEE2E22CA",
-                    "resolved_amount": "3.428712135881863e+21",
+                    "resolved_amount": "3.4287121359127335e+21",
                     "resolved_denom": "aevmos",
                     "display_denom": "evmos",
-                    "display_amount": "3428.712135881863",
+                    "display_amount": "3428.7121359127336",
                     "value_usd": "$71.60"
                   }
                 ],
-                "total_usd": 71.60435184472026
+                "total_usd": 71.60435184536495
               }
             },
             {
@@ -1771,14 +1906,14 @@
                 "tokens": [
                   {
                     "source_denom": "ibc/4F393C3FCA4190C0A6756CE7F6D897D5D1BE57D6CCB80D0BC87393566A7B6602",
-                    "resolved_amount": "986621546.0",
+                    "resolved_amount": "986621545.0",
                     "resolved_denom": "ustars",
                     "display_denom": "stars",
-                    "display_amount": "986.621546",
+                    "display_amount": "986.621545",
                     "value_usd": "$0.58"
                   }
                 ],
-                "total_usd": 0.5811452422465907
+                "total_usd": 0.5811452416575652
               }
             },
             {
@@ -1866,18 +2001,18 @@
             "tokens": [
               {
                 "source_denom": "ibc/078EAF11288A47609FD894070CA8A1BFCEBD9E08745EA7030F95D7ADEE2E22CA",
-                "resolved_amount": "2.3831867113149487e+22",
+                "resolved_amount": "2.3831867113364055e+22",
                 "resolved_denom": "aevmos",
                 "display_denom": "evmos",
-                "display_amount": "23831.86711314949",
+                "display_amount": "23831.867113364056",
                 "value_usd": "$497.70"
               },
               {
                 "source_denom": "ibc/4F393C3FCA4190C0A6756CE7F6D897D5D1BE57D6CCB80D0BC87393566A7B6602",
-                "resolved_amount": "2233754123.0",
+                "resolved_amount": "2233754122.0",
                 "resolved_denom": "ustars",
                 "display_denom": "stars",
-                "display_amount": "2233.754123",
+                "display_amount": "2233.754122",
                 "value_usd": "$1.32"
               },
               {
@@ -1897,7 +2032,7 @@
                 "value_usd": "$416.78"
               }
             ],
-            "total_usd": 975.1662006391623
+            "total_usd": 975.1662006430543
           },
           "recommended_block": "1697332"
         }
@@ -2279,14 +2414,14 @@
                 "tokens": [
                   {
                     "source_denom": "ibc/078EAF11288A47609FD894070CA8A1BFCEBD9E08745EA7030F95D7ADEE2E22CA",
-                    "resolved_amount": "2.2815590643726304e+22",
+                    "resolved_amount": "2.2815590643655986e+22",
                     "resolved_denom": "aevmos",
                     "display_denom": "evmos",
-                    "display_amount": "22815.590643726304",
+                    "display_amount": "22815.590643655985",
                     "value_usd": "$476.47"
                   }
                 ],
-                "total_usd": 476.474989807886
+                "total_usd": 476.47498980641745
               }
             },
             {
@@ -2295,14 +2430,14 @@
                 "tokens": [
                   {
                     "source_denom": "ibc/078EAF11288A47609FD894070CA8A1BFCEBD9E08745EA7030F95D7ADEE2E22CA",
-                    "resolved_amount": "5.079407519772511e+21",
+                    "resolved_amount": "5.079407519756857e+21",
                     "resolved_denom": "aevmos",
                     "display_denom": "evmos",
-                    "display_amount": "5079.407519772511",
+                    "display_amount": "5079.407519756856",
                     "value_usd": "$106.08"
                   }
                 ],
-                "total_usd": 106.0770542391898
+                "total_usd": 106.07705423886289
               }
             },
             {
@@ -2454,10 +2589,10 @@
             "tokens": [
               {
                 "source_denom": "ibc/078EAF11288A47609FD894070CA8A1BFCEBD9E08745EA7030F95D7ADEE2E22CA",
-                "resolved_amount": "2.789499816349881e+22",
+                "resolved_amount": "2.7894998163412845e+22",
                 "resolved_denom": "aevmos",
                 "display_denom": "evmos",
-                "display_amount": "27894.99816349881",
+                "display_amount": "27894.998163412845",
                 "value_usd": "$582.55"
               },
               {
@@ -2485,7 +2620,118 @@
                 "value_usd": "$677.10"
               }
             ],
-            "total_usd": 2112.4181909909935
+            "total_usd": 2112.418190989198
+          },
+          "recommended_block": "1697332"
+        }
+      }
+    },
+    {
+      "address": "lava@18khd75e8gwpsqplzhfxf84sdmrzgymqpztujcr",
+      "rewards_by_block": {
+        "1697333": {
+          "info": [
+            {
+              "source": "Boost: EVMOS",
+              "amount": {
+                "tokens": [
+                  {
+                    "source_denom": "ulava",
+                    "resolved_amount": "12045982.0",
+                    "resolved_denom": "ulava",
+                    "display_denom": "lava",
+                    "display_amount": "12.045982",
+                    "value_usd": "$0.90"
+                  }
+                ],
+                "total_usd": 0.8972790574096257
+              }
+            },
+            {
+              "source": "Boost: LAVA",
+              "amount": {
+                "tokens": [
+                  {
+                    "source_denom": "ulava",
+                    "resolved_amount": "1465656.0",
+                    "resolved_denom": "ulava",
+                    "display_denom": "lava",
+                    "display_amount": "1.465656",
+                    "value_usd": "$0.11"
+                  }
+                ],
+                "total_usd": 0.109173534724422
+              }
+            },
+            {
+              "source": "Pools: EVMOS",
+              "amount": {
+                "tokens": [
+                  {
+                    "source_denom": "ibc/078EAF11288A47609FD894070CA8A1BFCEBD9E08745EA7030F95D7ADEE2E22CA",
+                    "resolved_amount": "7.719583210470911e+17",
+                    "resolved_denom": "aevmos",
+                    "display_denom": "evmos",
+                    "display_amount": "0.7719583210470911",
+                    "value_usd": "$0.02"
+                  }
+                ],
+                "total_usd": 0.016121381159780148
+              }
+            },
+            {
+              "source": "Subscription: EVMOS",
+              "amount": {
+                "tokens": [
+                  {
+                    "source_denom": "ulava",
+                    "resolved_amount": "2240555.0",
+                    "resolved_denom": "ulava",
+                    "display_denom": "lava",
+                    "display_amount": "2.240555",
+                    "value_usd": "$0.17"
+                  }
+                ],
+                "total_usd": 0.16689407957561483
+              }
+            },
+            {
+              "source": "Subscription: LAVA",
+              "amount": {
+                "tokens": [
+                  {
+                    "source_denom": "ulava",
+                    "resolved_amount": "242964.0",
+                    "resolved_denom": "ulava",
+                    "display_denom": "lava",
+                    "display_amount": "0.242964",
+                    "value_usd": "$0.02"
+                  }
+                ],
+                "total_usd": 0.01809786108799368
+              }
+            }
+          ],
+          "total": {
+            "tokens": [
+              {
+                "source_denom": "ibc/078EAF11288A47609FD894070CA8A1BFCEBD9E08745EA7030F95D7ADEE2E22CA",
+                "resolved_amount": "7.719583210470911e+17",
+                "resolved_denom": "aevmos",
+                "display_denom": "evmos",
+                "display_amount": "0.7719583210470911",
+                "value_usd": "$0.02"
+              },
+              {
+                "source_denom": "ulava",
+                "resolved_amount": "15995157.0",
+                "resolved_denom": "ulava",
+                "display_denom": "lava",
+                "display_amount": "15.995157",
+                "value_usd": "$1.19"
+              }
+            ],
+            "total_usd": 1.2075659139574364
           },
           "recommended_block": "1697332"
         }
@@ -2566,14 +2812,14 @@
                 "tokens": [
                   {
                     "source_denom": "ibc/4F393C3FCA4190C0A6756CE7F6D897D5D1BE57D6CCB80D0BC87393566A7B6602",
-                    "resolved_amount": "4713749107.0",
+                    "resolved_amount": "4713749106.0",
                     "resolved_denom": "ustars",
                     "display_denom": "stars",
-                    "display_amount": "4713.749107",
+                    "display_amount": "4713.749106",
                     "value_usd": "$2.78"
                   }
                 ],
-                "total_usd": 2.776518390241161
+                "total_usd": 2.7765183896521357
               }
             },
             {
@@ -2629,10 +2875,10 @@
             "tokens": [
               {
                 "source_denom": "ibc/4F393C3FCA4190C0A6756CE7F6D897D5D1BE57D6CCB80D0BC87393566A7B6602",
-                "resolved_amount": "4713749107.0",
+                "resolved_amount": "4713749106.0",
                 "resolved_denom": "ustars",
                 "display_denom": "stars",
-                "display_amount": "4713.749107",
+                "display_amount": "4713.749106",
                 "value_usd": "$2.78"
               },
               {
@@ -2652,118 +2898,7 @@
                 "value_usd": "$10.07"
               }
             ],
-            "total_usd": 68.71529198540341
-          },
-          "recommended_block": "1697332"
-        }
-      }
-    },
-    {
-      "address": "lava@18khd75e8gwpsqplzhfxf84sdmrzgymqpztujcr",
-      "rewards_by_block": {
-        "1697333": {
-          "info": [
-            {
-              "source": "Boost: EVMOS",
-              "amount": {
-                "tokens": [
-                  {
-                    "source_denom": "ulava",
-                    "resolved_amount": "12045982.0",
-                    "resolved_denom": "ulava",
-                    "display_denom": "lava",
-                    "display_amount": "12.045982",
-                    "value_usd": "$0.90"
-                  }
-                ],
-                "total_usd": 0.8972790574096257
-              }
-            },
-            {
-              "source": "Boost: LAVA",
-              "amount": {
-                "tokens": [
-                  {
-                    "source_denom": "ulava",
-                    "resolved_amount": "1465656.0",
-                    "resolved_denom": "ulava",
-                    "display_denom": "lava",
-                    "display_amount": "1.465656",
-                    "value_usd": "$0.11"
-                  }
-                ],
-                "total_usd": 0.109173534724422
-              }
-            },
-            {
-              "source": "Pools: EVMOS",
-              "amount": {
-                "tokens": [
-                  {
-                    "source_denom": "ibc/078EAF11288A47609FD894070CA8A1BFCEBD9E08745EA7030F95D7ADEE2E22CA",
-                    "resolved_amount": "7.719583211701167e+17",
-                    "resolved_denom": "aevmos",
-                    "display_denom": "evmos",
-                    "display_amount": "0.7719583211701168",
-                    "value_usd": "$0.02"
-                  }
-                ],
-                "total_usd": 0.016121381162349388
-              }
-            },
-            {
-              "source": "Subscription: EVMOS",
-              "amount": {
-                "tokens": [
-                  {
-                    "source_denom": "ulava",
-                    "resolved_amount": "2240555.0",
-                    "resolved_denom": "ulava",
-                    "display_denom": "lava",
-                    "display_amount": "2.240555",
-                    "value_usd": "$0.17"
-                  }
-                ],
-                "total_usd": 0.16689407957561483
-              }
-            },
-            {
-              "source": "Subscription: LAVA",
-              "amount": {
-                "tokens": [
-                  {
-                    "source_denom": "ulava",
-                    "resolved_amount": "242964.0",
-                    "resolved_denom": "ulava",
-                    "display_denom": "lava",
-                    "display_amount": "0.242964",
-                    "value_usd": "$0.02"
-                  }
-                ],
-                "total_usd": 0.01809786108799368
-              }
-            }
-          ],
-          "total": {
-            "tokens": [
-              {
-                "source_denom": "ibc/078EAF11288A47609FD894070CA8A1BFCEBD9E08745EA7030F95D7ADEE2E22CA",
-                "resolved_amount": "7.719583211701167e+17",
-                "resolved_denom": "aevmos",
-                "display_denom": "evmos",
-                "display_amount": "0.7719583211701168",
-                "value_usd": "$0.02"
-              },
-              {
-                "source_denom": "ulava",
-                "resolved_amount": "15995157.0",
-                "resolved_denom": "ulava",
-                "display_denom": "lava",
-                "display_amount": "15.995157",
-                "value_usd": "$1.19"
-              }
-            ],
-            "total_usd": 1.2075659139600055
+            "total_usd": 68.7152919848144
           },
           "recommended_block": "1697332"
         }
@@ -2819,61 +2954,6 @@
               }
             ],
             "total_usd": 0.3684313314899693
-          },
-          "recommended_block": "1697332"
-        }
-      }
-    },
-    {
-      "address": "lava@1eh9mh9748rcknzlfceyxdnw6267t4wv0qcxeul",
-      "rewards_by_block": {
-        "1697333": {
-          "info": [
-            {
-              "source": "Boost: LAVA",
-              "amount": {
-                "tokens": [
-                  {
-                    "source_denom": "ulava",
-                    "resolved_amount": "22483097.0",
-                    "resolved_denom": "ulava",
-                    "display_denom": "lava",
-                    "display_amount": "22.483097",
-                    "value_usd": "$1.67"
-                  }
-                ],
-                "total_usd": 1.674717103496351
-              }
-            },
-            {
-              "source": "Subscription: LAVA",
-              "amount": {
-                "tokens": [
-                  {
-                    "source_denom": "ulava",
-                    "resolved_amount": "3243835.0",
-                    "resolved_denom": "ulava",
-                    "display_denom": "lava",
-                    "display_amount": "3.243835",
-                    "value_usd": "$0.24"
-                  }
-                ],
-                "total_usd": 0.24162622949231974
-              }
-            }
-          ],
-          "total": {
-            "tokens": [
-              {
-                "source_denom": "ulava",
-                "resolved_amount": "25726932.0",
-                "resolved_denom": "ulava",
-                "display_denom": "lava",
-                "display_amount": "25.726932",
-                "value_usd": "$1.92"
-              }
-            ],
-            "total_usd": 1.916343332988671
           },
           "recommended_block": "1697332"
         }
@@ -3240,14 +3320,14 @@
                 "tokens": [
                   {
                     "source_denom": "ibc/078EAF11288A47609FD894070CA8A1BFCEBD9E08745EA7030F95D7ADEE2E22CA",
-                    "resolved_amount": "1.6372260272390348e+21",
+                    "resolved_amount": "1.6372260272401104e+21",
                     "resolved_denom": "aevmos",
                     "display_denom": "evmos",
-                    "display_amount": "1637.226027239035",
+                    "display_amount": "1637.2260272401104",
                     "value_usd": "$34.19"
                   }
                 ],
-                "total_usd": 34.19141177729849
+                "total_usd": 34.19141177732095
               }
             },
             {
@@ -3256,14 +3336,14 @@
                 "tokens": [
                   {
                     "source_denom": "ibc/078EAF11288A47609FD894070CA8A1BFCEBD9E08745EA7030F95D7ADEE2E22CA",
-                    "resolved_amount": "4.6300014642503546e+21",
+                    "resolved_amount": "4.6300014642533965e+21",
                     "resolved_denom": "aevmos",
                     "display_denom": "evmos",
-                    "display_amount": "4630.001464250355",
+                    "display_amount": "4630.001464253397",
                     "value_usd": "$96.69"
                   }
                 ],
-                "total_usd": 96.69177252247904
+                "total_usd": 96.69177252254258
               }
             },
             {
@@ -3399,10 +3479,10 @@
             "tokens": [
               {
                 "source_denom": "ibc/078EAF11288A47609FD894070CA8A1BFCEBD9E08745EA7030F95D7ADEE2E22CA",
-                "resolved_amount": "6.26722749148939e+21",
+                "resolved_amount": "6.267227491493507e+21",
                 "resolved_denom": "aevmos",
                 "display_denom": "evmos",
-                "display_amount": "6267.22749148939",
+                "display_amount": "6267.227491493507",
                 "value_usd": "$130.88"
               },
               {
@@ -3430,7 +3510,7 @@
                 "value_usd": "$50.61"
               }
             ],
-            "total_usd": 813.4210348919163
+            "total_usd": 813.4210348920024
           },
           "recommended_block": "1697332"
         }
@@ -3844,14 +3924,14 @@
                 "tokens": [
                   {
                     "source_denom": "ibc/078EAF11288A47609FD894070CA8A1BFCEBD9E08745EA7030F95D7ADEE2E22CA",
-                    "resolved_amount": "1.036716417539799e+21",
+                    "resolved_amount": "1.0367164176839032e+21",
                     "resolved_denom": "aevmos",
                     "display_denom": "evmos",
-                    "display_amount": "1036.716417539799",
+                    "display_amount": "1036.7164176839033",
                     "value_usd": "$21.65"
                   }
                 ],
-                "total_usd": 21.650521881920803
+                "total_usd": 21.650521884930235
               }
             },
             {
@@ -3860,14 +3940,14 @@
                 "tokens": [
                   {
                     "source_denom": "ibc/078EAF11288A47609FD894070CA8A1BFCEBD9E08745EA7030F95D7ADEE2E22CA",
-                    "resolved_amount": "3.390629784287564e+21",
+                    "resolved_amount": "3.3906297847588633e+21",
                     "resolved_denom": "aevmos",
                     "display_denom": "evmos",
-                    "display_amount": "3390.629784287564",
+                    "display_amount": "3390.6297847588635",
                     "value_usd": "$70.81"
                   }
                 ],
-                "total_usd": 70.80904970369312
+                "total_usd": 70.80904971353563
               }
             },
             {
@@ -3955,10 +4035,10 @@
             "tokens": [
               {
                 "source_denom": "ibc/078EAF11288A47609FD894070CA8A1BFCEBD9E08745EA7030F95D7ADEE2E22CA",
-                "resolved_amount": "4.4273462018273627e+21",
+                "resolved_amount": "4.427346202442767e+21",
                 "resolved_denom": "aevmos",
                 "display_denom": "evmos",
-                "display_amount": "4427.346201827363",
+                "display_amount": "4427.346202442766",
                 "value_usd": "$92.46"
               },
               {
@@ -3978,62 +4058,7 @@
                 "value_usd": "$37.04"
               }
             ],
-            "total_usd": 260.18726022293305
-          },
-          "recommended_block": "1697332"
-        }
-      }
-    },
-    {
-      "address": "lava@1fzm7nv3e9y3qq76l4ftmsx99re8hmfjjsgen8q",
-      "rewards_by_block": {
-        "1697333": {
-          "info": [
-            {
-              "source": "Boost: LAVA",
-              "amount": {
-                "tokens": [
-                  {
-                    "source_denom": "ulava",
-                    "resolved_amount": "8143080.0",
-                    "resolved_denom": "ulava",
-                    "display_denom": "lava",
-                    "display_amount": "8.14308",
-                    "value_usd": "$0.61"
-                  }
-                ],
-                "total_usd": 0.6065603573715429
-              }
-            },
-            {
-              "source": "Subscription: LAVA",
-              "amount": {
-                "tokens": [
-                  {
-                    "source_denom": "ulava",
-                    "resolved_amount": "1159706.0",
-                    "resolved_denom": "ulava",
-                    "display_denom": "lava",
-                    "display_amount": "1.159706",
-                    "value_usd": "$0.09"
-                  }
-                ],
-                "total_usd": 0.08638398318645066
-              }
-            }
-          ],
-          "total": {
-            "tokens": [
-              {
-                "source_denom": "ulava",
-                "resolved_amount": "9302786.0",
-                "resolved_denom": "ulava",
-                "display_denom": "lava",
-                "display_amount": "9.302786",
-                "value_usd": "$0.69"
-              }
-            ],
-            "total_usd": 0.6929443405579936
+            "total_usd": 260.187260235785
           },
           "recommended_block": "1697332"
         }
@@ -4050,14 +4075,14 @@
                 "tokens": [
                   {
                     "source_denom": "ulava",
-                    "resolved_amount": "4462022.0",
+                    "resolved_amount": "4462028.0",
                     "resolved_denom": "ulava",
                     "display_denom": "lava",
-                    "display_amount": "4.462022",
+                    "display_amount": "4.462028",
                     "value_usd": "$0.33"
                   }
                 ],
-                "total_usd": 0.3323663354553421
+                "total_usd": 0.3323667823823211
               }
             },
             {
@@ -4137,14 +4162,14 @@
               },
               {
                 "source_denom": "ulava",
-                "resolved_amount": "16120110.0",
+                "resolved_amount": "16120116.0",
                 "resolved_denom": "ulava",
                 "display_denom": "lava",
-                "display_amount": "16.12011",
+                "display_amount": "16.120116",
                 "value_usd": "$1.20"
               }
             ],
-            "total_usd": 11.988383008537095
+            "total_usd": 11.988383455464074
           },
           "recommended_block": "1697332"
         }
@@ -4382,14 +4407,14 @@
                 "tokens": [
                   {
                     "source_denom": "ulava",
-                    "resolved_amount": "714777138.0",
+                    "resolved_amount": "714777139.0",
                     "resolved_denom": "ulava",
                     "display_denom": "lava",
-                    "display_amount": "714.777138",
+                    "display_amount": "714.777139",
                     "value_usd": "$53.24"
                   }
                 ],
-                "total_usd": 53.2421978251827
+                "total_usd": 53.24219789967053
               }
             },
             {
@@ -4510,14 +4535,14 @@
                 "tokens": [
                   {
                     "source_denom": "ibc/078EAF11288A47609FD894070CA8A1BFCEBD9E08745EA7030F95D7ADEE2E22CA",
-                    "resolved_amount": "1.4236589660593376e+21",
+                    "resolved_amount": "1.4236589660508174e+21",
                     "resolved_denom": "aevmos",
                     "display_denom": "evmos",
-                    "display_amount": "1423.6589660593377",
+                    "display_amount": "1423.6589660508175",
                     "value_usd": "$29.73"
                   }
                 ],
-                "total_usd": 29.73133161159489
+                "total_usd": 29.731331611416955
               }
             },
             {
@@ -4526,14 +4551,14 @@
                 "tokens": [
                   {
                     "source_denom": "ibc/078EAF11288A47609FD894070CA8A1BFCEBD9E08745EA7030F95D7ADEE2E22CA",
-                    "resolved_amount": "2.7283378410745275e+21",
+                    "resolved_amount": "2.7283378410581986e+21",
                     "resolved_denom": "aevmos",
                     "display_denom": "evmos",
-                    "display_amount": "2728.3378410745277",
+                    "display_amount": "2728.3378410581986",
                     "value_usd": "$56.98"
                   }
                 ],
-                "total_usd": 56.97791327510153
+                "total_usd": 56.97791327476052
               }
             },
             {
@@ -4701,10 +4726,10 @@
             "tokens": [
               {
                 "source_denom": "ibc/078EAF11288A47609FD894070CA8A1BFCEBD9E08745EA7030F95D7ADEE2E22CA",
-                "resolved_amount": "4.1519968071338647e+21",
+                "resolved_amount": "4.151996807109016e+21",
                 "resolved_denom": "aevmos",
                 "display_denom": "evmos",
-                "display_amount": "4151.996807133864",
+                "display_amount": "4151.996807109016",
                 "value_usd": "$86.71"
               },
               {
@@ -4725,14 +4750,14 @@
               },
               {
                 "source_denom": "ulava",
-                "resolved_amount": "1030149735.0",
+                "resolved_amount": "1030149736.0",
                 "resolved_denom": "ulava",
                 "display_denom": "lava",
-                "display_amount": "1030.149735",
+                "display_amount": "1030.149736",
                 "value_usd": "$76.73"
               }
             ],
-            "total_usd": 759.5653976781424
+            "total_usd": 759.5653977521114
           },
           "recommended_block": "1697332"
         }
@@ -4931,14 +4956,14 @@
                 "tokens": [
                   {
                     "source_denom": "ulava",
-                    "resolved_amount": "6161178231.0",
+                    "resolved_amount": "6161178230.0",
                     "resolved_denom": "ulava",
                     "display_denom": "lava",
-                    "display_amount": "6161.178231",
+                    "display_amount": "6161.17823",
                     "value_usd": "$458.93"
                   }
                 ],
-                "total_usd": 458.93279565288947
+                "total_usd": 458.9327955784017
               }
             },
             {
@@ -4995,14 +5020,14 @@
                 "tokens": [
                   {
                     "source_denom": "ibc/078EAF11288A47609FD894070CA8A1BFCEBD9E08745EA7030F95D7ADEE2E22CA",
-                    "resolved_amount": "1.1923029742281046e+22",
+                    "resolved_amount": "1.1923029742270531e+22",
                     "resolved_denom": "aevmos",
                     "display_denom": "evmos",
-                    "display_amount": "11923.029742281047",
+                    "display_amount": "11923.029742270532",
                     "value_usd": "$249.00"
                   }
                 ],
-                "total_usd": 248.9975194437764
+                "total_usd": 248.9975194435568
               }
             },
             {
@@ -5090,10 +5115,10 @@
             "tokens": [
               {
                 "source_denom": "ibc/078EAF11288A47609FD894070CA8A1BFCEBD9E08745EA7030F95D7ADEE2E22CA",
-                "resolved_amount": "1.1923029742281046e+22",
+                "resolved_amount": "1.1923029742270531e+22",
                 "resolved_denom": "aevmos",
                 "display_denom": "evmos",
-                "display_amount": "11923.029742281047",
+                "display_amount": "11923.029742270532",
                 "value_usd": "$249.00"
               },
               {
@@ -5114,14 +5139,14 @@
               },
               {
                 "source_denom": "ulava",
-                "resolved_amount": "8510039021.0",
+                "resolved_amount": "8510039020.0",
                 "resolved_denom": "ulava",
                 "display_denom": "lava",
-                "display_amount": "8510.039021",
+                "display_amount": "8510.03902",
                 "value_usd": "$633.89"
               }
             ],
-            "total_usd": 1586.805349846929
+            "total_usd": 1586.8053497722217
           },
           "recommended_block": "1697332"
         }
@@ -5399,14 +5424,14 @@
                 "tokens": [
                   {
                     "source_denom": "ulava",
-                    "resolved_amount": "3631553346.0",
+                    "resolved_amount": "3631553344.0",
                     "resolved_denom": "ulava",
                     "display_denom": "lava",
-                    "display_amount": "3631.553346",
+                    "display_amount": "3631.553344",
                     "value_usd": "$270.51"
                   }
                 ],
-                "total_usd": 270.50652767301597
+                "total_usd": 270.5065275240403
               }
             },
             {
@@ -5447,14 +5472,14 @@
                 "tokens": [
                   {
                     "source_denom": "ibc/078EAF11288A47609FD894070CA8A1BFCEBD9E08745EA7030F95D7ADEE2E22CA",
-                    "resolved_amount": "1.473865265041448e+22",
+                    "resolved_amount": "1.4738652650587778e+22",
                     "resolved_denom": "aevmos",
                     "display_denom": "evmos",
-                    "display_amount": "14738.65265041448",
+                    "display_amount": "14738.652650587777",
                     "value_usd": "$307.80"
                   }
                 ],
-                "total_usd": 307.79827185053585
+                "total_usd": 307.79827185415496
               }
             },
             {
@@ -5510,10 +5535,10 @@
             "tokens": [
               {
                 "source_denom": "ibc/078EAF11288A47609FD894070CA8A1BFCEBD9E08745EA7030F95D7ADEE2E22CA",
-                "resolved_amount": "1.473865265041448e+22",
+                "resolved_amount": "1.4738652650587778e+22",
                 "resolved_denom": "aevmos",
                 "display_denom": "evmos",
-                "display_amount": "14738.65265041448",
+                "display_amount": "14738.652650587777",
                 "value_usd": "$307.80"
               },
               {
@@ -5526,14 +5551,14 @@
               },
               {
                 "source_denom": "ulava",
-                "resolved_amount": "3708713523.0",
+                "resolved_amount": "3708713521.0",
                 "resolved_denom": "ulava",
                 "display_denom": "lava",
-                "display_amount": "3708.713523",
+                "display_amount": "3708.713521",
                 "value_usd": "$276.25"
               }
             ],
-            "total_usd": 645.2194716182755
+            "total_usd": 645.2194714729189
           },
           "recommended_block": "1697332"
         }
@@ -5930,10 +5955,10 @@
     }
   ],
   "timestamp": 1731855594,
-  "total_providers": 57,
-  "providers_with_rewards": 44,
+  "total_providers": 59,
+  "providers_with_rewards": 43,
   "metadata": {
-    "generated_at": "2025-02-18T14:02:14.166522",
+    "generated_at": "2025-03-04T11:37:59.680687",
     "block_info": {
       "height": 1697333,
       "time": "2024-11-17T14:59:54.942203+00:00",

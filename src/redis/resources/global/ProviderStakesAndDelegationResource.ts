@@ -1,4 +1,4 @@
-import { desc, sql, eq, inArray, gte } from 'drizzle-orm';
+import { desc, sql, eq, inArray, gte, and, gt } from 'drizzle-orm';
 import { RedisResourceBase } from '@jsinfo/redis/classes/RedisResourceBase';
 import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import * as JsinfoProviderAgrSchema from '@jsinfo/schemas/jsinfoSchema/providerRelayPaymentsAgregation';
@@ -11,6 +11,9 @@ import { ReplaceArchive } from '@jsinfo/indexer/utils/indexerUtils';
 import { BigIntIsZero } from '@jsinfo/utils/bigint';
 import { ProviderMonikerService } from '@jsinfo/redis/resources/global/ProviderMonikerSpecResource';
 import { GetAllProviderAvatars } from '@jsinfo/restRpc/GetProviderAvatar';
+import { IsMainnet } from '@jsinfo/utils/env';
+import { GetResourceResponse, MainnetProviderEstimatedRewardsGetService } from '@jsinfo/redis/resources/Mainnet/ProviderEstimatedRewards/MainnetProviderEstimatedRewardsGetResource';
+import { ActiveProvidersService } from '@jsinfo/redis/resources/index/ActiveProvidersResource';
 
 // Helper function to map status codes to readable strings
 function getStatusString(statusCode: number | null): string {
@@ -52,6 +55,12 @@ export interface HealthData {
     };
 }
 
+// Add this interface to represent rewards data
+export interface RewardsData {
+    lava: string;  // Rewards in LAVA
+    usd: string;   // Rewards in USD equivalent
+}
+
 // New detailed interface with usage metrics
 export interface DetailedStakeInfo {
     stake: string;
@@ -77,8 +86,9 @@ export interface DetailedStakeInfo {
     cuSum90Days: number;
     relaySum30Days: number;
     relaySum90Days: number;
-
-    // Replace the current health fields with a structured object
+    // Replace simple string with structured rewards data
+    rewards: RewardsData | "No data available";
+    // Health data
     health?: HealthData | "No data available";
 }
 
@@ -124,21 +134,6 @@ export interface ProviderStakesAndDelegationData {
     detailedSpecStakes?: Record<string, DetailedStakeInfo[]>;
 }
 
-// Add these interfaces near the top with your other interfaces
-interface UsageMetrics30Days {
-    provider: string;
-    specId: string;
-    cuSum30Days: number;
-    relaySum30Days: number;
-}
-
-interface UsageMetrics90Days {
-    provider: string;
-    specId: string;
-    cuSum90Days: number;
-    relaySum90Days: number;
-}
-
 // Add this interface to properly type the status data
 export interface StakesByStatus {
     status: number | null;
@@ -146,8 +141,44 @@ export interface StakesByStatus {
     delegateTotal: bigint;
 }
 
+// Keep only these type definitions
+type BasicStakesResult = {
+    provider: string | null;
+    stake: bigint;
+    delegateTotal: bigint;
+}
+
+type DetailedStakesResult = {
+    stake: bigint | null;
+    delegateTotal: bigint | null;
+    delegateCommission: bigint | null;
+    appliedHeight: number | null;
+    geolocation: number | null;
+    addons: string | null;
+    extensions: string | null;
+    status: number | null;
+    provider: string | null;
+    specId: string | null;
+    blockId: number | null;
+    totalStake: bigint;
+}
+
+type UsageMetrics90Days = {
+    provider: string | null;
+    specId: string | null;
+    cuSum90Days: number;
+    relaySum90Days: number;
+}
+
+type UsageMetrics30Days = {
+    provider: string | null;
+    specId: string | null;
+    cuSum30Days: number;
+    relaySum30Days: number;
+}
+
 export class ProviderStakesAndDelegationResource extends RedisResourceBase<ProviderStakesAndDelegationData, {}> {
-    protected readonly redisKey = 'ProviderStakesAndDelegationResource_v8';
+    protected readonly redisKey = 'ProviderStakesAndDelegationResource_v10';
     protected readonly cacheExpirySeconds = 600; // 10 minutes cache
 
     // Main fetch method
@@ -155,21 +186,81 @@ export class ProviderStakesAndDelegationResource extends RedisResourceBase<Provi
         try {
             logger.info("Fetching provider stakes and delegation data from source");
 
-            // Fetch all required data, now including avatars
-            const [stakesRes, stakesByStatusRes, detailedStakesRes, aggRes90Days, aggRes30Days, providerHealthData, avatarMap] = await Promise.all([
-                this.fetchBasicStakesData(),
-                this.fetchStakesByStatus(),
-                this.fetchDetailedStakes(),
-                this.fetch90DayMetrics(),
-                this.fetch30DayMetrics(),
-                this.fetchProviderHealth(),
-                GetAllProviderAvatars()  // Add this to fetch avatars
+            let providerAddresses: string[] = [];
+            try {
+                const activeProviders = await ActiveProvidersService.fetch();
+                logger.info(`ActiveProvidersService returned ${activeProviders?.length || 0} providers`);
+
+                if (activeProviders && activeProviders.length > 0) {
+                    providerAddresses = activeProviders;
+                    logger.info(`First 5 provider addresses: ${providerAddresses.slice(0, 5).join(', ')}`);
+                }
+
+                // If we have no providers, retry once after a delay
+                if (providerAddresses.length === 0) {
+                    logger.warn("No providers found, waiting 5 seconds to retry...");
+                    await new Promise(resolve => setTimeout(resolve, 5000));
+                    const retryProviders = await ActiveProvidersService.fetch();
+                    if (retryProviders && retryProviders.length > 0) {
+                        providerAddresses = retryProviders;
+                        logger.info(`After retry, found ${providerAddresses.length} providers`);
+                    }
+                }
+
+                logger.info(`Fetching data for ${providerAddresses.length} providers`);
+            } catch (error) {
+                logger.error("Error fetching active providers:", error);
+            }
+
+            // Fetch rewards data
+            let rewardsData: GetResourceResponse | null = null;
+            if (IsMainnet()) {
+                try {
+                    // logger.info("Fetching MainnetProviderEstimatedRewardsGetService data...");
+                    const startTime = Date.now();
+                    rewardsData = await MainnetProviderEstimatedRewardsGetService.fetch({ block: 'latest_distributed' });
+                    // logger.info(`Fetched rewards data in ${Date.now() - startTime}ms for ${rewardsData?.data?.providers?.length || 0} providers`);
+                } catch (error) {
+                    logger.error("Error fetching rewards data:", error);
+                }
+            }
+
+            // Additional debug logs
+            // logger.info(`Starting Promise.all for various data fetches`);
+
+            const startTime = Date.now();
+            const [
+                stakesRes,
+                stakesByStatusRes,
+                detailedStakesRes,
+                aggRes90Days,
+                aggRes30Days,
+                providerHealthData,
+                avatarMap
+            ] = await Promise.all([
+                this.fetchBasicStakesData(providerAddresses),
+                this.fetchStakesByStatus(providerAddresses),
+                this.fetchDetailedStakes(providerAddresses),
+                this.fetch90DayMetrics(providerAddresses),
+                this.fetch30DayMetrics(providerAddresses),
+                this.fetchProviderHealth(providerAddresses),
+                GetAllProviderAvatars()
             ]);
+            // logger.info(`Promise.all completed in ${Date.now() - startTime}ms`);
 
-            // Convert map to a more convenient object
-            const avatars = Object.fromEntries(avatarMap);
+            // // Log results from each data fetch
+            // logger.info(`Data fetch results: 
+            //     stakesRes: ${stakesRes?.length || 0} items
+            //     stakesByStatusRes: ${stakesByStatusRes?.length || 0} items
+            //     detailedStakesRes: ${detailedStakesRes?.length || 0} items
+            //     aggRes90Days: ${aggRes90Days?.length || 0} items
+            //     aggRes30Days: ${aggRes30Days?.length || 0} items
+            //     healthData: ${Object.keys(providerHealthData || {}).length} providers
+            //     avatars: ${avatarMap?.size || 0} entries
+            //     rewardsData: ${rewardsData?.data?.providers?.length || 0} items
+            // `);
 
-            // Create usage metrics maps with filtering and type assertion
+            // Create usage metrics maps
             const aggRes90DaysMap = new Map<string, UsageMetrics90Days>(
                 aggRes90Days
                     .filter(item => item.provider !== null && item.specId !== null)
@@ -181,22 +272,43 @@ export class ProviderStakesAndDelegationResource extends RedisResourceBase<Provi
                     .map(item => [`${item.provider}:${item.specId}`, item as UsageMetrics30Days])
             );
 
+            // Process rewards data
+            const rewardsMap = this.processRewardsData(rewardsData);
+
             // Process the basic stakes data
             const { stakeSum, delegationSum, providerStakes } = this.processBasicStakesData(stakesRes);
+            // logger.info(`Processed basic stakes: stakeSum=${stakeSum}, delegationSum=${delegationSum}, providers=${Object.keys(providerStakes).length}`);
 
-            // Pass the health data to the detailed stakes processing
+            // Handle case with no data
+            if (!stakesRes || stakesRes.length === 0) {
+                logger.warn(`No stake data found, returning empty response`);
+                return this.createEmptyResponse();
+            }
+
+            // Convert map to object using a more direct approach
+            const avatars: Record<string, string> = {};
+            avatarMap.forEach((value, key) => {
+                avatars[key] = value;
+            });
+
+            // Pass the health data and rewards map to the detailed stakes processing
+            const detailedProcessingStart = Date.now();
             const { detailedProviderStakes, detailedSpecStakes } =
-                await this.processDetailedStakes(detailedStakesRes, aggRes90DaysMap, aggRes30DaysMap, providerHealthData, avatars);
+                await this.processDetailedStakes(
+                    detailedStakesRes,
+                    aggRes90DaysMap,
+                    aggRes30DaysMap,
+                    providerHealthData,
+                    avatars,
+                    rewardsMap // Pass rewardsMap to processDetailedStakes
+                );
+            // logger.info(`processDetailedStakes completed in ${Date.now() - detailedProcessingStart}ms`);
 
             // Generate summary
             const summary = this.createSummary(stakeSum, delegationSum, stakesByStatusRes);
 
-            // Handle case with no data
-            if (!stakesRes || stakesRes.length === 0) {
-                return this.createEmptyResponse();
-            }
-
-            return {
+            // Return complete data
+            const result = {
                 stakeSum: stakeSum.toString(),
                 delegationSum: delegationSum.toString(),
                 stakeTotalSum: (stakeSum + delegationSum).toString(),
@@ -205,44 +317,85 @@ export class ProviderStakesAndDelegationResource extends RedisResourceBase<Provi
                 detailedProviderStakes,
                 detailedSpecStakes
             };
+
+            // logger.info(`Successfully built result with ${Object.keys(detailedProviderStakes || {}).length} providers and ${Object.keys(detailedSpecStakes || {}).length} specs`);
+            return result;
         } catch (error) {
-            logger.error(`Error in ProviderStakesAndDelegationResource.fetchFromSource: ${error}`);
-            throw error;
+            logger.error("Error fetching provider stakes and delegation:", error);
+            // Log the error stack trace for better debugging
+            if (error instanceof Error) {
+                logger.error(`Error stack: ${error.stack}`);
+            }
+            return this.createEmptyResponse();
         }
     }
 
     // Fetch basic stakes data for backward compatibility
-    private async fetchBasicStakesData() {
-        return await queryJsinfo(db => db.select({
-            provider: JsinfoSchema.providerStakes.provider,
-            stake: sql<bigint>`sum(${JsinfoSchema.providerStakes.stake})`,
-            delegateTotal: sql<bigint>`sum(${JsinfoSchema.providerStakes.delegateTotal})`,
-        })
-            .from(JsinfoSchema.providerStakes).groupBy(JsinfoSchema.providerStakes.provider),
-            'ProviderStakesAndDelegationResource::fetchBasicStakesData'
-        );
+    private async fetchBasicStakesData(providerAddresses: string[]): Promise<DetailedStakesResult[]> {
+        // logger.info(`fetchBasicStakesData called with ${providerAddresses.length} providers`);
+
+        return await queryJsinfo(async (db) => {
+            try {
+                const query = db.select({
+                    stake: JsinfoSchema.providerStakes.stake,
+                    delegateTotal: JsinfoSchema.providerStakes.delegateTotal,
+                    delegateCommission: JsinfoSchema.providerStakes.delegateCommission,
+                    appliedHeight: JsinfoSchema.providerStakes.appliedHeight,
+                    geolocation: JsinfoSchema.providerStakes.geolocation,
+                    addons: JsinfoSchema.providerStakes.addons,
+                    extensions: JsinfoSchema.providerStakes.extensions,
+                    status: JsinfoSchema.providerStakes.status,
+                    provider: JsinfoSchema.providerStakes.provider,
+                    specId: JsinfoSchema.providerStakes.specId,
+                    blockId: JsinfoSchema.providerStakes.blockId,
+                    totalStake: sql<bigint>`(${JsinfoSchema.providerStakes.stake} + ${JsinfoSchema.providerStakes.delegateTotal}) as totalStake`,
+                })
+                    .from(JsinfoSchema.providerStakes);
+
+                // Only apply filter if we have addresses
+                if (providerAddresses.length > 0) {
+                    query.where(inArray(JsinfoSchema.providerStakes.provider, providerAddresses));
+                    logger.info(`Applied provider filter to stakes query`);
+                } else {
+                    logger.info(`No provider filter applied to stakes query`);
+                }
+
+                const results = await query.orderBy(desc(JsinfoSchema.providerStakes.stake));
+                logger.info(`fetchBasicStakesData returned ${results.length} results`);
+
+                return results;
+            } catch (error) {
+                logger.error(`Error in fetchBasicStakesData: ${error}`);
+                return [];
+            }
+        }, 'ProviderStakesAndDelegationResource::fetchBasicStakesData');
     }
 
     // Fetch stakes broken down by status
-    private async fetchStakesByStatus(): Promise<StakesByStatus[]> {
+    private async fetchStakesByStatus(providerAddresses: string[] = []): Promise<StakesByStatus[]> {
         return await queryJsinfo(db => db.select({
             status: JsinfoSchema.providerStakes.status,
             stake: sql<bigint>`sum(${JsinfoSchema.providerStakes.stake})`,
             delegateTotal: sql<bigint>`sum(${JsinfoSchema.providerStakes.delegateTotal})`
         })
             .from(JsinfoSchema.providerStakes)
-            .where(inArray(JsinfoSchema.providerStakes.status, [
-                JsinfoSchema.LavaProviderStakeStatus.Active,
-                JsinfoSchema.LavaProviderStakeStatus.Frozen,
-                JsinfoSchema.LavaProviderStakeStatus.Jailed
-            ]))
+            .where(
+                and(
+                    inArray(JsinfoSchema.providerStakes.status, [
+                        JsinfoSchema.LavaProviderStakeStatus.Active,
+                        JsinfoSchema.LavaProviderStakeStatus.Frozen,
+                        JsinfoSchema.LavaProviderStakeStatus.Jailed
+                    ])
+                    ,
+                    inArray(JsinfoSchema.providerStakes.provider, providerAddresses))
+            )
             .groupBy(JsinfoSchema.providerStakes.status),
             'ProviderStakesAndDelegationResource::fetchStakesByStatus'
         );
     }
 
     // Fetch detailed stake information
-    private async fetchDetailedStakes() {
+    private async fetchDetailedStakes(providerAddresses: string[] = []): Promise<DetailedStakesResult[]> {
         return await queryJsinfo(async (db) => await db.select({
             stake: JsinfoSchema.providerStakes.stake,
             delegateTotal: JsinfoSchema.providerStakes.delegateTotal,
@@ -258,227 +411,244 @@ export class ProviderStakesAndDelegationResource extends RedisResourceBase<Provi
             totalStake: sql<bigint>`(${JsinfoSchema.providerStakes.stake} + ${JsinfoSchema.providerStakes.delegateTotal}) as totalStake`,
         })
             .from(JsinfoSchema.providerStakes)
+            .where(inArray(JsinfoSchema.providerStakes.provider, providerAddresses))
             .orderBy(desc(JsinfoSchema.providerStakes.stake)),
             'ProviderStakesAndDelegationResource::fetchDetailedStakes'
         );
     }
 
-    // Fetch 90-day usage metrics
-    private async fetch90DayMetrics() {
+    // Fix fetch90DayMetrics method
+    private async fetch90DayMetrics(providerAddresses: string[] = []): Promise<UsageMetrics90Days[]> {
+        if (providerAddresses.length === 0) return [];
+
         return await queryJsinfo(db => db.select({
-            provider: JsinfoSchema.providerStakes.provider,
-            specId: JsinfoSchema.providerStakes.specId,
+            provider: JsinfoProviderAgrSchema.aggDailyRelayPayments.provider,
+            specId: JsinfoProviderAgrSchema.aggDailyRelayPayments.specId,
             cuSum90Days: sql<number>`SUM(${JsinfoProviderAgrSchema.aggDailyRelayPayments.cuSum})`,
             relaySum90Days: sql<number>`SUM(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum})`,
-        }).from(JsinfoSchema.providerStakes)
-            .leftJoin(JsinfoProviderAgrSchema.aggDailyRelayPayments, sql`
-                ${JsinfoSchema.providerStakes.provider} = ${JsinfoProviderAgrSchema.aggDailyRelayPayments.provider} AND
-                ${JsinfoSchema.providerStakes.specId} = ${JsinfoProviderAgrSchema.aggDailyRelayPayments.specId} AND
-                ${JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday} > now() - interval '90 day'
-            `)
-            .groupBy(JsinfoSchema.providerStakes.provider, JsinfoSchema.providerStakes.specId),
-            'ProviderStakesAndDelegationResource::fetch90DayMetrics'
-        );
+        })
+            .from(JsinfoProviderAgrSchema.aggDailyRelayPayments)
+            .where(
+                and(
+                    sql`${JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday} > now() - interval '90 day'`,
+                    inArray(JsinfoProviderAgrSchema.aggDailyRelayPayments.provider, providerAddresses)
+                )
+            )
+            .groupBy(
+                JsinfoProviderAgrSchema.aggDailyRelayPayments.provider,
+                JsinfoProviderAgrSchema.aggDailyRelayPayments.specId
+            ), 'ProviderStakesAndDelegationResource::fetch90DayMetrics');
     }
 
-    // Fetch 30-day usage metrics
-    private async fetch30DayMetrics() {
+    // Fix the fetch30DayMetrics method
+    private async fetch30DayMetrics(providerAddresses: string[] = []): Promise<UsageMetrics30Days[]> {
+        if (providerAddresses.length === 0) return [];
+
         return await queryJsinfo(db => db.select({
-            provider: JsinfoSchema.providerStakes.provider,
-            specId: JsinfoSchema.providerStakes.specId,
+            provider: JsinfoProviderAgrSchema.aggDailyRelayPayments.provider,
+            specId: JsinfoProviderAgrSchema.aggDailyRelayPayments.specId,
             cuSum30Days: sql<number>`SUM(${JsinfoProviderAgrSchema.aggDailyRelayPayments.cuSum})`,
             relaySum30Days: sql<number>`SUM(${JsinfoProviderAgrSchema.aggDailyRelayPayments.relaySum})`,
-        }).from(JsinfoSchema.providerStakes)
-            .leftJoin(JsinfoProviderAgrSchema.aggDailyRelayPayments, sql`
-                ${JsinfoSchema.providerStakes.provider} = ${JsinfoProviderAgrSchema.aggDailyRelayPayments.provider} AND
-                ${JsinfoSchema.providerStakes.specId} = ${JsinfoProviderAgrSchema.aggDailyRelayPayments.specId} AND
-                ${JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday} > now() - interval '30 day'
-            `)
-            .groupBy(JsinfoSchema.providerStakes.provider, JsinfoSchema.providerStakes.specId),
-            'ProviderStakesAndDelegationResource::fetch30DayMetrics'
-        );
+        })
+            .from(JsinfoProviderAgrSchema.aggDailyRelayPayments)
+            .where(
+                and(
+                    sql`${JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday} > now() - interval '30 day'`,
+                    inArray(JsinfoProviderAgrSchema.aggDailyRelayPayments.provider, providerAddresses)
+                )
+            )
+            .groupBy(
+                JsinfoProviderAgrSchema.aggDailyRelayPayments.provider,
+                JsinfoProviderAgrSchema.aggDailyRelayPayments.specId
+            ), 'ProviderStakesAndDelegationResource::fetch30DayMetrics');
     }
 
-    // Update the fetchProviderHealth method to simplify the data structure
-    private async fetchProviderHealth(): Promise<Record<string, Record<string, HealthData | string>>> {
-        const fourHoursAgo = new Date();
-        fourHoursAgo.setHours(fourHoursAgo.getHours() - 4);
-
-        // Fetch all health records for the past four hours
-        const healthData = await queryJsinfo(db => db.select()
-            .from(JsinfoSchema.providerHealth)
-            .where(gte(JsinfoSchema.providerHealth.timestamp, fourHoursAgo))
-            .orderBy(desc(JsinfoSchema.providerHealth.timestamp)),
-            'ProviderStakesAndDelegationResource::fetchProviderHealth'
-        );
-
-        // Organize by provider -> spec -> interface
-        const providerHealthMap: Record<string, Record<string, HealthData | string>> = {};
-
-        // First, organize health records by provider, spec, interface
-        const latestRecords = new Map<string, any>(); // key: provider:spec:interface
-
-        for (const record of healthData) {
-            const { provider, spec, interface: iface, geolocation, status, timestamp, data } = record;
-
-            if (!provider || !spec || !iface) continue;
-
-            const key = `${provider}:${spec}:${iface}`;
-
-            // Keep only the newest record for each provider-spec-interface
-            if (!latestRecords.has(key) || latestRecords.get(key).timestamp < timestamp) {
-                latestRecords.set(key, {
-                    provider,
-                    spec,
-                    interface: iface,
-                    geolocation, // We'll still track this but won't prioritize by it
-                    status,
-                    timestamp,
-                    data
-                });
-            }
-        }
-
-        // Now process the latest records
-        for (const record of latestRecords.values()) {
-            const { provider, spec, interface: iface, status, timestamp, data } = record;
-
-            // Initialize provider map if needed
-            if (!providerHealthMap[provider]) {
-                providerHealthMap[provider] = {};
-            }
-
-            // Initialize spec data if needed
-            if (!providerHealthMap[provider][spec] || providerHealthMap[provider][spec] === "No data available") {
-                providerHealthMap[provider][spec] = {
-                    overallStatus: 'unknown',
-                    interfaces: [],
-                    lastTimestamp: timestamp.toISOString(),
-                    interfaceDetails: {}
-                };
-            }
-
-            // Skip if we've marked this as "No data available"
-            if (typeof providerHealthMap[provider][spec] === 'string') continue;
-
-            const healthObj = providerHealthMap[provider][spec] as HealthData;
-
-            // Add interface to list if not already there
-            if (!healthObj.interfaces.includes(iface)) {
-                healthObj.interfaces.push(iface);
-            }
-
-            // Update with the latest status - now directly in interfaceDetails
-            if (!healthObj.interfaceDetails) {
-                healthObj.interfaceDetails = {};
-            }
-
-            healthObj.interfaceDetails[iface] = {
-                status,
-                message: this.parseMessageFromHealth(data) || "N/A",
-                timestamp: timestamp.toISOString(),
-                region: record.geolocation || "Unknown" // Include the region info
-            };
-
-            // Update last timestamp if this is more recent
-            if (new Date(healthObj.lastTimestamp) < timestamp) {
-                healthObj.lastTimestamp = timestamp.toISOString();
-            }
-        }
-
-        // Calculate overall status and format timestamps
-        for (const provider in providerHealthMap) {
-            for (const spec in providerHealthMap[provider]) {
-                // Skip if marked as "No data available"
-                if (typeof providerHealthMap[provider][spec] === 'string') continue;
-
-                const healthObj = providerHealthMap[provider][spec] as HealthData;
-
-                // Get unique statuses from all interfaces
-                const statuses = Object.values(healthObj.interfaceDetails)
-                    .map(data => data.status);
-
-                // Determine overall status
-                if (statuses.length === 0) {
-                    providerHealthMap[provider][spec] = "No data available";
-                } else if (statuses.every(status => status === 'healthy')) {
-                    healthObj.overallStatus = 'healthy';
-                } else if (statuses.every(status => status === 'unhealthy')) {
-                    healthObj.overallStatus = 'unhealthy';
-                } else if (statuses.every(status => status === 'frozen')) {
-                    healthObj.overallStatus = 'frozen';
-                } else if (statuses.every(status => status === 'jailed')) {
-                    healthObj.overallStatus = 'jailed';
-                } else if (statuses.some(status =>
-                    status === 'frozen' ||
-                    status === 'unhealthy' ||
-                    status === 'jailed'
-                )) {
-                    healthObj.overallStatus = 'degraded';
-                }
-
-                // Format the timestamp for UI display
-                healthObj.lastTimestamp = this.formatTimestampForUI(new Date(healthObj.lastTimestamp));
-
-                // Format all interface timestamps
-                for (const iface in healthObj.interfaceDetails) {
-                    const interfaceData = healthObj.interfaceDetails[iface];
-                    interfaceData.timestamp = this.formatTimestampForUI(new Date(interfaceData.timestamp));
-                }
-
-                // Sort interfaces alphabetically
-                healthObj.interfaces.sort();
-            }
-        }
-
-        return providerHealthMap;
-    }
-
-    // Add helper method to format timestamps consistently
-    private formatTimestampForUI(date: Date): string {
-        return `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()}, ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}:${date.getSeconds().toString().padStart(2, '0')}`;
-    }
-
-    // Parse health message from health data
-    private parseMessageFromHealth(data: string | null): string {
+    // Improve health message formatting based on providerHealthLatestHandler
+    private formatHealthMessage(data: string | null): string {
         if (!data) return "";
+
         try {
             const parsedData = JSON.parse(data);
 
+            // Case 1: If there's a direct message field
             if (parsedData.message) {
                 return parsedData.message;
             }
 
+            // Case 2: If it's jail data
             if (parsedData.jail_end_time && parsedData.jails) {
                 const date = new Date(parsedData.jail_end_time);
-                // Skip bad data
+                // Skip bad data (1970 dates)
                 if (date.getFullYear() === 1970) return "";
-                let formattedDate = `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}:${date.getSeconds().toString().padStart(2, '0')}`;
-                return `Jail end time: ${formattedDate}, Jails: ${parsedData.jails}`;
+
+                const formattedDate = date.toISOString().replace('T', ' ').substring(0, 19);
+                return `End Time: ${formattedDate}, Jails: ${parsedData.jails}`;
             }
 
+            // Case 3: Block data (most common for NEAR)
             if (parsedData.block && parsedData.others) {
-                const blockMessage = `Block: 0x${(parsedData.block).toString(16)}`;
-                const latestBlock = parsedData.others;
-                let finalMessage = `${blockMessage}, Others: 0x${(latestBlock).toString(16)}`;
+                let finalMessage = `Block: ${parsedData.block}`;
 
+                // Only add others if different from block
+                if (parsedData.others !== parsedData.block) {
+                    finalMessage += `, Others: ${parsedData.others}`;
+                }
+
+                // Add latency if available
                 if (parsedData.latency) {
-                    const latencyInMs = parsedData.latency / 1000000;
-                    finalMessage += `. Latency: ${latencyInMs.toFixed(0)}ms`;
+                    const latencyMs = Math.round(parsedData.latency / 1000000);
+                    finalMessage += `, Latency: ${latencyMs}ms`;
                 }
 
                 return finalMessage;
             }
 
-            return "";
+            // Default: return JSON string representation
+            return JSON.stringify(parsedData);
         } catch (e) {
-            logger.error('parseMessageFromHealth - failed parsing data:', e);
-            return "";
+            // If parsing fails, return the original data
+            return data;
         }
     }
 
+    // Extract rewards processing to its own function
+    private processRewardsData(rewardsData: GetResourceResponse | null): Map<string, RewardsData> {
+        const rewardsMap = new Map<string, RewardsData>();
+
+        if (!rewardsData?.data?.providers) {
+            return rewardsMap;
+        }
+
+        // logger.info(`Processing rewards data for ${rewardsData.data.providers.length} providers`);
+
+        for (const provider of rewardsData.data.providers) {
+            try {
+                if (!provider.address || !provider.rewards_by_block) continue;
+
+                // Get the first block key (there should only be one)
+                const blockKeys = Object.keys(provider.rewards_by_block);
+                if (blockKeys.length === 0) continue;
+
+                const blockData = provider.rewards_by_block[blockKeys[0]];
+                if (!blockData?.total) continue;
+
+                // Extract lava token
+                const lavaToken = blockData.total.tokens.find(
+                    token => token.display_denom === 'lava'
+                );
+
+                rewardsMap.set(provider.address, {
+                    lava: lavaToken ? lavaToken.display_amount : "0",
+                    usd: blockData.total.total_usd ?
+                        `$${blockData.total.total_usd.toFixed(2)}` : "$0.00"
+                });
+            } catch (error) {
+                logger.error(`Error processing rewards for provider ${provider.address}:`, error);
+            }
+        }
+
+        // logger.info(`Created rewardsMap with ${rewardsMap.size} providers`);
+        return rewardsMap;
+    }
+
+    // Fix the processHealthData function to better handle region data
+    private processHealthData(healthData: any[]): Record<string, Record<string, HealthData | string>> {
+        const healthDataResult: Record<string, Record<string, HealthData | string>> = {};
+
+        // Known regions
+        const knownRegions = new Set(['EU', 'US', 'ASIA']);
+
+        // Group records by provider and spec
+        const groupedRecords: Record<string, Record<string, any[]>> = {};
+
+        for (const record of healthData) {
+            if (!record.provider || !record.spec) continue;
+
+            if (!groupedRecords[record.provider]) {
+                groupedRecords[record.provider] = {};
+            }
+
+            if (!groupedRecords[record.provider][record.spec]) {
+                groupedRecords[record.provider][record.spec] = [];
+            }
+
+            groupedRecords[record.provider][record.spec].push(record);
+        }
+
+        // Process each provider and spec
+        for (const provider in groupedRecords) {
+            if (!healthDataResult[provider]) {
+                healthDataResult[provider] = {};
+            }
+
+            for (const spec in groupedRecords[provider]) {
+                const records = groupedRecords[provider][spec];
+
+                // Get the most recent record for determining overall status
+                records.sort((a, b) =>
+                    b.timestamp.getTime() - a.timestamp.getTime()
+                );
+
+                const mostRecentRecord = records[0];
+
+                // Get interface type safely
+                const interfaceType = mostRecentRecord.interface_type || 'jsonrpc';
+
+                // Normalize region
+                const region = knownRegions.has(mostRecentRecord.region)
+                    ? mostRecentRecord.region
+                    : mostRecentRecord.geolocation || 'Unknown';
+
+                // Create health data object
+                const healthInfo: HealthData = {
+                    overallStatus: mostRecentRecord.status?.toLowerCase() || 'unknown',
+                    interfaces: [interfaceType],
+                    lastTimestamp: mostRecentRecord.timestamp?.toISOString(),
+                    interfaceDetails: {
+                        [interfaceType]: {
+                            status: mostRecentRecord.status?.toLowerCase() || 'unknown',
+                            message: this.formatHealthMessage(mostRecentRecord.message || mostRecentRecord.data),
+                            timestamp: mostRecentRecord.timestamp?.toISOString(),
+                            region: region
+                        }
+                    }
+                };
+
+                healthDataResult[provider][spec] = healthInfo;
+            }
+        }
+
+        return healthDataResult;
+    }
+
+    // Then update the fetchProviderHealth method to use this function:
+    private async fetchProviderHealth(providerAddresses: string[] = []): Promise<Record<string, Record<string, HealthData | string>>> {
+        // If no providers, return empty result immediately
+        if (providerAddresses.length === 0) {
+            logger.info("No providers to fetch health data for, returning empty result");
+            return {};
+        }
+
+        const fourHoursAgo = new Date();
+        fourHoursAgo.setHours(fourHoursAgo.getHours() - 4);
+
+        // Only run the query when we have providers to check
+        const healthData = await queryJsinfo(db => db.select()
+            .from(JsinfoSchema.providerHealth)
+            .where(
+                and(
+                    gte(JsinfoSchema.providerHealth.timestamp, fourHoursAgo),
+                    inArray(JsinfoSchema.providerHealth.provider, providerAddresses)
+                )
+            )
+            .orderBy(desc(JsinfoSchema.providerHealth.timestamp)),
+            'ProviderStakesAndDelegationResource::fetchProviderHealth');
+
+        return this.processHealthData(healthData);
+    }
+
     // Process basic stakes data
-    private processBasicStakesData(stakesRes: any[]) {
+    private processBasicStakesData(stakesRes: DetailedStakesResult[]): { stakeSum: bigint; delegationSum: bigint; providerStakes: Record<string, ProviderStakeInfo> } {
         let stakeSum = 0n;
         let delegationSum = 0n;
         const providerStakes: Record<string, ProviderStakeInfo> = {};
@@ -500,12 +670,13 @@ export class ProviderStakesAndDelegationResource extends RedisResourceBase<Provi
 
     // Update the processDetailedStakes method to use this improved health data
     private async processDetailedStakes(
-        detailedStakesRes: any[],
+        detailedStakesRes: DetailedStakesResult[],
         aggRes90DaysMap: Map<string, UsageMetrics90Days>,
         aggRes30DaysMap: Map<string, UsageMetrics30Days>,
         providerHealthMap: Record<string, Record<string, HealthData | string>>,
-        avatars: Record<string, string>
-    ) {
+        avatars: Record<string, string>,
+        rewardsMap: Map<string, RewardsData>
+    ): Promise<{ detailedProviderStakes: Record<string, DetailedStakeInfo[]>; detailedSpecStakes: Record<string, DetailedStakeInfo[]> }> {
         const detailedProviderStakes: Record<string, DetailedStakeInfo[]> = {};
         const detailedSpecStakes: Record<string, DetailedStakeInfo[]> = {};
 
@@ -527,9 +698,12 @@ export class ProviderStakesAndDelegationResource extends RedisResourceBase<Provi
                 relaySum30Days: 0
             };
 
-            // Get moniker data
+            // Get moniker data with debug logging
             const moniker = await ProviderMonikerService.GetMonikerForProvider(item.provider);
+            // logger.debug(`Retrieved moniker for ${item.provider}: ${moniker || 'empty'}`);
+
             const monikerfull = await ProviderMonikerService.GetMonikerFullDescription(item.provider);
+            // logger.debug(`Retrieved monikerfull for ${item.provider}: ${monikerfull || 'empty'}`);
 
             // Convert spec ID to chain name and get icon
             const chainName = ConvertToChainName(item.specId || '');
@@ -538,11 +712,18 @@ export class ProviderStakesAndDelegationResource extends RedisResourceBase<Provi
             // Get health data
             let health: HealthData | "No data available" = "No data available";
             if (providerHealthMap[item.provider] && providerHealthMap[item.provider][item.specId]) {
-                health = providerHealthMap[item.provider][item.specId];
+                const healthValue = providerHealthMap[item.provider][item.specId];
+                // Only assign if it's a HealthData object, otherwise keep "No data available"
+                if (typeof healthValue === 'object') {
+                    health = healthValue;
+                }
             }
 
             // Get the provider's avatar
             const providerAvatar = avatars[item.provider] || undefined;
+
+            // Get rewards data if on mainnet or set to "No data available"
+            const rewards = rewardsMap.get(item.provider) || "No data available";
 
             const detailedInfo: DetailedStakeInfo = {
                 stake: BigIntIsZero(item.stake) ? "0" : item.stake?.toString() ?? "0",
@@ -568,8 +749,7 @@ export class ProviderStakesAndDelegationResource extends RedisResourceBase<Provi
                 cuSum90Days: metrics90Days.cuSum90Days || 0,
                 relaySum30Days: metrics30Days.relaySum30Days || 0,
                 relaySum90Days: metrics90Days.relaySum90Days || 0,
-
-                // New structured health data
+                rewards,
                 health
             };
 

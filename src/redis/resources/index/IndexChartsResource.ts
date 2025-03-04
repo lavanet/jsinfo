@@ -1,5 +1,4 @@
-import { sql, desc, gt, and, inArray, lt } from "drizzle-orm";
-import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import { sql, desc, and, inArray, gte, lte } from "drizzle-orm";
 import { RedisResourceBase } from '@jsinfo/redis/classes/RedisResourceBase';
 import * as JsinfoProviderAgrSchema from '@jsinfo/schemas/jsinfoSchema/providerRelayPaymentsAgregation';
 import { PgColumn } from 'drizzle-orm/pg-core';
@@ -40,7 +39,7 @@ interface QueryParams {
 }
 
 export class IndexChartsResource extends RedisResourceBase<IndexChartResponse[], QueryParams> {
-    protected readonly redisKey = 'index:charts';
+    protected readonly redisKey = 'index:chartsV3:';
     protected readonly cacheExpirySeconds = 300; // 5 minutes cache
 
     protected async fetchFromSource(params?: QueryParams): Promise<IndexChartResponse[]> {
@@ -86,8 +85,8 @@ export class IndexChartsResource extends RedisResourceBase<IndexChartResponse[],
             where(
                 and(
                     and(
-                        gt(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday, sql<Date>`${from}`),
-                        lt(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday, sql<Date>`${to}`)
+                        gte(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday, sql<Date>`${from}`),
+                        lte(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday, sql<Date>`${to}`)
                     ),
                     inArray(JsinfoProviderAgrSchema.aggDailyRelayPayments.specId, topChains)
                 )
@@ -127,8 +126,8 @@ export class IndexChartsResource extends RedisResourceBase<IndexChartResponse[],
         }).from(JsinfoProviderAgrSchema.aggDailyRelayPayments).
             orderBy(desc(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday)).
             where(and(
-                gt(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday, sql<Date>`${from}`),
-                lt(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday, sql<Date>`${to}`)
+                gte(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday, sql<Date>`${from}`),
+                lte(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday, sql<Date>`${to}`)
             )).
             groupBy(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday),
             `IndexChartsResource::getQosData_${from}_${to}`

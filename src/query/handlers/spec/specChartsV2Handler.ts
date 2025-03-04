@@ -88,8 +88,8 @@ class SpecChartsV2Data extends RequestHandlerBase<SpecChartsV2Response> {
                 return cachedProviders;
             }
 
-            const sixMonthsAgo = new Date();
-            sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+            const threeMonthsAgo = new Date();
+            threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
 
             const providers = await queryJsinfo(
                 async (db) => await db.select({
@@ -99,7 +99,7 @@ class SpecChartsV2Data extends RequestHandlerBase<SpecChartsV2Response> {
                     .from(JsinfoProviderAgrSchema.aggDailyRelayPayments)
                     .where(eq(JsinfoProviderAgrSchema.aggDailyRelayPayments.specId, this.spec))
                     .groupBy(JsinfoProviderAgrSchema.aggDailyRelayPayments.provider)
-                    .having(gt(sql<Date>`MAX(${JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday})`, sixMonthsAgo)),
+                    .having(gt(sql<Date>`MAX(${JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday})`, threeMonthsAgo)),
                 `SpecChartsV2_getAllAvailableProviders_${this.spec}`
             );
 

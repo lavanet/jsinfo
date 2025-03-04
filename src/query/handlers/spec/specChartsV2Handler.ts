@@ -2,7 +2,7 @@
 
 import { FastifyReply, FastifyRequest, RouteShorthandOptions } from 'fastify';
 import * as JsinfoProviderAgrSchema from '@jsinfo/schemas/jsinfoSchema/providerRelayPaymentsAgregation';
-import { sql, gt, and, lt, desc, eq } from "drizzle-orm";
+import { sql, gt, and, lt, desc, eq, gte, lte } from "drizzle-orm";
 import { DateToISOString } from '@jsinfo/utils/date';
 import { RequestHandlerBase } from '@jsinfo/query/classes/RequestHandlerBase';
 import { GetAndValidateSpecIdFromRequest, GetAndValidateProviderAddressFromRequestWithAll } from '@jsinfo/query/utils/queryRequestArgParser';
@@ -79,7 +79,7 @@ class SpecChartsV2Data extends RequestHandlerBase<SpecChartsV2Response> {
     }
 
     private async getAllAvailableProviders(): Promise<{ [key: string]: string }> {
-        const cacheKey = `spec-providers-chart-v2:${this.spec}`;
+        const cacheKey = `spec-providers-chart-all-providers:${this.spec}`;
 
         try {
             const cachedProviders = await RedisCache.getDict(cacheKey);
@@ -131,8 +131,8 @@ class SpecChartsV2Data extends RequestHandlerBase<SpecChartsV2Response> {
 
             let conditions = and(
                 eq(JsinfoProviderAgrSchema.aggDailyRelayPayments.specId, this.spec),
-                gt(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday, sql<Date>`${from}`),
-                lt(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday, sql<Date>`${to}`)
+                gte(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday, sql<Date>`${from}`),
+                lte(JsinfoProviderAgrSchema.aggDailyRelayPayments.dateday, sql<Date>`${to}`)
             );
 
             if (this.provider !== 'all') {

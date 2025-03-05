@@ -32,6 +32,14 @@ export async function ProviderCardsStakesHandler(request: FastifyRequest, reply:
     }
 
     try {
+        // Initialize stake variables
+        let stake = BigInt(0);
+        let delegateTotal = BigInt(0);
+        let stakeSum = BigInt(0);
+        let activeStake = BigInt(0);
+        let activeDelegateTotal = BigInt(0);
+        let activeStakeSum = BigInt(0);
+
         const resource = new ProviderStakesAndDelegationResource();
         const result = await resource.fetch();
         if (!result) {
@@ -41,7 +49,7 @@ export async function ProviderCardsStakesHandler(request: FastifyRequest, reply:
             return reply;
         }
 
-        // First, get the provider's overall stake info
+        // First, check if provider exists
         const providerStake = result.providerStakes[addr];
         if (!providerStake) {
             logger.warn(`Provider stake not found for address: ${addr}`);
@@ -50,54 +58,62 @@ export async function ProviderCardsStakesHandler(request: FastifyRequest, reply:
             return reply;
         }
 
-        // Calculate total stake values (all stakes)
-        const stake = providerStake.stake ? BigInt(providerStake.stake) : BigInt(0);
-        const delegateTotal = providerStake.delegateTotal ? BigInt(providerStake.delegateTotal) : BigInt(0);
-        const stakeSum = stake + delegateTotal;
+        // Process detailed stakes if available
+        if (result.detailedProviderStakes && result.detailedProviderStakes[addr]) {
+            const stakes = result.detailedProviderStakes[addr];
 
-        // Now get the provider's individual stake records to filter by status
-        let activeStakeSum = BigInt(0);
-        let activeDelegateTotal = BigInt(0);
-        let activeStake = BigInt(0);
+            // Single pass through stakes to calculate both total and active values
+            for (const stakeItem of stakes) {
+                const stakeValue = BigInt(stakeItem.stake || '0');
+                const delegateTotalValue = BigInt(stakeItem.delegateTotal || '0');
 
-        // Try to get individual stakes to calculate active-only values
-        try {
-            if (result.detailedProviderStakes && result.detailedProviderStakes[addr]) {
-                const stakes = result.detailedProviderStakes[addr];
+                // Add to total stakes
+                stake += stakeValue;
+                delegateTotal += delegateTotalValue;
 
-                // Loop through all specs for this provider
-                for (const stake of stakes) {
-                    // Only include active stakes
-                    if (stake.statusString === 'Active') {
-                        activeStake += BigInt(stake.stake || '0');
-                        activeDelegateTotal += BigInt(stake.delegateTotal || '0');
-                    }
-                }
-                activeStakeSum = activeStake + activeDelegateTotal;
-            } else {
-                // If detailed provider stakes are not available, try to use the summary data
-                if (result.summary && result.summary.activeCombinedSum) {
-                    activeStakeSum = BigInt(result.summary.activeCombinedSum);
-                    // Estimate active stake and delegate total proportionally
-                    const totalRatio = stakeSum > 0n ? activeStakeSum * 100n / stakeSum : 0n;
-                    activeStake = stake * totalRatio / 100n;
-                    activeDelegateTotal = delegateTotal * totalRatio / 100n;
-                } else {
-                    // Fallback to total values
-                    activeStake = stake;
-                    activeDelegateTotal = delegateTotal;
-                    activeStakeSum = stakeSum;
+                // Add to active stakes if applicable
+                if (stakeItem.statusString === 'Active') {
+                    activeStake += stakeValue;
+                    activeDelegateTotal += delegateTotalValue;
                 }
             }
-        } catch (error) {
-            logger.warn(`Error calculating active stakes: ${error}. Using total values.`);
-            // Fall back to total values if we can't calculate active-only
-            activeStake = stake;
-            activeDelegateTotal = delegateTotal;
-            activeStakeSum = stakeSum;
+
+            stakeSum = stake + delegateTotal;
+            activeStakeSum = activeStake + activeDelegateTotal;
+        } else {
+            // Fall back to providerStakes and summary data
+            stake = BigInt(providerStake.stake || '0');
+            delegateTotal = BigInt(providerStake.delegateTotal || '0');
+            stakeSum = stake + delegateTotal;
+
+            // Try to get active values from summary if available
+            if (result.summary && result.summary.activeCombinedSum) {
+                activeStakeSum = BigInt(result.summary.activeCombinedSum);
+
+                // If we have both summary data and total stake is non-zero,
+                // distribute active values proportionally
+                if (stakeSum > 0n) {
+                    const ratio = activeStakeSum * 100n / stakeSum;
+                    activeStake = stake * ratio / 100n;
+                    activeDelegateTotal = delegateTotal * ratio / 100n;
+                }
+            } else {
+                // No detailed or summary data, use total values
+                activeStake = stake;
+                activeDelegateTotal = delegateTotal;
+                activeStakeSum = stakeSum;
+            }
         }
 
-        // Return both total and active-only values
+        // Consistency check: active can't be greater than total
+        if (activeStakeSum > stakeSum) {
+            logger.warn(`Provider ${addr} has inconsistent data: active (${activeStakeSum}) > total (${stakeSum})`);
+            stake = activeStake;
+            delegateTotal = activeDelegateTotal;
+            stakeSum = activeStakeSum;
+        }
+
+        // Return formatted response
         return {
             stakeSum: stakeSum.toString(),
             stake: stake.toString(),

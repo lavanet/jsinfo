@@ -120,6 +120,84 @@ Returns list of all active validators (addresses only)
    - Represent unique users over 30-day period back from today
    - Updated continuously based on blockchain data
 
+## Stakers and Restakers API
+
+#### `/stakers_and_restakers`
+
+Returns comprehensive statistics about stakers and restakers across the Lava Network, including counts, USD values, and LAVA token amounts.
+
+### Response Format
+
+```json
+{
+  "lastUpdated": "2025-03-05T15:19:44.512Z",
+  "lavaUsdRate": 0.075727,
+  "activeProviders": {
+    "providers": [
+      "lava@1pew9nxdepfnap3mkkcmvkemls4c5uets9rqq2h",
+      "lava@1r55m6pkrduvgt5hwewrermpcejxaps3hnaqd20",
+      "..."
+    ],
+    "data": {
+      "allTime": {
+        "stakers": {
+          "count": 5897,
+          "totalUSD": 51682345.263304494,
+          "totalLava": 682482407.375236
+        },
+        "restakers": {
+          "count": 1870,
+          "totalUSD": 2573251.8857427817,
+          "totalLava": 33980639.47789802
+        }
+      },
+      "monthly": {
+        "stakers": {
+          "count": 5897,
+          "totalUSD": 51682345.263304494,
+          "totalLava": 682482407.375236
+        },
+        "restakers": {
+          "count": 1870,
+          "totalUSD": 2573251.8857427817,
+          "totalLava": 33980639.47789802
+        }
+      }
+    }
+  },
+  "allProviders": {
+    "providers": [
+      "lava@10yq82k5srad6zzx8e5z5j0h4f302jvp72uutxp",
+      "lava@123gelhvpv0046g4869dse939xmf86x77ue22hp",
+      "..."
+    ],
+    "data": {
+      // Same structure as activeProviders.data
+    }
+  }
+}
+```
+
+### Important Notes
+
+1. The endpoint provides both current (allTime) and monthly statistics for:
+
+   - Stakers (traditional delegation via Cosmos API)
+   - Restakers (dual staking via Lava CLI)
+
+2. Data includes:
+
+   - Total count of unique delegators
+   - Total value in USD
+   - Total amount in LAVA tokens
+
+3. The response contains two main sections:
+
+   - `activeProviders`: Statistics for currently active providers only
+   - `allProviders`: Statistics across all providers (including inactive)
+
+4. Monthly statistics represent activity over the past 30 days
+
 ## APR (Annual Percentage Rewards) Endpoint
 
 #### `/apr`

@@ -4,11 +4,10 @@ import { RedisCache } from '@jsinfo/redis/classes/RedisCache';
 import { CoinGekoCache } from '@jsinfo/restRpc/ext/CoinGeko/CoinGekoCache';
 import { RpcOnDemandEndpointCache } from '@jsinfo/restRpc/LavaRpcOnDemandEndpointCache';
 import { logger } from '@jsinfo/utils/logger';
-import { IsTestnet } from '@jsinfo/utils/env';
 import Decimal from 'decimal.js';
 
 const DEMON_LOWEST_LIMIT_WARNING = 1.e-20;
-const DEMON_HIGHEST_LIMIT_ERROR = IsTestnet() ? 10_000_000_000_000 : 100_000_000; // 100_000 was ok for mainnet as well
+const DEMON_HIGHEST_LIMIT_ERROR = 10_000_000_000_000_000
 
 const CACHE_DURATION = {
     DENOM_TRACE: 3600 * 24, // 1 day

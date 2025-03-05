@@ -21,8 +21,6 @@ export const TotalLockedValuesComponentsHandlerOpts: RouteShorthandOptions = {
     }
 }
 
-type LockedValueItemWithoutCountBool = Omit<LockedTokenValuesItem, 'countForTlv'>;
-
 export async function TotalLockedValuesComponentsHandler(request: FastifyRequest, reply: FastifyReply) {
     const resource = new LockedTokenValuesResource();
     const totalValueLockedItems = await resource.fetch();
@@ -31,29 +29,35 @@ export async function TotalLockedValuesComponentsHandler(request: FastifyRequest
         return reply.status(400).send({ error: 'Failed to fetch Total Value Locked data' });
     }
 
-    const filteredItems: LockedValueItemWithoutCountBool[] = totalValueLockedItems
-        .filter(item => item.countForTlv)
-        .map(({ countForTlv, ...rest }) => rest);
+    // Make a copy of the items to avoid modifying the source data
+    const allItems = [...totalValueLockedItems];
 
-    const total: LockedValueItemWithoutCountBool = {
-        key: 'Misc_Total',
-        ulavaValue: filteredItems
-            .reduce((sum, item) => sum + item.ulavaValue, 0),
-        USDValue: filteredItems
-            .reduce((sum, item) => sum + item.USDValue, 0),
+    // Calculate the total based only on countForTlv=true items
+    const countedItems = totalValueLockedItems.filter(item => item.countForTlv);
+
+    // Create the total item
+    const total: LockedTokenValuesItem = {
+        key: 'Total_Of_Counted_For_TLV',
+        ulavaValue: countedItems.reduce((sum, item) => sum + item.ulavaValue, 0),
+        USDValue: countedItems.reduce((sum, item) => sum + item.USDValue, 0),
+        countForTlv: true // Mark as counted for TLV
     };
 
-    filteredItems.push(total as LockedTokenValuesItem);
+    // Add the total to the list
+    allItems.push(total);
 
-    const coinGeckoRate: LockedValueItemWithoutCountBool = {
+    // Add the CoinGecko rate item
+    const coinGeckoRate: LockedTokenValuesItem = {
         key: 'Misc_CoinGecko-LavaNetwork-Rate',
         ulavaValue: 1000000,
         USDValue: await CoinGekoCache.GetLavaUSDRate(),
+        countForTlv: false // Not counted for TLV
     };
 
-    filteredItems.push(coinGeckoRate as LockedTokenValuesItem);
+    allItems.push(coinGeckoRate);
+
     reply.header('Content-Type', 'application/json');
-    return JSONStringify(filteredItems);
+    return JSONStringify(allItems);
 }
 
 

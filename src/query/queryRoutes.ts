@@ -86,6 +86,7 @@ import { ActiveValidatorsPaginatedHandler, ActiveValidatorsPaginatedHandlerOpts,
 import { TotalLockedValueHandler, TotalLockedValueHandlerOpts } from './handlers/ajax/totalLockedValueHandler';
 import { TotalLockedValuesComponentsHandler, TotalLockedValuesComponentsHandlerOpts } from './handlers/ajax/totalLockedValuesComponentsHandler';
 import { AllLockedValuesHandler, AllLockedValuesHandlerOpts } from './handlers/ajax/allLockedValuesHandler';
+import { StakersAndRestakersHandler, StakersAndRestakersHandlerOpts } from './handlers/ajax/stakersAndRestakersHandler';
 
 // IpRpc Endpoints
 import { IpRpcEndpointsIndexHandler, IpRpcEndpointsIndexHandlerOpts } from './handlers/IpRpcEndpointsIndex/IpRpcEndpointsIndexHandler';
@@ -313,6 +314,8 @@ tvlComponentsRoutes.forEach(route => {
 });
 
 GetServerInstance().get("/all_locked_values", AllLockedValuesHandlerOpts, AllLockedValuesHandler);
+
+RegisterRedisBackedHandler('/stakers_and_restakers', StakersAndRestakersHandlerOpts, StakersAndRestakersHandler, { cache_ttl: 30 });
 
 // -----------------------------------------------------------------------------
 // IP RPC Endpoints Routes

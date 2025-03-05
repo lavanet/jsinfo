@@ -168,4 +168,8 @@ export const chainDictionary: { [key: string]: ChainInfo } = {
     kakarott: { name: "Kakarot Testnet", icon: "/icons/kakarot.webp" },
     movement: { name: "Movement", icon: "/icons/movement3.webp" },
     movementt: { name: "Movement Testnet", icon: "/icons/movement3.svg" },
+    secret: { name: "Secret", icon: "/icons/secret.png" },
+    secrett: { name: "Secret Testnet", icon: "/icons/secret.png" },
+    secret2: { name: "Secret", icon: "/icons/secret.png" },
+    secret2t: { name: "Secret Testnet", icon: "/icons/secret.png" },
 };

@@ -18,7 +18,7 @@ const REDIS_KEYS = {
     CHAIN_LIST: 'chain_list'
 } as const;
 
-interface Delegation {
+export interface Delegation {
     provider: string;
     chainID: string;
     delegator: string;

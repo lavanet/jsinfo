@@ -35,6 +35,7 @@ import { MainnetValidatorsWithRewardsService } from '../resources/Mainnet/Valida
 import { ProviderPerformanceResource } from '../resources/ajax/ProviderPerformanceResource';
 import { ProviderClaimableRewardsService } from '../resources/Mainnet/ProviderClaimableRewards/MainnetProviderClaimableRewardsResource';
 import { ProvidersReputationScoresService } from '../resources/ProviderConsumerOptimizerMetrics/ProvidersReputationScores';
+import { StakersAndRestakersService } from '../resources/ajax/StackersAndRestkersResource';
 
 export class IndexerRedisResourceCaller {
     private static readonly REFRESH_INTERVAL = 60 * 1000; // 1 minute
@@ -187,6 +188,11 @@ export class IndexerRedisResourceCaller {
             () => new ChainWalletResource().fetch({ type: 'restakers' }),
             this.currentFetches
         ).catch(e => logger.error('Failed to refresh restakers:', e));
+
+        await this.safeFetch('StakersAndRestakers',
+            () => StakersAndRestakersService.fetch(),
+            this.currentFetches
+        ).catch(e => logger.error('Failed to refresh stakers and restakers:', e));
 
         await this.safeFetch('AutoComplete',
             () => new AutoCompleteResource().fetch(),

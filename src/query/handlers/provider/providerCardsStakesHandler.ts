@@ -18,7 +18,8 @@ export const ProviderCardsStakesHandlerOpts: RouteShorthandOptions = {
                         stakeSum: { type: 'string' },
                         stake: { type: 'string' },
                         delegateTotal: { type: 'string' },
-                    }
+                    },
+                    Commission: { type: 'number' }
                 }
             }
         }
@@ -39,6 +40,10 @@ export async function ProviderCardsStakesHandler(request: FastifyRequest, reply:
         let activeStake = BigInt(0);
         let activeDelegateTotal = BigInt(0);
         let activeStakeSum = BigInt(0);
+
+        // For average commission calculation
+        let activeCommissionSum = 0;
+        let activeStakeCount = 0;
 
         const resource = new ProviderStakesAndDelegationResource();
         const result = await resource.fetch();
@@ -75,6 +80,16 @@ export async function ProviderCardsStakesHandler(request: FastifyRequest, reply:
                 if (stakeItem.statusString === 'Active') {
                     activeStake += stakeValue;
                     activeDelegateTotal += delegateTotalValue;
+
+                    // Track commission for active stakes
+                    if (stakeItem.delegateCommission) {
+                        // Convert to number for averaging
+                        const commission = Number(stakeItem.delegateCommission);
+                        if (!isNaN(commission)) {
+                            activeCommissionSum += commission;
+                            activeStakeCount++;
+                        }
+                    }
                 }
             }
 
@@ -113,7 +128,12 @@ export async function ProviderCardsStakesHandler(request: FastifyRequest, reply:
             stakeSum = activeStakeSum;
         }
 
-        // Return formatted response
+        // Calculate average commission
+        const avgActiveCommission = activeStakeCount > 0
+            ? Math.round((activeCommissionSum / activeStakeCount) * 100) / 100  // Round to 2 decimal places
+            : 0;
+
+        // Return formatted response with average commission
         return {
             stakeSum: stakeSum.toString(),
             stake: stake.toString(),
@@ -122,7 +142,8 @@ export async function ProviderCardsStakesHandler(request: FastifyRequest, reply:
                 stakeSum: activeStakeSum.toString(),
                 stake: activeStake.toString(),
                 delegateTotal: activeDelegateTotal.toString()
-            }
+            },
+            Commission: avgActiveCommission
         };
     } catch (error) {
         logger.error(`Error in ProviderCardsStakesHandler for ${addr}: ${error}`);

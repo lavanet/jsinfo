@@ -1,4 +1,4 @@
-import { desc, sql, eq, inArray, gte, and, gt } from 'drizzle-orm';
+import { desc, sql, inArray, gte, and } from 'drizzle-orm';
 import { RedisResourceBase } from '@jsinfo/redis/classes/RedisResourceBase';
 import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import * as JsinfoProviderAgrSchema from '@jsinfo/schemas/jsinfoSchema/providerRelayPaymentsAgregation';
@@ -137,13 +137,6 @@ export interface ProviderStakesAndDelegationData {
 // Add this interface to properly type the status data
 export interface StakesByStatus {
     status: number | null;
-    stake: bigint;
-    delegateTotal: bigint;
-}
-
-// Keep only these type definitions
-type BasicStakesResult = {
-    provider: string | null;
     stake: bigint;
     delegateTotal: bigint;
 }

@@ -90,12 +90,32 @@ export async function ProviderCardsStakesHandler(request: FastifyRequest, reply:
                     hasRewardData = true;
                     // Parse and add rewards, handling potential parsing errors
                     try {
-                        const lavaReward = stakeItem.rewards.lava || "0";
-                        const usdReward = stakeItem.rewards.usd || "0";
+                        // Extract lava rewards, ensuring we have a valid number
+                        let lavaReward = "0";
+                        if (stakeItem.rewards.lava) {
+                            lavaReward = stakeItem.rewards.lava.replace(/[^0-9.]/g, '');
+                        }
 
-                        // Add to totals (as numbers or BigInts for precision)
-                        totalLavaRewards = (BigInt(totalLavaRewards) + BigInt(lavaReward)).toString();
-                        totalUsdRewards = (Number(totalUsdRewards) + Number(usdReward)).toString();
+                        // Extract USD rewards, removing $ and other non-numeric characters
+                        let usdReward = "0";
+                        if (stakeItem.rewards.usd) {
+                            usdReward = stakeItem.rewards.usd.replace(/[^0-9.]/g, '');
+                        }
+
+                        // Log for debugging
+                        // logger.debug(`Processing rewards for ${addr} spec ${stakeItem.specId}: LAVA=${lavaReward}, USD=${usdReward}`);
+
+                        // Add to totals using safer parsing
+                        if (lavaReward && !isNaN(parseFloat(lavaReward))) {
+                            // Convert to same units (ulava) if needed, or keep as is
+                            const lavaValue = parseFloat(lavaReward);
+                            totalLavaRewards = (parseFloat(totalLavaRewards) + lavaValue).toString();
+                        }
+
+                        if (usdReward && !isNaN(parseFloat(usdReward))) {
+                            const usdValue = parseFloat(usdReward);
+                            totalUsdRewards = (parseFloat(totalUsdRewards) + usdValue).toString();
+                        }
                     } catch (e) {
                         logger.warn(`Failed to parse rewards for ${addr} spec ${stakeItem.specId}: ${e}`);
                     }

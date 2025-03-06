@@ -19,7 +19,7 @@ export const ProviderCardsStakesHandlerOpts: RouteShorthandOptions = {
                         stake: { type: 'string' },
                         delegateTotal: { type: 'string' },
                     },
-                    Commission: { type: 'number' }
+                    commission: { type: 'string' }
                 }
             }
         }
@@ -143,7 +143,7 @@ export async function ProviderCardsStakesHandler(request: FastifyRequest, reply:
                 stake: activeStake.toString(),
                 delegateTotal: activeDelegateTotal.toString()
             },
-            Commission: avgActiveCommission
+            commission: avgActiveCommission
         };
     } catch (error) {
         logger.error(`Error in ProviderCardsStakesHandler for ${addr}: ${error}`);

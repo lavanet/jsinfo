@@ -120,29 +120,6 @@ export async function ProviderCardsStakesHandler(request: FastifyRequest, reply:
 
             stakeSum = stake + delegateTotal;
             activeStakeSum = activeStake + activeDelegateTotal;
-        } else {
-            // Fall back to providerStakes and summary data
-            stake = BigInt(providerStake.stake || '0');
-            delegateTotal = BigInt(providerStake.delegateTotal || '0');
-            stakeSum = stake + delegateTotal;
-
-            // Try to get active values from summary if available
-            if (result.summary && result.summary.activeCombinedSum) {
-                activeStakeSum = BigInt(result.summary.activeCombinedSum);
-
-                // If we have both summary data and total stake is non-zero,
-                // distribute active values proportionally
-                if (stakeSum > 0n) {
-                    const ratio = activeStakeSum * 100n / stakeSum;
-                    activeStake = stake * ratio / 100n;
-                    activeDelegateTotal = delegateTotal * ratio / 100n;
-                }
-            } else {
-                // No detailed or summary data, use total values
-                activeStake = stake;
-                activeDelegateTotal = delegateTotal;
-                activeStakeSum = stakeSum;
-            }
         }
 
         // Consistency check: active can't be greater than total

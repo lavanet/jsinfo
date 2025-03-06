@@ -14,6 +14,7 @@ import { GetAllProviderAvatars } from '@jsinfo/restRpc/GetProviderAvatar';
 import { IsMainnet } from '@jsinfo/utils/env';
 import { GetResourceResponse, MainnetProviderEstimatedRewardsGetService } from '@jsinfo/redis/resources/Mainnet/ProviderEstimatedRewards/MainnetProviderEstimatedRewardsGetResource';
 import { ActiveProvidersService } from '@jsinfo/redis/resources/index/ActiveProvidersResource';
+import Decimal from 'decimal.js';
 
 // Helper function to map status codes to readable strings
 function getStatusString(statusCode: number | null): string {
@@ -55,10 +56,11 @@ export interface HealthData {
     };
 }
 
-// Add this interface to represent rewards data
+// Update the RewardsData interface to include _sources
 export interface RewardsData {
-    lava: string;  // Rewards in LAVA
-    usd: string;   // Rewards in USD equivalent
+    lava: string;
+    usd: string;
+    _sources?: any[]; // Add this line to support debugging sources
 }
 
 // New detailed interface with usage metrics
@@ -171,7 +173,7 @@ type UsageMetrics30Days = {
 }
 
 export class ProviderStakesAndDelegationResource extends RedisResourceBase<ProviderStakesAndDelegationData, {}> {
-    protected readonly redisKey = 'ProviderStakesAndDelegationResource_v10';
+    protected readonly redisKey = 'ProviderStakesAndDelegationResource_v11';
     protected readonly cacheExpirySeconds = 600; // 10 minutes cache
 
     // Main fetch method
@@ -210,7 +212,6 @@ export class ProviderStakesAndDelegationResource extends RedisResourceBase<Provi
             if (IsMainnet()) {
                 try {
                     // logger.info("Fetching MainnetProviderEstimatedRewardsGetService data...");
-                    const startTime = Date.now();
                     rewardsData = await MainnetProviderEstimatedRewardsGetService.fetch({ block: 'latest_distributed' });
                     // logger.info(`Fetched rewards data in ${Date.now() - startTime}ms for ${rewardsData?.data?.providers?.length || 0} providers`);
                 } catch (error) {
@@ -221,7 +222,6 @@ export class ProviderStakesAndDelegationResource extends RedisResourceBase<Provi
             // Additional debug logs
             // logger.info(`Starting Promise.all for various data fetches`);
 
-            const startTime = Date.now();
             const [
                 stakesRes,
                 stakesByStatusRes,
@@ -239,19 +239,6 @@ export class ProviderStakesAndDelegationResource extends RedisResourceBase<Provi
                 this.fetchProviderHealth(providerAddresses),
                 GetAllProviderAvatars()
             ]);
-            // logger.info(`Promise.all completed in ${Date.now() - startTime}ms`);
-
-            // // Log results from each data fetch
-            // logger.info(`Data fetch results: 
-            //     stakesRes: ${stakesRes?.length || 0} items
-            //     stakesByStatusRes: ${stakesByStatusRes?.length || 0} items
-            //     detailedStakesRes: ${detailedStakesRes?.length || 0} items
-            //     aggRes90Days: ${aggRes90Days?.length || 0} items
-            //     aggRes30Days: ${aggRes30Days?.length || 0} items
-            //     healthData: ${Object.keys(providerHealthData || {}).length} providers
-            //     avatars: ${avatarMap?.size || 0} entries
-            //     rewardsData: ${rewardsData?.data?.providers?.length || 0} items
-            // `);
 
             // Create usage metrics maps
             const aggRes90DaysMap = new Map<string, UsageMetrics90Days>(
@@ -270,7 +257,6 @@ export class ProviderStakesAndDelegationResource extends RedisResourceBase<Provi
 
             // Process the basic stakes data
             const { stakeSum, delegationSum, providerStakes } = this.processBasicStakesData(stakesRes);
-            // logger.info(`Processed basic stakes: stakeSum=${stakeSum}, delegationSum=${delegationSum}, providers=${Object.keys(providerStakes).length}`);
 
             // Handle case with no data
             if (!stakesRes || stakesRes.length === 0) {
@@ -285,7 +271,6 @@ export class ProviderStakesAndDelegationResource extends RedisResourceBase<Provi
             });
 
             // Pass the health data and rewards map to the detailed stakes processing
-            const detailedProcessingStart = Date.now();
             const { detailedProviderStakes, detailedSpecStakes } =
                 await this.processDetailedStakes(
                     detailedStakesRes,
@@ -295,7 +280,6 @@ export class ProviderStakesAndDelegationResource extends RedisResourceBase<Provi
                     avatars,
                     rewardsMap // Pass rewardsMap to processDetailedStakes
                 );
-            // logger.info(`processDetailedStakes completed in ${Date.now() - detailedProcessingStart}ms`);
 
             // Generate summary
             const summary = this.createSummary(stakeSum, delegationSum, stakesByStatusRes);
@@ -311,7 +295,6 @@ export class ProviderStakesAndDelegationResource extends RedisResourceBase<Provi
                 detailedSpecStakes
             };
 
-            // logger.info(`Successfully built result with ${Object.keys(detailedProviderStakes || {}).length} providers and ${Object.keys(detailedSpecStakes || {}).length} specs`);
             return result;
         } catch (error) {
             logger.error("Error fetching provider stakes and delegation:", error);
@@ -354,7 +337,6 @@ export class ProviderStakesAndDelegationResource extends RedisResourceBase<Provi
                 }
 
                 const results = await query.orderBy(desc(JsinfoSchema.providerStakes.stake));
-                logger.info(`fetchBasicStakesData returned ${results.length} results`);
 
                 return results;
             } catch (error) {
@@ -505,42 +487,108 @@ export class ProviderStakesAndDelegationResource extends RedisResourceBase<Provi
     }
 
     // Extract rewards processing to its own function
-    private processRewardsData(rewardsData: GetResourceResponse | null): Map<string, RewardsData> {
-        const rewardsMap = new Map<string, RewardsData>();
-
-        if (!rewardsData?.data?.providers) {
+    private processRewardsData(rewardsData: GetResourceResponse | null): Map<string, any> {
+        const rewardsMap = new Map<string, any>();
+        if (!rewardsData || !rewardsData.data || !rewardsData.data.providers) {
             return rewardsMap;
         }
 
-        // logger.info(`Processing rewards data for ${rewardsData.data.providers.length} providers`);
-
+        // Process each provider's rewards data
         for (const provider of rewardsData.data.providers) {
-            try {
-                if (!provider.address || !provider.rewards_by_block) continue;
+            const providerAddress = provider.address;
 
-                // Get the first block key (there should only be one)
-                const blockKeys = Object.keys(provider.rewards_by_block);
-                if (blockKeys.length === 0) continue;
+            // Skip if no rewards data for this block
+            if (!provider.rewards_by_block || Object.keys(provider.rewards_by_block).length === 0) {
+                continue;
+            }
 
-                const blockData = provider.rewards_by_block[blockKeys[0]];
-                if (!blockData?.total) continue;
+            // Get the latest block's rewards data (first key in object)
+            const latestBlockKey = Object.keys(provider.rewards_by_block)[0];
+            const blockData = provider.rewards_by_block[latestBlockKey];
 
-                // Extract lava token
-                const lavaToken = blockData.total.tokens.find(
-                    token => token.display_denom === 'lava'
-                );
+            // Skip if no info or total
+            if (!blockData.info || !blockData.total) {
+                continue;
+            }
 
-                rewardsMap.set(provider.address, {
-                    lava: lavaToken ? lavaToken.display_amount : "0",
-                    usd: blockData.total.total_usd ?
-                        `$${blockData.total.total_usd.toFixed(2)}` : "$0.00"
+            // Process each reward info entry (these are per-chain/spec rewards)
+            for (const rewardInfo of blockData.info) {
+                // Extract the spec from the source (e.g., "Boost: COSMOSHUB" -> "COSMOSHUB")
+                const sourceParts = rewardInfo.source.split(': ');
+                if (sourceParts.length < 2) continue;
+
+                const rewardType = sourceParts[0];  // e.g., "Boost", "Pool", "Subscription"
+                const specId = sourceParts[1];      // e.g., "COSMOSHUB", "EVMOS"
+
+                // Create a unique key for this provider+spec
+                const key = `${providerAddress}:${specId}`;
+
+                // Get existing data or initialize new
+                let specRewards = rewardsMap.get(key) || {
+                    lava: 0,
+                    usd: 0,
+                    sources: []
+                };
+
+                // Add the current reward source to track where rewards are coming from
+                specRewards.sources.push(rewardInfo.source);
+
+                // Add token values based on denom
+                if (rewardInfo.amount && rewardInfo.amount.tokens) {
+                    for (const token of rewardInfo.amount.tokens) {
+                        // Handle LAVA tokens
+                        if (token.display_denom === 'lava') {
+                            const lavaValue = new Decimal(token.display_amount || '0');
+                            specRewards.lava = new Decimal(specRewards.lava).plus(lavaValue);
+                        }
+
+                        // Add USD values from token if present
+                        if (token.value_usd) {
+                            const usdValue = parseFloat(token.value_usd.replace(/[^0-9.]/g, '') || '0');
+                            specRewards.usd += usdValue;
+                        }
+                    }
+                }
+
+                // // Add USD total if present
+                // if (rewardInfo.amount && rewardInfo.amount.total_usd) {
+                //     const totalUsd = rewardInfo.amount.total_usd;
+                //     // Check if totalUsd is already accounted for in token.value_usd values
+                //     // If not, add it here
+                // }
+
+                // Update the map
+                rewardsMap.set(key, specRewards);
+            }
+
+            // Also store the total rewards for this provider
+            if (blockData.total) {
+                let totalLava = "0";
+                let totalUsd = "0";
+
+                // Sum up the LAVA tokens
+                if (blockData.total.tokens) {
+                    for (const token of blockData.total.tokens) {
+                        if (token.display_denom === 'lava') {
+                            totalLava = token.display_amount || "0";
+                        }
+                    }
+                }
+
+                // Get the total USD value
+                if (blockData.total.total_usd) {
+                    totalUsd = blockData.total.total_usd.toString();
+                }
+
+                // Store the provider's total (useful for verification)
+                rewardsMap.set(providerAddress, {
+                    lava: totalLava,
+                    usd: totalUsd,
+                    isTotal: true
                 });
-            } catch (error) {
-                logger.error(`Error processing rewards for provider ${provider.address}:`, error);
             }
         }
 
-        // logger.info(`Created rewardsMap with ${rewardsMap.size} providers`);
         return rewardsMap;
     }
 
@@ -666,10 +714,13 @@ export class ProviderStakesAndDelegationResource extends RedisResourceBase<Provi
         detailedStakesRes: DetailedStakesResult[],
         aggRes90DaysMap: Map<string, UsageMetrics90Days>,
         aggRes30DaysMap: Map<string, UsageMetrics30Days>,
-        providerHealthMap: Record<string, Record<string, HealthData | string>>,
+        providerHealthData: Record<string, any> | null,
         avatars: Record<string, string>,
-        rewardsMap: Map<string, RewardsData>
-    ): Promise<{ detailedProviderStakes: Record<string, DetailedStakeInfo[]>; detailedSpecStakes: Record<string, DetailedStakeInfo[]> }> {
+        rewardsMap: Map<string, any> // Use our new rewards map
+    ): Promise<{
+        detailedProviderStakes: Record<string, DetailedStakeInfo[]>;
+        detailedSpecStakes: Record<string, DetailedStakeInfo[]>;
+    }> {
         const detailedProviderStakes: Record<string, DetailedStakeInfo[]> = {};
         const detailedSpecStakes: Record<string, DetailedStakeInfo[]> = {};
 
@@ -704,8 +755,8 @@ export class ProviderStakesAndDelegationResource extends RedisResourceBase<Provi
 
             // Get health data
             let health: HealthData | "No data available" = "No data available";
-            if (providerHealthMap[item.provider] && providerHealthMap[item.provider][item.specId]) {
-                const healthValue = providerHealthMap[item.provider][item.specId];
+            if (providerHealthData && providerHealthData[item.provider] && providerHealthData[item.provider][item.specId]) {
+                const healthValue = providerHealthData[item.provider][item.specId];
                 // Only assign if it's a HealthData object, otherwise keep "No data available"
                 if (typeof healthValue === 'object') {
                     health = healthValue;
@@ -716,7 +767,7 @@ export class ProviderStakesAndDelegationResource extends RedisResourceBase<Provi
             const providerAvatar = avatars[item.provider] || undefined;
 
             // Get rewards data if on mainnet or set to "No data available"
-            const rewards = rewardsMap.get(item.provider) || "No data available";
+            const rewards = rewardsMap.get(key);
 
             const detailedInfo: DetailedStakeInfo = {
                 stake: BigIntIsZero(item.stake) ? "0" : item.stake?.toString() ?? "0",
@@ -742,7 +793,11 @@ export class ProviderStakesAndDelegationResource extends RedisResourceBase<Provi
                 cuSum90Days: metrics90Days.cuSum90Days || 0,
                 relaySum30Days: metrics30Days.relaySum30Days || 0,
                 relaySum90Days: metrics90Days.relaySum90Days || 0,
-                rewards,
+                rewards: rewards ? {
+                    lava: new Decimal(rewards.lava).toFixed(3),
+                    usd: new Decimal(rewards.usd).toFixed(2),
+                    _sources: rewards.sources
+                } : "No data available",
                 health
             };
 

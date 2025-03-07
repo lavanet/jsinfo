@@ -56,7 +56,7 @@ export class NearHealthResource extends RedisResourceBase<NearHealthData, {}> {
                 ipProtocol: 'ip4'
             },
             gateway: {
-                url: `g.w.lavanet.xyz:443/gateway/near/rpc-http/${GetEnvVar('JSINFO_NEAR_GATEWAY_HASH', '-')}`,
+                url: `g.w.lavanet.xyz:443/gateway/near/rpc-http/${GetEnvVar('JSINFO_NEAR_GATEWAY_HASH', 'Nc426ffd5fb1c1086f7f68f050e7d527A')}`,
                 method: 'POST' as const,
                 headers: {
                     'content-type': 'application/json',
@@ -79,7 +79,7 @@ export class NearHealthResource extends RedisResourceBase<NearHealthData, {}> {
                 ipProtocol: 'ip4'
             },
             gateway: {
-                url: `g.w.lavanet.xyz:443/gateway/neart/rpc-http/${GetEnvVar('JSINFO_NEAR_GATEWAY_HASH', '-')}`,
+                url: `g.w.lavanet.xyz:443/gateway/neart/rpc-http/${GetEnvVar('JSINFO_NEAR_GATEWAY_HASH', 'Nc426ffd5fb1c1086f7f68f050e7d527A')}`,
                 method: 'POST' as const,
                 headers: {
                     'content-type': 'application/json',

@@ -93,8 +93,6 @@ export class NearHealthResource extends RedisResourceBase<NearHealthData, {}> {
 
     protected async fetchFromSource(): Promise<NearHealthData> {
         try {
-            logger.info('Fetching NEAR health data');
-
             // Perform health checks
             const [mainnetIprpc, mainnetGateway, testnetIprpc, testnetGateway] = await Promise.all([
                 this.checkEndpointHealth('mainnet', 'iprpc', this.endpoints.mainnet.iprpc),

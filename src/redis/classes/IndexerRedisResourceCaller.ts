@@ -36,6 +36,7 @@ import { ProviderPerformanceResource } from '../resources/ajax/ProviderPerforman
 import { ProviderClaimableRewardsService } from '../resources/Mainnet/ProviderClaimableRewards/MainnetProviderClaimableRewardsResource';
 import { ProvidersReputationScoresService } from '../resources/ProviderConsumerOptimizerMetrics/ProvidersReputationScores';
 import { StakersAndRestakersService } from '../resources/ajax/StackersAndRestkersResource';
+import { NearHealthService } from '@jsinfo/redis/resources/ajax/NearHealthResource';
 
 export class IndexerRedisResourceCaller {
     private static readonly REFRESH_INTERVAL = 60 * 1000; // 1 minute
@@ -213,6 +214,11 @@ export class IndexerRedisResourceCaller {
             () => ProvidersReputationScoresService.fetch(),
             this.currentFetches
         ).catch(e => logger.error('Failed to refresh providers reputation scores:', e));
+
+        await this.safeFetch('NearHealth',
+            () => NearHealthService.fetch(),
+            this.currentFetches
+        ).catch(e => logger.error('Failed to refresh near health:', e));
     }
 
     private static async refreshIndexResources(): Promise<void> {

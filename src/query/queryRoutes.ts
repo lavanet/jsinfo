@@ -110,6 +110,9 @@ import {
     ProviderStakesV2CSVRawHandlerOpts
 } from './handlers/provider/providerStakesV2Handler';
 
+// Import the handler
+import { NearHealthHandler, NearHealthHandlerOpts } from '@jsinfo/query/handlers/ajax/nearHealthHandler';
+
 // =============================================================================
 // ROUTE REGISTRATION - Grouped by functionality
 // =============================================================================
@@ -123,6 +126,7 @@ GetServerInstance().get('/health', HealthRawHandlerOpts, HealthRawHandler);
 GetServerInstance().get('/healths', HealthRawHandlerOpts, HealthRawHandler);
 GetServerInstance().get('/healthz', HealthRawHandlerOpts, HealthRawHandler);
 GetServerInstance().get('/healthstatus', HealthStatusRawHandlerOpts, HealthStatusRawHandler);
+GetServerInstance().get('/near_health', NearHealthHandlerOpts, NearHealthHandler);
 
 // -----------------------------------------------------------------------------
 // Supply Routes
@@ -334,3 +338,4 @@ if (IsMainnet()) {
 // Add route registrations for the new handlers
 GetServerInstance().get('/providerStakesV2/:addr', ProviderStakesV2HandlerOpts, ProviderStakesV2Handler);
 GetServerInstance().get('/providerStakesV2Csv/:addr', ProviderStakesV2CSVRawHandlerOpts, ProviderStakesV2CSVRawHandler);
+

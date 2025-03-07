@@ -38,7 +38,7 @@ export interface NearHealthData {
 }
 
 export class NearHealthResource extends RedisResourceBase<NearHealthData, {}> {
-    protected readonly redisKey = 'NearHealthResource_v1';
+    protected readonly redisKey = 'NearHealthResource_v2';
     protected readonly cacheExpirySeconds = 300; // 5 minutes cache
 
     // Configuration for the endpoints

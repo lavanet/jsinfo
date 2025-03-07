@@ -1,4 +1,4 @@
-import { IsMeaningfulText, JSONStringify, MaskPassword } from "./fmt";
+import { IsMeaningfulText, MaskPassword } from "./fmt";
 import { logger } from "./logger";
 import { Sleep } from "./sleep";
 

@@ -56,11 +56,11 @@ export class NearHealthResource extends RedisResourceBase<NearHealthData, {}> {
                 ipProtocol: 'ip4'
             },
             gateway: {
-                url: `g.w.lavanet.xyz:443/gateway/near/rpc-http/${GetEnvVar('NEAR_GATEWAY_HASH', '-')}`,
+                url: `g.w.lavanet.xyz:443/gateway/near/rpc-http/${GetEnvVar('JSINFO_NEAR_GATEWAY_HASH', '-')}`,
                 method: 'POST' as const,
                 headers: {
                     'content-type': 'application/json',
-                    'Authorization': `Bearer ${GetEnvVar('NEAR_GATEWAY_TOKEN', '-')}`
+                    'Authorization': `Bearer ${GetEnvVar('JSINFO_NEAR_GATEWAY_TOKEN', '-')}`
                 },
                 body: '{"jsonrpc":"2.0","method":"block","params":{"finality":"final"},"id":1}',
                 skipTlsVerify: true,
@@ -79,11 +79,11 @@ export class NearHealthResource extends RedisResourceBase<NearHealthData, {}> {
                 ipProtocol: 'ip4'
             },
             gateway: {
-                url: `g.w.lavanet.xyz:443/gateway/neart/rpc-http/${GetEnvVar('NEAR_GATEWAY_HASH', '-')}`,
+                url: `g.w.lavanet.xyz:443/gateway/neart/rpc-http/${GetEnvVar('JSINFO_NEAR_GATEWAY_HASH', '-')}`,
                 method: 'POST' as const,
                 headers: {
                     'content-type': 'application/json',
-                    'Authorization': `Bearer ${GetEnvVar('NEAR_GATEWAY_TOKEN', '-')}`
+                    'Authorization': `Bearer ${GetEnvVar('JSINFO_NEAR_GATEWAY_TOKEN', '-')}`
                 },
                 body: '{"jsonrpc":"2.0","method":"block","params":{"finality":"final"},"id":1}',
                 skipTlsVerify: true,

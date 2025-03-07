@@ -1,7 +1,6 @@
 import { RedisResourceBase } from '@jsinfo/redis/classes/RedisResourceBase';
 import axios from 'axios';
 import { logger } from '@jsinfo/utils/logger';
-import { GetEnvVar } from '@jsinfo/utils/env';
 
 // Endpoint configuration type
 interface EndpointConfig {
@@ -56,11 +55,11 @@ export class NearHealthResource extends RedisResourceBase<NearHealthData, {}> {
                 ipProtocol: 'ip4'
             },
             gateway: {
-                url: `g.w.lavanet.xyz:443/gateway/near/rpc-http/${GetEnvVar('JSINFO_NEAR_GATEWAY_HASH', 'Nc426ffd5fb1c1086f7f68f050e7d527A')}`,
+                url: 'g.w.lavanet.xyz:443/gateway/near/rpc-http/c426ffd5fb1c1086f7f68f050e7d527e',
                 method: 'POST' as const,
                 headers: {
                     'content-type': 'application/json',
-                    'Authorization': `Bearer ${GetEnvVar('JSINFO_NEAR_GATEWAY_TOKEN', '-')}`
+                    'Authorization': 'Bearer 9e7aa4d5-5de7-483b-ba6b-ad51ff940c16'
                 },
                 body: '{"jsonrpc":"2.0","method":"block","params":{"finality":"final"},"id":1}',
                 skipTlsVerify: true,
@@ -79,11 +78,11 @@ export class NearHealthResource extends RedisResourceBase<NearHealthData, {}> {
                 ipProtocol: 'ip4'
             },
             gateway: {
-                url: `g.w.lavanet.xyz:443/gateway/neart/rpc-http/${GetEnvVar('JSINFO_NEAR_GATEWAY_HASH', 'Nc426ffd5fb1c1086f7f68f050e7d527A')}`,
+                url: 'g.w.lavanet.xyz:443/gateway/neart/rpc-http/c426ffd5fb1c1086f7f68f050e7d527e',
                 method: 'POST' as const,
                 headers: {
                     'content-type': 'application/json',
-                    'Authorization': `Bearer ${GetEnvVar('JSINFO_NEAR_GATEWAY_TOKEN', '-')}`
+                    'Authorization': 'Bearer 9e7aa4d5-5de7-483b-ba6b-ad51ff940c16'
                 },
                 body: '{"jsonrpc":"2.0","method":"block","params":{"finality":"final"},"id":1}',
                 skipTlsVerify: true,

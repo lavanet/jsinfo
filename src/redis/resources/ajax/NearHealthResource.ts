@@ -39,7 +39,7 @@ export interface NearHealthData {
 }
 
 export class NearHealthResource extends RedisResourceBase<NearHealthData, {}> {
-    protected readonly redisKey = 'NearHealthResource_v5';
+    protected readonly redisKey = 'NearHealthResource_v1';
     protected readonly cacheExpirySeconds = 300; // 5 minutes cache
 
     // Configuration for the endpoints
@@ -56,11 +56,11 @@ export class NearHealthResource extends RedisResourceBase<NearHealthData, {}> {
                 ipProtocol: 'ip4'
             },
             gateway: {
-                url: `g.w.lavanet.xyz:443/gateway/near/rpc-http/${GetEnvVar('JSINFO_NEAR_GATEWAY_HASH', '-')}`,
+                url: `g.w.lavanet.xyz:443/gateway/near/rpc-http/${GetEnvVar('JSINFO_NEAR_GATEWAY_HASH', '-').trim()}`,
                 method: 'POST' as const,
                 headers: {
                     'content-type': 'application/json',
-                    'Authorization': `Bearer ${GetEnvVar('JSINFO_NEAR_GATEWAY_TOKEN', '-')}`
+                    'Authorization': `Bearer ${GetEnvVar('JSINFO_NEAR_GATEWAY_TOKEN', '-').trim()}`
                 },
                 body: '{"jsonrpc":"2.0","method":"block","params":{"finality":"final"},"id":1}',
                 skipTlsVerify: true,
@@ -79,11 +79,11 @@ export class NearHealthResource extends RedisResourceBase<NearHealthData, {}> {
                 ipProtocol: 'ip4'
             },
             gateway: {
-                url: `g.w.lavanet.xyz:443/gateway/neart/rpc-http/${GetEnvVar('JSINFO_NEAR_GATEWAY_HASH', '-')}`,
+                url: `g.w.lavanet.xyz:443/gateway/neart/rpc-http/${GetEnvVar('JSINFO_NEAR_GATEWAY_HASH', '-').trim()}`,
                 method: 'POST' as const,
                 headers: {
                     'content-type': 'application/json',
-                    'Authorization': `Bearer ${GetEnvVar('JSINFO_NEAR_GATEWAY_TOKEN', '-')}`
+                    'Authorization': `Bearer ${GetEnvVar('JSINFO_NEAR_GATEWAY_TOKEN', '-').trim()}`
                 },
                 body: '{"jsonrpc":"2.0","method":"block","params":{"finality":"final"},"id":1}',
                 skipTlsVerify: true,

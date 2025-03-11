@@ -286,7 +286,7 @@ export const IpRpcEndpointsIndexService = new IpRpcEndpointsIndexResource();
 
 export class IpRpcEndpointsIndexWithHealthResource extends RedisResourceBase<ChainEndpoint[], {}> {
     protected readonly redisKey = 'ip-rpc-endpoints-index-health-v2';
-    protected readonly cacheExpirySeconds = 180; // 3 minutes . 30 seconds is 2 little
+    protected readonly cacheExpirySeconds = 181; // 3 minutes . 30 seconds is 2 little
 
     protected async fetchFromSource(): Promise<ChainEndpoint[]> {
         const baseData = await IpRpcEndpointsIndexService.fetch();

@@ -28,7 +28,7 @@ import { ActiveProvidersService } from '../resources/index/ActiveProvidersResour
 import { IndexProvidersActiveV2Service } from '../resources/index/IndexProvidersActiveV2Resource';
 import { LockedTokenValuesResource } from '../resources/ajax/LockedTokenValuesResource';
 import { LockedVestingTokensService } from '../resources/global/LockedVestingTokensResource';
-import { IpRpcEndpointsIndexService } from '../resources/IpRpcEndpointsIndex/IpRpcEndpointsResource';
+import { IpRpcEndpointsIndexWithHealthService } from '../resources/IpRpcEndpointsIndex/IpRpcEndpointsResource';
 import { MainnetProviderEstimatedRewardsListService } from '../resources/Mainnet/ProviderEstimatedRewards/MainnetProviderEstimatedRewardsListResource';
 import { IsMainnet } from '@jsinfo/utils/env';
 import { MainnetValidatorsWithRewardsService } from '../resources/Mainnet/ValidatorWithRewards/MainnetValidatorsWithRewardsResource';
@@ -306,7 +306,7 @@ export class IndexerRedisResourceCaller {
 
     private static async refreshIpRpcEndpoints(): Promise<void> {
         await this.safeFetch('IpRpcEndpoints',
-            () => IpRpcEndpointsIndexService.fetch(),
+            () => IpRpcEndpointsIndexWithHealthService.fetch(),
             this.currentFetches
         ).catch(e => logger.error('Failed to refresh ip rpc endpoints:', e));
     }

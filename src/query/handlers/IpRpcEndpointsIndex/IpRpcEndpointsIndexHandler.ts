@@ -1,5 +1,5 @@
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { IpRpcEndpointsIndexService } from '@jsinfo/redis/resources/IpRpcEndpointsIndex/IpRpcEndpointsResource';
+import { IpRpcEndpointsIndexWithHealthService } from '@jsinfo/redis/resources/IpRpcEndpointsIndex/IpRpcEndpointsResource';
 import { JSONStringify } from '@jsinfo/utils/fmt';
 
 export const IpRpcEndpointsIndexHandlerOpts: RouteShorthandOptions = {
@@ -14,7 +14,7 @@ export const IpRpcEndpointsIndexHandlerOpts: RouteShorthandOptions = {
 
 export async function IpRpcEndpointsIndexHandler(_: FastifyRequest, reply: FastifyReply) {
     try {
-        const endpoints = await IpRpcEndpointsIndexService.fetch({});
+        const endpoints = await IpRpcEndpointsIndexWithHealthService.fetch({});
         reply.header('Content-Type', 'application/json');
         return reply.send(JSONStringify(endpoints));
     } catch (error) {

@@ -173,8 +173,8 @@ type UsageMetrics30Days = {
 }
 
 export class ProviderStakesAndDelegationResource extends RedisResourceBase<ProviderStakesAndDelegationData, {}> {
-    protected readonly redisKey = 'ProviderStakesAndDelegationResource_v11';
-    protected readonly cacheExpirySeconds = 600; // 10 minutes cache
+    protected readonly redisKey = 'ProviderStakesAndDelegationResource_v12';
+    protected readonly cacheExpirySeconds = 1800; // 30 minutes cache
 
     // Main fetch method
     protected async fetchFromSource(): Promise<ProviderStakesAndDelegationData> {

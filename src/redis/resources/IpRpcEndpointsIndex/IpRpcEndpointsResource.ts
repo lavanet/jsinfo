@@ -92,7 +92,7 @@ export class IpRpcEndpointsIndexResource extends RedisResourceBase<ChainEndpoint
             return [];
         }
 
-        logger.debug(`Converting geolocation number: ${geo}`);
+        // logger.debug(`Converting geolocation number: ${geo}`);
 
         if (geo === 0) {
             return ["Global-strict"];
@@ -110,7 +110,7 @@ export class IpRpcEndpointsIndexResource extends RedisResourceBase<ChainEndpoint
         if (geo & 0x20) geos.push("Asia");
         if (geo & 0x40) geos.push("Australia & New-Zealand");
 
-        logger.debug(`Converted ${geo} to geolocations:`, geos);
+        // logger.debug(`Converted ${geo} to geolocations:`, geos);
         return geos;
     }
 

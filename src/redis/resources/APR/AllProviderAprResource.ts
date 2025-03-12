@@ -141,12 +141,12 @@ export class AllProviderAprFullResource extends RedisResourceBase<AllAprProvider
         const processedAddressAndAprData: AllAprProviderData[] = [];
         const entries = Object.keys(addressAndAprData);
 
-        logger.info(`Constructing data for ${entries.length} providers`);
+        // logger.info(`Constructing data for ${entries.length} providers`);
 
         for (const address of entries) {
             const normalizedAddress = address.toLowerCase().trim();
             const commission = providerCommissionsDataMapByProviderId[normalizedAddress];
-            logger.info(`Looking up commission for ${normalizedAddress}: ${commission}`);
+            // logger.info(`Looking up commission for ${normalizedAddress}: ${commission}`);
 
             const moniker = await ProviderMonikerService.GetMonikerForProvider(address);
             const details = addressAndAprData[address];

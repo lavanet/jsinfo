@@ -42,7 +42,7 @@ export interface ConsumerOptimizerMetricsByProviderResponse {
 
 export class ConsumerOptimizerMetricsByProviderResource extends RedisResourceBase<ConsumerOptimizerMetricsByProviderResponse, ConsumerOptimizerMetricsByProviderFilterParams> {
     protected readonly redisKey = 'consumer_optimizer_metrics_by_provider';
-    protected readonly cacheExpirySeconds = 1200; // 20 minutes
+    protected readonly cacheExpirySeconds = 3600;
 
     protected async fetchFromSource(args: ConsumerOptimizerMetricsByProviderFilterParams): Promise<ConsumerOptimizerMetricsByProviderResponse> {
         const provider = args.provider;

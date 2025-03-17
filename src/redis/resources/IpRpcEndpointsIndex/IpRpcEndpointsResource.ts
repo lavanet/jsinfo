@@ -219,7 +219,7 @@ export class IpRpcEndpointsIndexResource extends RedisResourceBase<ChainEndpoint
                     params: config.jsonRpcParams || [],
                     id: 1
                 } : undefined,
-                timeout: 10000
+                timeout: 3000
             });
 
             const latency = Date.now() - startTime;

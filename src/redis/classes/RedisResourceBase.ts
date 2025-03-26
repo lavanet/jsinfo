@@ -166,15 +166,15 @@ export abstract class RedisResourceBase<T, A extends BaseArgs = BaseArgs> {
         if (data) {
             await this.set(data, args);
             const now = Date.now();
-            logger.info('Fetched and cached data', {
-                redisKey: this.redisKey,
-                key,
-                dataPreview: JSONStringify(data).slice(0, 100) + '...',
-                timeSinceLastUpdate: this.lastUpdateTime
-                    ? `${((now - this.lastUpdateTime) / 1000).toFixed(1)}s ago`
-                    : 'first cache',
-                cacheExpirySeconds: this.cacheExpirySeconds
-            });
+            // logger.info('Fetched and cached data', {
+            //     redisKey: this.redisKey,
+            //     key,
+            //     dataPreview: JSONStringify(data).slice(0, 100) + '...',
+            //     timeSinceLastUpdate: this.lastUpdateTime
+            //         ? `${((now - this.lastUpdateTime) / 1000).toFixed(1)}s ago`
+            //         : 'first cache',
+            //     cacheExpirySeconds: this.cacheExpirySeconds
+            // });
             this.lastUpdateTime = now;
             return data;
         }

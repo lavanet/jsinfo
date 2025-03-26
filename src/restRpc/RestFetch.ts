@@ -40,7 +40,7 @@ async function doFetch<T>(
             if (response.status !== 200) {
                 // Check for provider stake errors
                 if (isProviderStakeError(response.data)) {
-                    logger.debug(`Provider stake error for ${url}: ${response.data.message}`);
+                    // logger.debug(`Provider stake error for ${url}: ${response.data.message}`);
                     throw new EntryDoesNotExistException(response.data.message);
                 }
 

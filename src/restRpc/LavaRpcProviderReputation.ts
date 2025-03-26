@@ -67,43 +67,29 @@ interface ProviderReputationDetails {
 interface ProviderPairingChanceResponse {
     chance: string;
 }
+// Update the ProviderReputationMetrics interface to use a consistent structure
+interface MetricStats {
+    sum: number;
+    count: number;
+    min: number;
+    max: number;
+}
 
 interface ProviderReputationMetrics {
-    genericScore: number;
-    relativePlacement: number;
-    pairingScore: number;
-    pairingChance: number;
+    genericScore: MetricStats;
+    relativePlacement: MetricStats;
+    pairingScore: MetricStats;
+    pairingChance: MetricStats;
     chainID: string;
-    cluster: string;
-    timestamp: number;
+    timestamp: string; // Changed to string for UTC date
 }
 
 interface ProviderReputationStats {
-    genericScore: {
-        sum: number;
-        count: number;
-        min: number;
-        max: number;
-    };
-    relativePlacement: {
-        sum: number;
-        count: number;
-        min: number;
-        max: number;
-    };
-    pairingScore: {
-        sum: number;
-        count: number;
-        min: number;
-        max: number;
-    };
-    pairingChance: {
-        sum: number;
-        count: number;
-        min: number;
-        max: number;
-    };
-    lastUpdated: number;
+    genericScore: MetricStats;
+    relativePlacement: MetricStats;
+    pairingScore: MetricStats;
+    pairingChance: MetricStats;
+    lastUpdated: string; // Changed to string for UTC date
 }
 
 class LavaRpcProviderReputationClass {
@@ -113,6 +99,11 @@ class LavaRpcProviderReputationClass {
     constructor() {
         this.refreshCache();
         setInterval(() => this.refreshCache(), this.cacheRefreshInterval * 1000);
+    }
+
+    // Add the missing getCurrentUTCDateString method
+    private getCurrentUTCDateString(): string {
+        return new Date().toISOString();
     }
 
     private async refreshCache(): Promise<void> {
@@ -128,54 +119,86 @@ class LavaRpcProviderReputationClass {
         return this.refreshPromise;
     }
 
+    // Keep only one implementation of _refreshCache
     private async _refreshCache(): Promise<void> {
         try {
             // Get provider stakes data which includes chains per provider
             const providerStakesData = await ProviderStakesAndDelegationService.fetch();
-
             const allMetrics: ProviderReputationMetrics[] = [];
             const providerMetricsMap: Record<string, ProviderReputationMetrics[]> = {};
 
             if (providerStakesData && providerStakesData.detailedProviderStakes) {
-                // Iterate directly over the providers from detailedProviderStakes
-                for (const provider in providerStakesData.detailedProviderStakes) {
-                    providerMetricsMap[provider] = [];
-
-                    // Get the chains this provider is staked on
-                    const providerStakes = providerStakesData.detailedProviderStakes[provider];
-
-                    if (!providerStakes || providerStakes.length === 0) {
-                        logger.debug(`No stakes found for provider ${provider}, skipping reputation fetch`);
-                        continue;
-                    }
-
-                    // Extract unique chain IDs from provider stakes
-                    const chainIDs = [...new Set(providerStakes.map(stake => stake.specId))];
-
-                    for (const chainID of chainIDs) {
-                        try {
-                            const metrics = await this.fetchProviderReputationMetrics(provider, chainID);
-                            if (metrics) {
-                                allMetrics.push(metrics);
-                                providerMetricsMap[provider].push(metrics);
-                            }
-                        } catch (error) {
-                            logger.warn(`Failed to fetch reputation for provider ${provider} on chain ${chainID}`, {
-                                error: TruncateError(error)
-                            });
-                        }
-                    }
-                }
+                // Process providers in parallel
+                await this.processAllProviders(providerStakesData.detailedProviderStakes, providerMetricsMap);
             }
 
             // Store all metrics in Redis for quick retrieval
             await RedisCache.setDict(REDIS_KEYS.ALL_PROVIDER_REPUTATION_METRICS, providerMetricsMap, this.cacheRefreshInterval);
 
-            await this.updateReputationStats(allMetrics);
             logger.info(`Refreshed reputation data for ${allMetrics.length} provider-chain combinations`);
         } catch (error) {
             logger.error('Error refreshing provider reputation cache', { error: TruncateError(error) });
         }
+    }
+
+    // Process all providers and collect metrics
+    private async processAllProviders(
+        detailedProviderStakes: Record<string, any[]>,
+        providerMetricsMap: Record<string, ProviderReputationMetrics[]>
+    ): Promise<void> {
+        const providerPromises: Promise<void>[] = [];
+
+        for (const provider in detailedProviderStakes) {
+            providerMetricsMap[provider] = [];
+
+            // Get the chains this provider is staked on
+            const providerStakes = detailedProviderStakes[provider];
+
+            if (!providerStakes || providerStakes.length === 0) {
+                logger.debug(`No stakes found for provider ${provider}, skipping reputation fetch`);
+                continue;
+            }
+
+            // Extract unique chain IDs from provider stakes
+            const chainIDs = [...new Set(providerStakes.map(stake => stake.specId))];
+
+            // Create a promise for processing this provider
+            const providerPromise = this.processProviderChains(provider, chainIDs, providerMetricsMap);
+            providerPromises.push(providerPromise);
+        }
+
+        // Wait for all providers to be processed
+        await Promise.all(providerPromises);
+    }
+
+    // Process all chains for a single provider
+    private async processProviderChains(
+        provider: string,
+        chainIDs: string[],
+        providerMetricsMap: Record<string, ProviderReputationMetrics[]>
+    ): Promise<void> {
+        // Process each chain for this provider
+        const providerChainMetrics: ProviderReputationMetrics[] = [];
+
+        // Process chains in parallel for this provider
+        const chainPromises = chainIDs.map(async (chainID) => {
+            try {
+                const metrics = await this.fetchProviderReputationMetrics(provider, chainID);
+                if (metrics) {
+                    providerChainMetrics.push(metrics);
+                }
+            } catch (error) {
+                logger.warn(`Failed to fetch reputation for provider ${provider} on chain ${chainID}`, {
+                    error: TruncateError(error)
+                });
+            }
+        });
+
+        // Wait for all chain metrics to be fetched
+        await Promise.all(chainPromises);
+
+        // Add metrics to the provider's array
+        providerMetricsMap[provider] = providerChainMetrics;
     }
 
     private async fetchProviderReputationMetrics(provider: string, chainID: string): Promise<ProviderReputationMetrics | null> {
@@ -184,6 +207,7 @@ class LavaRpcProviderReputationClass {
             const reputationCacheKey = `${REDIS_KEYS.PROVIDER_REPUTATION_PREFIX}${provider}_${chainID}`;
             const detailsCacheKey = `${REDIS_KEYS.PROVIDER_REPUTATION_DETAILS_PREFIX}${provider}_${chainID}`;
             const pairingChanceCacheKey = `${REDIS_KEYS.PROVIDER_PAIRING_CHANCE_PREFIX}${provider}_${chainID}`;
+            const allMetricsKey = `${REDIS_KEYS.ALL_PROVIDER_REPUTATION_METRICS}${provider}_${chainID}`;
 
             // Fetch reputation data
             let reputationResponse: ProviderReputationResponse;
@@ -193,8 +217,6 @@ class LavaRpcProviderReputationClass {
                 );
                 await RedisCache.setDict(reputationCacheKey, reputationResponse, this.cacheRefreshInterval);
             } catch (error) {
-                // Simplified error handling - just return null for any error
-                logger.debug(`Error fetching reputation for provider ${provider} on chain ${chainID}: ${error.message}`);
                 return null;
             }
 
@@ -206,8 +228,6 @@ class LavaRpcProviderReputationClass {
                 );
                 await RedisCache.setDict(detailsCacheKey, detailsResponse, this.cacheRefreshInterval);
             } catch (error) {
-                // Simplified error handling - just return null for any error
-                logger.debug(`Error fetching reputation details for provider ${provider} on chain ${chainID}: ${error.message}`);
                 return null;
             }
 
@@ -219,13 +239,10 @@ class LavaRpcProviderReputationClass {
                 );
                 await RedisCache.setDict(pairingChanceCacheKey, pairingChanceResponse, this.cacheRefreshInterval);
             } catch (error) {
-                // Simplified error handling - just return null for any error
-                logger.debug(`Error fetching pairing chance for provider ${provider} on chain ${chainID}: ${error.message}`);
                 return null;
             }
 
             if (reputationResponse.data.length === 0 || detailsResponse.data.length === 0) {
-                logger.debug(`No reputation data found for provider ${provider} on chain ${chainID}`);
                 return null;
             }
 
@@ -233,28 +250,64 @@ class LavaRpcProviderReputationClass {
             const details = detailsResponse.data[0];
 
             // Calculate metrics
-            const genericScore = this.calculateGenericScore(details.reputation.score.score);
-            const relativePlacement = this.calculateRelativePlacement(reputation);
-            const pairingScore = parseFloat(details.reputation_pairing_score.score);
-            const pairingChance = parseFloat(pairingChanceResponse.chance);
+            const genericScoreValue = this.calculateGenericScore(details.reputation.score.score);
+            const relativePlacementValue = this.calculateRelativePlacement(reputation);
+            const pairingScoreValue = parseFloat(details.reputation_pairing_score.score);
+            const pairingChanceValue = parseFloat(pairingChanceResponse.chance);
 
+            // Check if previous metrics exist in Redis and aggregate if they do
+            const existingMetric = await RedisCache.getDict(allMetricsKey) as ProviderReputationMetrics | undefined;
+
+            // Create new metrics, aggregating with existing data if available
             const metrics: ProviderReputationMetrics = {
-                genericScore,
-                relativePlacement,
-                pairingScore,
-                pairingChance,
+                genericScore: this.createAggregatedMetricStats(
+                    genericScoreValue,
+                    existingMetric?.genericScore
+                ),
+                relativePlacement: this.createAggregatedMetricStats(
+                    relativePlacementValue,
+                    existingMetric?.relativePlacement
+                ),
+                pairingScore: this.createAggregatedMetricStats(
+                    pairingScoreValue,
+                    existingMetric?.pairingScore
+                ),
+                pairingChance: this.createAggregatedMetricStats(
+                    pairingChanceValue,
+                    existingMetric?.pairingChance
+                ),
                 chainID: reputation.chainID,
-                cluster: reputation.cluster,
-                timestamp: Math.floor(Date.now() / 1000)
+                timestamp: this.getCurrentUTCDateString()
             };
 
             return metrics;
         } catch (error) {
+            // Fix TypeScript error here too
             logger.error(`Error fetching reputation metrics for provider ${provider} on chain ${chainID}`, {
-                error: TruncateError(error)
+                error: TruncateError(error instanceof Error ? error : String(error))
             });
             return null;
         }
+    }
+
+    // Helper method to create aggregated metric stats
+    private createAggregatedMetricStats(newValue: number, existingStats?: MetricStats): MetricStats {
+        if (!existingStats) {
+            return {
+                sum: newValue,
+                count: 1,
+                min: newValue,
+                max: newValue
+            };
+        }
+
+        // Aggregate with existing stats
+        return {
+            sum: existingStats.sum + newValue,
+            count: existingStats.count + 1,
+            min: Math.min(existingStats.min, newValue),
+            max: Math.max(existingStats.max, newValue)
+        };
     }
 
     private calculateGenericScore(score: { num: string; denom: string }): number {
@@ -269,113 +322,26 @@ class LavaRpcProviderReputationClass {
         return providers === 0 ? 0 : rank / providers;
     }
 
-    private async updateReputationStats(metrics: ProviderReputationMetrics[]): Promise<void> {
-        if (metrics.length === 0) {
-            return;
-        }
-
-        const stats: ProviderReputationStats = {
-            genericScore: { sum: 0, count: 0, min: Infinity, max: -Infinity },
-            relativePlacement: { sum: 0, count: 0, min: Infinity, max: -Infinity },
-            pairingScore: { sum: 0, count: 0, min: Infinity, max: -Infinity },
-            pairingChance: { sum: 0, count: 0, min: Infinity, max: -Infinity },
-            lastUpdated: Math.floor(Date.now() / 1000)
-        };
-
-        for (const metric of metrics) {
-            // Update genericScore stats
-            stats.genericScore.sum += metric.genericScore;
-            stats.genericScore.count++;
-            stats.genericScore.min = Math.min(stats.genericScore.min, metric.genericScore);
-            stats.genericScore.max = Math.max(stats.genericScore.max, metric.genericScore);
-
-            // Update relativePlacement stats
-            stats.relativePlacement.sum += metric.relativePlacement;
-            stats.relativePlacement.count++;
-            stats.relativePlacement.min = Math.min(stats.relativePlacement.min, metric.relativePlacement);
-            stats.relativePlacement.max = Math.max(stats.relativePlacement.max, metric.relativePlacement);
-
-            // Update pairingScore stats
-            stats.pairingScore.sum += metric.pairingScore;
-            stats.pairingScore.count++;
-            stats.pairingScore.min = Math.min(stats.pairingScore.min, metric.pairingScore);
-            stats.pairingScore.max = Math.max(stats.pairingScore.max, metric.pairingScore);
-
-            // Update pairingChance stats
-            stats.pairingChance.sum += metric.pairingChance;
-            stats.pairingChance.count++;
-            stats.pairingChance.min = Math.min(stats.pairingChance.min, metric.pairingChance);
-            stats.pairingChance.max = Math.max(stats.pairingChance.max, metric.pairingChance);
-        }
-
-        // Fix min values if they're still at Infinity (no data)
-        if (stats.genericScore.min === Infinity) stats.genericScore.min = 0;
-        if (stats.relativePlacement.min === Infinity) stats.relativePlacement.min = 0;
-        if (stats.pairingScore.min === Infinity) stats.pairingScore.min = 0;
-        if (stats.pairingChance.min === Infinity) stats.pairingChance.min = 0;
-
-        await RedisCache.setDict(REDIS_KEYS.PROVIDER_REPUTATION_STATS, stats, this.cacheRefreshInterval);
-    }
-
-    public async GetProviderReputationMetrics(provider: string, chainID: string): Promise<ProviderReputationMetrics | null> {
-        const reputationCacheKey = `${REDIS_KEYS.PROVIDER_REPUTATION_PREFIX}${provider}_${chainID}`;
-        const detailsCacheKey = `${REDIS_KEYS.PROVIDER_REPUTATION_DETAILS_PREFIX}${provider}_${chainID}`;
-        const pairingChanceCacheKey = `${REDIS_KEYS.PROVIDER_PAIRING_CHANCE_PREFIX}${provider}_${chainID}`;
-
-        const reputationData = await RedisCache.getDict(reputationCacheKey) as ProviderReputationResponse;
-        const detailsData = await RedisCache.getDict(detailsCacheKey) as ProviderReputationDetailsResponse;
-        const pairingChanceData = await RedisCache.getDict(pairingChanceCacheKey) as ProviderPairingChanceResponse;
-
-        if (!reputationData || !detailsData || !pairingChanceData) {
-            await this.refreshCache();
-            return null;
-        }
-
-        if (reputationData.data.length === 0 || detailsData.data.length === 0) {
-            return null;
-        }
-
-        const reputation = reputationData.data[0];
-        const details = detailsData.data[0];
-
-        return {
-            genericScore: this.calculateGenericScore(details.reputation.score.score),
-            relativePlacement: this.calculateRelativePlacement(reputation),
-            pairingScore: parseFloat(details.reputation_pairing_score.score),
-            pairingChance: parseFloat(pairingChanceData.chance),
-            chainID: reputation.chainID,
-            cluster: reputation.cluster,
-            timestamp: Math.floor(Date.now() / 1000)
-        };
-    }
-
-    public async GetAllProviderReputationData(): Promise<Record<string, ProviderReputationMetrics[]>> {
+    // Update the GetAllProviderReputationData method to remove the stats object
+    public async GetAllProviderReputationData(): Promise<{
+        providers: Record<string, ProviderReputationMetrics[]>;
+    }> {
         const metricsData = await RedisCache.getDict(REDIS_KEYS.ALL_PROVIDER_REPUTATION_METRICS) as Record<string, ProviderReputationMetrics[]>;
 
         if (!metricsData) {
             await this.refreshCache();
-            return await RedisCache.getDict(REDIS_KEYS.ALL_PROVIDER_REPUTATION_METRICS) as Record<string, ProviderReputationMetrics[]> || {};
-        }
+            const refreshedMetrics = await RedisCache.getDict(REDIS_KEYS.ALL_PROVIDER_REPUTATION_METRICS) as Record<string, ProviderReputationMetrics[]> || {};
 
-        return metricsData;
-    }
-
-    public async GetReputationStats(): Promise<ProviderReputationStats> {
-        const stats = await RedisCache.getDict(REDIS_KEYS.PROVIDER_REPUTATION_STATS) as ProviderReputationStats;
-
-        if (!stats) {
-            await this.refreshCache();
-            return await RedisCache.getDict(REDIS_KEYS.PROVIDER_REPUTATION_STATS) as ProviderReputationStats || {
-                genericScore: { sum: 0, count: 0, min: 0, max: 0 },
-                relativePlacement: { sum: 0, count: 0, min: 0, max: 0 },
-                pairingScore: { sum: 0, count: 0, min: 0, max: 0 },
-                pairingChance: { sum: 0, count: 0, min: 0, max: 0 },
-                lastUpdated: Math.floor(Date.now() / 1000)
+            return {
+                providers: refreshedMetrics
             };
         }
 
-        return stats;
+        return {
+            providers: metricsData
+        };
     }
+
 }
 
 export const LavaRpcProviderReputation = new LavaRpcProviderReputationClass();

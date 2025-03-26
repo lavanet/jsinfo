@@ -2,8 +2,7 @@ import { logger } from '@jsinfo/utils/logger';
 import { QueryLavaRPC } from '@jsinfo/restRpc/LavaRpc';
 import { RedisCache } from '@jsinfo/redis/classes/RedisCache';
 import { TruncateError } from '@jsinfo/utils/fmt';
-import { RpcPeriodicEndpointCache } from '@jsinfo/restRpc/LavaRpcPeriodicEndpointCache';
-import { ProviderStakesAndDelegationResource } from '@jsinfo/redis/resources/global/ProviderStakesAndDelegationResource';
+import { ProviderStakesAndDelegationService } from '@jsinfo/redis/resources/global/ProviderStakesAndDelegationResource';
 
 const REDIS_KEYS = {
     PROVIDER_REPUTATION_PREFIX: 'provider_reputation_',
@@ -131,16 +130,15 @@ class LavaRpcProviderReputationClass {
 
     private async _refreshCache(): Promise<void> {
         try {
-            const providers = await RpcPeriodicEndpointCache.GetAllProvidersFromRpc();
-
             // Get provider stakes data which includes chains per provider
-            const providerStakesData = await ProviderStakesAndDelegationResource.fetch();
+            const providerStakesData = await ProviderStakesAndDelegationService.fetch();
 
             const allMetrics: ProviderReputationMetrics[] = [];
             const providerMetricsMap: Record<string, ProviderReputationMetrics[]> = {};
 
             if (providerStakesData && providerStakesData.detailedProviderStakes) {
-                for (const provider of providers) {
+                // Iterate directly over the providers from detailedProviderStakes
+                for (const provider in providerStakesData.detailedProviderStakes) {
                     providerMetricsMap[provider] = [];
 
                     // Get the chains this provider is staked on
@@ -188,22 +186,43 @@ class LavaRpcProviderReputationClass {
             const pairingChanceCacheKey = `${REDIS_KEYS.PROVIDER_PAIRING_CHANCE_PREFIX}${provider}_${chainID}`;
 
             // Fetch reputation data
-            const reputationResponse = await QueryLavaRPC<ProviderReputationResponse>(
-                `/lavanet/lava/pairing/provider_reputation/${encodedProvider}/${chainID}/*`
-            );
-            await RedisCache.setDict(reputationCacheKey, reputationResponse, this.cacheRefreshInterval);
+            let reputationResponse: ProviderReputationResponse;
+            try {
+                reputationResponse = await QueryLavaRPC<ProviderReputationResponse>(
+                    `/lavanet/lava/pairing/provider_reputation/${encodedProvider}/${chainID}/*`
+                );
+                await RedisCache.setDict(reputationCacheKey, reputationResponse, this.cacheRefreshInterval);
+            } catch (error) {
+                // Simplified error handling - just return null for any error
+                logger.debug(`Error fetching reputation for provider ${provider} on chain ${chainID}: ${error.message}`);
+                return null;
+            }
 
             // Fetch reputation details
-            const detailsResponse = await QueryLavaRPC<ProviderReputationDetailsResponse>(
-                `/lavanet/lava/pairing/provider_reputation_details/${encodedProvider}/${chainID}/*`
-            );
-            await RedisCache.setDict(detailsCacheKey, detailsResponse, this.cacheRefreshInterval);
+            let detailsResponse: ProviderReputationDetailsResponse;
+            try {
+                detailsResponse = await QueryLavaRPC<ProviderReputationDetailsResponse>(
+                    `/lavanet/lava/pairing/provider_reputation_details/${encodedProvider}/${chainID}/*`
+                );
+                await RedisCache.setDict(detailsCacheKey, detailsResponse, this.cacheRefreshInterval);
+            } catch (error) {
+                // Simplified error handling - just return null for any error
+                logger.debug(`Error fetching reputation details for provider ${provider} on chain ${chainID}: ${error.message}`);
+                return null;
+            }
 
             // Fetch pairing chance (using gateway_0 as default cluster)
-            const pairingChanceResponse = await QueryLavaRPC<ProviderPairingChanceResponse>(
-                `/lavanet/lava/pairing/provider_pairing_chance/${encodedProvider}/${chainID}/65535/gateway_0`
-            );
-            await RedisCache.setDict(pairingChanceCacheKey, pairingChanceResponse, this.cacheRefreshInterval);
+            let pairingChanceResponse: ProviderPairingChanceResponse;
+            try {
+                pairingChanceResponse = await QueryLavaRPC<ProviderPairingChanceResponse>(
+                    `/lavanet/lava/pairing/provider_pairing_chance/${encodedProvider}/${chainID}/65535/gateway_0`
+                );
+                await RedisCache.setDict(pairingChanceCacheKey, pairingChanceResponse, this.cacheRefreshInterval);
+            } catch (error) {
+                // Simplified error handling - just return null for any error
+                logger.debug(`Error fetching pairing chance for provider ${provider} on chain ${chainID}: ${error.message}`);
+                return null;
+            }
 
             if (reputationResponse.data.length === 0 || detailsResponse.data.length === 0) {
                 logger.debug(`No reputation data found for provider ${provider} on chain ${chainID}`);

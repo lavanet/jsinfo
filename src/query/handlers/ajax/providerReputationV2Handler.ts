@@ -1,10 +1,8 @@
-// src/query/handlers/SupplyHistoryService.ts
-
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
-import { SupplyHistoryService } from '@jsinfo/redis/resources/ajax/SupplyHistoryResource';
+import { LavaRpcProviderReputation } from '@jsinfo/restRpc/LavaRpcProviderReputation';
 import { JSONStringify } from '@jsinfo/utils/fmt';
 
-export const SupplyHistoryHandlerOpts: RouteShorthandOptions = {
+export const ProviderReputationV2HandlerOpts: RouteShorthandOptions = {
     schema: {
         response: {
             200: {
@@ -20,13 +18,12 @@ export const SupplyHistoryHandlerOpts: RouteShorthandOptions = {
     }
 }
 
-export async function supplyHistoryHandler(_: FastifyRequest, reply: FastifyReply) {
+export async function providerReputationV2Handler(_: FastifyRequest, reply: FastifyReply) {
     try {
-        const history = await SupplyHistoryService.fetch({});
+        const reputationData = await LavaRpcProviderReputation.GetAllProviderReputationData();
         reply.header('Content-Type', 'application/json');
-        return reply.send(JSONStringify(history));
+        return reply.send(JSONStringify(reputationData));
     } catch (error) {
-        return reply.status(500).send({ error: 'Failed to fetch supply history' });
+        return reply.status(500).send({ error: 'Failed to fetch provider reputation data' });
     }
 }
-

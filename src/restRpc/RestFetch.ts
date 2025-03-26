@@ -11,6 +11,14 @@ const HTTP_RETRY_CODES = {
     504: { delay: 5000, message: 'Gateway Timeout' }
 };
 
+// Add a function to check for provider stake errors
+function isProviderStakeError(data: any): boolean {
+    return data?.code === 2 &&
+        data?.message &&
+        (data.message.includes('provider not staked on chain') ||
+            data.message.includes('cannot get stake entry'));
+}
+
 async function doFetch<T>(
     url: string,
     options: AxiosRequestConfig = {},
@@ -30,6 +38,12 @@ async function doFetch<T>(
             });
 
             if (response.status !== 200) {
+                // Check for provider stake errors
+                if (isProviderStakeError(response.data)) {
+                    // logger.debug(`Provider stake error for ${url}: ${response.data.message}`);
+                    throw new EntryDoesNotExistException(response.data.message);
+                }
+
                 // Check for "does not exist" error
                 if (response.data?.code === 2 && (response.data?.message?.toLowerCase().includes('does not exist') || response.data?.message?.toLowerCase().includes('not found'))) {
                     throw new EntryDoesNotExistException(response.data.message);

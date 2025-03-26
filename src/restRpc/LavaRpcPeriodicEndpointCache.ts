@@ -120,10 +120,10 @@ interface ChainListResponse {
     chainInfoList: ChainInfo[];
 }
 
-const CACHE_VALIDITY_PERIOD = 600; // 10 minutes in seconds
+const CACHE_VALIDITY_PERIOD = 20 * 60; // 20 minutes in seconds
 
 class RpcPeriodicEndpointCacheClass {
-    private cacheRefreshInterval = 20 * 60; // 20 minutes
+    private cacheRefreshInterval = 30 * 60; // 30 minutes
     private refreshPromise: Promise<void> | null = null;
 
     private readonly VALIDATOR_STATUS_MAP: Record<ValidatorStatus, ValidatorStatusDisplay> = {

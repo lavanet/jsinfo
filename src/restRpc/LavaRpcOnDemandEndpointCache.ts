@@ -101,7 +101,7 @@ const CACHE_KEYS = {
 } as const;
 
 class RpcOnDemandEndpointCacheClass {
-    private cacheRefreshInterval = 30 * 60; // 0 minutes
+    private cacheRefreshInterval = 5 * 60 * 60; // 5 hours
 
     public async GetDenomTrace(denom: string): Promise<DenomTraceResponse> {
         const cacheKey = CACHE_KEYS.DENOM_TRACE(denom);
@@ -124,7 +124,7 @@ class RpcOnDemandEndpointCacheClass {
         }
         try {
             const response = await QueryLavaRPC<DenomTraceResponse>(`/ibc/apps/transfer/v1/denom_traces/${denom}`);
-            RedisCache.setDict(CACHE_KEYS.DENOM_TRACE(denom), response, this.cacheRefreshInterval);
+            RedisCache.setDict(CACHE_KEYS.DENOM_TRACE(denom), response, 24 * 60 * 60); // 24 hours
             return response;
         } catch (error) {
             logger.error(`Error fetching denom trace for ${denom}`, { error: TruncateError(error) });

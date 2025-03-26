@@ -84,14 +84,6 @@ interface ProviderReputationMetrics {
     timestamp: string; // Changed to string for UTC date
 }
 
-interface ProviderReputationStats {
-    genericScore: MetricStats;
-    relativePlacement: MetricStats;
-    pairingScore: MetricStats;
-    pairingChance: MetricStats;
-    lastUpdated: string; // Changed to string for UTC date
-}
-
 class LavaRpcProviderReputationClass {
     private cacheRefreshInterval = 15 * 60; // 15 minutes
     private refreshPromise: Promise<void> | null = null;
@@ -201,6 +193,45 @@ class LavaRpcProviderReputationClass {
         providerMetricsMap[provider] = providerChainMetrics;
     }
 
+    // Helper function to fetch data with caching
+    private async fetchWithCache<T>(
+        cacheKey: string,
+        endpoint: string,
+        minTTL: number
+    ): Promise<T | null> {
+        // Check if we need to refresh data
+        const ttl = await RedisCache.getTTL(cacheKey);
+
+        if (ttl === undefined || ttl < minTTL) {
+            try {
+                const response = await QueryLavaRPC<T>(endpoint);
+                if (!response) {
+                    return null;
+                }
+                await RedisCache.setDict(cacheKey, response, this.cacheRefreshInterval);
+                return response;
+            } catch (error) {
+                return null;
+            }
+        } else {
+            const cachedData = await RedisCache.getDict(cacheKey) as T;
+            if (!cachedData) {
+                // If cached data retrieval fails, try to fetch fresh data
+                try {
+                    const response = await QueryLavaRPC<T>(endpoint);
+                    if (!response) {
+                        return null;
+                    }
+                    await RedisCache.setDict(cacheKey, response, this.cacheRefreshInterval);
+                    return response;
+                } catch (error) {
+                    return null;
+                }
+            }
+            return cachedData;
+        }
+    }
+
     private async fetchProviderReputationMetrics(provider: string, chainID: string): Promise<ProviderReputationMetrics | null> {
         try {
             const encodedProvider = encodeURIComponent(provider);
@@ -209,43 +240,39 @@ class LavaRpcProviderReputationClass {
             const pairingChanceCacheKey = `${REDIS_KEYS.PROVIDER_PAIRING_CHANCE_PREFIX}${provider}_${chainID}`;
             const allMetricsKey = `${REDIS_KEYS.ALL_PROVIDER_REPUTATION_METRICS}${provider}_${chainID}`;
 
-            // Fetch reputation data
-            let reputationResponse: ProviderReputationResponse;
-            try {
-                reputationResponse = await QueryLavaRPC<ProviderReputationResponse>(
-                    `/lavanet/lava/pairing/provider_reputation/${encodedProvider}/${chainID}/*`
-                );
-                await RedisCache.setDict(reputationCacheKey, reputationResponse, this.cacheRefreshInterval);
-            } catch (error) {
-                return null;
-            }
+            // Define minimum TTL threshold (1 minute in seconds)
+            const minTTL = 60;
 
-            // Fetch reputation details
-            let detailsResponse: ProviderReputationDetailsResponse;
-            try {
-                detailsResponse = await QueryLavaRPC<ProviderReputationDetailsResponse>(
-                    `/lavanet/lava/pairing/provider_reputation_details/${encodedProvider}/${chainID}/*`
-                );
-                await RedisCache.setDict(detailsCacheKey, detailsResponse, this.cacheRefreshInterval);
-            } catch (error) {
-                return null;
-            }
+            // Fetch all required data using the helper function
+            const reputationResponse = await this.fetchWithCache<ProviderReputationResponse>(
+                reputationCacheKey,
+                `/lavanet/lava/pairing/provider_reputation/${encodedProvider}/${chainID}/*`,
+                minTTL
+            );
 
-            // Fetch pairing chance (using gateway_0 as default cluster)
-            let pairingChanceResponse: ProviderPairingChanceResponse;
-            try {
-                pairingChanceResponse = await QueryLavaRPC<ProviderPairingChanceResponse>(
-                    `/lavanet/lava/pairing/provider_pairing_chance/${encodedProvider}/${chainID}/65535/gateway_0`
-                );
-                await RedisCache.setDict(pairingChanceCacheKey, pairingChanceResponse, this.cacheRefreshInterval);
-            } catch (error) {
-                return null;
-            }
+            if (!reputationResponse) return null;
+
+            const detailsResponse = await this.fetchWithCache<ProviderReputationDetailsResponse>(
+                detailsCacheKey,
+                `/lavanet/lava/pairing/provider_reputation_details/${encodedProvider}/${chainID}/*`,
+                minTTL
+            );
+
+            if (!detailsResponse) return null;
+
+            const pairingChanceResponse = await this.fetchWithCache<ProviderPairingChanceResponse>(
+                pairingChanceCacheKey,
+                `/lavanet/lava/pairing/provider_pairing_chance/${encodedProvider}/${chainID}/65535/gateway_0`,
+                minTTL
+            );
+
+            if (!pairingChanceResponse) return null;
 
             if (reputationResponse.data.length === 0 || detailsResponse.data.length === 0) {
                 return null;
             }
 
+            // Rest of the function remains the same
             const reputation = reputationResponse.data[0];
             const details = detailsResponse.data[0];
 
@@ -255,8 +282,14 @@ class LavaRpcProviderReputationClass {
             const pairingScoreValue = parseFloat(details.reputation_pairing_score.score);
             const pairingChanceValue = parseFloat(pairingChanceResponse.chance);
 
-            // Check if previous metrics exist in Redis and aggregate if they do
-            const existingMetric = await RedisCache.getDict(allMetricsKey) as ProviderReputationMetrics | undefined;
+            // Check if previous metrics exist in Redis and if we need to refresh them
+            let existingMetric: ProviderReputationMetrics | undefined;
+            const allMetricsTTL = await RedisCache.getTTL(allMetricsKey);
+
+            // Only get existing metrics if they're not about to expire
+            if (allMetricsTTL !== undefined && allMetricsTTL > minTTL) {
+                existingMetric = await RedisCache.getDict(allMetricsKey) as ProviderReputationMetrics | undefined;
+            }
 
             // Create new metrics, aggregating with existing data if available
             const metrics: ProviderReputationMetrics = {
@@ -280,9 +313,11 @@ class LavaRpcProviderReputationClass {
                 timestamp: this.getCurrentUTCDateString()
             };
 
+            // Store the updated metrics
+            await RedisCache.setDict(allMetricsKey, metrics, this.cacheRefreshInterval);
+
             return metrics;
         } catch (error) {
-            // Fix TypeScript error here too
             logger.error(`Error fetching reputation metrics for provider ${provider} on chain ${chainID}`, {
                 error: TruncateError(error instanceof Error ? error : String(error))
             });
@@ -331,15 +366,42 @@ class LavaRpcProviderReputationClass {
         if (!metricsData) {
             await this.refreshCache();
             const refreshedMetrics = await RedisCache.getDict(REDIS_KEYS.ALL_PROVIDER_REPUTATION_METRICS) as Record<string, ProviderReputationMetrics[]> || {};
+            
+            // Calculate averages for all metrics
+            this.calculateAveragesForAllProviders(refreshedMetrics);
 
             return {
                 providers: refreshedMetrics
             };
         }
 
+        // Calculate averages for all metrics
+        this.calculateAveragesForAllProviders(metricsData);
+
         return {
             providers: metricsData
         };
+    }
+
+    // Helper method to calculate averages for all providers and their metrics
+    private calculateAveragesForAllProviders(providersMetrics: Record<string, ProviderReputationMetrics[]>): void {
+        for (const provider in providersMetrics) {
+            const metrics = providersMetrics[provider];
+            
+            for (const metric of metrics) {
+                // Add avg property to each metric stat
+                this.addAverageToMetricStats(metric.genericScore);
+                this.addAverageToMetricStats(metric.relativePlacement);
+                this.addAverageToMetricStats(metric.pairingScore);
+                this.addAverageToMetricStats(metric.pairingChance);
+            }
+        }
+    }
+
+    // Helper method to add average to a metric stats object
+    private addAverageToMetricStats(stats: MetricStats): void {
+        // Add avg property to the MetricStats object
+        (stats as any).avg = stats.count > 0 ? stats.sum / stats.count : 0;
     }
 
 }

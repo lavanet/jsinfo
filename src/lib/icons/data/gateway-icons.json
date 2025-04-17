@@ -347,7 +347,7 @@
         "onChainId": "FVM"
       },
       {
-        "name": "Filecoin Testnet (FVMTT)",
+        "name": "Filecoin Testnet (FVMT)",
         "type": "Testnet",
         "onChainId": "FVMT"
       }

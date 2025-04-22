@@ -33,10 +33,11 @@ const DENOM_CONVERSIONS = {
     "uaxl": { baseDenom: "axl", factor: 1_000_000 },                    // Axelar (AXL)
     "uband": { baseDenom: "band", factor: 1_000_000 },                    // Band Protocol (BAND)
     "ubld": { baseDenom: "bld", factor: 1_000_000 },                    // Agoric (BLD)
-    "ucmdx": { baseDenom: "cmdx", factor: 1_000_000 },                    // COMDEX (CMDX)
-    "ucre": { baseDenom: "cre", factor: 1_000_000 },                    // Crescent (CRE)
-    "uxprt": { baseDenom: "xprt", factor: 1_000_000 },                    // Persistence (XPRT)
-    "uusdc": { baseDenom: "usdc", factor: 1_000_000 },                    // USD Coin (USDC)
+    "ucmdx": { baseDenom: "cmdx", factor: 1_000_000 },                          // COMDEX (CMDX)
+    "ucre": { baseDenom: "cre", factor: 1_000_000 },                            // Crescent (CRE)
+    "uxprt": { baseDenom: "xprt", factor: 1_000_000 },                          // Persistence (XPRT)
+    "uusdc": { baseDenom: "usdc", factor: 1_000_000 },                          // USD Coin (USDC)
+    "unit-move": { baseDenom: "move", factor: 1_000_000 },                      // Movement (MOVE)
 };
 
 export async function GetDenomTrace(denom: string): Promise<string> {

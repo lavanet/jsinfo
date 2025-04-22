@@ -9,8 +9,17 @@ const getCacheKey = (coinGeckodenom: string) => `coingecko-rate-${coinGeckodenom
 
 const MIN_ACCEPTABLE_RATE = 1.e-7;
 const MAX_ACCEPTABLE_RATE = 100000;
-// Special denoms that should always return 0 USD value
-const ZERO_VALUE_DENOMS = ['unit-move'];
+
+// Define special denom handling
+interface DenomConfig {
+    coinGeckoId: string;
+    scaling?: number;
+}
+
+// Extend the denomsData with special handling
+const SPECIAL_DENOMS: Record<string, DenomConfig> = {
+    'unit-move': { coinGeckoId: 'movement', scaling: 1_000_000 }
+};
 
 export interface CoinGeckoRateResponse {
     [coinGeckodenom: string]: {
@@ -27,17 +36,15 @@ class CoinGekoCacheClass {
     }
 
     public async GetDenomToUSDRate(denom: string): Promise<number> {
-        // Check if this is a special denom that should always return 0
-        if (ZERO_VALUE_DENOMS.includes(denom)) {
-            logger.info(`CoinGekoCache:: Special denom ${denom} - returning 0 USD value`);
-            return 0;
-        }
+        // Check for special denom handling
+        const specialConfig = SPECIAL_DENOMS[denom];
 
         if (IsMainnet() && denom.includes("E3FCBEDDBAC500B1BAB90395C7D1E4F33D9B9ECFE82A16ED7D7D141A0152323F")) {
             throw new Error(`Using testnet denom on mainnet - something is wrong - ${denom} (samoleans)`);
         }
 
-        const coinGeckodenom = denomsData[denom as keyof typeof denomsData];
+        // Get CoinGecko ID from special config or regular mapping
+        const coinGeckodenom = specialConfig?.coinGeckoId || denomsData[denom as keyof typeof denomsData];
         if (!coinGeckodenom) {
             throw new Error(`CoinGekoCache:: No matching id found in denoms.json for ${denom}`);
         }
@@ -45,12 +52,21 @@ class CoinGekoCacheClass {
         const cacheKey = getCacheKey(coinGeckodenom);
         const cachedRate = await RedisCache.getDict(cacheKey);
         if (cachedRate) {
+            // Apply scaling if configured
+            if (specialConfig?.scaling) {
+                return cachedRate.rate / specialConfig.scaling;
+            }
             return cachedRate.rate;
         }
 
         // Return existing promise if we're already fetching this denom
         if (coinGeckodenom in this.activeFetches) {
-            return this.activeFetches[coinGeckodenom];
+            const rate = await this.activeFetches[coinGeckodenom];
+            // Apply scaling if configured
+            if (specialConfig?.scaling) {
+                return rate / specialConfig.scaling;
+            }
+            return rate;
         }
 
         // Create new promise for this denom
@@ -59,7 +75,12 @@ class CoinGekoCacheClass {
                 delete this.activeFetches[coinGeckodenom];
             });
 
-        return this.activeFetches[coinGeckodenom];
+        const rate = await this.activeFetches[coinGeckodenom];
+        // Apply scaling if configured
+        if (specialConfig?.scaling) {
+            return rate / specialConfig.scaling;
+        }
+        return rate;
     }
 
     private async fetchWithRetry(url: string): Promise<CoinGeckoRateResponse> {

@@ -9,6 +9,8 @@ const getCacheKey = (coinGeckodenom: string) => `coingecko-rate-${coinGeckodenom
 
 const MIN_ACCEPTABLE_RATE = 1.e-7;
 const MAX_ACCEPTABLE_RATE = 100000;
+// Special denoms that should always return 0 USD value
+const ZERO_VALUE_DENOMS = ['unit-move'];
 
 export interface CoinGeckoRateResponse {
     [coinGeckodenom: string]: {
@@ -25,6 +27,12 @@ class CoinGekoCacheClass {
     }
 
     public async GetDenomToUSDRate(denom: string): Promise<number> {
+        // Check if this is a special denom that should always return 0
+        if (ZERO_VALUE_DENOMS.includes(denom)) {
+            logger.info(`CoinGekoCache:: Special denom ${denom} - returning 0 USD value`);
+            return 0;
+        }
+
         if (IsMainnet() && denom.includes("E3FCBEDDBAC500B1BAB90395C7D1E4F33D9B9ECFE82A16ED7D7D141A0152323F")) {
             throw new Error(`Using testnet denom on mainnet - something is wrong - ${denom} (samoleans)`);
         }

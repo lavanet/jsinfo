@@ -70,7 +70,7 @@ interface RewardBlockInfo {
 }
 
 export class ProviderPerformanceResource extends RedisResourceBase<ProviderPerformanceData[], {}> {
-    protected readonly redisKey = 'provider-performance-v5';
+    protected readonly redisKey = 'provider_performance_v6';
     protected readonly cacheExpirySeconds = 7200 * 3; // 6 hours cache
 
     protected async fetchFromSource(): Promise<ProviderPerformanceData[]> {

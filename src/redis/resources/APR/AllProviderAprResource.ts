@@ -9,6 +9,9 @@ import Decimal from 'decimal.js';
 import { logger } from '@jsinfo/utils/logger';
 import { CalculateProviderAprs, ProviderAprDetails, RewardAmount } from '@jsinfo/redis/resources/APR/AprService';
 
+// Maximum APR cap for display - 90%
+const MAX_DISPLAY_APR_CAP = "90.0%";
+
 export interface AllAprProviderData {
     address: string;
     moniker: string;
@@ -38,6 +41,26 @@ function formatCommissionPrecent(commission: any): string {
     }
 }
 
+// Helper function to cap APR display value
+function capAprValue(aprValue: string | null | undefined): string {
+    if (!aprValue || aprValue === '-') return '-';
+
+    try {
+        // Remove % sign and parse as number
+        const aprNumStr = aprValue.replace('%', '').trim();
+        const aprNum = parseFloat(aprNumStr);
+
+        // Check if it's a valid number and exceeds the cap
+        if (!isNaN(aprNum) && aprNum > 90) {
+            return MAX_DISPLAY_APR_CAP;
+        }
+
+        return aprValue;
+    } catch (error) {
+        return aprValue; // Return original value if parsing fails
+    }
+}
+
 interface ProviderCommission {
     provider: string;
     commission: number;
@@ -50,7 +73,7 @@ interface CuServed {
 }
 
 export class AllProviderAprFullResource extends RedisResourceBase<AllAprProviderData[], {}> {
-    protected readonly redisKey = 'allProviderAPR_v8';
+    protected readonly redisKey = 'allProviderAPR_v9';
     protected readonly cacheExpirySeconds = 7200 * 3; // 6 hours cache
 
     protected async fetchFromSource(): Promise<AllAprProviderData[]> {
@@ -154,7 +177,7 @@ export class AllProviderAprFullResource extends RedisResourceBase<AllAprProvider
             const ret: AllAprProviderData = {
                 address: address,
                 moniker: ValueOrDash(moniker),
-                apr: details.apr || '-',
+                apr: capAprValue(details.apr), // Apply APR cap
                 commission: commission || '-',
                 '30_days_cu_served': ValueOrDash(String(cuServedDataMapByProviderId[normalizedAddress])),
                 '30_days_relays_served': ValueOrDash(String(relayServedDataMapByProviderId[normalizedAddress])),

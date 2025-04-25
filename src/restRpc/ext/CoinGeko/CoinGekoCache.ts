@@ -18,7 +18,7 @@ interface DenomConfig {
 
 // Extend the denomsData with special handling
 const SPECIAL_DENOMS: Record<string, DenomConfig> = {
-    'unit-move': { coinGeckoId: 'movement', scaling: 1_000_000 }
+    'unit-move': { coinGeckoId: 'movement', scaling: 10_000_000 }
 };
 
 export interface CoinGeckoRateResponse {

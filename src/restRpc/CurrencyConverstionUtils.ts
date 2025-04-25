@@ -37,7 +37,7 @@ const DENOM_CONVERSIONS = {
     "ucre": { baseDenom: "cre", factor: 1_000_000 },                            // Crescent (CRE)
     "uxprt": { baseDenom: "xprt", factor: 1_000_000 },                          // Persistence (XPRT)
     "uusdc": { baseDenom: "usdc", factor: 1_000_000 },                          // USD Coin (USDC)
-    "unit-move": { baseDenom: "move", factor: 1_000_000 },                      // Movement (MOVE)
+    "unit-move": { baseDenom: "move", factor: 10_000_000 },                      // Movement (MOVE)
 };
 
 export async function GetDenomTrace(denom: string): Promise<string> {

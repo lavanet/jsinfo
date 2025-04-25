@@ -1,6 +1,5 @@
 // src/indexer/lavaBlock.ts
 
-import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import { IndexedTx, Block, Event } from "@cosmjs/stargate"
 import { ProcessOneEvent } from './eventProcessor';
 import { LavaBlock } from './lavaTypes';

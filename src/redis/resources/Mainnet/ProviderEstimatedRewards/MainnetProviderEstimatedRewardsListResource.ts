@@ -29,7 +29,7 @@ export interface ProviderRewardsResourceResponse {
 }
 
 export class MainnetProviderEstimatedRewardsListResource extends RedisResourceBase<ListResponse, {}> {
-    protected readonly redisKey = 'mainnet_provider_estimated_rewards_list_v7';
+    protected readonly redisKey = 'mainnet_provider_estimated_rewards_list_v8';
     protected readonly cacheExpirySeconds = 7200 * 3; // 6 hours
     private readonly DATA_DIR = path.join(__dirname, 'data');
 

@@ -263,7 +263,7 @@ export async function ProviderHealthLatestPaginatedHandler(request: FastifyReque
             for (const geo in specsData[spec].interfaces[iface]) {
                 const record = specsData[spec].interfaces[iface][geo];
 
-                // Only check version for healthy nodes
+                // Check version for both healthy and unhealthy nodes
                 if (record.status === 'healthy' || record.status === 'unhealthy') {
                     // Check for version requirements
                     const versionStatus = await checkVersionRequirements(record.data);
@@ -274,7 +274,7 @@ export async function ProviderHealthLatestPaginatedHandler(request: FastifyReque
                         // If any interface needs an upgrade, update the spec's overall status
                         if (versionStatus === 'version_upgrade_required') {
                             if (specsData[spec].overallStatus === 'healthy') {
-                                specsData[spec].overallStatus = 'upgrade_required';
+                                specsData[spec].overallStatus = 'version_upgrade_required';
                             }
                         } else if (versionStatus === 'version_upgrade_available') {
                             if (specsData[spec].overallStatus === 'healthy') {
@@ -296,13 +296,13 @@ export async function ProviderHealthLatestPaginatedHandler(request: FastifyReque
         if (statuses.every(status => status === 'healthy')) {
             specsData[spec].overallStatus = 'healthy';
         } else if (statuses.some(status => status === 'version_upgrade_required')) {
-            specsData[spec].overallStatus = 'upgrade_required';
+            specsData[spec].overallStatus = 'version_upgrade_required';
         } else if (statuses.some(status => status === 'version_upgrade_available')) {
-            specsData[spec].overallStatus = 'upgrade_available';
-        } else if (statuses.every(status => status === 'unhealthy')) {
-            specsData[spec].overallStatus = 'unhealthy';
+            specsData[spec].overallStatus = 'version_upgrade_available';
         } else if (statuses.every(status => status === 'frozen')) {
             specsData[spec].overallStatus = 'frozen';
+        } else if (statuses.every(status => status === 'unhealthy')) {
+            specsData[spec].overallStatus = 'unhealthy';
         } else if (statuses.every(status => status === 'jailed')) {
             specsData[spec].overallStatus = 'jailed';
         } else if (statuses.every(status =>

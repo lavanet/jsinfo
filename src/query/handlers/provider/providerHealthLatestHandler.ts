@@ -299,12 +299,12 @@ export async function ProviderHealthLatestPaginatedHandler(request: FastifyReque
             specsData[spec].overallStatus = 'version_upgrade_required';
         } else if (statuses.some(status => status === 'version_upgrade_available')) {
             specsData[spec].overallStatus = 'version_upgrade_available';
-        } else if (statuses.every(status => status === 'frozen')) {
+        } else if (statuses.some(status => status === 'frozen')) {
             specsData[spec].overallStatus = 'frozen';
+        } else if (statuses.some(status => status === 'jailed')) {
+            specsData[spec].overallStatus = 'jailed';
         } else if (statuses.every(status => status === 'unhealthy')) {
             specsData[spec].overallStatus = 'unhealthy';
-        } else if (statuses.every(status => status === 'jailed')) {
-            specsData[spec].overallStatus = 'jailed';
         } else if (statuses.every(status =>
             status === 'frozen' ||
             status === 'unhealthy' ||

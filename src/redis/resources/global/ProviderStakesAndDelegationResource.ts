@@ -15,6 +15,7 @@ import { IsMainnet } from '@jsinfo/utils/env';
 import { GetResourceResponse, MainnetProviderEstimatedRewardsGetService } from '@jsinfo/redis/resources/Mainnet/ProviderEstimatedRewards/MainnetProviderEstimatedRewardsGetResource';
 import { ActiveProvidersService } from '@jsinfo/redis/resources/index/ActiveProvidersResource';
 import Decimal from 'decimal.js';
+import { RpcOnDemandProviderVersionEndpointCache } from '@jsinfo/restRpc/LavaRpcOnDemandProviderVersionEndpointCache';
 
 // Helper function to map status codes to readable strings
 function getStatusString(statusCode: number | null): string {
@@ -593,7 +594,7 @@ export class ProviderStakesAndDelegationResource extends RedisResourceBase<Provi
     }
 
     // Fix the processHealthData function to better handle region data
-    private processHealthData(healthData: any[]): Record<string, Record<string, HealthData | string>> {
+    private async processHealthData(healthData: any[]): Promise<Record<string, Record<string, HealthData | string>>> {
         const healthDataResult: Record<string, Record<string, HealthData | string>> = {};
 
         // Known regions
@@ -640,15 +641,47 @@ export class ProviderStakesAndDelegationResource extends RedisResourceBase<Provi
                     ? mostRecentRecord.region
                     : mostRecentRecord.geolocation || 'Unknown';
 
-                // Create health data object
+                // Format the health message
+                const formattedMessage = this.formatHealthMessage(mostRecentRecord.message || mostRecentRecord.data);
+
+                // Check for version upgrade message
+                let status = mostRecentRecord.status?.toLowerCase() || 'unknown';
+                if (status === 'healthy' || status == 'unhealthy') {
+                    const versionMatch = formattedMessage.match(/Version:(\d+\.\d+\.\d+)\s+should be:\s+(\d+\.\d+\.\d+)/);
+                    if (versionMatch) {
+                        const currentVersion = versionMatch[1];
+                        const targetVersion = versionMatch[2];
+
+                        try {
+                            // Simply await the version check
+                            const isHigherThanMin = await RpcOnDemandProviderVersionEndpointCache.IsVersionHigherThanMinProviderVersion(currentVersion);
+
+                            if (isHigherThanMin) {
+                                // Version is above minimum requirements but should be upgraded
+                                status = 'version_upgrade_available';
+                                // logger.info(`Provider ${provider} version ${currentVersion} is higher than minimum but should be upgraded to ${targetVersion}`);
+                            } else {
+                                // Version is below minimum, upgrade is required
+                                status = 'version_upgrade_required';
+                                // logger.warn(`Provider ${provider} version ${currentVersion} is below minimum required, needs upgrade to ${targetVersion}`);
+                            }
+                        } catch (error) {
+                            // On error, use the more restrictive status
+                            status = 'version_upgrade_required';
+                            logger.error("Error checking provider version", { error, provider, currentVersion });
+                        }
+                    }
+                }
+
+                // Create health data object with potentially updated status
                 const healthInfo: HealthData = {
-                    overallStatus: mostRecentRecord.status?.toLowerCase() || 'unknown',
+                    overallStatus: status, // Use the potentially updated status
                     interfaces: [interfaceType],
                     lastTimestamp: mostRecentRecord.timestamp?.toISOString(),
                     interfaceDetails: {
                         [interfaceType]: {
-                            status: mostRecentRecord.status?.toLowerCase() || 'unknown',
-                            message: this.formatHealthMessage(mostRecentRecord.message || mostRecentRecord.data),
+                            status: status, // Same status for interface details
+                            message: formattedMessage,
                             timestamp: mostRecentRecord.timestamp?.toISOString(),
                             region: region
                         }

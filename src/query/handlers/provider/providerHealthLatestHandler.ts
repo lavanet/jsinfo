@@ -1,5 +1,8 @@
 // src/query/handlers/providerHealthLatestHandler.ts
 
+// This page is the Provider Latest Health data section on the provider pages
+// Latest change 25-May-2025 adding latest statuses - version update required / paused
+
 // curl http://localhost:8081/providerLatestHealth/lava@1vuavgpa0cpufrq60zdggm8rusxann8ys76taf4
 // curl http://localhost:8081/providerLatestHealth/lava@1uhwudw7vzqtnffu2hf5yhv4n8trj79ezl66z99
 
@@ -11,6 +14,7 @@ import { WriteErrorToFastifyReplyNoLog } from '@jsinfo/query/utils/queryServerUt
 import { ParseDateToUtc } from '@jsinfo/utils/date';
 import { logger } from '@jsinfo/utils/logger';
 import { queryJsinfo } from '@jsinfo/utils/db';
+import { RpcOnDemandProviderVersionEndpointCache } from '@jsinfo/restRpc/LavaRpcOnDemandProviderVersionEndpointCache';
 
 type HealthRecord = {
     id: number;
@@ -90,6 +94,34 @@ export const ProviderHealthLatestPaginatedHandlerOpts: RouteShorthandOptions = {
     }
 };
 
+// Function to check version requirements
+async function checkVersionRequirements(message: string): Promise<string | null> {
+    // Check for version message pattern
+    const versionMatch = message.match(/Version:(\d+\.\d+\.\d+)\s+should be:\s+(\d+\.\d+\.\d+)/);
+    if (versionMatch) {
+        const currentVersion = versionMatch[1];
+
+        try {
+            // Check if version is higher than minimum required
+            const isHigherThanMin = await RpcOnDemandProviderVersionEndpointCache.IsVersionHigherThanMinProviderVersion(currentVersion);
+
+            if (isHigherThanMin) {
+                // Version is acceptable but should be upgraded
+                return 'version_upgrade_available';
+            } else {
+                // Version is below minimum, upgrade is required
+                return 'version_upgrade_required';
+            }
+        } catch (error) {
+            logger.error("Error checking provider version", { error, currentVersion });
+            // Default to required on error
+            return 'version_upgrade_required';
+        }
+    }
+
+    return null;
+}
+
 const ParseMessageFromHealthV2 = (data: any | null): string => {
     if (!data) return "";
     try {
@@ -130,7 +162,6 @@ const ParseMessageFromHealthV2 = (data: any | null): string => {
 
 // null is retuned for *PaginatedHandler functions
 // reply is returned in the *RawHandler functions - does not the use the RequestHandlerBase class
-
 export async function ProviderHealthLatestPaginatedHandler(request: FastifyRequest, reply: FastifyReply): Promise<{ data: ProviderHealthLatestResponse } | null> {
     let provider = await GetAndValidateProviderAddressFromRequest("providerHealthLatest", request, reply);
     if (provider === '') {
@@ -171,6 +202,7 @@ export async function ProviderHealthLatestPaginatedHandler(request: FastifyReque
     const specsData: { [spec: string]: { overallStatus: string; interfaces: { [iface: string]: { [geolocation: string]: { status: string; data: string; timestamp: string; } } } } } = {};
     const healthStatusPerSpec: { [spec: string]: { allHealthy: boolean, allUnhealthy: boolean } } = {};
 
+    // Process all health records
     for (const record of allHealthRecords) {
         const { spec, interface: iface, geolocation, status, timestamp, data } = record;
 
@@ -192,18 +224,24 @@ export async function ProviderHealthLatestPaginatedHandler(request: FastifyReque
 
         if (!specsData[spec].interfaces[iface]) specsData[spec].interfaces[iface] = {};
         if (!specsData[spec].interfaces[iface][geolocation]) {
+            // Parse message from data
+            const parsedMessage = ParseMessageFromHealthV2(data);
+
             specsData[spec].interfaces[iface][geolocation] = {
                 status,
-                data: ParseMessageFromHealthV2(data),
+                data: parsedMessage,
                 timestamp: timestamp.toISOString()
             };
             status_updated = true;
         } else {
             const existingRecord = specsData[spec].interfaces[iface][geolocation];
             if (new Date(existingRecord.timestamp) < timestamp) {
+                // Parse message from data
+                const parsedMessage = ParseMessageFromHealthV2(data);
+
                 specsData[spec].interfaces[iface][geolocation] = {
                     status,
-                    data: ParseMessageFromHealthV2(data),
+                    data: parsedMessage,
                     timestamp: timestamp.toISOString()
                 };
                 status_updated = true;
@@ -219,6 +257,37 @@ export async function ProviderHealthLatestPaginatedHandler(request: FastifyReque
         }
     }
 
+    // Check for version requirements in messages
+    for (const spec in specsData) {
+        for (const iface in specsData[spec].interfaces) {
+            for (const geo in specsData[spec].interfaces[iface]) {
+                const record = specsData[spec].interfaces[iface][geo];
+
+                // Only check version for healthy nodes
+                if (record.status === 'healthy' || record.status === 'unhealthy') {
+                    // Check for version requirements
+                    const versionStatus = await checkVersionRequirements(record.data);
+                    if (versionStatus) {
+                        // Update the status to the version status
+                        record.status = versionStatus;
+
+                        // If any interface needs an upgrade, update the spec's overall status
+                        if (versionStatus === 'version_upgrade_required') {
+                            if (specsData[spec].overallStatus === 'healthy') {
+                                specsData[spec].overallStatus = 'upgrade_required';
+                            }
+                        } else if (versionStatus === 'version_upgrade_available') {
+                            if (specsData[spec].overallStatus === 'healthy') {
+                                specsData[spec].overallStatus = 'version_upgrade_available';
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Calculate overall status for each spec
     for (const spec in specsData) {
         const statuses = Object.values(specsData[spec].interfaces)
             .flatMap(geo => Object.values(geo))
@@ -226,6 +295,10 @@ export async function ProviderHealthLatestPaginatedHandler(request: FastifyReque
 
         if (statuses.every(status => status === 'healthy')) {
             specsData[spec].overallStatus = 'healthy';
+        } else if (statuses.some(status => status === 'version_upgrade_required')) {
+            specsData[spec].overallStatus = 'upgrade_required';
+        } else if (statuses.some(status => status === 'version_upgrade_available')) {
+            specsData[spec].overallStatus = 'upgrade_available';
         } else if (statuses.every(status => status === 'unhealthy')) {
             specsData[spec].overallStatus = 'unhealthy';
         } else if (statuses.every(status => status === 'frozen')) {
@@ -241,6 +314,7 @@ export async function ProviderHealthLatestPaginatedHandler(request: FastifyReque
         } else {
             specsData[spec].overallStatus = 'degraded';
         }
+
         specsArray.push({ spec, specData: specsData[spec] });
     }
 

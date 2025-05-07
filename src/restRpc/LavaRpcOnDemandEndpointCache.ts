@@ -1,4 +1,4 @@
-// src/indexer/classes/RpcEndpointCahce.ts
+// src/restRpc/LavaRpcOnDemandEndpointCache.ts
 
 import { logger } from '@jsinfo/utils/logger';
 import { QueryLavaRPC } from '@jsinfo/restRpc/LavaRpc';

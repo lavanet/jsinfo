@@ -291,24 +291,42 @@ export async function ProviderHealthLatestPaginatedHandler(request: FastifyReque
     for (const spec in specsData) {
         const statuses = Object.values(specsData[spec].interfaces)
             .flatMap(geo => Object.values(geo))
-            .map(data => data.status);
+            .map(data => ({ status: data.status, message: data.data }));
 
-        if (statuses.every(status => status === 'healthy')) {
+        // Count interfaces by status and message
+        const healthyInterfaces = statuses.filter(data => data.status === 'healthy');
+        const timeoutInterfaces = statuses.filter(data =>
+        (data.status === 'unhealthy' &&
+            (data.message.includes('timed') || data.message.includes('timeout')))
+        );
+        const otherUnhealthyInterfaces = statuses.filter(data =>
+            data.status !== 'healthy' &&
+            !(data.status === 'unhealthy' &&
+                (data.message.includes('timed') || data.message.includes('timeout')))
+        );
+
+        // Special case: If we have up to 2 timeout interfaces and at least one healthy interface, mark as healthy
+        if (timeoutInterfaces.length <= 2 && healthyInterfaces.length >= 1 &&
+            (otherUnhealthyInterfaces.length === 0 ||
+                otherUnhealthyInterfaces.every(i => i.status === 'version_upgrade_available'))) {
             specsData[spec].overallStatus = 'healthy';
-        } else if (statuses.some(status => status === 'version_upgrade_required')) {
+            logger.debug(`Treating spec ${spec} as healthy despite ${timeoutInterfaces.length} timeouts`);
+        } else if (statuses.map(s => s.status).every(status => status === 'healthy')) {
+            specsData[spec].overallStatus = 'healthy';
+        } else if (statuses.map(s => s.status).some(status => status === 'version_upgrade_required')) {
             specsData[spec].overallStatus = 'version_upgrade_required';
-        } else if (statuses.some(status => status === 'version_upgrade_available')) {
+        } else if (statuses.map(s => s.status).some(status => status === 'version_upgrade_available')) {
             specsData[spec].overallStatus = 'version_upgrade_available';
-        } else if (statuses.some(status => status === 'frozen')) {
+        } else if (statuses.map(s => s.status).some(status => status === 'frozen')) {
             specsData[spec].overallStatus = 'frozen';
-        } else if (statuses.some(status => status === 'jailed')) {
+        } else if (statuses.map(s => s.status).some(status => status === 'jailed')) {
             specsData[spec].overallStatus = 'jailed';
-        } else if (statuses.every(status => status === 'unhealthy')) {
+        } else if (statuses.map(s => s.status).every(status => status === 'unhealthy')) {
             specsData[spec].overallStatus = 'unhealthy';
         } else if (statuses.every(status =>
-            status === 'frozen' ||
-            status === 'unhealthy' ||
-            status === 'jailed'
+            status.status === 'frozen' ||
+            status.status === 'unhealthy' ||
+            status.status === 'jailed'
         )) {
             specsData[spec].overallStatus = 'unhealthy';
         } else {

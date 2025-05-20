@@ -2,6 +2,7 @@
 
 import { RegisterPaginationServerHandler, RegisterRedisBackedHandler, GetServerInstance } from './queryServer';
 import { IsMainnet } from '@jsinfo/utils/env';
+import { FastifyInstance } from 'fastify';
 
 // =============================================================================
 // IMPORTS - Grouped by functionality
@@ -114,6 +115,10 @@ import {
 import { NearHealthHandler, NearHealthHandlerOpts } from '@jsinfo/query/handlers/ajax/nearHealthHandler';
 import { providerReputationV2Handler, ProviderReputationV2HandlerOpts } from './handlers/ajax/providerReputationV2Handler';
 
+// Import the new handlers
+import { NearMainnetHealthHandler, NearMainnetHealthHandlerOpts } from './handlers/ajax/nearMainnetHealthHandler';
+import { NearTestnetHealthHandler, NearTestnetHealthHandlerOpts } from './handlers/ajax/nearTestnetHealthHandler';
+
 // =============================================================================
 // ROUTE REGISTRATION - Grouped by functionality
 // =============================================================================
@@ -128,6 +133,8 @@ GetServerInstance().get('/healths', HealthRawHandlerOpts, HealthRawHandler);
 GetServerInstance().get('/healthz', HealthRawHandlerOpts, HealthRawHandler);
 GetServerInstance().get('/healthstatus', HealthStatusRawHandlerOpts, HealthStatusRawHandler);
 GetServerInstance().get('/near_health', NearHealthHandlerOpts, NearHealthHandler);
+GetServerInstance().get('/near_mainnet_health', NearMainnetHealthHandlerOpts, NearMainnetHealthHandler);
+GetServerInstance().get('/near_testnet_health', NearTestnetHealthHandlerOpts, NearTestnetHealthHandler);
 
 // -----------------------------------------------------------------------------
 // Supply Routes

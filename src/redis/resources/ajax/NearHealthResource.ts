@@ -158,7 +158,7 @@ export class NearHealthResource extends RedisResourceBase<NearHealthData, {}> {
                 url: fullUrl,
                 headers: config.headers,
                 data: JSON.parse(config.body),
-                timeout: 10000, // 10 second timeout
+                timeout: 3000, // 3 second timeout
                 httpsAgent: config.skipTlsVerify
                     ? new (require('https').Agent)({ rejectUnauthorized: false })
                     : undefined

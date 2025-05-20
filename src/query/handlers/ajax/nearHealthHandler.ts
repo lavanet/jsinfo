@@ -29,6 +29,10 @@ export async function NearHealthHandler(request: FastifyRequest, reply: FastifyR
             return { error: 'No health data available' };
         }
 
+        if (healthData.health !== 'healthy') {
+            reply.status(420);
+        }
+
         reply.header('Content-Type', 'application/json');
         return JSONStringify(healthData);
     } catch (error) {

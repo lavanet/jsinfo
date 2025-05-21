@@ -30,7 +30,7 @@ export async function NearHealthHandler(request: FastifyRequest, reply: FastifyR
         }
 
         if (healthData.health !== 'healthy') {
-            reply.status(420);
+            reply.status(408);
         }
 
         reply.header('Content-Type', 'application/json');

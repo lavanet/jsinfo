@@ -41,7 +41,7 @@ export async function NearTestnetHealthHandler(request: FastifyRequest, reply: F
 
         // Set appropriate HTTP status based on health
         if (testnetData.overallStatus !== 'healthy') {
-            reply.status(420);
+            reply.status(408);
         }
 
         reply.header('Content-Type', 'application/json');

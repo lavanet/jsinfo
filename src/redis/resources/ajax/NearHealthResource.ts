@@ -228,6 +228,7 @@ export class NearHealthResource extends RedisResourceBase<NearHealthData, {}> {
             this.envCache = {};
         }
 
+
         // Return cached value if available
         if (this.envCache[key] !== undefined) {
             return this.envCache[key];

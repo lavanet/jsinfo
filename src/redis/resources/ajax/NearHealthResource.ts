@@ -152,6 +152,16 @@ export class NearHealthResource extends RedisResourceBase<NearHealthData, {}> {
         try {
             const startTime = Date.now();
 
+            // Inject dynamic header using JSINFO_NEAR_ prefix
+            const headerKey = this.getEnvVarClean('JSINFO_NEAR_HEADER_KEY', 'empty');
+            const headerValue = this.getEnvVarClean('JSINFO_NEAR_HEADER_VALUE', 'empty');
+
+            // Only inject if both key and value are non-empty strings
+            if (headerKey !== 'empty' && headerValue !== 'empty') {
+                config.headers = config.headers || {};
+                config.headers[headerKey] = headerValue;
+            }
+
             // Make the request with proper headers and configuration
             const response = await axios({
                 method: config.method as 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH',
@@ -211,10 +221,25 @@ export class NearHealthResource extends RedisResourceBase<NearHealthData, {}> {
         }
     }
 
+    private envCache: Record<string, string> = {};
+
     private getEnvVarClean(key: string, defaultValue: string): string {
-        const value = GetEnvVar(key, defaultValue);
-        // Remove any surrounding quotes and trim whitespace
-        return value.replace(/^["']|["']$/g, '').trim();
+        if (!this.envCache) {
+            this.envCache = {};
+        }
+
+        // Return cached value if available
+        if (this.envCache[key] !== undefined) {
+            return this.envCache[key];
+        }
+
+        // Fetch and clean
+        const rawValue = GetEnvVar(key, defaultValue);
+        const cleanValue = rawValue.replace(/^["']|["']$/g, '').trim();
+
+        // Cache and return
+        this.envCache[key] = cleanValue;
+        return cleanValue;
     }
 }
 

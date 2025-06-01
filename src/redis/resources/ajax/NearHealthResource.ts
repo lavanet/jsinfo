@@ -140,6 +140,52 @@ export class NearHealthResource extends RedisResourceBase<NearHealthData, {}> {
         }
     }
 
+    private async makeRequestWithRetry(
+        config: {
+            method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
+            url: string;
+            headers: Record<string, string>;
+            data: any;
+            timeout: number;
+            httpsAgent?: any;
+        },
+        endpointName: string,
+        maxRetries: number = 3
+    ): Promise<any> {
+        let lastError: any;
+
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                const response = await axios(config);
+
+                // Log successful retry if this wasn't the first attempt
+                if (attempt > 1) {
+                    logger.info(`Request succeeded for ${endpointName} on attempt ${attempt}`);
+                }
+
+                return response;
+            } catch (error) {
+                lastError = error;
+                const isTimeout = (error as any).code === 'ECONNABORTED' || (error as any).message?.includes('timeout');
+
+                if (isTimeout && attempt < maxRetries) {
+                    logger.warn(`Request timeout for ${endpointName} on attempt ${attempt}, retrying...`, {
+                        error: (error as any).message
+                    });
+                    // Add a small delay before retry (1 second)
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    continue;
+                }
+
+                // If it's not a timeout or we've exhausted retries, throw the error
+                throw lastError;
+            }
+        }
+
+        // This should never be reached, but just in case
+        throw lastError;
+    }
+
     private async checkEndpointHealth(
         network: 'mainnet' | 'testnet',
         endpointType: 'iprpc' | 'gateway',
@@ -162,17 +208,17 @@ export class NearHealthResource extends RedisResourceBase<NearHealthData, {}> {
                 config.headers[headerKey] = headerValue;
             }
 
-            // Make the request with proper headers and configuration
-            const response = await axios({
-                method: config.method as 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH',
+            // Make the request with retry logic
+            const response = await this.makeRequestWithRetry({
+                method: config.method,
                 url: fullUrl,
                 headers: config.headers,
                 data: JSON.parse(config.body),
-                timeout: 3000, // 3 second timeout
+                timeout: 10000, // 10 second timeout
                 httpsAgent: config.skipTlsVerify
                     ? new (require('https').Agent)({ rejectUnauthorized: false })
                     : undefined
-            });
+            }, endpointName);
 
             const latency = Date.now() - startTime;
 

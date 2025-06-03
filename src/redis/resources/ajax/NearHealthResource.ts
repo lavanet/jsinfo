@@ -150,7 +150,7 @@ export class NearHealthResource extends RedisResourceBase<NearHealthData, {}> {
             httpsAgent?: any;
         },
         endpointName: string,
-        maxRetries: number = 3
+        maxRetries: number = 5
     ): Promise<any> {
         let lastError: any;
 

@@ -3,6 +3,11 @@ import axios from 'axios';
 import { logger } from '@jsinfo/utils/logger';
 import { GetEnvVar } from '@jsinfo/utils/env';
 
+// curl -X POST https://near.jsonrpc.lava.build \
+//   -H "Content-Type: application/json" \
+//   -d '{"jsonrpc":"2.0","method":"block","params":{"finality":"final"},"id":1}' \
+//   --ipv4 --insecure
+
 // Endpoint configuration type
 interface EndpointConfig {
     url: string;
@@ -26,12 +31,12 @@ interface HealthCheckResult {
 export interface NearHealthData {
     mainnet: {
         iprpc: HealthCheckResult;
-        gateway: HealthCheckResult;
+        // gateway: HealthCheckResult;
         overallStatus: 'healthy' | 'degraded' | 'unhealthy';
     };
     testnet: {
         iprpc: HealthCheckResult;
-        gateway: HealthCheckResult;
+        // gateway: HealthCheckResult;
         overallStatus: 'healthy' | 'degraded' | 'unhealthy';
     };
     lastUpdated: string;
@@ -40,13 +45,13 @@ export interface NearHealthData {
 
 export class NearHealthResource extends RedisResourceBase<NearHealthData, {}> {
     protected readonly redisKey = 'NearHealthResource_v2';
-    protected readonly cacheExpirySeconds = 300; // 5 minutes cache
+    protected readonly cacheExpirySeconds = 60 * 30; // 30 * minutes
 
     // Configuration for the endpoints
     private readonly endpoints = {
         mainnet: {
             iprpc: {
-                url: 'near.jsonrpc.lava.build',
+                url: 'near.lava.build',
                 method: 'POST' as const,
                 headers: {
                     'content-type': 'application/json'
@@ -55,21 +60,21 @@ export class NearHealthResource extends RedisResourceBase<NearHealthData, {}> {
                 skipTlsVerify: true,
                 ipProtocol: 'ip4'
             },
-            gateway: {
-                url: `g.w.lavanet.xyz:443/gateway/near/rpc-http/${this.getEnvVarClean('JSINFO_NEAR_GATEWAY_HASH', '-')}`,
-                method: 'POST' as const,
-                headers: {
-                    'content-type': 'application/json',
-                    'Authorization': `Bearer ${this.getEnvVarClean('JSINFO_NEAR_GATEWAY_TOKEN', '-')}`
-                },
-                body: '{"jsonrpc":"2.0","method":"block","params":{"finality":"final"},"id":1}',
-                skipTlsVerify: true,
-                ipProtocol: 'ip4'
-            }
+            // gateway: {
+            //     url: `g.w.lavanet.xyz:443/gateway/near/rpc-http/${this.getEnvVarClean('JSINFO_NEAR_GATEWAY_HASH', '-')}`,
+            //     method: 'POST' as const,
+            //     headers: {
+            //         'content-type': 'application/json',
+            //         'Authorization': `Bearer ${this.getEnvVarClean('JSINFO_NEAR_GATEWAY_TOKEN', '-')}`
+            //     },
+            //     body: '{"jsonrpc":"2.0","method":"block","params":{"finality":"final"},"id":1}',
+            //     skipTlsVerify: true,
+            //     ipProtocol: 'ip4'
+            // }
         },
         testnet: {
             iprpc: {
-                url: 'neart.jsonrpc.lava.build',
+                url: 'neart.lava.build',
                 method: 'POST' as const,
                 headers: {
                     'content-type': 'application/json'
@@ -78,32 +83,49 @@ export class NearHealthResource extends RedisResourceBase<NearHealthData, {}> {
                 skipTlsVerify: true,
                 ipProtocol: 'ip4'
             },
-            gateway: {
-                url: `g.w.lavanet.xyz:443/gateway/neart/rpc-http/${this.getEnvVarClean('JSINFO_NEAR_GATEWAY_HASH', '-')}`,
-                method: 'POST' as const,
-                headers: {
-                    'content-type': 'application/json',
-                    'Authorization': `Bearer ${this.getEnvVarClean('JSINFO_NEAR_GATEWAY_TOKEN', '-')}`
-                },
-                body: '{"jsonrpc":"2.0","method":"block","params":{"finality":"final"},"id":1}',
-                skipTlsVerify: true,
-                ipProtocol: 'ip4'
-            }
+            // gateway: {
+            //     url: `g.w.lavanet.xyz:443/gateway/neart/rpc-http/${this.getEnvVarClean('JSINFO_NEAR_GATEWAY_HASH', '-')}`,
+            //     method: 'POST' as const,
+            //     headers: {
+            //         'content-type': 'application/json',
+            //         'Authorization': `Bearer ${this.getEnvVarClean('JSINFO_NEAR_GATEWAY_TOKEN', '-')}`
+            //     },
+            //     body: '{"jsonrpc":"2.0","method":"block","params":{"finality":"final"},"id":1}',
+            //     skipTlsVerify: true,
+            //     ipProtocol: 'ip4'
+            // }
         }
     };
 
     protected async fetchFromSource(): Promise<NearHealthData> {
         try {
             // Perform health checks
-            const [mainnetIprpc, mainnetGateway, testnetIprpc, testnetGateway] = await Promise.all([
+            const [mainnetIprpc, testnetIprpc] = await Promise.all([
                 this.checkEndpointHealth('mainnet', 'iprpc', this.endpoints.mainnet.iprpc),
-                this.checkEndpointHealth('mainnet', 'gateway', this.endpoints.mainnet.gateway),
+                // this.checkEndpointHealth('mainnet', 'gateway', this.endpoints.mainnet.gateway),
                 this.checkEndpointHealth('testnet', 'iprpc', this.endpoints.testnet.iprpc),
-                this.checkEndpointHealth('testnet', 'gateway', this.endpoints.testnet.gateway)
+                // this.checkEndpointHealth('testnet', 'gateway', this.endpoints.testnet.gateway)
             ]);
 
+            // // Create empty placeholder for gateway results
+            // const mainnetGatewayPlaceholder: HealthCheckResult = {
+            //     endpoint: 'mainnet-gateway',
+            //     status: 'unhealthy',
+            //     latency: 0,
+            //     error: 'Gateway endpoint disabled',
+            //     timestamp: new Date().toISOString()
+            // };
+            
+            // const testnetGatewayPlaceholder: HealthCheckResult = {
+            //     endpoint: 'testnet-gateway',
+            //     status: 'unhealthy',
+            //     latency: 0,
+            //     error: 'Gateway endpoint disabled',
+            //     timestamp: new Date().toISOString()
+            // };
+
             // Calculate overall health
-            const allResults = [mainnetIprpc, mainnetGateway, testnetIprpc, testnetGateway];
+            const allResults = [mainnetIprpc, testnetIprpc];
             const healthyCount = allResults.filter(r => r.status === 'healthy').length;
 
             let overallHealth: 'healthy' | 'degraded' | 'unhealthy';
@@ -115,18 +137,18 @@ export class NearHealthResource extends RedisResourceBase<NearHealthData, {}> {
                 overallHealth = 'unhealthy';
             }
 
-            const mainnetStatus = this.determineOverallStatus([mainnetIprpc, mainnetGateway]);
-            const testnetStatus = this.determineOverallStatus([testnetIprpc, testnetGateway]);
+            const mainnetStatus = this.determineOverallStatus([mainnetIprpc]);
+            const testnetStatus = this.determineOverallStatus([testnetIprpc]);
 
             const healthData: NearHealthData = {
                 mainnet: {
                     iprpc: mainnetIprpc,
-                    gateway: mainnetGateway,
+                    // gateway: mainnetGatewayPlaceholder,
                     overallStatus: mainnetStatus
                 },
                 testnet: {
                     iprpc: testnetIprpc,
-                    gateway: testnetGateway,
+                    // gateway: testnetGatewayPlaceholder,
                     overallStatus: testnetStatus
                 },
                 lastUpdated: new Date().toISOString(),
@@ -150,39 +172,48 @@ export class NearHealthResource extends RedisResourceBase<NearHealthData, {}> {
             httpsAgent?: any;
         },
         endpointName: string,
-        maxRetries: number = 10
+        maxTimeMs: number = 1200000 // 20 minutes in milliseconds
     ): Promise<any> {
         let lastError: any;
+        const startTime = Date.now();
+        let attempt = 1;
 
-        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        while (Date.now() - startTime < maxTimeMs) {
             try {
                 const response = await axios(config);
 
                 // Log successful retry if this wasn't the first attempt
                 if (attempt > 1) {
-                    logger.info(`Request succeeded for ${endpointName} on attempt ${attempt}`);
+                    const elapsedTime = Math.round((Date.now() - startTime) / 1000);
+                    logger.info(`Request succeeded for ${endpointName} on attempt ${attempt} after ${elapsedTime} seconds`);
                 }
 
                 return response;
             } catch (error) {
                 lastError = error;
                 const isTimeout = (error as any).code === 'ECONNABORTED' || (error as any).message?.includes('timeout');
+                const elapsedTime = Date.now() - startTime;
+                const timeRemaining = maxTimeMs - elapsedTime;
 
-                if (isTimeout && attempt < maxRetries) {
-                    logger.warn(`Request timeout for ${endpointName} on attempt ${attempt}, retrying...`, {
+                if (isTimeout && timeRemaining > 0) {
+                    logger.warn(`Request timeout for ${endpointName} on attempt ${attempt}, retrying... (${Math.round(elapsedTime/1000)}s elapsed of ${Math.round(maxTimeMs/1000)}s total)`, {
                         error: (error as any).message
                     });
-                    // Add a small delay before retry (1 second)
-                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    
+                    // Retry every 10 seconds
+                    const retryDelay = Math.min(10000, timeRemaining); // Wait 10 seconds or the remaining time, whichever is shorter
+                    await new Promise(resolve => setTimeout(resolve, retryDelay));
+                    attempt++;
                     continue;
                 }
 
-                // If it's not a timeout or we've exhausted retries, throw the error
+                // If it's not a timeout or we've exhausted the time limit, throw the error
                 throw lastError;
             }
         }
 
-        // This should never be reached, but just in case
+        // Throw error when max time is reached
+        logger.error(`Request for ${endpointName} failed after reaching maximum retry time (${Math.round(maxTimeMs/1000)} seconds)`);
         throw lastError;
     }
 

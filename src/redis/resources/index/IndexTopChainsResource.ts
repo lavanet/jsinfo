@@ -53,18 +53,75 @@ export class IndexTopChainsResource extends RedisResourceBase<IndexTopChainsData
             cuSum: number;
         }>();
 
+        // add here custom logic to remove these chains:
+        const mainnetChains = [
+            "FVM",
+            "FVMT",
+            "STRK",
+            "STRKS",
+            "AXELAR",
+            "AXELART",
+            "ARBITRUM",
+            "ARBITRUMS",
+            "MOVEMENT",
+            "MOVEMENTT",
+            "NEAR",
+            "NEART",
+            "COSMOSHUB",
+            "COSMOSHUBT",
+            "LAVA",
+            "ETH1",
+            "Sep1",
+            "HOL1",
+            "BASE",
+            "BASES",
+            "OPTM",
+            "OPTMS",
+            "BSC",
+            "BSCT",
+            "POLYGON",
+            "POLYGONA",
+            "SOLANA",
+            "SOLANAT",
+            "HYPERLIQUID",
+            "HYPERLIQUIDT"
+        ].map(chain => chain.toLowerCase().trim());
+
+        const testnetChains = [
+            "LAV1",
+            "APT1",
+            "ETH1",
+            "SOLANA",
+            "NEAR"
+        ].map(chain => chain.toLowerCase().trim());
+
         // Initialize with 30-day stats instead of all-time stats
-        thirtyDaysStats
+        const filteredStats = thirtyDaysStats
+            .filter((stat): stat is { chainId: string; relaySum: number; cuSum: number; } =>
+                stat.chainId !== null && (mainnetChains.includes(stat.chainId.toLowerCase().trim()) || testnetChains.includes(stat.chainId.toLowerCase().trim())));
+
+        // Log what got filtered out
+        const allChainIds = thirtyDaysStats
             .filter((stat): stat is { chainId: string; relaySum: number; cuSum: number; } => stat.chainId !== null)
-            .forEach(stat => {
-                statsMap.set(stat.chainId, {
-                    chainId: stat.chainId,
-                    relaySum30Days: Number(stat.relaySum) || 0,
-                    cuSum30Days: Number(stat.cuSum) || 0,
-                    relaySum: 0,  // Will be updated with all-time stats
-                    cuSum: 0
-                });
+            .map(stat => stat.chainId);
+
+        const filteredOutChains = allChainIds.filter(chainId =>
+            !mainnetChains.includes(chainId.toLowerCase().trim()) && !testnetChains.includes(chainId.toLowerCase().trim())
+        );
+
+        if (filteredOutChains.length > 0) {
+            console.log(`IndexTopChainsResource: Filtered out chains: ${filteredOutChains.join(', ')}`);
+        }
+
+        filteredStats.forEach(stat => {
+            statsMap.set(stat.chainId, {
+                chainId: stat.chainId,
+                relaySum30Days: Number(stat.relaySum) || 0,
+                cuSum30Days: Number(stat.cuSum) || 0,
+                relaySum: 0,  // Will be updated with all-time stats
+                cuSum: 0
             });
+        });
 
         // Add all-time stats only for chains that exist in 30-day window
         allTimeStats

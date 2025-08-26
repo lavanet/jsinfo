@@ -83,7 +83,6 @@ export const chainDictionary: { [key: string]: ChainInfo } = {
     fuse: { name: "Fuse", icon: "/icons/fuse.svg" },
     gnosis: { name: "Gnosis", icon: "/icons/gnosis.svg" },
     gravity: { name: "Gravity", icon: "/icons/gravity.svg" },
-    hedera: { name: "Hedera Hashgraph", icon: "/icons/hedera-hashgraph.svg" },
     hubble: { name: "Hubble Exchange", icon: "/icons/hubble-exchange.svg" },
     immutable: { name: "Immutable", icon: "/icons/immutable.svg" },
     injective: { name: "Injective", icon: "/icons/injective.svg" },
@@ -172,4 +171,5 @@ export const chainDictionary: { [key: string]: ChainInfo } = {
     secrett: { name: "Secret Testnet", icon: "/icons/secret.png" },
     secret2: { name: "Secret", icon: "/icons/secret.png" },
     secret2t: { name: "Secret Testnet", icon: "/icons/secret.png" },
+    hedera: { name: "Hedera", icon: "/icons/hedera.svg" },
 };

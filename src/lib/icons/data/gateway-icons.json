@@ -453,5 +453,16 @@
         "onChainId": "BERAT2"
       }
     ]
+  },
+  {
+    "id": "Hedera",
+    "thumbnail": "https://gateway-fe-public-assets.s3.us-east-1.amazonaws.com/icons/hedera-hbar-logo.svg",
+    "services": [
+      {
+        "name": "Hedera (HEDERA)",
+        "type": "Mainnet",
+        "onChainId": "HEDERA"
+      }
+    ]
   }
 ]

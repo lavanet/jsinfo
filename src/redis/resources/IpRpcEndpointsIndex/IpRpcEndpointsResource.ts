@@ -83,7 +83,8 @@ export class IpRpcEndpointsIndexResource extends RedisResourceBase<ChainEndpoint
         'fvmt': 'FVMT',
         'blast': 'BLAST',
         'avax': 'AVAX',
-        'polygon': 'POLYGON'
+        'polygon': 'POLYGON',
+        'hedera': 'HEDERA'
     };
 
     private getGeolocationsFromNumber(geo: number): string[] {

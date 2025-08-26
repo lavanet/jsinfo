@@ -31,7 +31,7 @@ export class IndexTopChainsResource extends RedisResourceBase<IndexTopChainsData
                 .groupBy(JsinfoProviderAgrSchema.aggDailyRelayPayments.specId),
             'IndexTopChainsResource_fetchFromSource_30days'
         );
-
+        
         // Get all time stats
         const allTimeStats = await queryJsinfo(
             async (db: PostgresJsDatabase) => db.select({
@@ -84,7 +84,8 @@ export class IndexTopChainsResource extends RedisResourceBase<IndexTopChainsData
             "SOLANA",
             "SOLANAT",
             "HYPERLIQUID",
-            "HYPERLIQUIDT"
+            "HYPERLIQUIDT",
+            "HADERA"
         ].map(chain => chain.toLowerCase().trim());
 
         const testnetChains = [
@@ -99,6 +100,12 @@ export class IndexTopChainsResource extends RedisResourceBase<IndexTopChainsData
         const filteredStats = thirtyDaysStats
             .filter((stat): stat is { chainId: string; relaySum: number; cuSum: number; } =>
                 stat.chainId !== null && (mainnetChains.includes(stat.chainId.toLowerCase().trim()) || testnetChains.includes(stat.chainId.toLowerCase().trim())));
+        
+        // Manually add HEDERA if it's not in the 30-day stats
+        // const hasHedera = filteredStats.some(stat => stat.chainId.toLowerCase() === 'hedera');
+        // if (!hasHedera) {
+        //     filteredStats.push({ chainId: "hedera", relaySum: 0, cuSum: 0 });
+        // }
 
         // Log what got filtered out
         const allChainIds = thirtyDaysStats
@@ -108,6 +115,11 @@ export class IndexTopChainsResource extends RedisResourceBase<IndexTopChainsData
         const filteredOutChains = allChainIds.filter(chainId =>
             !mainnetChains.includes(chainId.toLowerCase().trim()) && !testnetChains.includes(chainId.toLowerCase().trim())
         );
+
+        // Debug: Check if hedera is in the raw data
+        const hederaInRawData = allChainIds.some(chainId => chainId.toLowerCase() === 'hedera');
+        console.log(`IndexTopChainsResource: HEDERA in raw 30-day data: ${hederaInRawData}`);
+        console.log(`IndexTopChainsResource: All chain IDs from 30-day query: ${allChainIds.join(', ')}`);
 
         if (filteredOutChains.length > 0) {
             console.log(`IndexTopChainsResource: Filtered out chains: ${filteredOutChains.join(', ')}`);

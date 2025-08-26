@@ -32,6 +32,7 @@ export class IndexTopChainsResource extends RedisResourceBase<IndexTopChainsData
             'IndexTopChainsResource_fetchFromSource_30days'
         );
         
+        console.log("thirtyDaysStats",thirtyDaysStats);
         // Get all time stats
         const allTimeStats = await queryJsinfo(
             async (db: PostgresJsDatabase) => db.select({
@@ -85,7 +86,7 @@ export class IndexTopChainsResource extends RedisResourceBase<IndexTopChainsData
             "SOLANAT",
             "HYPERLIQUID",
             "HYPERLIQUIDT",
-            "HADERA"
+            "HEDERA"
         ].map(chain => chain.toLowerCase().trim());
 
         const testnetChains = [

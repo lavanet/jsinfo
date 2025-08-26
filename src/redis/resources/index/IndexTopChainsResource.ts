@@ -102,11 +102,6 @@ export class IndexTopChainsResource extends RedisResourceBase<IndexTopChainsData
             .filter((stat): stat is { chainId: string; relaySum: number; cuSum: number; } =>
                 stat.chainId !== null && (mainnetChains.includes(stat.chainId.toLowerCase().trim()) || testnetChains.includes(stat.chainId.toLowerCase().trim())));
         
-        // Manually add HEDERA if it's not in the 30-day stats
-        // const hasHedera = filteredStats.some(stat => stat.chainId.toLowerCase() === 'hedera');
-        // if (!hasHedera) {
-        //     filteredStats.push({ chainId: "hedera", relaySum: 0, cuSum: 0 });
-        // }
 
         // Log what got filtered out
         const allChainIds = thirtyDaysStats

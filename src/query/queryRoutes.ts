@@ -118,6 +118,7 @@ import { providerReputationV2Handler, ProviderReputationV2HandlerOpts } from './
 // Import the new handlers
 import { NearMainnetHealthHandler, NearMainnetHealthHandlerOpts } from './handlers/ajax/nearMainnetHealthHandler';
 import { NearTestnetHealthHandler, NearTestnetHealthHandlerOpts } from './handlers/ajax/nearTestnetHealthHandler';
+import { ActiveProviderCountHandler, ActiveProviderCountHandlerOpts } from './handlers/ajax/activeProviderCountHandler';
 
 // =============================================================================
 // ROUTE REGISTRATION - Grouped by functionality
@@ -159,6 +160,7 @@ GetServerInstance().get('/all_providers_apr', ProviderPerformanceHandlerOpts, Pr
 GetServerInstance().get('/providers_performance', ProviderPerformanceHandlerOpts, ProviderPerformanceRawHandler);
 GetServerInstance().get('/providers_reputation_scores', ProvidersReputationScoresHandlerOpts, ProvidersReputationScoresHandler);
 GetServerInstance().get('/provider_reputation_v2', ProviderReputationV2HandlerOpts, providerReputationV2Handler);
+GetServerInstance().get('/active_provider_count', ActiveProviderCountHandlerOpts, ActiveProviderCountHandler);
 
 // -----------------------------------------------------------------------------
 // Provider Listing Routes

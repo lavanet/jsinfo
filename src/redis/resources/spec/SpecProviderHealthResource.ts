@@ -45,7 +45,10 @@ export class SpecProviderHealthResource extends RedisResourceBase<SPHRes[], SPHA
         const uniqueRecordsMap = new Map<string, SPHRes>();
 
         healthRecords.forEach(record => {
-            const key = `${record.provider}-${record.spec}`;
+            // Skip records without provider
+            if (!record.provider) return;
+            
+            const key = `${record.provider}-${record.spec}-${record.interface || 'unknown'}`;
             const existing = uniqueRecordsMap.get(key);
             
             // Prefer healthy status over any other status

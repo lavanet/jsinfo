@@ -110,8 +110,31 @@ export async function SpecEndpointHealthHandler(request: FastifyRequest, reply: 
         return null;
     }
 
-    const healthyCount = healthRecords.filter(hs => hs.status === 'healthy').length;
-    const unhealthyCount = healthRecords.length - healthyCount;
+    // Group health records by provider
+    const providerHealthMap = new Map<string, boolean>();
+    
+    healthRecords.forEach(record => {
+        if (!record.provider) return; // Skip records without provider
+        
+        const currentStatus = providerHealthMap.get(record.provider);
+        // If provider already marked as healthy, keep it healthy
+        // Otherwise, update with current interface status
+        if (currentStatus !== true) {
+            providerHealthMap.set(record.provider, record.status === 'healthy');
+        }
+    });
+    
+    // Count healthy and unhealthy providers
+    let healthyCount = 0;
+    let unhealthyCount = 0;
+    
+    providerHealthMap.forEach(isHealthy => {
+        if (isHealthy) {
+            healthyCount++;
+        } else {
+            unhealthyCount++;
+        }
+    });
 
     return {
         endpointHealth: {

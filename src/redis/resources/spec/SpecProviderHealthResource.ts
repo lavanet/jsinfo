@@ -52,12 +52,20 @@ export class SpecProviderHealthResource extends RedisResourceBase<SPHRes[], SPHA
             const existing = uniqueRecordsMap.get(key);
             
             // Prefer healthy status over any other status
-            // If no existing record, or this record is healthy, or existing is not healthy and this is newer
-            if (!existing || 
-                record.status === 'healthy' || 
-                (existing.status !== 'healthy' && record.timestamp > existing.timestamp)) {
+            // If no existing record, or this record is healthy, or (existing is not healthy and this is newer)
+            if (!existing) {
+                uniqueRecordsMap.set(key, record);
+            } else if (record.status === 'healthy' && existing.status !== 'healthy') {
+                // Always prefer healthy over unhealthy, regardless of timestamp
+                uniqueRecordsMap.set(key, record);
+            } else if (existing.status !== 'healthy' && record.status !== 'healthy' && record.timestamp > existing.timestamp) {
+                // If both are unhealthy, prefer newer timestamp
+                uniqueRecordsMap.set(key, record);
+            } else if (existing.status === 'healthy' && record.status === 'healthy' && record.timestamp > existing.timestamp) {
+                // If both are healthy, prefer newer timestamp
                 uniqueRecordsMap.set(key, record);
             }
+            // Otherwise keep existing record
         });
 
         const uniqueHealthRecords = Array.from(uniqueRecordsMap.values());

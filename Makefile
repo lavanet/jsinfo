@@ -1,5 +1,4 @@
-.PHONY: bun_create_migrations \
-		docker_build \
+.PHONY: docker_build \
 		docker_sh \
 		docker_compose \
 		docker_compose_query_populate \

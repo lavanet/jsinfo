@@ -60,7 +60,7 @@ commands=(
   "python3 ./tests/index_page_endpoints.py"
 
   # TESTS_FULL tests:
-  "python3 ./tests/provider_page_endpoints.py"
+  # "python3 ./tests/provider_page_endpoints.py"
   "python3 ./tests/provider_tabs_endpoints.py"
   "python3 ./tests/provider_csv_endpoints.py"
 

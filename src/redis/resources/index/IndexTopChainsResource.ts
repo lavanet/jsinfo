@@ -86,7 +86,8 @@ export class IndexTopChainsResource extends RedisResourceBase<IndexTopChainsData
             "SOLANAT",
             "HYPERLIQUID",
             "HYPERLIQUIDT",
-            "HEDERA"
+            "HEDERA",
+            // "HEDERAT"
         ].map(chain => chain.toLowerCase().trim());
 
         const testnetChains = [
@@ -112,10 +113,10 @@ export class IndexTopChainsResource extends RedisResourceBase<IndexTopChainsData
             !mainnetChains.includes(chainId.toLowerCase().trim()) && !testnetChains.includes(chainId.toLowerCase().trim())
         );
 
-        // Debug: Check if hedera is in the raw data
-        const hederaInRawData = allChainIds.some(chainId => chainId.toLowerCase() === 'hedera');
-        console.log(`IndexTopChainsResource: HEDERA in raw 30-day data: ${hederaInRawData}`);
-        console.log(`IndexTopChainsResource: All chain IDs from 30-day query: ${allChainIds.join(', ')}`);
+        // // Debug: Check if hedera is in the raw data
+        // const hederaInRawData = allChainIds.some(chainId => chainId.toLowerCase() === 'hedera');
+        // console.log(`IndexTopChainsResource: HEDERA in raw 30-day data: ${hederaInRawData}`);
+        // console.log(`IndexTopChainsResource: All chain IDs from 30-day query: ${allChainIds.join(', ')}`);
 
         if (filteredOutChains.length > 0) {
             console.log(`IndexTopChainsResource: Filtered out chains: ${filteredOutChains.join(', ')}`);

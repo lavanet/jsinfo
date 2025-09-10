@@ -464,5 +464,16 @@
         "onChainId": "HEDERA"
       }
     ]
+  },
+  {
+    "id": "Hedera",
+    "thumbnail": "https://gateway-fe-public-assets.s3.us-east-1.amazonaws.com/icons/hedera-hbar-logo.svg",
+    "services": [
+      {
+        "name": "Hedera (HEDERAT)",
+        "type": "Testnet",
+        "onChainId": "HEDERAT"
+      }
+    ]
   }
 ]

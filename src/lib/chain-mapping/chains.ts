@@ -103,6 +103,7 @@ const chainMapping: Record<string, string> = {
     BASESP: "Base Sepolia Testnet",
     FVMT: "Filecoin Testnet",
     HEDERA: "Hedera",
+    HEDERAT: "Hedera Testnet",
 };
 
 /**

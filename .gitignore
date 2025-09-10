@@ -65,7 +65,6 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-env.sh
 heap.json
 heap-snapshot-*.json
 snapshot_parsed.txt

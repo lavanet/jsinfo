@@ -440,7 +440,7 @@ export class ProviderStakesAndDelegationResource extends RedisResourceBase<Provi
     }
 
     // Improve health message formatting based on providerHealthLatestHandler
-    private formatHealthMessage(data: string | null): string {
+    private formatHealthMessage(data: string | null, specId?: string): string {
         if (!data) return "";
 
         try {
@@ -463,6 +463,15 @@ export class ProviderStakesAndDelegationResource extends RedisResourceBase<Provi
 
             // Case 3: Block data (most common for NEAR)
             if (parsedData.block && parsedData.others) {
+                // For HYPERLIQUID and HEDERA chains, only show latency
+                if (specId && (specId === 'HYPERLIQUID' || specId === 'HYPERLIQUIDT' || specId === 'HEDERA' || specId === 'HEDERAT')) {
+                    if (parsedData.latency) {
+                        const latencyMs = Math.round(parsedData.latency / 1000000);
+                        return `Latency: ${latencyMs}ms`;
+                    }
+                    return ""; // Return empty if no latency data
+                }
+
                 let finalMessage = `Block: ${parsedData.block}`;
 
                 // Only add others if different from block
@@ -642,7 +651,7 @@ export class ProviderStakesAndDelegationResource extends RedisResourceBase<Provi
                     : mostRecentRecord.geolocation || 'Unknown';
 
                 // Format the health message
-                const formattedMessage = this.formatHealthMessage(mostRecentRecord.message || mostRecentRecord.data);
+                const formattedMessage = this.formatHealthMessage(mostRecentRecord.message || mostRecentRecord.data, spec);
 
                 // Check for version upgrade message
                 let status = mostRecentRecord.status?.toLowerCase() || 'unknown';

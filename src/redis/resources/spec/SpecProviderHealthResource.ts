@@ -21,7 +21,7 @@ export interface SPHRes {
 
 export class SpecProviderHealthResource extends RedisResourceBase<SPHRes[], SPHArgs> {
     protected readonly redisKey = 'spec:provider-health';
-    protected readonly cacheExpirySeconds = 2 * 60 * 1000; // 2 minutes cache
+    protected readonly cacheExpirySeconds = 2 * 60; // 2 minutes cache (in seconds)
 
     protected async fetchFromSource(args: SPHArgs): Promise<SPHRes[]> {
         const { spec } = args;

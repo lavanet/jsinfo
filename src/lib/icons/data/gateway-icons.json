@@ -475,5 +475,21 @@
         "onChainId": "HEDERAT"
       }
     ]
+  },
+  {
+    "id": "Union",
+    "thumbnail": "https://gateway-fe-public-assets.s3.us-east-1.amazonaws.com/icons/union.png",
+    "services": [
+      {
+        "name": "Union Testnet",
+        "type": "Testnet",
+        "onChainId": "UNIONT"
+      },
+      {
+        "name": "Union Mainnet",
+        "type": "Mainnet",
+        "onChainId": "UNION"
+      }
+    ]
   }
 ]

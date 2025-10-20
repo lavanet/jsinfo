@@ -70,3 +70,4 @@ heap-snapshot-*.json
 snapshot_parsed.txt
 dump.custom
 output.txt
+aggregated_consumer_optimizer_metrics_week.csv

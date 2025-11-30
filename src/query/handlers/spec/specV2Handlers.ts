@@ -3,12 +3,13 @@
 import { FastifyRequest, FastifyReply, RouteShorthandOptions } from 'fastify';
 import * as JsinfoSchema from '@jsinfo/schemas/jsinfoSchema/jsinfoSchema';
 import * as JsinfoProviderAgrSchema from '@jsinfo/schemas/jsinfoSchema/providerRelayPaymentsAgregation';
-import { sql, eq, count, and, gte, inArray } from "drizzle-orm";
+import { sql, eq, count, and, gte, inArray, isNotNull, ne } from "drizzle-orm";
 import { GetAndValidateSpecIdFromRequest } from '@jsinfo/query/utils/queryRequestArgParser';
 import { RedisCache } from '@jsinfo/redis/classes/RedisCache';
 import { queryJsinfo } from '@jsinfo/utils/db';
 import { SpecProviderHealthResource } from '@jsinfo/redis/resources/spec/SpecProviderHealthResource';
 import { WriteErrorToFastifyReplyNoLog } from '@jsinfo/query/utils/queryServerUtils';
+import { ProviderStakesAndDelegationService } from '@jsinfo/redis/resources/global/ProviderStakesAndDelegationResource';
 
 // Spec CU, Relay, and Rewards Handler
 export const SpecCuRelayRewardsHandlerOpts: RouteShorthandOptions = {
@@ -66,14 +67,72 @@ export async function SpecProviderCountHandler(request: FastifyRequest, reply: F
         return reply;
     }
 
-    const providerCount = await queryJsinfo<{ count: number }[]>(
-        async (db) => await db.select({ count: count() })
-            .from(JsinfoSchema.providerStakes)
-            .where(eq(JsinfoSchema.providerStakes.specId, spec)),
-        'SpecProviderCount_getCount'
-    );
+    // Use the same data source as SpecStakesV2Handler to ensure 100% consistency
+    // This ensures the count matches exactly what's shown in the provider list
+    try {
+        const allStakesData = await ProviderStakesAndDelegationService.fetch();
+        
+        if (!allStakesData || !allStakesData.detailedSpecStakes) {
+            // Fallback to database query if cached data is not available
+            const providerRows = await queryJsinfo<{ provider: string | null; specId: string | null }[]>(
+                async (db) => await db.select({
+                    provider: JsinfoSchema.providerStakes.provider,
+                    specId: JsinfoSchema.providerStakes.specId,
+                })
+                    .from(JsinfoSchema.providerStakes)
+                    .where(
+                        and(
+                            eq(JsinfoSchema.providerStakes.specId, spec),
+                            isNotNull(JsinfoSchema.providerStakes.provider),
+                            ne(JsinfoSchema.providerStakes.provider, ''),
+                            isNotNull(JsinfoSchema.providerStakes.specId),
+                            ne(JsinfoSchema.providerStakes.specId, '')
+                        )
+                    ),
+                'SpecProviderCount_getProviders_fallback'
+            );
 
-    return { providerCount: providerCount[0].count };
+            // Count distinct providers
+            const validProviders = new Set<string>();
+            for (const row of providerRows) {
+                if (row.provider && row.specId) {
+                    validProviders.add(row.provider);
+                }
+            }
+            return { providerCount: validProviders.size };
+        }
+
+        // Get stakes for this spec (same data source as SpecStakesV2Handler)
+        const specStakes = allStakesData.detailedSpecStakes[spec] || [];
+        
+        // Count distinct providers
+        const providerSet = new Set<string>();
+        for (const stake of specStakes) {
+            if (stake.provider) {
+                providerSet.add(stake.provider);
+            }
+        }
+
+        return { providerCount: providerSet.size };
+    } catch (error) {
+        // Fallback to simple database count if there's an error
+        const providerCount = await queryJsinfo<{ count: number }[]>(
+            async (db) => await db.select({ count: count() })
+                .from(JsinfoSchema.providerStakes)
+                .where(
+                    and(
+                        eq(JsinfoSchema.providerStakes.specId, spec),
+                        isNotNull(JsinfoSchema.providerStakes.provider),
+                        ne(JsinfoSchema.providerStakes.provider, ''),
+                        isNotNull(JsinfoSchema.providerStakes.specId),
+                        ne(JsinfoSchema.providerStakes.specId, '')
+                    )
+                ),
+            'SpecProviderCount_getCount_fallback'
+        );
+
+        return { providerCount: providerCount[0]?.count || 0 };
+    }
 }
 
 // Spec Endpoint Health Handler

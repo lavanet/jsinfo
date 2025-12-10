@@ -20,18 +20,19 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 
 async function getPoolsAmount(client: LavaClient): Promise<bigint> {
     const lavaClient = client.lavanet.lava.rewards;
-    let pools = await lavaClient.pools();
+    const poolsResponse = await lavaClient.pools();
 
     let totalAmount = 0n;
 
-    // check why iprpc pools are missin
-    pools.pools.forEach((pool: any) => {
+    (poolsResponse.pools ?? []).forEach((pool: any) => {
         if (REWARD_POOL_NAMES_TO_CONSIDER_IN_TOTAL_TOKEN_VALUE_CALCULATIONS.includes(pool.name)) {
-            if (pool.denom === 'ulava') {
-                totalAmount += BigInt(pool.balance[0].amount);
+            for (const coin of pool.balance ?? []) {
+                if (coin.denom === 'ulava') {
+                    totalAmount += BigInt(coin.amount);
+                }
             }
         }
-    })
+    });
 
     return totalAmount;
 }

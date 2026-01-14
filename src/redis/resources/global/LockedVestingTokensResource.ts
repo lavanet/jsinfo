@@ -30,11 +30,12 @@ function parseContinuousVestingAccount(nowSeconds: number, account: any): bigint
 
 function parsePeriodicVestingAccount(nowSeconds: number, account: any): bigint {
     let totalAmount = 0n;
-    const startTime = parseInt(account.startTime);
+    let currentTime = parseInt(account.startTime);
 
     account.vestingPeriods.forEach((vestingPeriod: any) => {
-        const current = startTime + parseInt(vestingPeriod.length);
-        if (current >= nowSeconds) {
+        // Each period's length is added to the previous period's end time (sequential vesting)
+        currentTime += parseInt(vestingPeriod.length);
+        if (currentTime >= nowSeconds) {
             totalAmount += BigInt(vestingPeriod.amount[0].amount);
         }
     });

@@ -30,6 +30,12 @@ export interface ConsumerOptimizerMetricsBySpecItem {
     node_error_rate: number;
     entry_index: number;
     epoch: number;
+    // WRS normalized scores (0-1, higher is better)
+    selection_availability: number;
+    selection_latency: number;
+    selection_sync: number;
+    selection_stake: number;
+    selection_composite: number;
 }
 
 export interface ConsumerOptimizerMetricsBySpecResponse {
@@ -107,7 +113,12 @@ export class ConsumerOptimizerMetricsBySpecResource extends RedisResourceBase<Co
                 node_error_rate_sum: aggregatedConsumerOptimizerMetrics.node_error_rate_sum,
                 entry_index_sum: aggregatedConsumerOptimizerMetrics.entry_index_sum,
                 provider_stake: aggregatedConsumerOptimizerMetrics.max_provider_stake,
-                max_epoch: aggregatedConsumerOptimizerMetrics.max_epoch
+                max_epoch: aggregatedConsumerOptimizerMetrics.max_epoch,
+                selection_availability_sum: aggregatedConsumerOptimizerMetrics.selection_availability_sum,
+                selection_latency_sum: aggregatedConsumerOptimizerMetrics.selection_latency_sum,
+                selection_sync_sum: aggregatedConsumerOptimizerMetrics.selection_sync_sum,
+                selection_stake_sum: aggregatedConsumerOptimizerMetrics.selection_stake_sum,
+                selection_composite_sum: aggregatedConsumerOptimizerMetrics.selection_composite_sum,
             })
                 .from(aggregatedConsumerOptimizerMetrics)
                 .where(and(
@@ -175,6 +186,16 @@ export class ConsumerOptimizerMetricsBySpecResource extends RedisResourceBase<Co
                 node_error_rate: Number(m.node_error_rate_sum) / Number(m.metrics_count),
                 entry_index: Number(m.entry_index_sum) / Number(m.metrics_count),
                 epoch: Number(m.max_epoch),
+                selection_availability: m.selection_availability_sum != null ?
+                    Number(m.selection_availability_sum) / Number(m.metrics_count) : 0,
+                selection_latency: m.selection_latency_sum != null ?
+                    Number(m.selection_latency_sum) / Number(m.metrics_count) : 0,
+                selection_sync: m.selection_sync_sum != null ?
+                    Number(m.selection_sync_sum) / Number(m.metrics_count) : 0,
+                selection_stake: m.selection_stake_sum != null ?
+                    Number(m.selection_stake_sum) / Number(m.metrics_count) : 0,
+                selection_composite: m.selection_composite_sum != null ?
+                    Number(m.selection_composite_sum) / Number(m.metrics_count) : 0,
             });
         }
 

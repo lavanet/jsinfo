@@ -20,6 +20,8 @@ export interface ConsumerOptimizerMetricsByProviderItem {
     consumer_hostname: string;
     metrics_count: number;
     provider_stake: number;
+    provider: string;
+    provider_moniker: string;
     latency_score: number;
     availability_score: number;
     sync_score: number;
@@ -28,6 +30,18 @@ export interface ConsumerOptimizerMetricsByProviderItem {
     entry_index: number;
     chain: string;
     epoch: number;
+    tier_average: number;
+    tier_chances: {
+        tier0: number;
+        tier1: number;
+        tier2: number;
+        tier3: number;
+    };
+    selection_availability: number;
+    selection_latency: number;
+    selection_sync: number;
+    selection_stake: number;
+    selection_composite: number;
 }
 
 export interface ConsumerOptimizerMetricsByProviderResponse {
@@ -100,7 +114,18 @@ export class ConsumerOptimizerMetricsByProviderResource extends RedisResourceBas
                 node_error_rate_sum: aggregatedConsumerOptimizerMetrics.node_error_rate_sum,
                 entry_index_sum: aggregatedConsumerOptimizerMetrics.entry_index_sum,
                 provider_stake: aggregatedConsumerOptimizerMetrics.max_provider_stake,
-                max_epoch: aggregatedConsumerOptimizerMetrics.max_epoch
+                max_epoch: aggregatedConsumerOptimizerMetrics.max_epoch,
+                tier_sum: aggregatedConsumerOptimizerMetrics.tier_sum,
+                tier_metrics_count: aggregatedConsumerOptimizerMetrics.tier_metrics_count,
+                tier_chance_0_sum: aggregatedConsumerOptimizerMetrics.tier_chance_0_sum,
+                tier_chance_1_sum: aggregatedConsumerOptimizerMetrics.tier_chance_1_sum,
+                tier_chance_2_sum: aggregatedConsumerOptimizerMetrics.tier_chance_2_sum,
+                tier_chance_3_sum: aggregatedConsumerOptimizerMetrics.tier_chance_3_sum,
+                selection_availability_sum: aggregatedConsumerOptimizerMetrics.selection_availability_sum,
+                selection_latency_sum: aggregatedConsumerOptimizerMetrics.selection_latency_sum,
+                selection_sync_sum: aggregatedConsumerOptimizerMetrics.selection_sync_sum,
+                selection_stake_sum: aggregatedConsumerOptimizerMetrics.selection_stake_sum,
+                selection_composite_sum: aggregatedConsumerOptimizerMetrics.selection_composite_sum,
             })
                 .from(aggregatedConsumerOptimizerMetrics)
                 .where(and(
@@ -112,6 +137,7 @@ export class ConsumerOptimizerMetricsByProviderResource extends RedisResourceBas
             , `ConsumerOptimizerMetricsByProviderResource::getAggregatedMetrics_${provider}_${from}_${to}`);
 
         const validMetrics: ConsumerOptimizerMetricsByProviderItem[] = [];
+        const providerMoniker = await ProviderMonikerService.GetMonikerForProvider(provider) || provider;
 
         for (const m of metrics) {
             if (m.latency_score_sum === null ||
@@ -149,6 +175,8 @@ export class ConsumerOptimizerMetricsByProviderResource extends RedisResourceBas
                 consumer_hostname: m.consumer_hostname,
                 metrics_count: m.metrics_count,
                 provider_stake: m.provider_stake,
+                provider: provider,
+                provider_moniker: providerMoniker,
                 latency_score: Number(m.latency_score_sum) / Number(m.metrics_count),
                 availability_score: Number(m.availability_score_sum) / Number(m.metrics_count),
                 sync_score: Number(m.sync_score_sum) / Number(m.metrics_count),
@@ -156,6 +184,28 @@ export class ConsumerOptimizerMetricsByProviderResource extends RedisResourceBas
                 node_error_rate: Number(m.node_error_rate_sum) / Number(m.metrics_count),
                 entry_index: Number(m.entry_index_sum) / Number(m.metrics_count),
                 epoch: Number(m.max_epoch),
+                tier_average: (m.tier_metrics_count ?? 0) > 0 && m.tier_sum != null ?
+                    Number(m.tier_sum) / Number(m.tier_metrics_count) : 0,
+                tier_chances: {
+                    tier0: (m.tier_metrics_count ?? 0) > 0 && m.tier_chance_0_sum != null ?
+                        Number(m.tier_chance_0_sum) / Number(m.tier_metrics_count) : 0,
+                    tier1: (m.tier_metrics_count ?? 0) > 0 && m.tier_chance_1_sum != null ?
+                        Number(m.tier_chance_1_sum) / Number(m.tier_metrics_count) : 0,
+                    tier2: (m.tier_metrics_count ?? 0) > 0 && m.tier_chance_2_sum != null ?
+                        Number(m.tier_chance_2_sum) / Number(m.tier_metrics_count) : 0,
+                    tier3: (m.tier_metrics_count ?? 0) > 0 && m.tier_chance_3_sum != null ?
+                        Number(m.tier_chance_3_sum) / Number(m.tier_metrics_count) : 0,
+                },
+                selection_availability: m.selection_availability_sum != null ?
+                    Number(m.selection_availability_sum) / Number(m.metrics_count) : 0,
+                selection_latency: m.selection_latency_sum != null ?
+                    Number(m.selection_latency_sum) / Number(m.metrics_count) : 0,
+                selection_sync: m.selection_sync_sum != null ?
+                    Number(m.selection_sync_sum) / Number(m.metrics_count) : 0,
+                selection_stake: m.selection_stake_sum != null ?
+                    Number(m.selection_stake_sum) / Number(m.metrics_count) : 0,
+                selection_composite: m.selection_composite_sum != null ?
+                    Number(m.selection_composite_sum) / Number(m.metrics_count) : 0,
             });
         }
 

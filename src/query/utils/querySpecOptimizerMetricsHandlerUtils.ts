@@ -36,6 +36,11 @@ export interface MetricsItem {
         tier2: number;
         tier3: number;
     };
+    selection_availability?: number;
+    selection_latency?: number;
+    selection_sync?: number;
+    selection_stake?: number;
+    selection_composite?: number;
 }
 
 export interface BaseAggregatedMetrics {
@@ -49,6 +54,11 @@ export interface BaseAggregatedMetrics {
     generic_score: number;
     provider_stake: number;
     epoch: number;
+    selection_availability: number;
+    selection_latency: number;
+    selection_sync: number;
+    selection_stake: number;
+    selection_composite: number;
 }
 
 export interface AggregatedMetricsWithTiers extends BaseAggregatedMetrics {
@@ -163,7 +173,12 @@ export function aggregateMetrics(
             tier1: number[],
             tier2: number[],
             tier3: number[]
-        }
+        },
+        selection_availability: number[],
+        selection_latency: number[],
+        selection_sync: number[],
+        selection_stake: number[],
+        selection_composite: number[]
     }>();
 
     for (const metric of metrics) {
@@ -191,7 +206,12 @@ export function aggregateMetrics(
                     tier1: [],
                     tier2: [],
                     tier3: []
-                }
+                },
+                selection_availability: [],
+                selection_latency: [],
+                selection_sync: [],
+                selection_stake: [],
+                selection_composite: []
             });
         }
 
@@ -245,6 +265,13 @@ export function aggregateMetrics(
             if (metric.tier_chances.tier2 != null) agg.tier_chances.tier2.push(parseFloat(String(metric.tier_chances.tier2)));
             if (metric.tier_chances.tier3 != null) agg.tier_chances.tier3.push(parseFloat(String(metric.tier_chances.tier3)));
         }
+
+        // Aggregate WRS selection scores
+        if (metric.selection_availability != null) agg.selection_availability.push(parseFloat(String(metric.selection_availability)));
+        if (metric.selection_latency != null) agg.selection_latency.push(parseFloat(String(metric.selection_latency)));
+        if (metric.selection_sync != null) agg.selection_sync.push(parseFloat(String(metric.selection_sync)));
+        if (metric.selection_stake != null) agg.selection_stake.push(parseFloat(String(metric.selection_stake)));
+        if (metric.selection_composite != null) agg.selection_composite.push(parseFloat(String(metric.selection_composite)));
     }
 
     return Array.from(aggregations.entries()).map(([key, agg]) => {
@@ -259,7 +286,12 @@ export function aggregateMetrics(
             entry_index: parseFloat(avg(agg.entry_indices).toFixed(9)),
             generic_score: parseFloat(avg(agg.generic_scores).toFixed(9)),
             provider_stake: parseFloat(String(agg.provider_stake)),
-            epoch: parseFloat(String(agg.epoch))
+            epoch: parseFloat(String(agg.epoch)),
+            selection_availability: parseFloat(avg(agg.selection_availability).toFixed(9)),
+            selection_latency: parseFloat(avg(agg.selection_latency).toFixed(9)),
+            selection_sync: parseFloat(avg(agg.selection_sync).toFixed(9)),
+            selection_stake: parseFloat(avg(agg.selection_stake).toFixed(9)),
+            selection_composite: parseFloat(avg(agg.selection_composite).toFixed(9)),
         };
 
         if (!includeTiers) {

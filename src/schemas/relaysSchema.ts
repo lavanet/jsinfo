@@ -61,7 +61,14 @@ export const aggregatedConsumerOptimizerMetrics = pgTable('aggregated_consumer_o
   tier_chance_1_sum: numeric('tier_chance_1_sum'),
   tier_chance_2_sum: numeric('tier_chance_2_sum'),
   tier_chance_3_sum: numeric('tier_chance_3_sum'),
-  tier_metrics_count: integer('tier_metrics_count')
+  tier_metrics_count: integer('tier_metrics_count'),
+
+  // WRS normalized scores
+  selection_availability_sum: numeric('selection_availability_sum'),
+  selection_latency_sum: numeric('selection_latency_sum'),
+  selection_sync_sum: numeric('selection_sync_sum'),
+  selection_stake_sum: numeric('selection_stake_sum'),
+  selection_composite_sum: numeric('selection_composite_sum'),
 });
 
 export type AggregatedConsumerOptimizerMetrics = typeof aggregatedConsumerOptimizerMetrics.$inferSelect

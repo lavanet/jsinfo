@@ -490,7 +490,12 @@ export const AVAILABLE_METRICS_FULL = {
     tier_chances_tier3: "Tier 3 Chance",
     provider_stake: "Provider Stake",
     metrics_count: "Metrics Count",
-    epoch: "Epoch"
+    epoch: "Epoch",
+    selection_availability: "Selection Availability",
+    selection_latency: "Selection Latency",
+    selection_sync: "Selection Sync",
+    selection_stake: "Selection Stake",
+    selection_composite: "Selection Composite"
 } as const;
 
 export interface MetricsResponse {

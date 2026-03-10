@@ -478,7 +478,12 @@ export const AVAILABLE_METRICS = {
     sync_score: "Sync Score",
     generic_score: "Reputation Score",
     node_error_rate: "Error Rate",
-    entry_index: "Entry Index"
+    entry_index: "Entry Index",
+    selection_latency: "Latency Score",
+    selection_availability: "Availability Score",
+    selection_sync: "Sync Score",
+    selection_stake: "Stake Score",
+    selection_composite: "Composite Score"
 } as const;
 
 export const AVAILABLE_METRICS_FULL = {
@@ -491,11 +496,11 @@ export const AVAILABLE_METRICS_FULL = {
     provider_stake: "Provider Stake",
     metrics_count: "Metrics Count",
     epoch: "Epoch",
-    selection_availability: "Selection Availability",
-    selection_latency: "Selection Latency",
-    selection_sync: "Selection Sync",
-    selection_stake: "Selection Stake",
-    selection_composite: "Selection Composite"
+    selection_availability: "Availability Score",
+    selection_latency: "Latency Score",
+    selection_sync: "Sync Score",
+    selection_stake: "Stake Score",
+    selection_composite: "Composite Score"
 } as const;
 
 export interface MetricsResponse {

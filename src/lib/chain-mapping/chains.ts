@@ -104,6 +104,21 @@ const chainMapping: Record<string, string> = {
     FVMT: "Filecoin Testnet",
     HEDERA: "Hedera",
     HEDERAT: "Hedera Testnet",
+    BERAT2: "Berachain Testnet",
+    BERA: "Berachain Mainnet",
+    BNB: "BNB Chain Mainnet",
+    BNT: "BNB Chain Testnet",
+    POLYGONA: "Polygon Amoy Testnet",
+    MOVEMENTT: "Movement Testnet",
+    HYPERLIQUID: "Hyperliquid Mainnet",
+    HYPERLIQUIDT: "Hyperliquid Testnet",
+    XLM: "Stellar Mainnet",
+    XLMT: "Stellar Testnet",
+    SONIC: "Sonic Mainnet",
+    BTC: "Bitcoin Mainnet",
+    BTCT: "Bitcoin Testnet",
+    BCH: "Bitcoin Cash Mainnet",
+    BCHT: "Bitcoin Cash Testnet",
 };
 
 /**

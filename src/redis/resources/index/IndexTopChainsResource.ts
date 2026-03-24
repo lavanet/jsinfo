@@ -87,7 +87,18 @@ export class IndexTopChainsResource extends RedisResourceBase<IndexTopChainsData
             "HYPERLIQUID",
             "HYPERLIQUIDT",
             "HEDERA",
-            "HEDERAT"
+            "HEDERAT",
+            "XLM",
+            "XLMT",
+            "SONIC",
+            "UNION",
+            "UNIONT",
+            "BTC",
+            "BTCT",
+            "BCH",
+            "BCHT",
+            "AVAX",
+            "AVAXT"
         ].map(chain => chain.toLowerCase().trim());
 
         const testnetChains = [

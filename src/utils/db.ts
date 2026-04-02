@@ -305,7 +305,7 @@ class DbConnectionPoolClass {
                 try {
                     return await queryFn(conn.db).finally(async () => {
                         // Close the postgres client
-                        if (this.connections.includes(conn)) return;
+                        if (!this.connections.includes(conn)) return;
 
                         await (conn.db as any).client.end();
                         // Remove from connections array

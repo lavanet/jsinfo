@@ -10,6 +10,7 @@ import { MaskPassword, JSONStringify } from './fmt';
 
 interface DbConnection {
     db: PostgresJsDatabase;
+    sqlClient: ReturnType<typeof postgres>;
     lastUsed: number;
     inUse: boolean;
     createdAt: number;
@@ -194,10 +195,11 @@ class DbConnectionPoolClass {
         for (let attempt = 0; attempt < urls.length; attempt++) {
             try {
                 const url = await this.getNextValidUrl(urls);
-                const db = await this.createDbConnection(url);
+                const { db, sqlClient } = await this.createDbConnection(url);
                 await db.select({ now: sql`NOW()` }).from(sql`(SELECT 1) AS foo`).limit(1);
                 return {
                     db,
+                    sqlClient,
                     lastUsed: Date.now(),
                     inUse: false,
                     createdAt: Date.now(),
@@ -225,7 +227,7 @@ class DbConnectionPoolClass {
         throw lastError || new Error('Failed to connect to any database URL');
     }
 
-    private async createDbConnection(url: string): Promise<PostgresJsDatabase> {
+    private async createDbConnection(url: string): Promise<{ db: PostgresJsDatabase; sqlClient: ReturnType<typeof postgres> }> {
         const config = this.connectionString === "jsinfo"
             ? {
                 idle_timeout: 60 * 2,
@@ -240,7 +242,7 @@ class DbConnectionPoolClass {
             };
 
         const queryClient = postgres(url, config);
-        return drizzle(queryClient);
+        return { db: drizzle(queryClient), sqlClient: queryClient };
     }
 
     private async getConnection(queryKey: string): Promise<DbConnection> {
@@ -307,7 +309,7 @@ class DbConnectionPoolClass {
                         // Close the postgres client
                         if (!this.connections.includes(conn)) return;
 
-                        await (conn.db as any).client.end();
+                        await conn.sqlClient.end();
                         // Remove from connections array
                         this.connections = this.connections.filter(c => c.id !== conn.id);
 
